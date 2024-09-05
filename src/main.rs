@@ -33,7 +33,7 @@ fn main() {
             .start(
                 "the_canvas_id",
                 web_options,
-                Box::new(|cc| Ok(Box::new(egui_dist_test::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(logviewer_rs::App::new(cc)))),
             )
             .await;
 

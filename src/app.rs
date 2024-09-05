@@ -75,6 +75,7 @@ impl eframe::App for App {
             ui.heading("Logviewer");
             ui.label("Drag-and-drop files onto the window!");
 
+            #[cfg(not(target_arch = "wasm32"))]
             if ui.button("Open file…").clicked() {
                 if let Some(path) = rfd::FileDialog::new().pick_file() {
                     self.picked_path = Some(path.display().to_string());
@@ -140,6 +141,7 @@ impl eframe::App for App {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
                 }
                 if self.pid_log_entries.is_empty() {
+                    // This doesn't work for web
                     if let Some(logfile) = self.dropped_files.first() {
                         let path = logfile.path.as_deref().unwrap();
                         let contents = std::fs::read(path).unwrap();
