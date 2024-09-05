@@ -4,22 +4,25 @@ use crate::util::{parse_timestamp, read_f32, read_u32};
 
 use super::LogEntry;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PidLogEntry {
-    timestamp_ms: String,
-    rpm: f32,
-    pid_err: f32,
-    servo_duty_cycle: f32,
+    timestamp_ms_str: String,
+    pub timestamp_ms: u32,
+    pub rpm: f32,
+    pub pid_err: f32,
+    pub servo_duty_cycle: f32,
 }
 
 impl LogEntry for PidLogEntry {
     fn from_buf(bytes: &mut &[u8]) -> io::Result<Self> {
-        let timestamp_ms = parse_timestamp(read_u32(bytes)?);
+        let timestamp_ms = read_u32(bytes)?;
+        let timestamp_ms_str = parse_timestamp(timestamp_ms);
         let rpm = read_f32(bytes)?;
         let pid_err = read_f32(bytes)?;
         let servo_duty_cycle = read_f32(bytes)?;
 
         Ok(Self {
+            timestamp_ms_str,
             timestamp_ms,
             rpm,
             pid_err,

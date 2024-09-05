@@ -1,34 +1,58 @@
-use std::io::{self};
+#![warn(clippy::all, rust_2018_idioms)]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::path::Path;
+// When compiling natively:
+#[cfg(not(target_arch = "wasm32"))]
+fn main() -> eframe::Result {
+    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
-use clap::Parser;
-use config::{Config, LogType};
-use logs::pid::PidLogEntry;
-use logs::status::StatusLogEntry;
-use logs::{parse_and_display, LogEntry, LogHeader};
+    let native_options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([800.0, 800.0])
+            .with_min_inner_size([500.0, 400.0])
+            .with_drag_and_drop(true),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "Logviewer",
+        native_options,
+        Box::new(|cc| Ok(Box::new(logviewer_rs::App::new(cc)))),
+    )
+}
 
-pub mod config;
-pub mod logs;
-pub mod util;
+// When compiling to web using trunk:
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    // Redirect `log` message to `console.log` and friends:
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 
-fn main() -> io::Result<()> {
-    let args = Config::parse();
-    let path = Path::new(&args.file_path);
-    let buf = std::fs::read(path)?;
-    println!("File contents len: {}", buf.len());
+    let web_options = eframe::WebOptions::default();
 
-    let mut pos = 0;
-    let header = LogHeader::from_buf(&mut buf.as_slice())?;
-    println!("{header}");
-    pos += LogHeader::packed_footprint();
+    wasm_bindgen_futures::spawn_local(async {
+        let start_result = eframe::WebRunner::new()
+            .start(
+                "the_canvas_id",
+                web_options,
+                Box::new(|cc| Ok(Box::new(egui_dist_test::TemplateApp::new(cc)))),
+            )
+            .await;
 
-    match args.log_type {
-        LogType::Status => {
-            parse_and_display::<StatusLogEntry>(&mut &buf[pos..]);
+        // Remove the loading text and spinner:
+        let loading_text = web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.get_element_by_id("loading_text"));
+        if let Some(loading_text) = loading_text {
+            match start_result {
+                Ok(_) => {
+                    loading_text.remove();
+                }
+                Err(e) => {
+                    loading_text.set_inner_html(
+                        "<p> The app has crashed. See the developer console for details. </p>",
+                    );
+                    panic!("Failed to start eframe: {e:?}");
+                }
+            }
         }
-        LogType::Pid => parse_and_display::<PidLogEntry>(&mut &buf[pos..]),
-    }
-
-    Ok(())
+    });
 }

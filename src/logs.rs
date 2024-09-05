@@ -3,6 +3,22 @@ use std::{fmt::Display, io, mem};
 pub mod pid;
 pub mod status;
 
+pub fn parse_to_vec<T: LogEntry>(bytes: &mut &[u8]) -> Vec<T> {
+    let mut pos = 0;
+    let mut v = Vec::new();
+    while pos < bytes.len() {
+        match T::from_buf(&mut &bytes[pos..]) {
+            Ok(e) => v.push(e),
+            Err(_) => {
+                eprintln!("End of buffer at {pos}");
+                break;
+            }
+        }
+        pos += T::packed_footprint();
+    }
+    v
+}
+
 pub fn parse_and_display<T: LogEntry>(bytes: &mut &[u8]) {
     let mut pos = 0;
     while pos < bytes.len() {
