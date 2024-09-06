@@ -4,7 +4,7 @@ use crate::logs::{
     LogEntry,
 };
 use egui::Response;
-use egui_plot::{Corner, Legend, Line, Plot, PlotPoints};
+use egui_plot::{Corner, HPlacement, Legend, Line, Plot, PlotPoints};
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 struct AxisLink {
@@ -45,17 +45,17 @@ impl LogPlot {
     }
 
     fn pid_log_lines(pid_logs: &[PidLogEntry]) -> (Vec<Line>, Vec<Line>) {
-        let small_range = vec![
+        let zero_to_one_range = vec![
             Self::line_from_log_entry(pid_logs, |e| e.pid_err as f64).name("PID Error"),
             Self::line_from_log_entry(pid_logs, |e| e.servo_duty_cycle as f64)
                 .name("Servo Duty Cycle"),
         ];
         let big_range = vec![Self::line_from_log_entry(pid_logs, |e| e.rpm as f64).name("RPM")];
-        (small_range, big_range)
+        (zero_to_one_range, big_range)
     }
 
     fn status_log_lines(status_log: &[StatusLogEntry]) -> (Vec<Line>, Vec<Line>) {
-        let small_range =
+        let zero_to_one_range =
             vec![Self::line_from_log_entry(status_log, |e| (e.fan_on as u8) as f64).name("Fan On")];
 
         let big_range = vec![
@@ -64,7 +64,7 @@ impl LogPlot {
             Self::line_from_log_entry(status_log, |e| e.motor_state.into()).name("Motor State"),
             Self::line_from_log_entry(status_log, |e| e.setpoint.into()).name("Setpoint"),
         ];
-        (small_range, big_range)
+        (zero_to_one_range, big_range)
     }
 
     pub fn ui(
@@ -87,8 +87,6 @@ impl LogPlot {
                     ui.selectable_value(&mut config.text_style, style.clone(), style.to_string());
                 }
             });
-
-            ui.end_row();
 
             ui.label("Position:");
             ui.horizontal(|ui| {
@@ -122,33 +120,36 @@ impl LogPlot {
         ui.vertical(|ui| {
             let plot_height = ui.available_height() / 2.0;
 
-            // Plot for values between 0 and 1
-            let small_range_plot = Plot::new("small_range_plot")
+            let zero_to_one_range_plot = Plot::new("zero_to_one_range_plot")
                 .legend(config.clone())
                 .height(plot_height)
+                .y_axis_position(HPlacement::Right)
                 .link_axis(link_group_id, self.axis_link.link_x, false)
                 .link_cursor(link_group_id, self.axis_link.link_cursor_x, false);
-            small_range_plot.show(ui, |plot_ui| {
-                if let Some(log) = pid_log {
-                    let (small_range, _) = Self::pid_log_lines(log.entries());
-                    for lineplot in small_range {
-                        plot_ui.line(lineplot.width(*line_width));
-                    }
-                }
-                if let Some(log) = status_log {
-                    let (small_range, _) = Self::status_log_lines(log.entries());
-                    for lineplot in small_range {
-                        plot_ui.line(lineplot.width(*line_width));
-                    }
-                }
-            });
 
             // Plot for values outside 0-1 range
             let large_range_plot = Plot::new("large_range_plot")
                 .legend(config.clone())
                 .height(plot_height)
+                .y_axis_position(HPlacement::Right)
                 .link_axis(link_group_id, self.axis_link.link_x, false)
                 .link_cursor(link_group_id, self.axis_link.link_cursor_x, false);
+
+            zero_to_one_range_plot.show(ui, |plot_ui| {
+                if let Some(log) = pid_log {
+                    let (zero_to_one_range, _) = Self::pid_log_lines(log.entries());
+                    for lineplot in zero_to_one_range {
+                        plot_ui.line(lineplot.width(*line_width));
+                    }
+                }
+                if let Some(log) = status_log {
+                    let (zero_to_one_range, _) = Self::status_log_lines(log.entries());
+                    for lineplot in zero_to_one_range {
+                        plot_ui.line(lineplot.width(*line_width));
+                    }
+                }
+            });
+
             large_range_plot.show(ui, |plot_ui| {
                 if let Some(log) = pid_log {
                     let (_, large_range) = Self::pid_log_lines(log.entries());
