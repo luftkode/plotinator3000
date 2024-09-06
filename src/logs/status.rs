@@ -2,15 +2,35 @@ use super::{parse_to_vec, LogEntry};
 use crate::util::{parse_timestamp, read_f32, read_u32};
 use serde_big_array::BigArray;
 use std::{io, mem};
+use strum_macros::{Display, FromRepr};
+
+#[allow(non_camel_case_types)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize, FromRepr, Display,
+)]
+pub enum MotorState {
+    POWER_HOLD = 0,
+    ECU_ON_WAIT_PUMP,
+    ECU_ON_WAIT_PRESS_START,
+    DO_IGNITION,
+    IGNITION_END,
+    WAIT_FOR_T_STANDBY,
+    STANDBY_WAIT_FOR_CAP,
+    STANDBY_WAIT_FOR_T_RUN,
+    STANDBY_READY,
+    RUNNING,
+    WAIT_TIME_SHUTDOWN,
+    INVALID_STATE,
+}
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
-    timestamps_with_state_changes: Vec<(u32, u8)>, // for memoization
+    timestamps_with_state_changes: Vec<(u32, MotorState)>, // for memoization
 }
 
-fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, u8)> {
+fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, MotorState)> {
     let mut result = Vec::new();
     let mut last_state = None;
 
@@ -42,7 +62,7 @@ impl StatusLog {
         &self.entries
     }
 
-    pub fn timestamps_with_state_changes(&self) -> &[(u32, u8)] {
+    pub fn timestamps_with_state_changes(&self) -> &[(u32, MotorState)] {
         &self.timestamps_with_state_changes
     }
 }
@@ -66,8 +86,7 @@ pub struct StatusLogHeader {
 impl StatusLogHeader {
     pub const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG";
     fn unique_description(&self) -> String {
-        let uniq_desc = super::parse_unique_description(self.unique_description);
-        uniq_desc
+        super::parse_unique_description(self.unique_description)
     }
 
     pub fn is_buf_header(bytes: &mut &[u8]) -> io::Result<bool> {
@@ -109,7 +128,7 @@ pub struct StatusLogEntry {
     pub fan_on: bool,
     pub vbat: f32,
     pub setpoint: f32,
-    pub motor_state: u8,
+    pub motor_state: MotorState,
 }
 
 impl std::fmt::Display for StatusLogEntry {
@@ -131,14 +150,27 @@ impl LogEntry for StatusLogEntry {
     fn from_buf(bytes: &mut &[u8]) -> io::Result<Self> {
         let timestamp_ms = read_u32(bytes)?;
         let timestamp_ms_str = parse_timestamp(timestamp_ms);
+        let engine_temp = read_f32(bytes)?;
+        let fan_on = bytes[0] == 1;
+        let vbat = read_f32(&mut &bytes[1..])?;
+        let setpoint = read_f32(&mut &bytes[5..])?;
+        let motor_state = match MotorState::from_repr(bytes[9].into()) {
+            Some(st) => st,
+            None => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Invalid motor state",
+                ))
+            }
+        };
         Ok(Self {
             timestamp_ms_str,
             timestamp_ms,
-            engine_temp: read_f32(bytes)?,
-            fan_on: bytes[0] == 1,
-            vbat: read_f32(&mut &bytes[1..])?,
-            setpoint: read_f32(&mut &bytes[5..])?,
-            motor_state: bytes[9],
+            engine_temp,
+            fan_on,
+            vbat,
+            setpoint,
+            motor_state,
         })
     }
 
@@ -177,13 +209,22 @@ mod tests {
         assert_eq!(first_entry.fan_on, true);
         assert_eq!(first_entry.vbat, 2.0);
         assert_eq!(first_entry.setpoint, 3.0);
-        assert_eq!(first_entry.motor_state, 4);
+        assert_eq!(first_entry.motor_state, MotorState::DO_IGNITION);
         let second_entry = status_log.entries.get(1).unwrap();
         assert_eq!(second_entry.engine_temp, 123.4);
         assert_eq!(second_entry.fan_on, false);
         assert_eq!(second_entry.vbat, 2.34);
         assert_eq!(second_entry.setpoint, 3.45);
-        assert_eq!(second_entry.motor_state, 5);
+        assert_eq!(second_entry.motor_state, MotorState::IGNITION_END);
         //eprintln!("{status_log}");
+    }
+
+    #[test]
+    fn test_motor_state_deserialize() {
+        assert_eq!(MotorState::DO_IGNITION, MotorState::from_repr(3).unwrap());
+        assert_eq!(
+            MotorState::WAIT_TIME_SHUTDOWN,
+            MotorState::from_repr(10).unwrap()
+        );
     }
 }

@@ -49,8 +49,7 @@ impl PidLogHeader {
     pub const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG";
 
     fn unique_description(&self) -> String {
-        let uniq_desc = super::parse_unique_description(self.unique_description);
-        uniq_desc
+        super::parse_unique_description(self.unique_description)
     }
 
     pub fn is_buf_header(bytes: &mut &[u8]) -> io::Result<bool> {

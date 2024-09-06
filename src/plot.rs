@@ -6,9 +6,7 @@ use crate::logs::{
     LogEntry,
 };
 use egui::Response;
-use egui_plot::{
-    Corner, HLine, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VLine, VPlacement,
-};
+use egui_plot::{Corner, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement};
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 struct AxisConfig {
@@ -67,7 +65,8 @@ impl LogPlot {
         let big_range = vec![
             Self::line_from_log_entry(status_log, |e| e.engine_temp as f64).name("Engine Temp °C"),
             Self::line_from_log_entry(status_log, |e| e.vbat.into()).name("Vbat"),
-            Self::line_from_log_entry(status_log, |e| e.motor_state.into()).name("Motor State"),
+            Self::line_from_log_entry(status_log, |e| (e.motor_state as u8) as f64)
+                .name("Motor State"),
             Self::line_from_log_entry(status_log, |e| e.setpoint.into()).name("Setpoint"),
         ];
         (zero_to_one_range, big_range)
@@ -157,49 +156,56 @@ impl LogPlot {
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
-            zero_to_one_range_plot.show(ui, |plot_ui| {
-                if let Some(ref status_log) = status_log {
-                    for (ts, st_change) in status_log.timestamps_with_state_changes() {
-                        plot_ui.text(Text::new(
-                            PlotPoint::new(*ts as f64, *st_change as f64),
-                            format!("State {st_change}"),
-                        ))
-                    }
-                }
-                if let Some(log) = pid_log {
-                    let (zero_to_one_range, _) = Self::pid_log_lines(log.entries());
-                    for lineplot in zero_to_one_range {
-                        plot_ui.line(lineplot.width(*line_width));
-                    }
-                }
-                if let Some(log) = status_log {
-                    let (zero_to_one_range, _) = Self::status_log_lines(log.entries());
-                    for lineplot in zero_to_one_range {
-                        plot_ui.line(lineplot.width(*line_width));
-                    }
-                }
-            });
+            let (zero_to_one_range_pid, large_range_pid) = pid_log
+                .map(|log| Self::pid_log_lines(log.entries()))
+                .unwrap_or((vec![], vec![]));
+            let (zero_to_one_range_status, large_range_status) = status_log
+                .map(|log| Self::status_log_lines(log.entries()))
+                .unwrap_or((vec![], vec![]));
 
-            large_range_plot.show(ui, |plot_ui| {
-                if let Some(log) = pid_log {
-                    let (_, large_range) = Self::pid_log_lines(log.entries());
-                    for lineplot in large_range {
+            let has_zero_to_one_data =
+                !zero_to_one_range_pid.is_empty() || !zero_to_one_range_status.is_empty();
+            let has_large_range_data = !large_range_pid.is_empty()
+                || !large_range_status.is_empty()
+                || status_log.is_some();
+
+            if has_zero_to_one_data {
+                zero_to_one_range_plot.show(ui, |plot_ui| {
+                    if let Some(status_log) = status_log {
+                        for (ts, st_change) in status_log.timestamps_with_state_changes() {
+                            plot_ui.text(Text::new(
+                                PlotPoint::new(*ts as f64, ((*st_change as u8) as f64) / 10.0),
+                                st_change.to_string(),
+                            ))
+                        }
+                    }
+                    for lineplot in zero_to_one_range_pid {
                         plot_ui.line(lineplot.width(*line_width));
                     }
-                }
-                if let Some(log) = status_log {
-                    for (ts, st_change) in log.timestamps_with_state_changes() {
-                        plot_ui.text(Text::new(
-                            PlotPoint::new(*ts as f64, *st_change as f64),
-                            format!("State {st_change}"),
-                        ))
-                    }
-                    let (_, large_range) = Self::status_log_lines(log.entries());
-                    for lineplot in large_range {
+                    for lineplot in zero_to_one_range_status {
                         plot_ui.line(lineplot.width(*line_width));
                     }
-                }
-            });
+                });
+            }
+
+            if has_large_range_data {
+                large_range_plot.show(ui, |plot_ui| {
+                    for lineplot in large_range_pid {
+                        plot_ui.line(lineplot.width(*line_width));
+                    }
+                    if let Some(log) = status_log {
+                        for (ts, st_change) in log.timestamps_with_state_changes() {
+                            plot_ui.text(Text::new(
+                                PlotPoint::new(*ts as f64, (*st_change as u8) as f64),
+                                st_change.to_string(),
+                            ))
+                        }
+                        for lineplot in large_range_status {
+                            plot_ui.line(lineplot.width(*line_width));
+                        }
+                    }
+                });
+            }
         })
         .response
     }
