@@ -6,10 +6,26 @@ use crate::logs::{
 use egui::Response;
 use egui_plot::{Corner, Legend, Line, Plot, PlotPoints};
 
+#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+struct AxisLink {
+    link_x: bool,
+    link_cursor_x: bool,
+}
+
+impl Default for AxisLink {
+    fn default() -> Self {
+        Self {
+            link_x: true,
+            link_cursor_x: true,
+        }
+    }
+}
+
 #[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct LogPlot {
     config: Legend,
     line_width: f32,
+    axis_link: AxisLink,
 }
 
 impl LogPlot {
@@ -28,23 +44,27 @@ impl LogPlot {
         Line::new(points)
     }
 
-    fn pid_log_lines(pid_logs: &[PidLogEntry]) -> Vec<Line> {
-        vec![
-            Self::line_from_log_entry(pid_logs, |e| e.rpm as f64).name("RPM"),
+    fn pid_log_lines(pid_logs: &[PidLogEntry]) -> (Vec<Line>, Vec<Line>) {
+        let small_range = vec![
             Self::line_from_log_entry(pid_logs, |e| e.pid_err as f64).name("PID Error"),
             Self::line_from_log_entry(pid_logs, |e| e.servo_duty_cycle as f64)
                 .name("Servo Duty Cycle"),
-        ]
+        ];
+        let big_range = vec![Self::line_from_log_entry(pid_logs, |e| e.rpm as f64).name("RPM")];
+        (small_range, big_range)
     }
 
-    fn status_log_lines(status_log: &[StatusLogEntry]) -> Vec<Line> {
-        vec![
+    fn status_log_lines(status_log: &[StatusLogEntry]) -> (Vec<Line>, Vec<Line>) {
+        let small_range =
+            vec![Self::line_from_log_entry(status_log, |e| (e.fan_on as u8) as f64).name("Fan On")];
+
+        let big_range = vec![
             Self::line_from_log_entry(status_log, |e| e.engine_temp as f64).name("Engine Temp °C"),
-            Self::line_from_log_entry(status_log, |e| (e.fan_on as u8) as f64).name("Fan On"),
             Self::line_from_log_entry(status_log, |e| e.vbat.into()).name("Vbat"),
-            Self::line_from_log_entry(status_log, |e| e.setpoint.into()).name("Setpoint"),
             Self::line_from_log_entry(status_log, |e| e.motor_state.into()).name("Motor State"),
-        ]
+            Self::line_from_log_entry(status_log, |e| e.setpoint.into()).name("Setpoint"),
+        ];
+        (small_range, big_range)
     }
 
     pub fn ui(
@@ -53,7 +73,11 @@ impl LogPlot {
         pid_log: Option<&PidLog>,
         status_log: Option<&StatusLog>,
     ) -> Response {
-        let Self { config, line_width } = self;
+        let Self {
+            config,
+            line_width,
+            axis_link,
+        } = self;
 
         egui::Grid::new("settings").show(ui, |ui| {
             ui.label("Text style:");
@@ -86,22 +110,60 @@ impl LogPlot {
                     .speed(0.02)
                     .range(0.5..=20.0),
             );
+            ui.horizontal(|ui| {
+                ui.label("Linked axes:");
+                ui.checkbox(&mut self.axis_link.link_x, "X");
+                ui.label("Linked cursors:");
+                ui.checkbox(&mut self.axis_link.link_cursor_x, "X");
+            });
             ui.end_row();
         });
-        let legend_plot = Plot::new("plots").legend(config.clone());
-        legend_plot
-            .show(ui, |plot_ui| {
+        let link_group_id = ui.id().with("linked_plots");
+        ui.vertical(|ui| {
+            let plot_height = ui.available_height() / 2.0;
+
+            // Plot for values between 0 and 1
+            let small_range_plot = Plot::new("small_range_plot")
+                .legend(config.clone())
+                .height(plot_height)
+                .link_axis(link_group_id, self.axis_link.link_x, false)
+                .link_cursor(link_group_id, self.axis_link.link_cursor_x, false);
+            small_range_plot.show(ui, |plot_ui| {
                 if let Some(log) = pid_log {
-                    for lineplot in Self::pid_log_lines(log.entries()) {
+                    let (small_range, _) = Self::pid_log_lines(log.entries());
+                    for lineplot in small_range {
                         plot_ui.line(lineplot.width(*line_width));
                     }
                 }
                 if let Some(log) = status_log {
-                    for lineplot in Self::status_log_lines(log.entries()) {
+                    let (small_range, _) = Self::status_log_lines(log.entries());
+                    for lineplot in small_range {
                         plot_ui.line(lineplot.width(*line_width));
                     }
                 }
-            })
-            .response
+            });
+
+            // Plot for values outside 0-1 range
+            let large_range_plot = Plot::new("large_range_plot")
+                .legend(config.clone())
+                .height(plot_height)
+                .link_axis(link_group_id, self.axis_link.link_x, false)
+                .link_cursor(link_group_id, self.axis_link.link_cursor_x, false);
+            large_range_plot.show(ui, |plot_ui| {
+                if let Some(log) = pid_log {
+                    let (_, large_range) = Self::pid_log_lines(log.entries());
+                    for lineplot in large_range {
+                        plot_ui.line(lineplot.width(*line_width));
+                    }
+                }
+                if let Some(log) = status_log {
+                    let (_, large_range) = Self::status_log_lines(log.entries());
+                    for lineplot in large_range {
+                        plot_ui.line(lineplot.width(*line_width));
+                    }
+                }
+            });
+        })
+        .response
     }
 }
