@@ -3,6 +3,12 @@ use std::{fmt::Display, io, mem};
 pub mod pid;
 pub mod status;
 
+pub fn parse_unique_description(raw_uniq_desc: [u8; 128]) -> String {
+    String::from_utf8_lossy(&raw_uniq_desc)
+        .trim_end_matches(char::from(0))
+        .to_owned()
+}
+
 pub fn parse_to_vec<T: LogEntry>(bytes: &mut &[u8]) -> Vec<T> {
     let mut pos = 0;
     let mut v = Vec::new();

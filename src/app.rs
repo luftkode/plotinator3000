@@ -1,5 +1,10 @@
+use std::{fs::File, io::Read};
+
 use crate::{
-    logs::{parse_to_vec, pid::PidLogEntry, LogEntry, LogHeader},
+    logs::{
+        pid::{PidLog, PidLogHeader},
+        status::{StatusLog, StatusLogHeader},
+    },
     plot::LogPlot,
 };
 
@@ -9,8 +14,10 @@ use crate::{
 pub struct App {
     dropped_files: Vec<egui::DroppedFile>,
     picked_path: Option<String>,
-    pid_log_entries: Vec<PidLogEntry>,
+    pid_log: Option<PidLog>,
+    status_log: Option<StatusLog>,
     plot: LogPlot,
+    font_size: f32,
 }
 
 impl Default for App {
@@ -18,8 +25,10 @@ impl Default for App {
         Self {
             dropped_files: Vec::new(),
             picked_path: None,
-            pid_log_entries: Vec::new(),
+            pid_log: None,
+            status_log: None,
             plot: LogPlot::default(),
+            font_size: 16.0,
         }
     }
 }
@@ -62,11 +71,33 @@ impl eframe::App for App {
                         if ui.button("Quit").clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
+                        if ui.button("Reset").clicked() {
+                            *self = Self::default();
+                        }
                     });
                     ui.add_space(16.0);
                 }
 
                 egui::widgets::global_dark_light_mode_buttons(ui);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Font size:");
+                if ui
+                    .add(
+                        egui::DragValue::new(&mut self.font_size)
+                            .speed(0.1)
+                            .range(8.0..=32.0)
+                            .suffix("px"),
+                    )
+                    .changed()
+                {
+                    // Update the font size for all text styles
+                    let mut style = (*ctx.style()).clone();
+                    for (_text_style, font_id) in style.text_styles.iter_mut() {
+                        font_id.size = self.font_size;
+                    }
+                    ctx.set_style(style);
+                }
             });
         });
 
@@ -74,21 +105,6 @@ impl eframe::App for App {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Logviewer");
             ui.label("Drag-and-drop files onto the window!");
-
-            #[cfg(not(target_arch = "wasm32"))]
-            if ui.button("Open file…").clicked() {
-                if let Some(path) = rfd::FileDialog::new().pick_file() {
-                    self.picked_path = Some(path.display().to_string());
-                }
-            }
-
-            if let Some(picked_path) = &self.picked_path {
-                ui.horizontal(|ui| {
-                    ui.label("Picked file:");
-                    ui.monospace(picked_path);
-                });
-            }
-
             ui.separator();
 
             ui.add(egui::github_link_file!(
@@ -97,12 +113,8 @@ impl eframe::App for App {
             ));
 
             ui.separator();
-            let opt_pid_logs = if self.pid_log_entries.is_empty() {
-                None
-            } else {
-                Some(self.pid_log_entries.as_ref())
-            };
-            self.plot.ui(ui, opt_pid_logs);
+            self.plot
+                .ui(ui, self.pid_log.as_ref(), self.status_log.as_ref());
 
             ui.separator();
             if !self.dropped_files.is_empty() {
@@ -140,17 +152,47 @@ impl eframe::App for App {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
                 }
-                if self.pid_log_entries.is_empty() {
-                    // This doesn't work for web
-                    if let Some(logfile) = self.dropped_files.first() {
-                        let path = logfile.path.as_deref().unwrap();
-                        let contents = std::fs::read(path).unwrap();
-                        let mut pos = 0;
-                        let _header = LogHeader::from_buf(&mut contents.as_slice()).unwrap();
-                        pos += LogHeader::packed_footprint();
-                        let vec_of_entries = parse_to_vec::<PidLogEntry>(&mut &contents[pos..]);
-                        eprintln!("Entries: {}", vec_of_entries.len());
-                        self.pid_log_entries = vec_of_entries;
+                for df in &self.dropped_files {
+                    eprintln!("{:?}", df);
+                }
+                //  Attempt to serialize
+                if self.pid_log.is_none() {
+                    for df in &self.dropped_files {
+                        let mut first_200_bytes = [0u8; 200];
+                        if let Some(p) = &df.path {
+                            let mut f = File::open(p).unwrap();
+                            f.read_exact(&mut first_200_bytes).unwrap();
+                            let is_pid_header =
+                                PidLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
+                                    .unwrap();
+                            if is_pid_header {
+                                let contents = std::fs::read(p).unwrap();
+                                let deserialized_pid_log =
+                                    PidLog::from_buf(&mut contents.as_slice()).unwrap();
+                                self.pid_log = Some(deserialized_pid_log);
+                                break;
+                            }
+                        }
+                    }
+                }
+                // same for status log
+                if self.status_log.is_none() {
+                    for df in &self.dropped_files {
+                        let mut first_200_bytes = [0u8; 200];
+                        if let Some(p) = &df.path {
+                            let mut f = File::open(p).unwrap();
+                            f.read_exact(&mut first_200_bytes).unwrap();
+                            let is_status_header =
+                                StatusLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
+                                    .unwrap();
+                            if is_status_header {
+                                let contents = std::fs::read(p).unwrap();
+                                let deserialized_status_log =
+                                    StatusLog::from_buf(&mut contents.as_slice()).unwrap();
+                                self.status_log = Some(deserialized_status_log);
+                                break;
+                            }
+                        }
                     }
                 }
             });
