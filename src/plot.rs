@@ -4,19 +4,21 @@ use crate::logs::{
     LogEntry,
 };
 use egui::Response;
-use egui_plot::{Corner, HPlacement, Legend, Line, Plot, PlotPoints};
+use egui_plot::{Corner, HPlacement, Legend, Line, Plot, PlotPoints, VPlacement};
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
-struct AxisLink {
+struct AxisConfig {
     link_x: bool,
     link_cursor_x: bool,
+    show_axes: bool,
 }
 
-impl Default for AxisLink {
+impl Default for AxisConfig {
     fn default() -> Self {
         Self {
             link_x: true,
             link_cursor_x: true,
+            show_axes: true,
         }
     }
 }
@@ -25,7 +27,7 @@ impl Default for AxisLink {
 pub struct LogPlot {
     config: Legend,
     line_width: f32,
-    axis_link: AxisLink,
+    axis_config: AxisConfig,
 }
 
 impl LogPlot {
@@ -76,7 +78,7 @@ impl LogPlot {
         let Self {
             config,
             line_width,
-            axis_link,
+            axis_config: _,
         } = self;
 
         egui::Grid::new("settings").show(ui, |ui| {
@@ -109,10 +111,9 @@ impl LogPlot {
                     .range(0.5..=20.0),
             );
             ui.horizontal(|ui| {
-                ui.label("Linked axes:");
-                ui.checkbox(&mut self.axis_link.link_x, "X");
-                ui.label("Linked cursors:");
-                ui.checkbox(&mut self.axis_link.link_cursor_x, "X");
+                ui.checkbox(&mut self.axis_config.link_x, "Linked Axes");
+                ui.checkbox(&mut self.axis_config.link_cursor_x, "Linked Cursors");
+                ui.checkbox(&mut self.axis_config.show_axes, "Show Axes");
             });
             ui.end_row();
         });
@@ -123,17 +124,21 @@ impl LogPlot {
             let zero_to_one_range_plot = Plot::new("zero_to_one_range_plot")
                 .legend(config.clone())
                 .height(plot_height)
+                .show_axes(self.axis_config.show_axes)
+                .x_axis_position(VPlacement::Top)
                 .y_axis_position(HPlacement::Right)
-                .link_axis(link_group_id, self.axis_link.link_x, false)
-                .link_cursor(link_group_id, self.axis_link.link_cursor_x, false);
+                .link_axis(link_group_id, self.axis_config.link_x, false)
+                .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
             // Plot for values outside 0-1 range
             let large_range_plot = Plot::new("large_range_plot")
                 .legend(config.clone())
                 .height(plot_height)
+                .show_axes(self.axis_config.show_axes)
                 .y_axis_position(HPlacement::Right)
-                .link_axis(link_group_id, self.axis_link.link_x, false)
-                .link_cursor(link_group_id, self.axis_link.link_cursor_x, false);
+                .show_y(self.axis_config.show_axes)
+                .link_axis(link_group_id, self.axis_config.link_x, false)
+                .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
             zero_to_one_range_plot.show(ui, |plot_ui| {
                 if let Some(log) = pid_log {

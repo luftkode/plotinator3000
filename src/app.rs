@@ -103,10 +103,7 @@ impl eframe::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Logviewer");
             ui.label("Drag-and-drop files onto the window!");
-            ui.separator();
-
             ui.add(egui::github_link_file!(
                 "https://github.com/luftkode/logviewer-rs",
                 "Homepage"
