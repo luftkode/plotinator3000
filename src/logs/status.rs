@@ -7,6 +7,21 @@ use std::{io, mem};
 pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
+    timestamps_with_state_changes: Vec<(u32, u8)>, // for memoization
+}
+
+fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, u8)> {
+    let mut result = Vec::new();
+    let mut last_state = None;
+
+    for entry in entries.iter() {
+        // Check if the current state is different from the last recorded state
+        if last_state != Some(entry.motor_state) {
+            result.push((entry.timestamp_ms, entry.motor_state));
+            last_state = Some(entry.motor_state);
+        }
+    }
+    result
 }
 
 impl StatusLog {
@@ -15,15 +30,20 @@ impl StatusLog {
         let header = StatusLogHeader::from_buf(bytes)?;
         pos += StatusLogHeader::packed_footprint();
         let vec_of_entries = parse_to_vec::<StatusLogEntry>(&mut &bytes[pos..]);
-
+        let timestamps_with_state_changes = parse_timestamps_with_state_changes(&vec_of_entries);
         Ok(Self {
             header,
             entries: vec_of_entries,
+            timestamps_with_state_changes,
         })
     }
 
     pub fn entries(&self) -> &[StatusLogEntry] {
         &self.entries
+    }
+
+    pub fn timestamps_with_state_changes(&self) -> &[(u32, u8)] {
+        &self.timestamps_with_state_changes
     }
 }
 

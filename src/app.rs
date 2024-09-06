@@ -1,5 +1,7 @@
 use std::{fs::File, io::Read};
 
+use egui::Hyperlink;
+
 use crate::{
     logs::{
         pid::{PidLog, PidLogHeader},
@@ -61,26 +63,20 @@ impl eframe::App for App {
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-
             egui::menu::bar(ui, |ui| {
                 // NOTE: no File->Quit on web pages!
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
                     ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
                         if ui.button("Reset").clicked() {
                             *self = Self::default();
+                        }
+                        if ui.button("Quit").clicked() {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     });
                     ui.add_space(16.0);
                 }
-
-                egui::widgets::global_dark_light_mode_buttons(ui);
-            });
-            ui.horizontal(|ui| {
                 ui.label("Font size:");
                 if ui
                     .add(
@@ -98,18 +94,18 @@ impl eframe::App for App {
                     }
                     ctx.set_style(style);
                 }
+                egui::widgets::global_dark_light_mode_buttons(ui);
+                ui.add(Hyperlink::from_label_and_url(
+                    "Homepage",
+                    "https://github.com/luftkode/logviewer-rs",
+                ));
+                ui.label("Drag-and-drop files onto the window!");
             });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.label("Drag-and-drop files onto the window!");
-            ui.add(egui::github_link_file!(
-                "https://github.com/luftkode/logviewer-rs",
-                "Homepage"
-            ));
 
-            ui.separator();
             self.plot
                 .ui(ui, self.pid_log.as_ref(), self.status_log.as_ref());
 
@@ -151,43 +147,43 @@ impl eframe::App for App {
                     for df in &self.dropped_files {
                         log::debug!("{:?}", df);
                     }
-                }
-                //  Attempt to serialize
-                if self.pid_log.is_none() {
-                    for df in &self.dropped_files {
-                        let mut first_200_bytes = [0u8; 200];
-                        if let Some(p) = &df.path {
-                            let mut f = File::open(p).unwrap();
-                            f.read_exact(&mut first_200_bytes).unwrap();
-                            let is_pid_header =
-                                PidLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
-                                    .unwrap();
-                            if is_pid_header {
-                                let contents = std::fs::read(p).unwrap();
-                                let deserialized_pid_log =
-                                    PidLog::from_buf(&mut contents.as_slice()).unwrap();
-                                self.pid_log = Some(deserialized_pid_log);
-                                break;
+                    //  Attempt to serialize
+                    if self.pid_log.is_none() {
+                        for df in &self.dropped_files {
+                            let mut first_200_bytes = [0u8; 200];
+                            if let Some(p) = &df.path {
+                                let mut f = File::open(p).unwrap();
+                                f.read_exact(&mut first_200_bytes).unwrap();
+                                let is_pid_header =
+                                    PidLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
+                                        .unwrap();
+                                if is_pid_header {
+                                    let contents = std::fs::read(p).unwrap();
+                                    let deserialized_pid_log =
+                                        PidLog::from_buf(&mut contents.as_slice()).unwrap();
+                                    self.pid_log = Some(deserialized_pid_log);
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                // same for status log
-                if self.status_log.is_none() {
-                    for df in &self.dropped_files {
-                        let mut first_200_bytes = [0u8; 200];
-                        if let Some(p) = &df.path {
-                            let mut f = File::open(p).unwrap();
-                            f.read_exact(&mut first_200_bytes).unwrap();
-                            let is_status_header =
-                                StatusLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
-                                    .unwrap();
-                            if is_status_header {
-                                let contents = std::fs::read(p).unwrap();
-                                let deserialized_status_log =
-                                    StatusLog::from_buf(&mut contents.as_slice()).unwrap();
-                                self.status_log = Some(deserialized_status_log);
-                                break;
+                    // same for status log
+                    if self.status_log.is_none() {
+                        for df in &self.dropped_files {
+                            let mut first_200_bytes = [0u8; 200];
+                            if let Some(p) = &df.path {
+                                let mut f = File::open(p).unwrap();
+                                f.read_exact(&mut first_200_bytes).unwrap();
+                                let is_status_header =
+                                    StatusLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
+                                        .unwrap();
+                                if is_status_header {
+                                    let contents = std::fs::read(p).unwrap();
+                                    let deserialized_status_log =
+                                        StatusLog::from_buf(&mut contents.as_slice()).unwrap();
+                                    self.status_log = Some(deserialized_status_log);
+                                    break;
+                                }
                             }
                         }
                     }

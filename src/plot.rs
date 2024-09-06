@@ -1,10 +1,14 @@
+use std::time::Duration;
+
 use crate::logs::{
     pid::{PidLog, PidLogEntry},
     status::{StatusLog, StatusLogEntry},
     LogEntry,
 };
 use egui::Response;
-use egui_plot::{Corner, HPlacement, Legend, Line, Plot, PlotPoints, VPlacement};
+use egui_plot::{
+    Corner, HLine, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VLine, VPlacement,
+};
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 struct AxisConfig {
@@ -96,14 +100,13 @@ impl LogPlot {
                     ui.selectable_value(&mut config.position, position, format!("{position:?}"));
                 });
             });
-            ui.end_row();
-
             ui.label("Opacity:");
             ui.add(
                 egui::DragValue::new(&mut config.background_alpha)
                     .speed(0.02)
                     .range(0.0..=1.0),
             );
+            ui.end_row();
             ui.label("Line width");
             ui.add(
                 egui::DragValue::new(line_width)
@@ -121,12 +124,26 @@ impl LogPlot {
         ui.vertical(|ui| {
             let plot_height = ui.available_height() / 2.0;
 
+            // Function to format milliseconds into HH:MM.ms
+            let format_time = |x: f64| {
+                let duration = Duration::from_millis(x as u64);
+                let hours = duration.as_secs() / 3600;
+                let minutes = (duration.as_secs() % 3600) / 60;
+                let seconds = duration.as_secs() % 60;
+
+                format!("{:1}:{:02}:{:02}.{x:03}", hours, minutes, seconds)
+            };
+
             let zero_to_one_range_plot = Plot::new("zero_to_one_range_plot")
                 .legend(config.clone())
                 .height(plot_height)
                 .show_axes(self.axis_config.show_axes)
                 .x_axis_position(VPlacement::Top)
                 .y_axis_position(HPlacement::Right)
+                .include_y(0.0) // Force Y-axis to include 0%
+                .include_y(1.0) // Force Y-axis to include 100%
+                .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0))
+                .x_axis_formatter(move |x, _range| format_time(x.value))
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
@@ -136,11 +153,19 @@ impl LogPlot {
                 .height(plot_height)
                 .show_axes(self.axis_config.show_axes)
                 .y_axis_position(HPlacement::Right)
-                .show_y(self.axis_config.show_axes)
+                .x_axis_formatter(move |x, _range| format_time(x.value))
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
             zero_to_one_range_plot.show(ui, |plot_ui| {
+                if let Some(ref status_log) = status_log {
+                    for (ts, st_change) in status_log.timestamps_with_state_changes() {
+                        plot_ui.text(Text::new(
+                            PlotPoint::new(*ts as f64, *st_change as f64),
+                            format!("State {st_change}"),
+                        ))
+                    }
+                }
                 if let Some(log) = pid_log {
                     let (zero_to_one_range, _) = Self::pid_log_lines(log.entries());
                     for lineplot in zero_to_one_range {
@@ -163,6 +188,12 @@ impl LogPlot {
                     }
                 }
                 if let Some(log) = status_log {
+                    for (ts, st_change) in log.timestamps_with_state_changes() {
+                        plot_ui.text(Text::new(
+                            PlotPoint::new(*ts as f64, *st_change as f64),
+                            format!("State {st_change}"),
+                        ))
+                    }
                     let (_, large_range) = Self::status_log_lines(log.entries());
                     for lineplot in large_range {
                         plot_ui.line(lineplot.width(*line_width));
