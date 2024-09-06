@@ -60,7 +60,7 @@ impl PidLogHeader {
     }
 }
 
-impl LogEntry for PidLogHeader {
+impl PidLogHeader {
     fn from_buf(bytes: &mut &[u8]) -> io::Result<Self> {
         let mut unique_description = [0; 128];
         unique_description.clone_from_slice(&bytes[..128]);
@@ -115,6 +115,10 @@ impl LogEntry for PidLogEntry {
             + mem::size_of::<f32>() // rpm 
             + mem::size_of::<f32>() // pid err
             + mem::size_of::<f32>() // servo duty cycle
+    }
+
+    fn timestamp_ms(&self) -> u32 {
+        self.timestamp_ms
     }
 }
 

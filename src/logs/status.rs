@@ -57,7 +57,7 @@ impl StatusLogHeader {
     }
 }
 
-impl LogEntry for StatusLogHeader {
+impl StatusLogHeader {
     fn from_buf(bytes: &mut &[u8]) -> io::Result<Self> {
         let mut unique_description = [0; 128];
         unique_description.clone_from_slice(&bytes[..128]);
@@ -129,6 +129,10 @@ impl LogEntry for StatusLogEntry {
             + mem::size_of::<f32>() // vbat
             + mem::size_of::<f32>() // setpoint
             + mem::size_of::<u8>() // motor state
+    }
+
+    fn timestamp_ms(&self) -> u32 {
+        self.timestamp_ms
     }
 }
 
