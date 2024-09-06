@@ -8,6 +8,7 @@ use egui_plot::{Corner, Legend, Line, Plot, PlotPoints};
 #[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct LogPlot {
     config: Legend,
+    line_width: f32,
 }
 
 impl LogPlot {
@@ -121,7 +122,7 @@ impl LogPlot {
         pid_log: Option<&PidLog>,
         status_log: Option<&StatusLog>,
     ) -> Response {
-        let Self { config } = self;
+        let Self { config, line_width } = self;
 
         egui::Grid::new("settings").show(ui, |ui| {
             ui.label("Text style:");
@@ -131,6 +132,7 @@ impl LogPlot {
                     ui.selectable_value(&mut config.text_style, style.clone(), style.to_string());
                 }
             });
+
             ui.end_row();
 
             ui.label("Position:");
@@ -147,24 +149,60 @@ impl LogPlot {
                     .speed(0.02)
                     .range(0.0..=1.0),
             );
+            ui.label("Line width");
+            ui.add(
+                egui::DragValue::new(line_width)
+                    .speed(0.02)
+                    .range(0.5..=20.0),
+            );
             ui.end_row();
         });
-        let legend_plot = Plot::new("plots").legend(config.clone()).data_aspect(1.0);
+        let legend_plot = Plot::new("plots").legend(config.clone());
         legend_plot
             .show(ui, |plot_ui| {
                 if let Some(log) = pid_log {
-                    plot_ui.line(Self::pid_log_rpm(log.entries()).name("RPM"));
-                    plot_ui.line(Self::pid_log_pid_err(log.entries()).name("PID Error"));
                     plot_ui.line(
-                        Self::pid_log_servo_duty_cycle(log.entries()).name("Servo Duty Cycle"),
+                        Self::pid_log_rpm(log.entries())
+                            .name("RPM")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Self::pid_log_pid_err(log.entries())
+                            .name("PID Error")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Self::pid_log_servo_duty_cycle(log.entries())
+                            .name("Servo Duty Cycle")
+                            .width(*line_width),
                     );
                 }
                 if let Some(log) = status_log {
-                    plot_ui.line(Self::status_log_engine_temp(log.entries()).name("Engine temp"));
-                    plot_ui.line(Self::status_log_fan_on(log.entries()).name("Fan On"));
-                    plot_ui.line(Self::status_log_vbat(log.entries()).name("Vbat"));
-                    plot_ui.line(Self::status_log_setpoint(log.entries()).name("Setpoint"));
-                    plot_ui.line(Self::status_log_motorstate(log.entries()).name("Motor State"));
+                    plot_ui.line(
+                        Self::status_log_engine_temp(log.entries())
+                            .name("Engine temp")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Self::status_log_fan_on(log.entries())
+                            .name("Fan On")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Self::status_log_vbat(log.entries())
+                            .name("Vbat")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Self::status_log_setpoint(log.entries())
+                            .name("Setpoint")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Self::status_log_motorstate(log.entries())
+                            .name("Motor State")
+                            .width(*line_width),
+                    );
                 }
             })
             .response
