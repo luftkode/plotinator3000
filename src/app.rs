@@ -109,7 +109,7 @@ impl eframe::App for App {
 
             ui.add(egui::github_link_file!(
                 "https://github.com/luftkode/logviewer-rs",
-                "Source code."
+                "Homepage"
             ));
 
             ui.separator();
@@ -151,9 +151,9 @@ impl eframe::App for App {
             ctx.input(|i| {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
-                }
-                for df in &self.dropped_files {
-                    eprintln!("{:?}", df);
+                    for df in &self.dropped_files {
+                        log::debug!("{:?}", df);
+                    }
                 }
                 //  Attempt to serialize
                 if self.pid_log.is_none() {

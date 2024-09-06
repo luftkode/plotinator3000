@@ -1,6 +1,7 @@
 use crate::logs::{
     pid::{PidLog, PidLogEntry},
     status::{StatusLog, StatusLogEntry},
+    LogEntry,
 };
 use egui::Response;
 use egui_plot::{Corner, Legend, Line, Plot, PlotPoints};
@@ -12,108 +13,38 @@ pub struct LogPlot {
 }
 
 impl LogPlot {
-    fn pid_log_rpm(pid_logs: &[PidLogEntry]) -> Line {
+    fn line_from_log_entry<F, L: LogEntry>(pid_logs: &[L], y_extractor: F) -> Line
+    where
+        F: Fn(&L) -> f64,
+    {
         let points: PlotPoints = pid_logs
             .iter()
             .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = e.rpm as f64;
+                let x = e.timestamp_ms() as f64;
+                let y = y_extractor(e);
                 [x, y]
             })
             .collect();
-
         Line::new(points)
     }
 
-    fn pid_log_pid_err(pid_logs: &[PidLogEntry]) -> Line {
-        let points: PlotPoints = pid_logs
-            .iter()
-            .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = e.pid_err as f64;
-                [x, y]
-            })
-            .collect();
-
-        Line::new(points)
+    fn pid_log_lines(pid_logs: &[PidLogEntry]) -> Vec<Line> {
+        vec![
+            Self::line_from_log_entry(pid_logs, |e| e.rpm as f64).name("RPM"),
+            Self::line_from_log_entry(pid_logs, |e| e.pid_err as f64).name("PID Error"),
+            Self::line_from_log_entry(pid_logs, |e| e.servo_duty_cycle as f64)
+                .name("Servo Duty Cycle"),
+        ]
     }
 
-    fn pid_log_servo_duty_cycle(pid_logs: &[PidLogEntry]) -> Line {
-        let points: PlotPoints = pid_logs
-            .iter()
-            .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = e.servo_duty_cycle as f64;
-                [x, y]
-            })
-            .collect();
-
-        Line::new(points)
-    }
-
-    fn status_log_engine_temp(status_log: &[StatusLogEntry]) -> Line {
-        let points: PlotPoints = status_log
-            .iter()
-            .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = e.engine_temp as f64;
-                [x, y]
-            })
-            .collect();
-
-        Line::new(points)
-    }
-
-    fn status_log_fan_on(status_log: &[StatusLogEntry]) -> Line {
-        let points: PlotPoints = status_log
-            .iter()
-            .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = (e.fan_on as u8) as f64;
-                [x, y]
-            })
-            .collect();
-
-        Line::new(points)
-    }
-
-    fn status_log_vbat(status_log: &[StatusLogEntry]) -> Line {
-        let points: PlotPoints = status_log
-            .iter()
-            .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = e.vbat as f64;
-                [x, y]
-            })
-            .collect();
-
-        Line::new(points)
-    }
-
-    fn status_log_setpoint(status_log: &[StatusLogEntry]) -> Line {
-        let points: PlotPoints = status_log
-            .iter()
-            .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = e.setpoint as f64;
-                [x, y]
-            })
-            .collect();
-
-        Line::new(points)
-    }
-
-    fn status_log_motorstate(status_log: &[StatusLogEntry]) -> Line {
-        let points: PlotPoints = status_log
-            .iter()
-            .map(|e| {
-                let x = e.timestamp_ms as f64;
-                let y = e.motor_state as f64;
-                [x, y]
-            })
-            .collect();
-
-        Line::new(points)
+    fn status_log_lines(status_log: &[StatusLogEntry]) -> Vec<Line> {
+        vec![
+            Self::line_from_log_entry(status_log, |e| e.engine_temp as f64).name("Engine Temp °C"),
+            Self::line_from_log_entry(status_log, |e| (e.fan_on as u8) as f64).name("Fan On"),
+            Self::line_from_log_entry(status_log, |e| e.vbat.into()).name("Vbat"),
+            Self::line_from_log_entry(status_log, |e| e.setpoint.into()).name("Setpoint"),
+            Self::line_from_log_entry(status_log, |e| e.motor_state.into()).name("Motor State"),
+        ]
     }
 
     pub fn ui(
@@ -161,48 +92,14 @@ impl LogPlot {
         legend_plot
             .show(ui, |plot_ui| {
                 if let Some(log) = pid_log {
-                    plot_ui.line(
-                        Self::pid_log_rpm(log.entries())
-                            .name("RPM")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Self::pid_log_pid_err(log.entries())
-                            .name("PID Error")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Self::pid_log_servo_duty_cycle(log.entries())
-                            .name("Servo Duty Cycle")
-                            .width(*line_width),
-                    );
+                    for lineplot in Self::pid_log_lines(log.entries()) {
+                        plot_ui.line(lineplot.width(*line_width));
+                    }
                 }
                 if let Some(log) = status_log {
-                    plot_ui.line(
-                        Self::status_log_engine_temp(log.entries())
-                            .name("Engine temp")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Self::status_log_fan_on(log.entries())
-                            .name("Fan On")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Self::status_log_vbat(log.entries())
-                            .name("Vbat")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Self::status_log_setpoint(log.entries())
-                            .name("Setpoint")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Self::status_log_motorstate(log.entries())
-                            .name("Motor State")
-                            .width(*line_width),
-                    );
+                    for lineplot in Self::status_log_lines(log.entries()) {
+                        plot_ui.line(lineplot.width(*line_width));
+                    }
                 }
             })
             .response
