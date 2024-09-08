@@ -10,7 +10,11 @@ use crate::{
     plot::LogPlot,
 };
 use egui::{DroppedFile, Hyperlink, RichText, Stroke};
-use std::{fs, io::BufReader};
+use std::{
+    fs,
+    io::BufReader,
+    time::{Duration, SystemTime},
+};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -22,6 +26,10 @@ pub struct App {
     status_log: Option<StatusLog>,
     plot: LogPlot,
     font_size: f32,
+    is_playing: bool,               // Whether the plot is playing
+    start_time: Option<SystemTime>, // Store the time when the animation started
+    elapsed_time: Duration,
+    elapsed_last_plot_update: f64,
 }
 
 impl Default for App {
@@ -33,6 +41,10 @@ impl Default for App {
             status_log: None,
             plot: LogPlot::default(),
             font_size: 16.0,
+            is_playing: false,
+            start_time: None,
+            elapsed_time: Duration::from_secs(0),
+            elapsed_last_plot_update: 0.0,
         }
     }
 }
@@ -67,6 +79,7 @@ impl eframe::App for App {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 // NOTE: no File->Quit on web pages!
+
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
                     ui.menu_button("File", |ui| {
@@ -101,13 +114,68 @@ impl eframe::App for App {
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
                 ));
+                if ui
+                    .button(if self.is_playing { "Pause" } else { "Play" })
+                    .clicked()
+                {
+                    self.is_playing = !self.is_playing;
+                    if self.is_playing {
+                        self.start_time = Some(SystemTime::now());
+                    } else {
+                        // Pause: accumulate the time played so far
+                        if let Some(start) = self.start_time {
+                            // Add the time played since the last "start"
+                            self.elapsed_time += start.elapsed().unwrap_or_default();
+                            self.start_time = None; // Stop tracking the current time
+                        }
+                    }
+                }
+                if self.is_playing {
+                    if let Some(start) = self.start_time {
+                        // Calculate time passed since the current play session started
+                        let time_since_last_start = start.elapsed().unwrap_or_default();
+                        let total_elapsed_time = self.elapsed_time + time_since_last_start;
+
+                        let seconds_elapsed = total_elapsed_time.as_secs_f64();
+                        ui.label(format!("{:.2}s", seconds_elapsed));
+
+                        // Make sure the GUI is repainted while the timer is running
+                        ctx.request_repaint();
+                    }
+                } else {
+                    // Display the total time passed when paused
+                    let seconds_elapsed = self.elapsed_time.as_secs_f64();
+                    ui.label(format!("{:.2}s", seconds_elapsed));
+                }
             });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            self.plot
-                .ui(ui, self.pid_log.as_ref(), self.status_log.as_ref());
+            let play_timer_update_val = if self.is_playing {
+                self.start_time.and_then(|start_time| {
+                    let current_elapsed = start_time.elapsed().unwrap_or_default();
+                    let total_elapsed = self.elapsed_time + current_elapsed;
+                    let elapsed_since_last_update =
+                        total_elapsed.as_millis() as f64 - self.elapsed_last_plot_update;
+
+                    self.elapsed_last_plot_update = total_elapsed.as_millis() as f64;
+
+                    if elapsed_since_last_update > 0.0 {
+                        Some(elapsed_since_last_update)
+                    } else {
+                        None
+                    }
+                })
+            } else {
+                None
+            };
+            self.plot.ui(
+                ui,
+                self.pid_log.as_ref(),
+                self.status_log.as_ref(),
+                play_timer_update_val,
+            );
 
             ui.separator();
 

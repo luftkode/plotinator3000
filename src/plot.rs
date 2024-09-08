@@ -79,6 +79,7 @@ impl LogPlot {
         ui: &mut egui::Ui,
         pid_log: Option<&PidLog>,
         status_log: Option<&StatusLog>,
+        timer: Option<f64>,
     ) -> Response {
         let Self {
             config,
@@ -186,6 +187,12 @@ impl LogPlot {
                     }
                     for lineplot in zero_to_one_range_status {
                         plot_ui.line(lineplot.width(*line_width));
+                    }
+
+                    if let Some(t) = timer {
+                        let mut bounds = plot_ui.plot_bounds();
+                        bounds.translate_x(t);
+                        plot_ui.set_plot_bounds(bounds);
                     }
                 });
             }
