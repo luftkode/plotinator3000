@@ -1,46 +1,90 @@
 use std::{fmt::Display, io};
 
-pub mod pid;
-pub mod status;
+pub mod mbed_motor_control;
 
+/// A given log should implement this trait
+pub trait Log: Sized + Display {
+    type Entry: LogEntry;
+    /// Create a [Log] instance from a reader
+    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
+    /// Return a borrowed slice (list) of log entries
+    fn entries(&self) -> &[Self::Entry];
+}
+
+/// A given log entry should implement this trait
+pub trait LogEntry: Sized + Display {
+    /// Create a [LogEntry] instance from a reader
+    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
+    /// Return the [LogEntry] timestamp in milliseconds
+    fn timestamp_ms(&self) -> u32;
+}
+
+/// Parse the unique description string from a 128-byte array
+///
+/// A log header has a unique description, e.g. `MBED-MOTOR-CONTROL-STATUS-LOG`
+/// represented by a 128 byte array of chars.
+///
+/// ### Note
+///
+/// This might only apply for binary formats or even only for the MBED binary log formats.
+/// Hopefully that becomes apparent soon, and if it is, this function should be pushed down
+/// to the `mbed_motor_control` module.
 pub fn parse_unique_description(raw_uniq_desc: [u8; 128]) -> String {
     String::from_utf8_lossy(&raw_uniq_desc)
         .trim_end_matches(char::from(0))
         .to_owned()
 }
 
-pub fn parse_to_vec<T: LogEntry>(bytes: &mut &[u8]) -> Vec<T> {
-    let mut pos = 0;
+/// Take a reader and parse [LogEntry]s from it until it returns an error,
+/// then return a vector of all [LogEntry]s.
+pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
     let mut v = Vec::new();
-    while pos < bytes.len() {
-        match T::from_buf(&mut &bytes[pos..]) {
-            Ok(e) => v.push(e),
-            Err(_) => {
-                eprintln!("End of buffer at {pos}");
-                break;
-            }
-        }
-        pos += T::packed_footprint();
+    while let Ok(e) = T::from_reader(reader) {
+        v.push(e);
     }
     v
 }
 
-pub fn parse_and_display<T: LogEntry>(bytes: &mut &[u8]) {
-    let mut pos = 0;
-    while pos < bytes.len() {
-        match T::from_buf(&mut &bytes[pos..]) {
-            Ok(e) => println!("{e}"),
-            Err(_) => {
-                eprintln!("End of buffer at {pos}");
-                break;
-            }
+/// Parse log entries and display them, optionally only display up to `limit` entries
+///
+/// This is a good way to verify by hand that your data is parsed as expected
+///
+/// Example
+/// ```
+/// use std::fs::File;
+/// use std::io::{self, BufReader, ErrorKind};
+/// use logviewer_rs::logs::{mbed_motor_control::pid::{PidLogHeader, PidLogEntry}, parse_and_display_log_entries};
+///
+/// fn main() -> std::io::Result<()> {
+///     // Open the log file
+///     let file = File::open("test_data/pid_20240906_081235_00.bin")?;
+///     let mut reader = BufReader::new(file);
+///     
+///     // First, read the header
+///     let header = PidLogHeader::from_reader(&mut reader)?;
+///     println!("Log Header: {:?}", header);
+///     
+///     if !header.is_valid_header() {
+///         return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid Header"));
+///     }
+///     
+///     // Now parse and display the log entries
+///     println!("Log Entries:");
+///     parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
+///     
+///     Ok(())
+/// }
+/// ```
+pub fn parse_and_display_log_entries<T: LogEntry, R: io::Read>(
+    reader: &mut R,
+    limit: Option<usize>,
+) {
+    let mut entry_count = 0;
+    while let Ok(e) = T::from_reader(reader) {
+        entry_count += 1;
+        println!("{e}");
+        if limit.is_some_and(|l| l == entry_count) {
+            break;
         }
-        pos += T::packed_footprint();
     }
-}
-
-pub trait LogEntry: Sized + Display {
-    fn from_buf(bytes: &mut &[u8]) -> io::Result<Self>;
-    fn packed_footprint() -> usize;
-    fn timestamp_ms(&self) -> u32;
 }

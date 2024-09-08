@@ -1,9 +1,11 @@
 use std::time::Duration;
 
 use crate::logs::{
-    pid::{PidLog, PidLogEntry},
-    status::{StatusLog, StatusLogEntry},
-    LogEntry,
+    mbed_motor_control::{
+        pid::{PidLog, PidLogEntry},
+        status::{StatusLog, StatusLogEntry},
+    },
+    Log, LogEntry,
 };
 use egui::Response;
 use egui_plot::{Corner, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement};

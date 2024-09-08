@@ -1,11 +1,17 @@
-use std::{fs::File, io::Read};
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+};
 
 use egui::{DroppedFile, Hyperlink};
 
 use crate::{
     logs::{
-        pid::{PidLog, PidLogHeader},
-        status::{StatusLog, StatusLogHeader},
+        mbed_motor_control::{
+            pid::{PidLog, PidLogHeader},
+            status::{StatusLog, StatusLogHeader},
+        },
+        Log,
     },
     plot::LogPlot,
 };
@@ -157,10 +163,10 @@ impl eframe::App for App {
                                     PidLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
                                         .unwrap();
                                 if is_pid_header {
-                                    let contents = std::fs::read(p).unwrap();
-                                    let deserialized_pid_log =
-                                        PidLog::from_buf(&mut contents.as_slice()).unwrap();
-                                    self.pid_log = Some(deserialized_pid_log);
+                                    let f = File::open(p).unwrap();
+                                    let mut buf_reader = BufReader::new(f);
+                                    let pid_log = PidLog::from_reader(&mut buf_reader).unwrap();
+                                    self.pid_log = Some(pid_log);
                                     break;
                                 }
                             }
@@ -177,10 +183,11 @@ impl eframe::App for App {
                                     StatusLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
                                         .unwrap();
                                 if is_status_header {
-                                    let contents = std::fs::read(p).unwrap();
-                                    let deserialized_status_log =
-                                        StatusLog::from_buf(&mut contents.as_slice()).unwrap();
-                                    self.status_log = Some(deserialized_status_log);
+                                    let f = File::open(p).unwrap();
+                                    let mut buf_reader = BufReader::new(f);
+                                    let status_log =
+                                        StatusLog::from_reader(&mut buf_reader).unwrap();
+                                    self.status_log = Some(status_log);
                                     break;
                                 }
                             }
