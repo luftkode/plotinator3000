@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read};
 
-use egui::Hyperlink;
+use egui::{DroppedFile, Hyperlink};
 
 use crate::{
     logs::{
@@ -14,7 +14,7 @@ use crate::{
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
-    dropped_files: Vec<egui::DroppedFile>,
+    dropped_files: Vec<DroppedFile>,
     picked_path: Option<String>,
     pid_log: Option<PidLog>,
     status_log: Option<StatusLog>,
@@ -105,7 +105,6 @@ impl eframe::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-
             self.plot
                 .ui(ui, self.pid_log.as_ref(), self.status_log.as_ref());
 
