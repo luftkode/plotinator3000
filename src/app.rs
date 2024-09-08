@@ -1,7 +1,3 @@
-use std::{fs, io::BufReader, sync::Arc};
-
-use egui::{DroppedFile, Hyperlink};
-
 use crate::{
     logs::{
         mbed_motor_control::{
@@ -13,6 +9,8 @@ use crate::{
     },
     plot::LogPlot,
 };
+use egui::{DroppedFile, Hyperlink};
+use std::{fs, io::BufReader};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -52,6 +50,46 @@ impl App {
         }
 
         Default::default()
+    }
+
+    fn parse_dropped_files(&mut self) {
+        // The `to_vec` copies but is needed here to prevent a mutable borrow of self in the loop
+        #[allow(clippy::unnecessary_to_owned)]
+        for file in self.dropped_files.to_vec() {
+            self.parse_file(&file);
+        }
+    }
+
+    fn parse_file(&mut self, file: &DroppedFile) {
+        if let Some(content) = file.bytes.as_ref().map(|b| b.as_ref()) {
+            self.parse_content(content);
+        } else if let Some(path) = &file.path {
+            self.parse_path(path);
+        }
+    }
+
+    fn parse_content(&mut self, mut content: &[u8]) {
+        if self.pid_log.is_none() && PidLogHeader::is_buf_header(content).unwrap_or(false) {
+            self.pid_log = PidLog::from_reader(&mut content).ok();
+        } else if self.status_log.is_none()
+            && StatusLogHeader::is_buf_header(content).unwrap_or(false)
+        {
+            self.status_log = StatusLog::from_reader(&mut content).ok();
+        }
+    }
+
+    fn parse_path(&mut self, path: &std::path::Path) {
+        if self.pid_log.is_none() && PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
+            self.pid_log = fs::File::open(path)
+                .ok()
+                .and_then(|file| PidLog::from_reader(&mut BufReader::new(file)).ok());
+        } else if self.status_log.is_none()
+            && StatusLogHeader::file_starts_with_header(path).unwrap_or(false)
+        {
+            self.status_log = fs::File::open(path)
+                .ok()
+                .and_then(|file| StatusLog::from_reader(&mut BufReader::new(file)).ok());
+        }
     }
 }
 
@@ -116,55 +154,8 @@ impl eframe::App for App {
             if !self.dropped_files.is_empty() {
                 ui.group(|ui| {
                     ui.label("Dropped files:");
-
                     for file in &self.dropped_files {
-                        let mut info = if let Some(path) = &file.path {
-                            path.display().to_string()
-                        } else if !file.name.is_empty() {
-                            file.name.clone()
-                        } else {
-                            "???".to_owned()
-                        };
-
-                        let mut additional_info = vec![];
-                        if !file.mime.is_empty() {
-                            additional_info.push(format!("type: {}", file.mime));
-                        }
-                        if let Some(bytes) = &file.bytes {
-                            additional_info.push(format!("{} bytes", bytes.len()));
-                        }
-                        if !additional_info.is_empty() {
-                            info += &format!(" ({})", additional_info.join(", "));
-                        }
-
-                        // Parse DragNDrop files on web version
-                        for df in &self.dropped_files {
-                            if let Some(ref content) = df.bytes {
-                                let content: Arc<[u8]> = Arc::clone(content);
-                                if self.pid_log.is_none() {
-                                    let is_pid_header =
-                                        PidLogHeader::is_buf_header(content.as_ref()).unwrap();
-                                    if is_pid_header {
-                                        let pid_log =
-                                            PidLog::from_reader(&mut content.as_ref()).unwrap();
-                                        self.pid_log = Some(pid_log);
-                                        continue;
-                                    }
-                                }
-                                if self.status_log.is_none() {
-                                    let is_status_header =
-                                        StatusLogHeader::is_buf_header(content.as_ref()).unwrap();
-                                    if is_status_header {
-                                        let status_log =
-                                            StatusLog::from_reader(&mut content.as_ref()).unwrap();
-                                        self.status_log = Some(status_log);
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-
-                        ui.label(info);
+                        ui.label(file_info(file));
                     }
                 });
             }
@@ -174,37 +165,7 @@ impl eframe::App for App {
             ctx.input(|i| {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
-
-                    // Parse DragNDrop files on native version
-                    for df in &self.dropped_files {
-                        if let Some(ref path) = df.path {
-                            log::debug!("Path: {path:?}");
-                            if self.pid_log.is_none() {
-                                let starts_with_pid_header =
-                                    PidLogHeader::file_starts_with_header(path).unwrap();
-                                log::debug!("starts_with_pid_header: {starts_with_pid_header}");
-                                if starts_with_pid_header {
-                                    let file = fs::File::open(path).unwrap();
-                                    let mut bufreader = BufReader::new(file);
-                                    let pid_log = PidLog::from_reader(&mut bufreader).unwrap();
-                                    self.pid_log = Some(pid_log);
-                                    continue;
-                                }
-                            }
-                            if self.status_log.is_none() {
-                                let is_status_header =
-                                    StatusLogHeader::file_starts_with_header(path).unwrap();
-                                if is_status_header {
-                                    let file = fs::File::open(path).unwrap();
-                                    let mut bufreader = BufReader::new(file);
-                                    let status_log =
-                                        StatusLog::from_reader(&mut bufreader).unwrap();
-                                    self.status_log = Some(status_log);
-                                    continue;
-                                }
-                            }
-                        }
-                    }
+                    self.parse_dropped_files();
                 }
             });
 
@@ -248,4 +209,23 @@ fn preview_files_being_dropped(ctx: &egui::Context) {
             Color32::WHITE,
         );
     }
+}
+
+fn file_info(file: &DroppedFile) -> String {
+    let path = file
+        .path
+        .as_ref()
+        .map(|p| p.display().to_string())
+        .or_else(|| (!file.name.is_empty()).then(|| file.name.clone()))
+        .unwrap_or_else(|| "???".to_owned());
+
+    let mut info = vec![path];
+    if !file.mime.is_empty() {
+        info.push(format!("type: {}", file.mime));
+    }
+    if let Some(bytes) = &file.bytes {
+        info.push(format!("{} bytes", bytes.len()));
+    }
+
+    info.join(" ")
 }
