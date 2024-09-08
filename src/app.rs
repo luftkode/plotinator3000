@@ -1,7 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-};
+use std::{fs, io::BufReader, sync::Arc};
 
 use egui::{DroppedFile, Hyperlink};
 
@@ -10,6 +7,7 @@ use crate::{
         mbed_motor_control::{
             pid::{PidLog, PidLogHeader},
             status::{StatusLog, StatusLogHeader},
+            MbedMotorControlLogHeader,
         },
         Log,
     },
@@ -74,14 +72,14 @@ impl eframe::App for App {
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
                     ui.menu_button("File", |ui| {
-                        if ui.button("Reset").clicked() {
-                            *self = Self::default();
-                        }
                         if ui.button("Quit").clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     });
                     ui.add_space(16.0);
+                }
+                if ui.button("Reset").clicked() {
+                    *self = Self::default();
                 }
                 ui.label("Font size:");
                 if ui
@@ -139,6 +137,33 @@ impl eframe::App for App {
                             info += &format!(" ({})", additional_info.join(", "));
                         }
 
+                        // Parse DragNDrop files on web version
+                        for df in &self.dropped_files {
+                            if let Some(ref content) = df.bytes {
+                                let content: Arc<[u8]> = Arc::clone(content);
+                                if self.pid_log.is_none() {
+                                    let is_pid_header =
+                                        PidLogHeader::is_buf_header(content.as_ref()).unwrap();
+                                    if is_pid_header {
+                                        let pid_log =
+                                            PidLog::from_reader(&mut content.as_ref()).unwrap();
+                                        self.pid_log = Some(pid_log);
+                                        continue;
+                                    }
+                                }
+                                if self.status_log.is_none() {
+                                    let is_status_header =
+                                        StatusLogHeader::is_buf_header(content.as_ref()).unwrap();
+                                    if is_status_header {
+                                        let status_log =
+                                            StatusLog::from_reader(&mut content.as_ref()).unwrap();
+                                        self.status_log = Some(status_log);
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
                         ui.label(info);
                     }
                 });
@@ -149,46 +174,33 @@ impl eframe::App for App {
             ctx.input(|i| {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
+
+                    // Parse DragNDrop files on native version
                     for df in &self.dropped_files {
-                        log::debug!("{:?}", df);
-                    }
-                    //  Attempt to serialize
-                    if self.pid_log.is_none() {
-                        for df in &self.dropped_files {
-                            let mut first_200_bytes = [0u8; 200];
-                            if let Some(p) = &df.path {
-                                let mut f = File::open(p).unwrap();
-                                f.read_exact(&mut first_200_bytes).unwrap();
-                                let is_pid_header =
-                                    PidLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
-                                        .unwrap();
-                                if is_pid_header {
-                                    let f = File::open(p).unwrap();
-                                    let mut buf_reader = BufReader::new(f);
-                                    let pid_log = PidLog::from_reader(&mut buf_reader).unwrap();
+                        if let Some(ref path) = df.path {
+                            log::debug!("Path: {path:?}");
+                            if self.pid_log.is_none() {
+                                let starts_with_pid_header =
+                                    PidLogHeader::file_starts_with_header(path).unwrap();
+                                log::debug!("starts_with_pid_header: {starts_with_pid_header}");
+                                if starts_with_pid_header {
+                                    let file = fs::File::open(path).unwrap();
+                                    let mut bufreader = BufReader::new(file);
+                                    let pid_log = PidLog::from_reader(&mut bufreader).unwrap();
                                     self.pid_log = Some(pid_log);
-                                    break;
+                                    continue;
                                 }
                             }
-                        }
-                    }
-                    // same for status log
-                    if self.status_log.is_none() {
-                        for df in &self.dropped_files {
-                            let mut first_200_bytes = [0u8; 200];
-                            if let Some(p) = &df.path {
-                                let mut f = File::open(p).unwrap();
-                                f.read_exact(&mut first_200_bytes).unwrap();
+                            if self.status_log.is_none() {
                                 let is_status_header =
-                                    StatusLogHeader::is_buf_header(&mut first_200_bytes.as_slice())
-                                        .unwrap();
+                                    StatusLogHeader::file_starts_with_header(path).unwrap();
                                 if is_status_header {
-                                    let f = File::open(p).unwrap();
-                                    let mut buf_reader = BufReader::new(f);
+                                    let file = fs::File::open(path).unwrap();
+                                    let mut bufreader = BufReader::new(file);
                                     let status_log =
-                                        StatusLog::from_reader(&mut buf_reader).unwrap();
+                                        StatusLog::from_reader(&mut bufreader).unwrap();
                                     self.status_log = Some(status_log);
-                                    break;
+                                    continue;
                                 }
                             }
                         }
