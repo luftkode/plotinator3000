@@ -1,10 +1,11 @@
-use crate::logs::{parse_to_vec, parse_unique_description, Log, LogEntry};
+use crate::logs::{parse_to_vec, Log, LogEntry};
 use crate::util::parse_timestamp;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde_big_array::BigArray;
 use std::io;
-use std::io::Read;
 use strum_macros::{Display, FromRepr};
+
+use super::MbedMotorControlLogHeader;
 
 #[allow(non_camel_case_types)]
 #[derive(
@@ -88,26 +89,22 @@ pub struct StatusLogHeader {
     version: u16,
 }
 
-impl StatusLogHeader {
-    pub const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG";
-    fn unique_description(&self) -> String {
-        parse_unique_description(self.unique_description)
+impl MbedMotorControlLogHeader for StatusLogHeader {
+    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG";
+
+    fn unique_description_bytes(&self) -> &[u8; 128] {
+        &self.unique_description
     }
 
-    pub fn is_buf_header(bytes: &mut &[u8]) -> io::Result<bool> {
-        let deserialized = Self::from_reader(bytes)?;
-        let is_header = deserialized.unique_description() == Self::UNIQUE_DESCRIPTION;
-        Ok(is_header)
+    fn version(&self) -> u16 {
+        self.version
     }
 
-    pub fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
-        let mut unique_description = [0u8; 128];
-        reader.read_exact(&mut unique_description)?;
-        let version = reader.read_u16::<LittleEndian>()?;
-        Ok(Self {
+    fn new(unique_description: [u8; 128], version: u16) -> Self {
+        StatusLogHeader {
             unique_description,
             version,
-        })
+        }
     }
 }
 
