@@ -9,7 +9,7 @@ use crate::{
     },
     plot::LogPlot,
 };
-use egui::{DroppedFile, Hyperlink};
+use egui::{DroppedFile, Hyperlink, RichText, Stroke};
 use std::{fs, io::BufReader};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -50,46 +50,6 @@ impl App {
         }
 
         Default::default()
-    }
-
-    fn parse_dropped_files(&mut self) {
-        // The `to_vec` copies but is needed here to prevent a mutable borrow of self in the loop
-        #[allow(clippy::unnecessary_to_owned)]
-        for file in self.dropped_files.to_vec() {
-            self.parse_file(&file);
-        }
-    }
-
-    fn parse_file(&mut self, file: &DroppedFile) {
-        if let Some(content) = file.bytes.as_ref().map(|b| b.as_ref()) {
-            self.parse_content(content);
-        } else if let Some(path) = &file.path {
-            self.parse_path(path);
-        }
-    }
-
-    fn parse_content(&mut self, mut content: &[u8]) {
-        if self.pid_log.is_none() && PidLogHeader::is_buf_header(content).unwrap_or(false) {
-            self.pid_log = PidLog::from_reader(&mut content).ok();
-        } else if self.status_log.is_none()
-            && StatusLogHeader::is_buf_header(content).unwrap_or(false)
-        {
-            self.status_log = StatusLog::from_reader(&mut content).ok();
-        }
-    }
-
-    fn parse_path(&mut self, path: &std::path::Path) {
-        if self.pid_log.is_none() && PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
-            self.pid_log = fs::File::open(path)
-                .ok()
-                .and_then(|file| PidLog::from_reader(&mut BufReader::new(file)).ok());
-        } else if self.status_log.is_none()
-            && StatusLogHeader::file_starts_with_header(path).unwrap_or(false)
-        {
-            self.status_log = fs::File::open(path)
-                .ok()
-                .and_then(|file| StatusLog::from_reader(&mut BufReader::new(file)).ok());
-        }
     }
 }
 
@@ -141,7 +101,6 @@ impl eframe::App for App {
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
                 ));
-                ui.label("Drag-and-drop files onto the window!");
             });
         });
 
@@ -151,7 +110,11 @@ impl eframe::App for App {
                 .ui(ui, self.pid_log.as_ref(), self.status_log.as_ref());
 
             ui.separator();
-            if !self.dropped_files.is_empty() {
+
+            if self.dropped_files.is_empty() {
+                // Display the message when no files have been dropped and no logs are loaded
+                self.draw_empty_state(ui);
+            } else {
                 ui.group(|ui| {
                     ui.label("Dropped files:");
                     for file in &self.dropped_files {
@@ -172,6 +135,98 @@ impl eframe::App for App {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 egui::warn_if_debug_build(ui);
             });
+        });
+    }
+}
+
+// Utility functions (not the primary framework functions such as `update` and `save`)
+impl App {
+    fn parse_dropped_files(&mut self) {
+        // The `to_vec` copies but is needed here to prevent a mutable borrow of self in the loop
+        #[allow(clippy::unnecessary_to_owned)]
+        for file in self.dropped_files.to_vec() {
+            self.parse_file(&file);
+        }
+    }
+
+    fn parse_file(&mut self, file: &DroppedFile) {
+        if let Some(content) = file.bytes.as_ref().map(|b| b.as_ref()) {
+            // This is how content is made accesible via drag-n-drop in a browser
+            self.parse_content(content);
+        } else if let Some(path) = &file.path {
+            // This is how content is accesible via drag-n-drop when the app is running natively
+            self.parse_path(path);
+        }
+    }
+
+    fn parse_content(&mut self, mut content: &[u8]) {
+        if self.pid_log.is_none() && PidLogHeader::is_buf_header(content).unwrap_or(false) {
+            self.pid_log = PidLog::from_reader(&mut content).ok();
+        } else if self.status_log.is_none()
+            && StatusLogHeader::is_buf_header(content).unwrap_or(false)
+        {
+            self.status_log = StatusLog::from_reader(&mut content).ok();
+        }
+    }
+
+    fn parse_path(&mut self, path: &std::path::Path) {
+        if self.pid_log.is_none() && PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
+            self.pid_log = fs::File::open(path)
+                .ok()
+                .and_then(|file| PidLog::from_reader(&mut BufReader::new(file)).ok());
+        } else if self.status_log.is_none()
+            && StatusLogHeader::file_starts_with_header(path).unwrap_or(false)
+        {
+            self.status_log = fs::File::open(path)
+                .ok()
+                .and_then(|file| StatusLog::from_reader(&mut BufReader::new(file)).ok());
+        }
+    }
+
+    fn draw_empty_state(&self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.add_space(100.0);
+            ui.heading("Drag and drop logfiles onto this window");
+            ui.add_space(40.0);
+
+            let table_width = ui.available_width() * 0.8;
+            egui::Frame::none()
+                .fill(ui.style().visuals.extreme_bg_color)
+                .stroke(Stroke::new(1.0, ui.style().visuals.widgets.active.bg_fill))
+                .inner_margin(10.0)
+                .outer_margin(0.0)
+                .show(ui, |ui| {
+                    ui.set_width(table_width);
+                    egui::Grid::new("supported_formats_grid")
+                        .num_columns(2)
+                        .spacing([40.0, 10.0])
+                        .striped(true)
+                        .show(ui, |ui| {
+                            ui.colored_label(
+                                ui.style().visuals.strong_text_color(),
+                                "Supported Formats",
+                            );
+                            ui.colored_label(
+                                ui.style().visuals.strong_text_color(),
+                                "Description",
+                            );
+                            ui.end_row();
+
+                            ui.label(RichText::new("Mbed Motor Control").strong());
+                            ui.label("Logs from Mbed-based motor controller");
+                            ui.end_row();
+
+                            ui.label("• PID Logs");
+                            ui.label("Contains PID controller data");
+                            ui.end_row();
+
+                            ui.label("• Status Logs");
+                            ui.label(
+                                "General status information such as engine temperature, and controller state machine information",
+                            );
+                            ui.end_row();
+                        });
+                });
         });
     }
 }
