@@ -125,6 +125,12 @@ pub struct StatusLogEntry {
     pub motor_state: MotorState,
 }
 
+impl StatusLogEntry {
+    pub fn timestamp_ms(&self) -> u32 {
+        self.timestamp_ms
+    }
+}
+
 impl std::fmt::Display for StatusLogEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -166,10 +172,6 @@ impl LogEntry for StatusLogEntry {
             setpoint,
             motor_state,
         })
-    }
-
-    fn timestamp_ms(&self) -> u32 {
-        self.timestamp_ms
     }
 }
 

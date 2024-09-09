@@ -81,6 +81,12 @@ pub struct PidLogEntry {
     pub servo_duty_cycle: f32,
 }
 
+impl PidLogEntry {
+    pub fn timestamp_ms(&self) -> u32 {
+        self.timestamp_ms
+    }
+}
+
 impl LogEntry for PidLogEntry {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let timestamp_ms = reader.read_u32::<LittleEndian>()?;
@@ -96,9 +102,6 @@ impl LogEntry for PidLogEntry {
             pid_err,
             servo_duty_cycle,
         })
-    }
-    fn timestamp_ms(&self) -> u32 {
-        self.timestamp_ms
     }
 }
 

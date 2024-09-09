@@ -16,8 +16,6 @@ pub trait Log: Sized + Display {
 pub trait LogEntry: Sized + Display {
     /// Create a [LogEntry] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
-    /// Return the [LogEntry] timestamp in milliseconds
-    fn timestamp_ms(&self) -> u32;
 }
 
 /// Parse the unique description string from a 128-byte array
