@@ -12,7 +12,7 @@ use crate::{
     },
 };
 use chrono::{DateTime, Timelike};
-use egui::Response;
+use egui::{Color32, Response, RichText};
 use egui_plot::{
     AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement,
 };
@@ -139,7 +139,6 @@ impl LogPlot {
         pid_log: Option<&PidLog>,
         status_log: Option<&StatusLog>,
         generator_log: Option<&GeneratorLog>,
-        playback_button_event: Option<PlayBackButtonEvent>,
     ) -> Response {
         let Self {
             config,
@@ -148,27 +147,49 @@ impl LogPlot {
             play_state,
         } = self;
 
-        if let Some(e) = playback_button_event {
-            play_state.handle_playback_button_press(e);
-        };
-        let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
-        let timer = play_state.time_since_update();
+        let mut playback_button_event = None;
 
         egui::Grid::new("settings").show(ui, |ui| {
-            ui.end_row();
             ui.label("Line width");
             ui.add(
                 egui::DragValue::new(line_width)
                     .speed(0.02)
                     .range(0.5..=20.0),
             );
-            ui.horizontal(|ui| {
+            ui.horizontal_top(|ui| {
                 ui.checkbox(&mut self.axis_config.link_x, "Linked Axes");
                 ui.checkbox(&mut self.axis_config.link_cursor_x, "Linked Cursors");
                 ui.checkbox(&mut self.axis_config.show_axes, "Show Axes");
             });
+
+            ui.horizontal_centered(|ui| {
+                ui.label("| ");
+                let playpause_text = if play_state.is_playing() {
+                    RichText::new("⏸ ").color(Color32::YELLOW)
+                } else {
+                    RichText::new("▶  ").color(Color32::GREEN)
+                };
+                if ui.button(playpause_text).clicked() {
+                    playback_button_event = Some(PlayBackButtonEvent::PlayPause);
+                }
+
+                // Reset button
+                let reset_text = RichText::new("🔄").color(Color32::LIGHT_GRAY);
+                if ui.button(reset_text).clicked() {
+                    playback_button_event = Some(PlayBackButtonEvent::Reset);
+                }
+                ui.label(RichText::new(play_state.formatted_time()));
+                ui.label(" |");
+            });
+
             ui.end_row();
         });
+        if let Some(e) = playback_button_event {
+            play_state.handle_playback_button_press(e);
+        };
+        let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
+        let timer = play_state.time_since_update();
+
         let link_group_id = ui.id().with("linked_plots");
         ui.vertical(|ui| {
             // Determining plot count really needs a refactor

@@ -111,13 +111,7 @@ impl eframe::App for App {
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
                 ));
-                if ui.button("Play/Pause").clicked() {
-                    self.playback_event = Some(PlayBackButtonEvent::PlayPause)
-                }
-                if ui.button("Reset playback").clicked() {
-                    self.playback_event = Some(PlayBackButtonEvent::Reset);
-                }
-                ui.label(self.plot.formatted_playback_time());
+
                 if self.plot.is_playing() {
                     ctx.request_repaint();
                 }
@@ -144,7 +138,6 @@ impl eframe::App for App {
                 self.logs.mbed_pid_log(),
                 self.logs.mbed_status_log(),
                 self.logs.generator_log(),
-                self.playback_event.take(),
             );
 
             if self.dropped_files.is_empty() {
