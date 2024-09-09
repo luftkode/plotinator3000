@@ -271,7 +271,7 @@ impl LogPlot {
 
                     if let Some(t) = timer {
                         let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t);
+                        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
                         plot_ui.set_plot_bounds(bounds);
                     }
                     if is_reset_pressed {
@@ -300,7 +300,7 @@ impl LogPlot {
                     }
                     if let Some(t) = timer {
                         let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t);
+                        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
                         plot_ui.set_plot_bounds(bounds);
                     }
                     if is_reset_pressed {
@@ -393,7 +393,7 @@ impl LogPlot {
                     plot_ui.line(gen_log.vout_plot().width(*line_width));
                     if let Some(t) = timer {
                         let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t / 1000.0); // Divide by 1000 because this plot is in seconds but timer is in ms
+                        bounds.translate_x(t); // Divide by 1000 because this plot is in seconds but timer is in ms
                         plot_ui.set_plot_bounds(bounds);
                     }
                     if is_reset_pressed {
