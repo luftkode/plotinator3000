@@ -2,7 +2,8 @@
 @_default:
     just --list --no-aliases
 
-# serve as a local webserver with hot reloading and logging enabled
+# Get trunk: https://trunkrs.dev/guide/introduction.html
+[doc("serve as a local webserver with hot reloading and logging enabled (requires trunk)")]
 serve *ARGS:
     RUST_LOG=debug trunk serve {{ARGS}}
 
@@ -10,12 +11,24 @@ serve *ARGS:
 run *ARGS:
     RUST_LOG=debug cargo run {{ARGS}}
 
+# Run tests
 test *ARGS:
     cargo test
 
-# Run the tests with nextest (faster and much more features)
+# About nextest: https://nexte.st/
+[doc("Run the tests with nextest (faster and much more features)")]
 ntest *ARGS:
     cargo nextest run
 
+# Lint
+lint *ARGS:
+    cargo clippy {{ARGS}}
 
+format *ARGS:
+    cargo fmt --all -- {{ARGS}}
+
+# Install nice-to-have devtools
 install-extra-devtools:
+    cargo install cargo-nextest --locked
+    cargo install trunk --locked 
+
