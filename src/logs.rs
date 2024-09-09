@@ -1,5 +1,6 @@
 use std::{fmt::Display, io};
 
+pub mod generator;
 pub mod mbed_motor_control;
 
 /// A given log should implement this trait
