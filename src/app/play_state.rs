@@ -1,50 +1,63 @@
 use std::time::{Duration, SystemTime};
 
-/// State for managing the playback of the plot, simulating real-time scrolling.
+/// Represents the state of the playback (either playing or paused).
+#[derive(serde::Deserialize, serde::Serialize)]
+enum PlaybackState {
+    Playing { start_time: SystemTime },
+    Paused,
+}
+
+impl Default for PlaybackState {
+    fn default() -> Self {
+        PlaybackState::Paused
+    }
+}
+
+/// State for managing real-time playback of the plot.
 #[derive(Default, serde::Deserialize, serde::Serialize)]
 pub struct PlayState {
-    is_playing: bool,
-    start_time: Option<SystemTime>,
+    state: PlaybackState,
     elapsed: Duration,   // Accumulated play time
     last_update_ms: f64, // Time in milliseconds at the last update
 }
 
 impl PlayState {
+    /// Checks if the state is currently playing.
     pub fn is_playing(&self) -> bool {
-        self.is_playing
+        matches!(self.state, PlaybackState::Playing { .. })
     }
 
-    /// Toggles between play and pause modes.
+    /// Toggles between playing and paused states.
     pub fn toggle(&mut self) {
-        if self.is_playing {
-            self.pause();
-        } else {
-            self.play();
+        match self.state {
+            PlaybackState::Paused => self.play(),
+            PlaybackState::Playing { .. } => self.pause(),
         }
     }
 
+    /// Starts playing, recording the start time.
     fn play(&mut self) {
-        self.start_time = Some(SystemTime::now());
-        self.is_playing = true;
+        self.state = PlaybackState::Playing {
+            start_time: SystemTime::now(),
+        };
     }
 
+    /// Pauses the playback, updating the elapsed time.
     fn pause(&mut self) {
-        self.update_elapsed();
-        self.is_playing = false;
-    }
-
-    /// Updates elapsed time when pausing.
-    fn update_elapsed(&mut self) {
-        if let Some(start) = self.start_time.take() {
-            self.elapsed += start.elapsed().unwrap_or_default();
+        if let PlaybackState::Playing { start_time } = self.state {
+            self.elapsed += start_time.elapsed().unwrap_or_default();
+            self.state = PlaybackState::Paused;
         }
     }
 
-    /// Computes total elapsed time, including active play time.
+    /// Computes total elapsed time, including active play time if playing.
     fn total_elapsed(&self) -> Duration {
-        self.start_time
-            .map(|start| self.elapsed + start.elapsed().unwrap_or_default())
-            .unwrap_or(self.elapsed)
+        match self.state {
+            PlaybackState::Playing { start_time } => {
+                self.elapsed + start_time.elapsed().unwrap_or_default()
+            }
+            PlaybackState::Paused => self.elapsed,
+        }
     }
 
     /// Returns total play time as a formatted string (e.g., "12.34s").
@@ -54,7 +67,7 @@ impl PlayState {
 
     /// Returns time in milliseconds since the last update if playing.
     pub fn time_since_update(&mut self) -> Option<f64> {
-        if self.is_playing {
+        if let PlaybackState::Playing { .. } = self.state {
             let elapsed_ms = self.total_elapsed().as_millis() as f64;
             let delta_ms = elapsed_ms - self.last_update_ms;
 
