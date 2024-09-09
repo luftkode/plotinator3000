@@ -12,6 +12,8 @@ use super::{Log, LogEntry};
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct GeneratorLog {
     entries: Vec<GeneratorLogEntry>,
+    pub power: Vec<f64>, // Calculated from Vout * Vin
+    timestamps_as_secs: Vec<f64>,
 }
 
 impl GeneratorLog {
@@ -24,6 +26,63 @@ impl GeneratorLog {
             GeneratorLogEntry::is_line_valid_generator_log_entry(&first_line);
 
         Ok(is_first_line_gen_log_entry)
+    }
+
+    pub fn timestamp_as_secs(&self) -> &[f64] {
+        &self.timestamps_as_secs
+    }
+
+    fn y_over_time<F>(&self, y_extractor: F) -> Vec<[f64; 2]>
+    where
+        F: Fn(&GeneratorLogEntry) -> f64,
+    {
+        self.timestamp_as_secs()
+            .iter()
+            .zip(self.entries().iter())
+            .map(|(x, e)| [*x, y_extractor(e)])
+            .collect()
+    }
+
+    pub fn vout_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.vout.into())
+    }
+
+    pub fn rrotor_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.rrotor.into())
+    }
+
+    pub fn rpm_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.rpm.into())
+    }
+
+    pub fn pwm_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.pwm.into())
+    }
+
+    pub fn power_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| (e.vout as f64) * (e.iin as f64))
+    }
+
+    pub fn load_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.load.into())
+    }
+    pub fn irotor_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.irotor.into())
+    }
+    pub fn temp1_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.temp1.into())
+    }
+    pub fn temp2_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.temp2.into())
+    }
+    pub fn iin_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.iin.into())
+    }
+    pub fn iout_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.iout.into())
+    }
+    pub fn vbat_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.vbat.into())
     }
 }
 
@@ -42,7 +101,22 @@ impl Log for GeneratorLog {
             }
         }
 
-        Ok(GeneratorLog { entries })
+        let mut power_vals: Vec<f64> = Vec::with_capacity(entries.len());
+        for e in &entries {
+            let power = (e.vout as f64) * (e.iin as f64);
+            power_vals.push(power);
+        }
+
+        let mut timestamps_as_secs: Vec<f64> = Vec::with_capacity(entries.len());
+        for entry in &entries {
+            timestamps_as_secs.push(entry.timestamp.and_utc().timestamp() as f64);
+        }
+
+        Ok(GeneratorLog {
+            entries,
+            power: power_vals,
+            timestamps_as_secs,
+        })
     }
 
     fn entries(&self) -> &[Self::Entry] {
@@ -62,18 +136,18 @@ impl fmt::Display for GeneratorLog {
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct GeneratorLogEntry {
-    timestamp: NaiveDateTime,
-    vout: f32,
-    vbat: f32,
-    iout: f32,
-    rpm: u32,
-    load: f32,
-    pwm: f32,
-    temp1: f32,
-    temp2: f32,
-    iin: f32,
-    irotor: f32,
-    rrotor: f32,
+    pub timestamp: NaiveDateTime,
+    pub vout: f32,
+    pub vbat: f32,
+    pub iout: f32,
+    pub rpm: u32,
+    pub load: f32,
+    pub pwm: f32,
+    pub temp1: f32,
+    pub temp2: f32,
+    pub iin: f32,
+    pub irotor: f32,
+    pub rrotor: f32,
 }
 
 impl GeneratorLogEntry {
@@ -139,10 +213,6 @@ impl LogEntry for GeneratorLogEntry {
         bufreader.read_line(&mut line)?;
 
         Self::from_str(&line)
-    }
-
-    fn timestamp_ms(&self) -> u32 {
-        todo!()
     }
 }
 

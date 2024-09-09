@@ -1,14 +1,18 @@
-use std::time::Duration;
+use std::{ops::RangeInclusive, time::Duration};
 
 use crate::logs::{
+    generator::GeneratorLog,
     mbed_motor_control::{
         pid::{PidLog, PidLogEntry},
         status::{StatusLog, StatusLogEntry},
     },
     Log, LogEntry,
 };
+use chrono::{DateTime, Timelike};
 use egui::Response;
-use egui_plot::{Corner, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement};
+use egui_plot::{
+    AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement,
+};
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 struct AxisConfig {
@@ -35,41 +39,71 @@ pub struct LogPlot {
 }
 
 impl LogPlot {
-    fn line_from_log_entry<F, L: LogEntry>(pid_logs: &[L], y_extractor: F) -> Line
+    fn line_from_log_entry<XF, YF, L: LogEntry>(
+        pid_logs: &[L],
+        x_extractor: XF,
+        y_extractor: YF,
+    ) -> Line
     where
-        F: Fn(&L) -> f64,
+        XF: Fn(&L) -> f64,
+        YF: Fn(&L) -> f64,
     {
         let points: PlotPoints = pid_logs
             .iter()
-            .map(|e| {
-                let x = e.timestamp_ms() as f64;
-                let y = y_extractor(e);
-                [x, y]
-            })
+            .map(|e| [x_extractor(e), y_extractor(e)])
             .collect();
         Line::new(points)
     }
 
     fn pid_log_lines(pid_logs: &[PidLogEntry]) -> (Vec<Line>, Vec<Line>) {
         let zero_to_one_range = vec![
-            Self::line_from_log_entry(pid_logs, |e| e.pid_err as f64).name("PID Error"),
-            Self::line_from_log_entry(pid_logs, |e| e.servo_duty_cycle as f64)
-                .name("Servo Duty Cycle"),
+            Self::line_from_log_entry(pid_logs, |e| e.timestamp_ms() as f64, |e| e.pid_err as f64)
+                .name("PID Error"),
+            Self::line_from_log_entry(
+                pid_logs,
+                |e| e.timestamp_ms() as f64,
+                |e| e.servo_duty_cycle as f64,
+            )
+            .name("Servo Duty Cycle"),
         ];
-        let big_range = vec![Self::line_from_log_entry(pid_logs, |e| e.rpm as f64).name("RPM")];
+        let big_range = vec![Self::line_from_log_entry(
+            pid_logs,
+            |e| e.timestamp_ms() as f64,
+            |e| e.rpm as f64,
+        )
+        .name("RPM")];
         (zero_to_one_range, big_range)
     }
 
     fn status_log_lines(status_log: &[StatusLogEntry]) -> (Vec<Line>, Vec<Line>) {
-        let zero_to_one_range =
-            vec![Self::line_from_log_entry(status_log, |e| (e.fan_on as u8) as f64).name("Fan On")];
+        let zero_to_one_range = vec![Self::line_from_log_entry(
+            status_log,
+            |e| e.timestamp_ms() as f64,
+            |e| (e.fan_on as u8) as f64,
+        )
+        .name("Fan On")];
 
         let big_range = vec![
-            Self::line_from_log_entry(status_log, |e| e.engine_temp as f64).name("Engine Temp °C"),
-            Self::line_from_log_entry(status_log, |e| e.vbat.into()).name("Vbat"),
-            Self::line_from_log_entry(status_log, |e| (e.motor_state as u8) as f64)
-                .name("Motor State"),
-            Self::line_from_log_entry(status_log, |e| e.setpoint.into()).name("Setpoint"),
+            Self::line_from_log_entry(
+                status_log,
+                |e| e.timestamp_ms() as f64,
+                |e| e.engine_temp as f64,
+            )
+            .name("Engine Temp °C"),
+            Self::line_from_log_entry(status_log, |e| e.timestamp_ms() as f64, |e| e.vbat.into())
+                .name("Vbat"),
+            Self::line_from_log_entry(
+                status_log,
+                |e| e.timestamp_ms() as f64,
+                |e| (e.motor_state as u8) as f64,
+            )
+            .name("Motor State"),
+            Self::line_from_log_entry(
+                status_log,
+                |e| e.timestamp_ms() as f64,
+                |e| e.setpoint.into(),
+            )
+            .name("Setpoint"),
         ];
         (zero_to_one_range, big_range)
     }
@@ -79,6 +113,7 @@ impl LogPlot {
         ui: &mut egui::Ui,
         pid_log: Option<&PidLog>,
         status_log: Option<&StatusLog>,
+        generator_log: Option<&GeneratorLog>,
         timer: Option<f64>,
     ) -> Response {
         let Self {
@@ -88,26 +123,6 @@ impl LogPlot {
         } = self;
 
         egui::Grid::new("settings").show(ui, |ui| {
-            ui.label("Text style:");
-            ui.horizontal(|ui| {
-                let all_text_styles = ui.style().text_styles();
-                for style in all_text_styles {
-                    ui.selectable_value(&mut config.text_style, style.clone(), style.to_string());
-                }
-            });
-
-            ui.label("Position:");
-            ui.horizontal(|ui| {
-                Corner::all().for_each(|position| {
-                    ui.selectable_value(&mut config.position, position, format!("{position:?}"));
-                });
-            });
-            ui.label("Opacity:");
-            ui.add(
-                egui::DragValue::new(&mut config.background_alpha)
-                    .speed(0.02)
-                    .range(0.0..=1.0),
-            );
             ui.end_row();
             ui.label("Line width");
             ui.add(
@@ -124,7 +139,19 @@ impl LogPlot {
         });
         let link_group_id = ui.id().with("linked_plots");
         ui.vertical(|ui| {
-            let plot_height = ui.available_height() / 2.0;
+            // Determining plot count really needs a refactor
+            // the generator and pid logs count as 2 if any of them is there, just because they both have values that fall on the 0-1 plot and the "large values"-plot
+            // hopefully future plots with be compatible with this format or the format needs refactoring (it will at some point) such that many logs can be plotted on the same
+            // few plots that handle different value ranges (or look into custom axes in egui_plot)
+            let mut total_plot_count: u8 = 0;
+            if pid_log.is_some() || status_log.is_some() {
+                total_plot_count += 2;
+            }
+            if generator_log.is_some() {
+                total_plot_count += 1;
+            }
+
+            let plot_height = ui.available_height() / (total_plot_count as f32);
 
             // Function to format milliseconds into HH:MM.ms
             let format_time = |x: f64| {
@@ -213,6 +240,97 @@ impl LogPlot {
                             plot_ui.line(lineplot.width(*line_width));
                         }
                     }
+                });
+            }
+
+            if let Some(gen_log) = generator_log {
+                let time_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
+                    let sec = mark.value;
+                    let dt = DateTime::from_timestamp(sec as i64, 0).unwrap();
+                    dt.format("%Y-%m-%d %H:%M:%S").to_string()
+                };
+                let x_axes = vec![AxisHints::new_x().label("Time").formatter(time_formatter)];
+                let label_fmt = |_s: &str, val: &PlotPoint| {
+                    let dt = DateTime::from_timestamp(val.x as i64, 0).unwrap();
+                    format!(
+                        "{h:02}:{m:02}:{s:02}",
+                        h = dt.hour(),
+                        m = dt.minute(),
+                        s = dt.second()
+                    )
+                };
+
+                let gen_log_plot = Plot::new("generator_log_plot")
+                    .legend(config.clone())
+                    .height(plot_height)
+                    .show_axes(self.axis_config.show_axes)
+                    .x_axis_position(VPlacement::Top)
+                    .y_axis_position(HPlacement::Right)
+                    .custom_x_axes(x_axes)
+                    .label_formatter(label_fmt)
+                    .include_y(0.0);
+
+                gen_log_plot.show(ui, |plot_ui| {
+                    plot_ui.line(
+                        Line::new(gen_log.rrotor_over_time())
+                            .name("rotor [R]")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.power_over_time())
+                            .name("Power [W]")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.pwm_over_time())
+                            .name("PWM")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.rpm_over_time())
+                            .name("RPM")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.load_over_time())
+                            .name("Load")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.irotor_over_time())
+                            .name("rotor [I]")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.temp1_over_time())
+                            .name("Temp1")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.temp2_over_time())
+                            .name("Temp2")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.iin_over_time())
+                            .name("Iin")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.iout_over_time())
+                            .name("Iout")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.vbat_over_time())
+                            .name("Vbat [V]")
+                            .width(*line_width),
+                    );
+                    plot_ui.line(
+                        Line::new(gen_log.vout_over_time())
+                            .name("Vout [V]")
+                            .width(*line_width),
+                    );
                 });
             }
         })

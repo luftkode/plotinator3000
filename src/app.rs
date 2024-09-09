@@ -177,6 +177,7 @@ impl eframe::App for App {
                 ui,
                 self.pid_log.as_ref(),
                 self.status_log.as_ref(),
+                self.generator_log.as_ref(),
                 play_timer_update_val,
             );
 
