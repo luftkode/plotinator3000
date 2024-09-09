@@ -14,13 +14,14 @@ impl PlayState {
         self.is_playing
     }
 
+    /// Toggles between playing and pausing the plot.
     pub fn toggle_play_pause(&mut self) {
-        self.is_playing = !self.is_playing;
         if self.is_playing {
-            self.start_time = Some(SystemTime::now());
-        } else {
             self.update_elapsed_time();
+        } else {
+            self.start_time = Some(SystemTime::now());
         }
+        self.is_playing = !self.is_playing;
     }
 
     fn update_elapsed_time(&mut self) {
@@ -30,9 +31,10 @@ impl PlayState {
     }
 
     fn current_elapsed_time(&self) -> Duration {
-        self.start_time.map_or(self.elapsed_time, |start| {
-            self.elapsed_time + start.elapsed().unwrap_or_default()
-        })
+        match self.start_time {
+            Some(start) => self.elapsed_time + start.elapsed().unwrap_or_default(),
+            None => self.elapsed_time,
+        }
     }
 
     /// Returns the total play time formatted as a string in seconds (e.g., "12.34s")
@@ -43,10 +45,10 @@ impl PlayState {
     /// Returns the time in milliseconds since the last update, if currently playing.
     pub fn time_since_last_update(&mut self) -> Option<f64> {
         if self.is_playing {
-            let total_elapsed_ms = self.current_elapsed_time().as_millis() as f64;
-            let time_delta = total_elapsed_ms - self.last_plot_update_time;
+            let current_elapsed_time = self.current_elapsed_time().as_millis() as f64;
+            let time_delta = current_elapsed_time - self.last_plot_update_time;
 
-            self.last_plot_update_time = total_elapsed_ms;
+            self.last_plot_update_time = current_elapsed_time;
 
             (time_delta > 0.0).then_some(time_delta)
         } else {
