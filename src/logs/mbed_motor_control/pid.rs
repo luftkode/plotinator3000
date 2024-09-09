@@ -116,7 +116,8 @@ impl std::fmt::Display for PidLogEntry {
 mod tests {
     use std::fs::{self, File};
 
-    const TEST_DATA: &str = "test_data/fake_controlled_data/pid_20240906_081235_00.bin";
+    const TEST_DATA: &str =
+        "test_data/mbed_motor_control/fake_controlled_data/pid_20240906_081235_00.bin";
 
     use testresult::TestResult;
 

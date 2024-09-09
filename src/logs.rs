@@ -58,7 +58,7 @@ pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
 ///
 /// fn main() -> std::io::Result<()> {
 ///     // Open the log file
-///     let file = File::open("test_data/old_rpm_algo/pid_20240906_110538_00.bin")?;
+///     let file = File::open("test_data/mbed_motor_control/old_rpm_algo/pid_20240906_110538_00.bin")?;
 ///     let mut reader = BufReader::new(file);
 ///     
 ///     // First, read the header

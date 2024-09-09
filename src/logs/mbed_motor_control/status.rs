@@ -183,7 +183,9 @@ mod tests {
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let data = fs::read("test_data/fake_controlled_data/status_20240906_081236_00.bin")?;
+        let data = fs::read(
+            "test_data/mbed_motor_control/fake_controlled_data/status_20240906_081236_00.bin",
+        )?;
         let status_log = StatusLog::from_reader(&mut data.as_slice())?;
         eprintln!("{}", status_log.header);
         assert_eq!(
