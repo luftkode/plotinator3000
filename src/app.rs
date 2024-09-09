@@ -1,5 +1,6 @@
 use crate::{
     logs::{
+        generator::{GeneratorLog, GeneratorLogEntry},
         mbed_motor_control::{
             pid::{PidLog, PidLogHeader},
             status::{StatusLog, StatusLogHeader},
@@ -24,6 +25,7 @@ pub struct App {
     picked_path: Option<String>,
     pid_log: Option<PidLog>,
     status_log: Option<StatusLog>,
+    generator_log: Option<GeneratorLog>,
     plot: LogPlot,
     font_size: f32,
     is_playing: bool,               // Whether the plot is playing
@@ -39,6 +41,7 @@ impl Default for App {
             picked_path: None,
             pid_log: None,
             status_log: None,
+            generator_log: None,
             plot: LogPlot::default(),
             font_size: 16.0,
             is_playing: false,
@@ -227,6 +230,7 @@ impl App {
         }
     }
 
+    /// Parse file contents drag-n-drop'd through a browser
     fn parse_content(&mut self, mut content: &[u8]) {
         if self.pid_log.is_none() && PidLogHeader::is_buf_header(content).unwrap_or(false) {
             self.pid_log = PidLog::from_reader(&mut content).ok();
@@ -234,9 +238,14 @@ impl App {
             && StatusLogHeader::is_buf_header(content).unwrap_or(false)
         {
             self.status_log = StatusLog::from_reader(&mut content).ok();
+        } else if self.generator_log.is_none()
+            && GeneratorLogEntry::is_bytes_valid_generator_log_entry(content)
+        {
+            self.generator_log = GeneratorLog::from_reader(&mut content).ok();
         }
     }
 
+    /// Parse file contents drag-n-drop'd through a native app
     fn parse_path(&mut self, path: &std::path::Path) {
         if self.pid_log.is_none() && PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
             self.pid_log = fs::File::open(path)
@@ -248,6 +257,12 @@ impl App {
             self.status_log = fs::File::open(path)
                 .ok()
                 .and_then(|file| StatusLog::from_reader(&mut BufReader::new(file)).ok());
+        } else if self.generator_log.is_none()
+            && GeneratorLog::file_is_generator_log(path).unwrap_or(false)
+        {
+            self.generator_log = fs::File::open(path)
+                .ok()
+                .and_then(|file| GeneratorLog::from_reader(&mut BufReader::new(file)).ok());
         }
     }
 
