@@ -43,7 +43,7 @@ impl Default for App {
             status_log: None,
             generator_log: None,
             plot: LogPlot::default(),
-            font_size: 16.0,
+            font_size: Self::DEFAULT_FONT_SIZE,
             is_playing: false,
             start_time: None,
             elapsed_time: Duration::from_secs(0),
@@ -53,6 +53,8 @@ impl Default for App {
 }
 
 impl App {
+    const DEFAULT_FONT_SIZE: f32 = 16.0;
+
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -63,6 +65,13 @@ impl App {
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
+
+        // Set default font size for all font styles
+        let mut style = (*cc.egui_ctx.style()).clone();
+        for (_text_style, font_id) in style.text_styles.iter_mut() {
+            font_id.size = Self::DEFAULT_FONT_SIZE;
+        }
+        cc.egui_ctx.set_style(style);
 
         Default::default()
     }
