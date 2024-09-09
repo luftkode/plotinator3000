@@ -6,6 +6,7 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
+use egui_plot::Line;
 
 use super::{Log, LogEntry};
 
@@ -51,9 +52,15 @@ impl GeneratorLog {
     pub fn vout_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.vout.into())
     }
+    pub fn vout_plot(&self) -> Line {
+        Line::new(self.vout_over_time()).name("Vout [V]")
+    }
 
     pub fn rrotor_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.rrotor.into())
+    }
+    pub fn rrotor_plot(&self) -> Line {
+        Line::new(self.rrotor_over_time()).name("rotor [R]")
     }
 
     pub fn rpm_over_time(&self) -> Vec<[f64; 2]> {

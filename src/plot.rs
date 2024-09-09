@@ -339,11 +339,7 @@ impl LogPlot {
                     .include_y(0.0);
 
                 gen_log_plot.show(ui, |plot_ui| {
-                    plot_ui.line(
-                        Line::new(gen_log.rrotor_over_time())
-                            .name("rotor [R]")
-                            .width(*line_width),
-                    );
+                    plot_ui.line(gen_log.rrotor_plot().width(*line_width));
                     plot_ui.line(
                         Line::new(gen_log.power_over_time())
                             .name("Power [W]")
@@ -394,11 +390,7 @@ impl LogPlot {
                             .name("Vbat [V]")
                             .width(*line_width),
                     );
-                    plot_ui.line(
-                        Line::new(gen_log.vout_over_time())
-                            .name("Vout [V]")
-                            .width(*line_width),
-                    );
+                    plot_ui.line(gen_log.vout_plot().width(*line_width));
                     if let Some(t) = timer {
                         let mut bounds = plot_ui.plot_bounds();
                         bounds.translate_x(t / 1000.0); // Divide by 1000 because this plot is in seconds but timer is in ms
