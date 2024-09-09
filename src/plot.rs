@@ -31,11 +31,21 @@ impl Default for AxisConfig {
     }
 }
 
-#[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct LogPlot {
     config: Legend,
     line_width: f32,
     axis_config: AxisConfig,
+}
+
+impl Default for LogPlot {
+    fn default() -> Self {
+        Self {
+            config: Default::default(),
+            line_width: 1.0,
+            axis_config: Default::default(),
+        }
+    }
 }
 
 impl LogPlot {
