@@ -1,30 +1,10 @@
-use crate::{
-    logs::{
-        generator::{GeneratorLog, GeneratorLogEntry},
-        mbed_motor_control::{
-            pid::{PidLog, PidLogHeader},
-            status::{StatusLog, StatusLogHeader},
-            MbedMotorControlLogHeader,
-        },
-        Log,
-    },
-    plot::LogPlot,
-};
-use egui::{DroppedFile, Hyperlink, RichText, Stroke};
-use std::{
-    fs,
-    io::BufReader,
-    time::{Duration, SystemTime},
-};
+use crate::plot::LogPlot;
+use egui::{DroppedFile, Hyperlink};
+use std::time::{Duration, SystemTime};
+use supported_logs::SupportedLogs;
 
+mod supported_logs;
 mod util;
-
-#[derive(serde::Deserialize, serde::Serialize)]
-struct SupportedLogs {
-    picked_path: Option<String>,
-    pid_log: Option<PidLog>,
-    status_log: Option<StatusLog>,
-}
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -32,9 +12,7 @@ struct SupportedLogs {
 pub struct App {
     dropped_files: Vec<DroppedFile>,
     picked_path: Option<String>,
-    pid_log: Option<PidLog>,
-    status_log: Option<StatusLog>,
-    generator_log: Option<GeneratorLog>,
+    logs: SupportedLogs,
     plot: LogPlot,
     font_size: f32,
     is_playing: bool,               // Whether the plot is playing
@@ -48,9 +26,7 @@ impl Default for App {
         Self {
             dropped_files: Vec::new(),
             picked_path: None,
-            pid_log: None,
-            status_log: None,
-            generator_log: None,
+            logs: SupportedLogs::default(),
             plot: LogPlot::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
             is_playing: false,
@@ -206,9 +182,9 @@ impl eframe::App for App {
             };
             self.plot.ui(
                 ui,
-                self.pid_log.as_ref(),
-                self.status_log.as_ref(),
-                self.generator_log.as_ref(),
+                self.logs.mbed_pid_log(),
+                self.logs.mbed_status_log(),
+                self.logs.generator_log(),
                 play_timer_update_val,
             );
 
@@ -229,7 +205,7 @@ impl eframe::App for App {
             ctx.input(|i| {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
-                    self.parse_dropped_files();
+                    SupportedLogs::parse_dropped_files(&self.dropped_files, &mut self.logs);
                 }
             });
 
@@ -237,103 +213,5 @@ impl eframe::App for App {
                 egui::warn_if_debug_build(ui);
             });
         });
-    }
-}
-
-// Utility functions (not the primary framework functions such as `update` and `save`)
-impl App {
-    fn parse_dropped_files(&mut self) {
-        // The `to_vec` copies but is needed here to prevent a mutable borrow of self in the loop
-        #[allow(clippy::unnecessary_to_owned)]
-        for file in self.dropped_files.to_vec() {
-            self.parse_file(&file);
-        }
-    }
-
-    fn parse_file(&mut self, file: &DroppedFile) {
-        if let Some(content) = file.bytes.as_ref().map(|b| b.as_ref()) {
-            // This is how content is made accesible via drag-n-drop in a browser
-            self.parse_content(content);
-        } else if let Some(path) = &file.path {
-            // This is how content is accesible via drag-n-drop when the app is running natively
-            self.parse_path(path);
-        }
-    }
-
-    /// Parse file contents drag-n-drop'd through a browser
-    fn parse_content(&mut self, mut content: &[u8]) {
-        if self.pid_log.is_none() && PidLogHeader::is_buf_header(content).unwrap_or(false) {
-            self.pid_log = PidLog::from_reader(&mut content).ok();
-        } else if self.status_log.is_none()
-            && StatusLogHeader::is_buf_header(content).unwrap_or(false)
-        {
-            self.status_log = StatusLog::from_reader(&mut content).ok();
-        } else if self.generator_log.is_none()
-            && GeneratorLogEntry::is_bytes_valid_generator_log_entry(content)
-        {
-            self.generator_log = GeneratorLog::from_reader(&mut content).ok();
-        }
-    }
-
-    /// Parse file contents drag-n-drop'd through a native app
-    fn parse_path(&mut self, path: &std::path::Path) {
-        if self.pid_log.is_none() && PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
-            self.pid_log = fs::File::open(path)
-                .ok()
-                .and_then(|file| PidLog::from_reader(&mut BufReader::new(file)).ok());
-        } else if self.status_log.is_none()
-            && StatusLogHeader::file_starts_with_header(path).unwrap_or(false)
-        {
-            self.status_log = fs::File::open(path)
-                .ok()
-                .and_then(|file| StatusLog::from_reader(&mut BufReader::new(file)).ok());
-        } else if self.generator_log.is_none()
-            && GeneratorLog::file_is_generator_log(path).unwrap_or(false)
-        {
-            self.generator_log = fs::File::open(path)
-                .ok()
-                .and_then(|file| GeneratorLog::from_reader(&mut BufReader::new(file)).ok());
-        }
-    }
-}
-
-fn parse_dropped_files(dropped_files: &[DroppedFile], logs: &mut SupportedLogs) {
-    // The `to_vec` copies but is needed here to prevent a mutable borrow of self in the loop
-    #[allow(clippy::unnecessary_to_owned)]
-    for file in dropped_files {
-        parse_file(&file, logs);
-    }
-}
-
-fn parse_file(file: &DroppedFile, logs: &mut SupportedLogs) {
-    if let Some(content) = file.bytes.as_ref().map(|b| b.as_ref()) {
-        // This is how content is made accesible via drag-n-drop in a browser
-        parse_content(content, logs);
-    } else if let Some(path) = &file.path {
-        // This is how content is accesible via drag-n-drop when the app is running natively
-        parse_path(path, logs);
-    }
-}
-
-fn parse_content(mut content: &[u8], logs: &mut SupportedLogs) {
-    if logs.pid_log.is_none() && PidLogHeader::is_buf_header(content).unwrap_or(false) {
-        logs.pid_log = PidLog::from_reader(&mut content).ok();
-    } else if logs.status_log.is_none() && StatusLogHeader::is_buf_header(content).unwrap_or(false)
-    {
-        logs.status_log = StatusLog::from_reader(&mut content).ok();
-    }
-}
-
-fn parse_path(path: &std::path::Path, logs: &mut SupportedLogs) {
-    if logs.pid_log.is_none() && PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
-        logs.pid_log = fs::File::open(path)
-            .ok()
-            .and_then(|file| PidLog::from_reader(&mut BufReader::new(file)).ok());
-    } else if logs.status_log.is_none()
-        && StatusLogHeader::file_starts_with_header(path).unwrap_or(false)
-    {
-        logs.status_log = fs::File::open(path)
-            .ok()
-            .and_then(|file| StatusLog::from_reader(&mut BufReader::new(file)).ok());
     }
 }
