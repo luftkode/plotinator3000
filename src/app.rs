@@ -115,9 +115,9 @@ impl eframe::App for App {
                     })
                     .clicked()
                 {
-                    self.play_state.toggle_play_pause();
+                    self.play_state.toggle();
                 }
-                ui.label(self.play_state.formatted_play_time());
+                ui.label(self.play_state.formatted_time());
                 if self.play_state.is_playing() {
                     ctx.request_repaint();
                 }
@@ -144,7 +144,7 @@ impl eframe::App for App {
                 self.logs.mbed_pid_log(),
                 self.logs.mbed_status_log(),
                 self.logs.generator_log(),
-                self.play_state.time_since_last_update(),
+                self.play_state.time_since_update(),
             );
 
             if self.dropped_files.is_empty() {
