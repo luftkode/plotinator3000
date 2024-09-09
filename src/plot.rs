@@ -149,11 +149,9 @@ impl LogPlot {
         } = self;
 
         if let Some(e) = playback_button_event {
-            match e {
-                PlayBackButtonEvent::PlayPause => play_state.toggle(),
-                PlayBackButtonEvent::Reset => play_state.reset(),
-            }
+            play_state.handle_playback_button_press(e);
         };
+        let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
         let timer = play_state.time_since_update();
 
         egui::Grid::new("settings").show(ui, |ui| {
@@ -255,7 +253,7 @@ impl LogPlot {
                         bounds.translate_x(t);
                         plot_ui.set_plot_bounds(bounds);
                     }
-                    if matches!(playback_button_event, Some(PlayBackButtonEvent::Reset)) {
+                    if is_reset_pressed {
                         let mut bounds = plot_ui.plot_bounds();
                         bounds.translate_x(-bounds.min()[0]);
                         plot_ui.set_plot_bounds(bounds);
@@ -284,7 +282,7 @@ impl LogPlot {
                         bounds.translate_x(t);
                         plot_ui.set_plot_bounds(bounds);
                     }
-                    if matches!(playback_button_event, Some(PlayBackButtonEvent::Reset)) {
+                    if is_reset_pressed {
                         let mut bounds = plot_ui.plot_bounds();
                         bounds.translate_x(-bounds.min()[0]);
                         plot_ui.set_plot_bounds(bounds);
@@ -385,7 +383,7 @@ impl LogPlot {
                         bounds.translate_x(t / 1000.0); // Divide by 1000 because this plot is in seconds but timer is in ms
                         plot_ui.set_plot_bounds(bounds);
                     }
-                    if matches!(playback_button_event, Some(PlayBackButtonEvent::Reset)) {
+                    if is_reset_pressed {
                         let mut bounds = plot_ui.plot_bounds();
                         let first_timestamp = gen_log.first_timestamp().unwrap_or(0.0);
 

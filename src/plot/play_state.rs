@@ -1,5 +1,7 @@
 use std::time::{Duration, SystemTime};
 
+use crate::app;
+
 /// Represents the state of the playback (either playing or paused).
 #[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
 enum PlaybackState {
@@ -19,6 +21,16 @@ pub struct PlayState {
 }
 
 impl PlayState {
+    pub fn handle_playback_button_press(
+        &mut self,
+        playback_button_event: app::PlayBackButtonEvent,
+    ) {
+        match playback_button_event {
+            app::PlayBackButtonEvent::PlayPause => self.toggle(),
+            app::PlayBackButtonEvent::Reset => self.reset(),
+        }
+    }
+
     /// Checks if the state is currently playing.
     pub fn is_playing(&self) -> bool {
         matches!(self.state, PlaybackState::Playing { .. })
