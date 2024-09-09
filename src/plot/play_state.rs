@@ -1,23 +1,53 @@
-use std::time::{Duration, SystemTime};
-
 use crate::app;
 
-/// Represents the state of the playback (either playing or paused).
-#[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
-enum PlaybackState {
-    Playing {
-        start_time: SystemTime,
-    },
-    #[default]
-    Paused,
+/// Get the current time with support for wasm and native.
+fn now() -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        web_sys::window()
+            .expect("no global `window` exists")
+            .performance()
+            .expect("should have performance on window")
+            .now()
+            / 1000.0
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs_f64()
+    }
 }
 
-/// State for managing real-time playback of the plot.
-#[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+enum PlaybackState {
+    Playing { start_time: f64 },
+    Paused { pause_time: f64 },
+}
+
+impl Default for PlaybackState {
+    fn default() -> Self {
+        PlaybackState::Paused { pause_time: now() }
+    }
+}
+
+#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PlayState {
     state: PlaybackState,
-    elapsed: Duration,   // Accumulated play time
-    last_update_ms: f64, // Time in milliseconds at the last update
+    elapsed: f64,
+    last_update: f64,
+}
+
+impl Default for PlayState {
+    fn default() -> Self {
+        Self {
+            state: PlaybackState::default(),
+            elapsed: 0.0,
+            last_update: now(),
+        }
+    }
 }
 
 impl PlayState {
@@ -31,65 +61,56 @@ impl PlayState {
         }
     }
 
-    /// Checks if the state is currently playing.
     pub fn is_playing(&self) -> bool {
         matches!(self.state, PlaybackState::Playing { .. })
     }
 
-    /// Toggles between playing and paused states.
     pub fn toggle(&mut self) {
         match self.state {
-            PlaybackState::Paused => self.play(),
+            PlaybackState::Paused { .. } => self.play(),
             PlaybackState::Playing { .. } => self.pause(),
         }
     }
 
-    /// Starts playing, recording the start time.
     fn play(&mut self) {
-        self.state = PlaybackState::Playing {
-            start_time: SystemTime::now(),
-        };
+        let now = now();
+        if let PlaybackState::Paused { pause_time } = self.state {
+            self.last_update += now - pause_time;
+        }
+        self.state = PlaybackState::Playing { start_time: now };
     }
 
-    /// Pauses the playback, updating the elapsed time.
     fn pause(&mut self) {
         if let PlaybackState::Playing { start_time } = self.state {
-            self.elapsed += start_time.elapsed().unwrap_or_default();
-            self.state = PlaybackState::Paused;
+            let now = now();
+            self.elapsed += now - start_time;
+            self.state = PlaybackState::Paused { pause_time: now };
         }
     }
 
-    /// Resets the playback to the beginning, clearing elapsed time and stopping playback.
     pub fn reset(&mut self) {
-        self.elapsed = Duration::ZERO;
-        self.last_update_ms = 0.0;
-        self.state = PlaybackState::Paused;
+        self.elapsed = 0.0;
+        self.last_update = now();
+        self.state = PlaybackState::Paused { pause_time: now() };
     }
 
-    /// Computes total elapsed time, including active play time if playing.
-    fn total_elapsed(&self) -> Duration {
+    fn total_elapsed(&self) -> f64 {
         match self.state {
-            PlaybackState::Playing { start_time } => {
-                self.elapsed + start_time.elapsed().unwrap_or_default()
-            }
-            PlaybackState::Paused => self.elapsed,
+            PlaybackState::Playing { start_time } => self.elapsed + (now() - start_time),
+            PlaybackState::Paused { .. } => self.elapsed,
         }
     }
 
-    /// Returns total play time as a formatted string (e.g., "12.34s").
     pub fn formatted_time(&self) -> String {
-        format!("{:.2}s", self.total_elapsed().as_secs_f64())
+        format!("{:.2}s", self.total_elapsed())
     }
 
-    /// Returns time in milliseconds since the last update if playing.
     pub fn time_since_update(&mut self) -> Option<f64> {
         if let PlaybackState::Playing { .. } = self.state {
-            let elapsed_ms = self.total_elapsed().as_millis() as f64;
-            let delta_ms = elapsed_ms - self.last_update_ms;
-
-            self.last_update_ms = elapsed_ms;
-
-            (delta_ms > 0.0).then_some(delta_ms)
+            let now = now();
+            let delta = now - self.last_update;
+            self.last_update = now;
+            Some(delta)
         } else {
             None
         }
