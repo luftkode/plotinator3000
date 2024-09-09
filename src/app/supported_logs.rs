@@ -37,7 +37,7 @@ impl SupportedLogs {
     /// meaning you would be forced to make a copy which isn't actually needed, but required for it to compile.
     pub fn parse_dropped_files(dropped_files: &[DroppedFile], logs: &mut SupportedLogs) {
         for file in dropped_files {
-            parse_file(&file, logs);
+            parse_file(file, logs);
         }
     }
 }
