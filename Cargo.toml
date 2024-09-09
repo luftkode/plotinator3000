@@ -22,6 +22,7 @@ serde-big-array = "0.5.1"
 strum = "0.26.3"
 strum_macros = "0.26.3"
 byteorder = "1.5.0"
+chrono = { version = "0.4.38", features = ["serde"] }
 
 [dev-dependencies]
 testresult = "0.4.1"
