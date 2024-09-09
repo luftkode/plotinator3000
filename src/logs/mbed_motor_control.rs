@@ -54,10 +54,12 @@ pub trait MbedMotorControlLogHeader: Sized {
             )
         })?;
 
-        let version =
-            u16::from_le_bytes(slice[128..130].try_into().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidData, "Failed to read version")
-            })?);
+        let version = u16::from_le_bytes(slice[128..130].try_into().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Failed to read version: {e}"),
+            )
+        })?);
 
         Ok(Self::new(unique_description, version))
     }
@@ -83,7 +85,7 @@ pub trait MbedMotorControlLogHeader: Sized {
     ///
     /// Useful for probing a file for whether it matches a given log type
     fn file_starts_with_header(fpath: &Path) -> io::Result<bool> {
-        let mut file = fs::File::open(fpath).unwrap();
+        let mut file = fs::File::open(fpath)?;
         Self::reader_starts_with_header(&mut file)
     }
 
