@@ -1,12 +1,12 @@
 use std::time::{Duration, SystemTime};
 
-/// State for "playing" the plot, meaning scrolling the plot(s) at real time pace.
+/// State for managing the playback of the plot, simulating real-time scrolling.
 #[derive(Default, serde::Deserialize, serde::Serialize)]
 pub struct PlayState {
-    is_playing: bool,               // Whether the plot is playing
-    start_time: Option<SystemTime>, // Store the time when the animation started
-    elapsed_time: Duration,
-    elapsed_last_plot_update: f64,
+    is_playing: bool,
+    start_time: Option<SystemTime>,
+    elapsed_time: Duration,     // Total accumulated play time
+    last_plot_update_time: f64, // Time at the last plot update in milliseconds
 }
 
 impl PlayState {
@@ -19,36 +19,36 @@ impl PlayState {
         if self.is_playing {
             self.start_time = Some(SystemTime::now());
         } else {
-            self.accumulate_paused_time();
+            self.update_elapsed_time();
         }
     }
 
-    fn accumulate_paused_time(&mut self) {
+    fn update_elapsed_time(&mut self) {
         if let Some(start) = self.start_time.take() {
             self.elapsed_time += start.elapsed().unwrap_or_default();
         }
     }
 
-    fn total_elapsed(&self) -> Duration {
-        self.start_time
-            .map(|start| self.elapsed_time + start.elapsed().unwrap_or_default())
-            .unwrap_or(self.elapsed_time)
+    fn current_elapsed_time(&self) -> Duration {
+        self.start_time.map_or(self.elapsed_time, |start| {
+            self.elapsed_time + start.elapsed().unwrap_or_default()
+        })
     }
 
-    /// Update the play time and return a formatted string with the updated time
-    pub fn calculate_play_time(&self) -> String {
-        format!("{:.2}s", self.total_elapsed().as_secs_f64())
+    /// Returns the total play time formatted as a string in seconds (e.g., "12.34s")
+    pub fn formatted_play_time(&self) -> String {
+        format!("{:.2}s", self.current_elapsed_time().as_secs_f64())
     }
 
-    /// If the play timer is running, returns the elapsed time in milliseconds from the last update (previous frame)
-    pub fn play_timer_elapsed_update(&mut self) -> Option<f64> {
+    /// Returns the time in milliseconds since the last update, if currently playing.
+    pub fn time_since_last_update(&mut self) -> Option<f64> {
         if self.is_playing {
-            let elapsed_since_last_update =
-                self.total_elapsed().as_millis() as f64 - self.elapsed_last_plot_update;
+            let total_elapsed_ms = self.current_elapsed_time().as_millis() as f64;
+            let time_delta = total_elapsed_ms - self.last_plot_update_time;
 
-            self.elapsed_last_plot_update = self.total_elapsed().as_millis() as f64;
+            self.last_plot_update_time = total_elapsed_ms;
 
-            (elapsed_since_last_update > 0.0).then_some(elapsed_since_last_update)
+            (time_delta > 0.0).then_some(time_delta)
         } else {
             None
         }
