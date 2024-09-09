@@ -1,20 +1,17 @@
 use std::time::{Duration, SystemTime};
 
 /// Represents the state of the playback (either playing or paused).
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
 enum PlaybackState {
-    Playing { start_time: SystemTime },
+    Playing {
+        start_time: SystemTime,
+    },
+    #[default]
     Paused,
 }
 
-impl Default for PlaybackState {
-    fn default() -> Self {
-        PlaybackState::Paused
-    }
-}
-
 /// State for managing real-time playback of the plot.
-#[derive(Default, serde::Deserialize, serde::Serialize)]
+#[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PlayState {
     state: PlaybackState,
     elapsed: Duration,   // Accumulated play time
@@ -48,6 +45,13 @@ impl PlayState {
             self.elapsed += start_time.elapsed().unwrap_or_default();
             self.state = PlaybackState::Paused;
         }
+    }
+
+    /// Resets the playback to the beginning, clearing elapsed time and stopping playback.
+    pub fn reset(&mut self) {
+        self.elapsed = Duration::ZERO;
+        self.last_update_ms = 0.0;
+        self.state = PlaybackState::Paused;
     }
 
     /// Computes total elapsed time, including active play time if playing.

@@ -17,6 +17,11 @@ pub struct GeneratorLog {
 }
 
 impl GeneratorLog {
+    /// Returns the first timestamp of the dataset or None if the data is empty.
+    pub fn first_timestamp(&self) -> Option<f64> {
+        self.timestamp_as_secs().first().copied()
+    }
+
     pub fn file_is_generator_log(fpath: &Path) -> io::Result<bool> {
         let file = fs::File::open(fpath)?;
         let mut buf_reader = BufReader::new(file);

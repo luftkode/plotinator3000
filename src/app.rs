@@ -1,11 +1,15 @@
 use crate::plot::LogPlot;
 use egui::{DroppedFile, Hyperlink};
-use play_state::PlayState;
 use supported_logs::SupportedLogs;
 
-mod play_state;
 mod supported_logs;
 mod util;
+
+#[derive(serde::Deserialize, serde::Serialize, strum_macros::Display, Clone, Copy)]
+pub enum PlayBackButtonEvent {
+    PlayPause,
+    Reset,
+}
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -16,7 +20,7 @@ pub struct App {
     logs: SupportedLogs,
     plot: LogPlot,
     font_size: f32,
-    play_state: PlayState,
+    playback_event: Option<PlayBackButtonEvent>,
 }
 
 impl Default for App {
@@ -27,7 +31,7 @@ impl Default for App {
             logs: SupportedLogs::default(),
             plot: LogPlot::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
-            play_state: PlayState::default(),
+            playback_event: None,
         }
     }
 }
@@ -107,18 +111,14 @@ impl eframe::App for App {
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
                 ));
-                if ui
-                    .button(if self.play_state.is_playing() {
-                        "Pause"
-                    } else {
-                        "Play"
-                    })
-                    .clicked()
-                {
-                    self.play_state.toggle();
+                if ui.button("Play/Pause").clicked() {
+                    self.playback_event = Some(PlayBackButtonEvent::PlayPause)
                 }
-                ui.label(self.play_state.formatted_time());
-                if self.play_state.is_playing() {
+                if ui.button("Reset playback").clicked() {
+                    self.playback_event = Some(PlayBackButtonEvent::Reset);
+                }
+                ui.label(self.plot.formatted_playback_time());
+                if self.plot.is_playing() {
                     ctx.request_repaint();
                 }
             });
@@ -144,7 +144,7 @@ impl eframe::App for App {
                 self.logs.mbed_pid_log(),
                 self.logs.mbed_status_log(),
                 self.logs.generator_log(),
-                self.play_state.time_since_update(),
+                self.playback_event.take(),
             );
 
             if self.dropped_files.is_empty() {

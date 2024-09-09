@@ -1,18 +1,24 @@
 use std::{ops::RangeInclusive, time::Duration};
 
-use crate::logs::{
-    generator::GeneratorLog,
-    mbed_motor_control::{
-        pid::{PidLog, PidLogEntry},
-        status::{StatusLog, StatusLogEntry},
+use crate::{
+    app::PlayBackButtonEvent,
+    logs::{
+        generator::GeneratorLog,
+        mbed_motor_control::{
+            pid::{PidLog, PidLogEntry},
+            status::{StatusLog, StatusLogEntry},
+        },
+        Log, LogEntry,
     },
-    Log, LogEntry,
 };
 use chrono::{DateTime, Timelike};
 use egui::Response;
 use egui_plot::{
     AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement,
 };
+use play_state::PlayState;
+
+mod play_state;
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 struct AxisConfig {
@@ -36,6 +42,7 @@ pub struct LogPlot {
     config: Legend,
     line_width: f32,
     axis_config: AxisConfig,
+    play_state: PlayState,
 }
 
 impl Default for LogPlot {
@@ -44,11 +51,19 @@ impl Default for LogPlot {
             config: Default::default(),
             line_width: 1.0,
             axis_config: Default::default(),
+            play_state: PlayState::default(),
         }
     }
 }
 
 impl LogPlot {
+    pub fn formatted_playback_time(&self) -> String {
+        self.play_state.formatted_time()
+    }
+    pub fn is_playing(&self) -> bool {
+        self.play_state.is_playing()
+    }
+
     fn line_from_log_entry<XF, YF, L: LogEntry>(
         pid_logs: &[L],
         x_extractor: XF,
@@ -124,13 +139,22 @@ impl LogPlot {
         pid_log: Option<&PidLog>,
         status_log: Option<&StatusLog>,
         generator_log: Option<&GeneratorLog>,
-        timer: Option<f64>,
+        playback_button_event: Option<PlayBackButtonEvent>,
     ) -> Response {
         let Self {
             config,
             line_width,
             axis_config: _,
+            play_state,
         } = self;
+
+        if let Some(e) = playback_button_event {
+            match e {
+                PlayBackButtonEvent::PlayPause => play_state.toggle(),
+                PlayBackButtonEvent::Reset => play_state.reset(),
+            }
+        };
+        let timer = play_state.time_since_update();
 
         egui::Grid::new("settings").show(ui, |ui| {
             ui.end_row();
@@ -231,6 +255,11 @@ impl LogPlot {
                         bounds.translate_x(t);
                         plot_ui.set_plot_bounds(bounds);
                     }
+                    if matches!(playback_button_event, Some(PlayBackButtonEvent::Reset)) {
+                        let mut bounds = plot_ui.plot_bounds();
+                        bounds.translate_x(-bounds.min()[0]);
+                        plot_ui.set_plot_bounds(bounds);
+                    }
                 });
             }
 
@@ -249,6 +278,16 @@ impl LogPlot {
                         for lineplot in large_range_status {
                             plot_ui.line(lineplot.width(*line_width));
                         }
+                    }
+                    if let Some(t) = timer {
+                        let mut bounds = plot_ui.plot_bounds();
+                        bounds.translate_x(t);
+                        plot_ui.set_plot_bounds(bounds);
+                    }
+                    if matches!(playback_button_event, Some(PlayBackButtonEvent::Reset)) {
+                        let mut bounds = plot_ui.plot_bounds();
+                        bounds.translate_x(-bounds.min()[0]);
+                        plot_ui.set_plot_bounds(bounds);
                     }
                 });
             }
@@ -341,6 +380,19 @@ impl LogPlot {
                             .name("Vout [V]")
                             .width(*line_width),
                     );
+                    if let Some(t) = timer {
+                        let mut bounds = plot_ui.plot_bounds();
+                        bounds.translate_x(t / 1000.0); // Divide by 1000 because this plot is in seconds but timer is in ms
+                        plot_ui.set_plot_bounds(bounds);
+                    }
+                    if matches!(playback_button_event, Some(PlayBackButtonEvent::Reset)) {
+                        let mut bounds = plot_ui.plot_bounds();
+                        let first_timestamp = gen_log.first_timestamp().unwrap_or(0.0);
+
+                        // Translate X to start from the first data point timestamp
+                        bounds.translate_x(-bounds.min()[0] + first_timestamp);
+                        plot_ui.set_plot_bounds(bounds);
+                    }
                 });
             }
         })
