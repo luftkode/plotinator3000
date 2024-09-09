@@ -104,6 +104,7 @@ impl eframe::App for App {
                 if ui.button("Reset").clicked() {
                     *self = Self::default();
                 }
+
                 ui.label("Font size:");
                 if ui
                     .add(
@@ -160,6 +161,18 @@ impl eframe::App for App {
                     ui.label(format!("{:.2}s", seconds_elapsed));
                 }
             });
+            ui.collapsing("Instructions", |ui| {
+                ui.label("Pan by dragging, or scroll (+ shift = horizontal).");
+                ui.label("Box zooming: Right click to zoom in and zoom out using a selection.");
+                if cfg!(target_arch = "wasm32") {
+                    ui.label("Zoom with ctrl / ⌘ + pointer wheel, or with pinch gesture.");
+                } else if cfg!(target_os = "macos") {
+                    ui.label("Zoom with ctrl / ⌘ + scroll.");
+                } else {
+                    ui.label("Zoom with ctrl + scroll.");
+                }
+                ui.label("Reset view with double-click.");
+            });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -189,8 +202,6 @@ impl eframe::App for App {
                 self.generator_log.as_ref(),
                 play_timer_update_val,
             );
-
-            ui.separator();
 
             if self.dropped_files.is_empty() {
                 // Display the message when no files have been dropped and no logs are loaded
@@ -307,6 +318,11 @@ impl App {
 
                             ui.label(RichText::new("Mbed Motor Control").strong());
                             ui.label("Logs from Mbed-based motor controller");
+                            ui.add(Hyperlink::from_label_and_url(
+                                "https://github.com/luftkode/mbed-motor-control",
+                                "https://github.com/luftkode/mbed-motor-control",
+                            ));
+                            
                             ui.end_row();
 
                             ui.label("• PID Logs");
@@ -317,6 +333,15 @@ impl App {
                             ui.label(
                                 "General status information such as engine temperature, and controller state machine information",
                             );
+                            ui.end_row();
+
+                            ui.label(RichText::new("Generator").strong());
+                            ui.label("Logs from the generator");
+                            
+                            ui.add(Hyperlink::from_label_and_url(
+                                "https://github.com/luftkode/delphi_generator_linux",
+                                "https://github.com/luftkode/delphi_generator_linux",
+                            ));
                             ui.end_row();
                         });
                 });
