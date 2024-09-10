@@ -164,20 +164,20 @@ impl LogPlot {
 
             ui.horizontal_centered(|ui| {
                 ui.label("| ");
+                // Reset button
+                let reset_text = RichText::new(egui_phosphor::regular::REWIND);
+                if ui.button(reset_text).clicked() {
+                    playback_button_event = Some(PlayBackButtonEvent::Reset);
+                }
                 let playpause_text = if play_state.is_playing() {
-                    RichText::new("⏸ ").color(Color32::YELLOW)
+                    RichText::new(egui_phosphor::regular::PAUSE).color(Color32::YELLOW)
                 } else {
-                    RichText::new("▶  ").color(Color32::GREEN)
+                    RichText::new(egui_phosphor::regular::PLAY).color(Color32::GREEN)
                 };
                 if ui.button(playpause_text).clicked() {
                     playback_button_event = Some(PlayBackButtonEvent::PlayPause);
                 }
 
-                // Reset button
-                let reset_text = RichText::new("🔄").color(Color32::LIGHT_GRAY);
-                if ui.button(reset_text).clicked() {
-                    playback_button_event = Some(PlayBackButtonEvent::Reset);
-                }
                 ui.label(RichText::new(play_state.formatted_time()));
                 ui.label(" |");
             });
