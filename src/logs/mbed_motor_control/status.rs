@@ -197,13 +197,13 @@ mod tests {
         assert_eq!(status_log.header.version, 0);
         let first_entry = status_log.entries.first().unwrap();
         assert_eq!(first_entry.engine_temp, 0.0);
-        assert_eq!(first_entry.fan_on, true);
+        assert!(first_entry.fan_on);
         assert_eq!(first_entry.vbat, 2.0);
         assert_eq!(first_entry.setpoint, 3.0);
         assert_eq!(first_entry.motor_state, MotorState::IGNITION_END);
         let second_entry = status_log.entries.get(1).unwrap();
         assert_eq!(second_entry.engine_temp, 123.4);
-        assert_eq!(second_entry.fan_on, false);
+        assert!(!second_entry.fan_on);
         assert_eq!(second_entry.vbat, 2.34);
         assert_eq!(second_entry.setpoint, 3.45);
         assert_eq!(second_entry.motor_state, MotorState::WAIT_FOR_T_STANDBY);
