@@ -30,7 +30,7 @@ impl SupportedLogs {
         self.generator_log.as_ref()
     }
 
-    /// Parse dropped files to supported logs. Only parses and stores log types that haven't already been parsed succesfully
+    /// Parse dropped files to supported logs. Only parses and stores log types that haven't already been parsed successfully
     ///
     /// ### Note to developers who are not seasoned Rust devs :)
     /// This cannot take `&mut self` as that breaks ownership rules when looping over dropped files
@@ -44,10 +44,10 @@ impl SupportedLogs {
 
 fn parse_file(file: &DroppedFile, logs: &mut SupportedLogs) {
     if let Some(content) = file.bytes.as_ref().map(|b| b.as_ref()) {
-        // This is how content is made accesible via drag-n-drop in a browser
+        // This is how content is made accessible via drag-n-drop in a browser
         parse_content(content, logs);
     } else if let Some(path) = &file.path {
-        // This is how content is accesible via drag-n-drop when the app is running natively
+        // This is how content is accessible via drag-n-drop when the app is running natively
         parse_path(path, logs);
     }
 }

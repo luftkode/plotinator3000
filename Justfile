@@ -23,6 +23,7 @@ ntest *ARGS:
 # Lint
 lint *ARGS:
     cargo clippy {{ARGS}}
+    typos
 
 fmt *ARGS:
     cargo fmt --all -- {{ARGS}}

@@ -376,8 +376,8 @@ impl LogPlot {
                             .width(*line_width),
                     );
                     plot_ui.line(
-                        Line::new(gen_log.iin_over_time())
-                            .name("Iin")
+                        Line::new(gen_log.i_in_over_time())
+                            .name("I_in")
                             .width(*line_width),
                     );
                     plot_ui.line(
