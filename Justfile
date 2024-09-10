@@ -24,14 +24,25 @@ ntest *ARGS:
 lint *ARGS:
     cargo clippy {{ARGS}}
 
-format *ARGS:
+fmt *ARGS:
     cargo fmt --all -- {{ARGS}}
+
+# Trunk is used to serve the app with a webserver, cargo-dist is used to generate and update workflows for distributing installers for various platforms
+[doc("Install the required tools for performing all dev tasks for the project")]
+install-devtools:
+    cargo install trunk --locked 
+    cargo install cargo-dist --locked
 
 # Install nice-to-have devtools
 install-extra-devtools:
     cargo install cargo-nextest --locked
-    cargo install trunk --locked 
+    
 
+[group("CI")]
+ci-fmt: (fmt " --check")
 
 [group("CI")]
 ci-lint: (lint "--workspace --all-targets --all-features --  -D warnings -W clippy::all")
+
+[group("CI")]
+ci-test: (test "--lib")
