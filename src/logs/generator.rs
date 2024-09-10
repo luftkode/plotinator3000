@@ -148,20 +148,20 @@ impl GeneratorLog {
     /// Don't be tempted to comment out stuff just because it's easy to leave out
     /// "irrelevant" plots that way. Creat a new `selective_plots` functions or similar
     pub fn all_plots(&self) -> Vec<Line> {
-        let mut all_plots = Vec::new();
-        all_plots.push(self.rrotor_plot());
-        all_plots.push(self.rpm_plot());
-        all_plots.push(self.power_plot());
-        all_plots.push(self.pwm_plot());
-        all_plots.push(self.load_plot());
-        all_plots.push(self.irotor_plot());
-        all_plots.push(self.temp1_plot());
-        all_plots.push(self.temp2_plot());
-        all_plots.push(self.i_in_plot());
-        all_plots.push(self.i_out_plot());
-        all_plots.push(self.vbat_plot());
-        all_plots.push(self.vout_plot());
-        all_plots
+        vec![
+            self.rrotor_plot(),
+            self.rpm_plot(),
+            self.power_plot(),
+            self.pwm_plot(),
+            self.load_plot(),
+            self.irotor_plot(),
+            self.temp1_plot(),
+            self.temp2_plot(),
+            self.i_in_plot(),
+            self.i_out_plot(),
+            self.vbat_plot(),
+            self.vout_plot(),
+        ]
     }
 }
 
