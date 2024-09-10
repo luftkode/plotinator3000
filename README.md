@@ -34,3 +34,14 @@ All the boilerplate and workflows etc. is pulled from [this eframe template](htt
 ### Infrastructure (CI, releases)
 
 [cargo-dist](https://github.com/axodotdev/cargo-dist) handles the complexities of setting up build/releases for various platforms.
+
+Read their documentation!!
+
+Generating the first instance of CI for the release workflow is done via
+
+```shell
+cargo dist init
+```
+... And then following the instructions/prompts.
+
+A (very complicated) [release.yml](.github/workflows/release.yml) is generated and metadata is added to [Cargo.toml](Cargo.toml), if distributing for windows, a [main.wxs](wix/main.wxs) is also generated. To update these with changes to the project, simply rerun `cargo dist init`, don't edit the workflow manually, there's a [section on CI customization](https://opensource.axo.dev/cargo-dist/book/ci/customizing.html) in the `cargo dist` docs.
