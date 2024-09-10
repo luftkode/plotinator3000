@@ -45,3 +45,12 @@ cargo dist init
 ... And then following the instructions/prompts.
 
 A (very complicated) [release.yml](.github/workflows/release.yml) is generated and metadata is added to [Cargo.toml](Cargo.toml), if distributing for windows, a [main.wxs](wix/main.wxs) is also generated. To update these with changes to the project, simply rerun `cargo dist init`, don't edit the workflow manually, there's a [section on CI customization](https://opensource.axo.dev/cargo-dist/book/ci/customizing.html) in the `cargo dist` docs.
+
+When developing/trouble shooting the release pipeline adding `pr-run-mode = "upload"` like this
+
+```toml
+[workspace.metadata.dist]
+pr-run-mode = "upload"
+```
+
+Will run the release pipeline on pull request, then you can open a PR and develop/fix/test the release pipeline.
