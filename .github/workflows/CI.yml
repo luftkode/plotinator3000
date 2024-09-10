@@ -88,12 +88,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: macos-latest
-          # macos-latest seems to already run on arm64(=aarch64):
+        - os: macos-13
+          # macos-13 seems to already run on arm64(=aarch64):
           # https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job#standard-github-hosted-runners-for-public-repositories
           TARGET: aarch64-apple-darwin
 
-        - os: macos-latest
+        - os: macos-13
           TARGET: x86_64-apple-darwin
           # even though the runner uses arm64, MacOS on arm64 seems to support building for amd64.
           # which makes sense, would be bad for devs otherwise.
