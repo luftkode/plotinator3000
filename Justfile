@@ -32,3 +32,6 @@ install-extra-devtools:
     cargo install cargo-nextest --locked
     cargo install trunk --locked 
 
+
+[group("CI")]
+ci-lint: (lint "--workspace --all-targets --all-features --  -D warnings -W clippy::all")
