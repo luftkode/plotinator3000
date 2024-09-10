@@ -54,7 +54,7 @@ pub fn draw_empty_state(ui: &mut egui::Ui) {
                                 "https://github.com/luftkode/mbed-motor-control",
                                 "https://github.com/luftkode/mbed-motor-control",
                             ));
-                            
+
                             ui.end_row();
 
                             ui.label("• PID Logs");
@@ -69,7 +69,7 @@ pub fn draw_empty_state(ui: &mut egui::Ui) {
 
                             ui.label(RichText::new("Generator").strong());
                             ui.label("Logs from the generator");
-                            
+
                             ui.add(Hyperlink::from_label_and_url(
                                 "https://github.com/luftkode/delphi_generator_linux",
                                 "https://github.com/luftkode/delphi_generator_linux",
@@ -114,4 +114,3 @@ pub fn preview_files_being_dropped(ctx: &egui::Context) {
         );
     }
 }
-
