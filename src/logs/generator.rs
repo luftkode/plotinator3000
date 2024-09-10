@@ -57,7 +57,7 @@ impl GeneratorLog {
     }
 
     pub fn rrotor_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.rrotor.into())
+        self.y_over_time(|e| e.r_rotor.into())
     }
     pub fn rrotor_plot(&self) -> Line {
         Line::new(self.rrotor_over_time()).name("rotor [R]")
@@ -66,35 +66,102 @@ impl GeneratorLog {
     pub fn rpm_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.rpm.into())
     }
+    pub fn rpm_plot(&self) -> Line {
+        Line::new(self.rpm_over_time()).name("RPM")
+    }
 
     pub fn pwm_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.pwm.into())
     }
+    pub fn pwm_plot(&self) -> Line {
+        Line::new(self.pwm_over_time()).name("PWM")
+    }
 
     pub fn power_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| (e.vout as f64) * (e.iin as f64))
+        self.y_over_time(|e| (e.vout as f64) * (e.i_in as f64))
+    }
+
+    pub fn power_plot(&self) -> Line {
+        Line::new(self.power_over_time()).name("Power [W]")
     }
 
     pub fn load_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.load.into())
     }
-    pub fn irotor_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.irotor.into())
+
+    pub fn load_plot(&self) -> Line {
+        Line::new(self.load_over_time()).name("Load")
     }
+
+    pub fn irotor_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.i_rotor.into())
+    }
+
+    pub fn irotor_plot(&self) -> Line {
+        Line::new(self.irotor_over_time()).name("rotor [I]")
+    }
+
     pub fn temp1_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.temp1.into())
     }
+
+    pub fn temp1_plot(&self) -> Line {
+        Line::new(self.temp1_over_time()).name("Temp1")
+    }
+
     pub fn temp2_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.temp2.into())
     }
-    pub fn iin_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.iin.into())
+
+    pub fn temp2_plot(&self) -> Line {
+        Line::new(self.temp2_over_time()).name("Temp2")
     }
+
+    pub fn i_in_over_time(&self) -> Vec<[f64; 2]> {
+        self.y_over_time(|e| e.i_in.into())
+    }
+
+    pub fn i_in_plot(&self) -> Line {
+        Line::new(self.i_in_over_time()).name("I_in")
+    }
+
     pub fn iout_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.iout.into())
+        self.y_over_time(|e| e.i_out.into())
     }
+
+    pub fn i_out_plot(&self) -> Line {
+        Line::new(self.iout_over_time()).name("Iout")
+    }
+
     pub fn vbat_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.vbat.into())
+    }
+
+    pub fn vbat_plot(&self) -> Line {
+        Line::new(self.vbat_over_time()).name("Vbat [V]")
+    }
+
+    /// Return all the plots that a [GeneratorLog] can produce
+    ///
+    /// ### Note to developer
+    ///
+    /// Don't be tempted to comment out stuff just because it's easy to leave out
+    /// "irrelevant" plots that way. Creat a new `selective_plots` functions or similar
+    pub fn all_plots(&self) -> Vec<Line> {
+        vec![
+            self.rrotor_plot(),
+            self.rpm_plot(),
+            self.power_plot(),
+            self.pwm_plot(),
+            self.load_plot(),
+            self.irotor_plot(),
+            self.temp1_plot(),
+            self.temp2_plot(),
+            self.i_in_plot(),
+            self.i_out_plot(),
+            self.vbat_plot(),
+            self.vout_plot(),
+        ]
     }
 }
 
@@ -115,7 +182,7 @@ impl Log for GeneratorLog {
 
         let mut power_vals: Vec<f64> = Vec::with_capacity(entries.len());
         for e in &entries {
-            let power = (e.vout as f64) * (e.iin as f64);
+            let power = (e.vout as f64) * (e.i_in as f64);
             power_vals.push(power);
         }
 
@@ -151,15 +218,15 @@ pub struct GeneratorLogEntry {
     pub timestamp: NaiveDateTime,
     pub vout: f32,
     pub vbat: f32,
-    pub iout: f32,
+    pub i_out: f32,
     pub rpm: u32,
     pub load: f32,
     pub pwm: f32,
     pub temp1: f32,
     pub temp2: f32,
-    pub iin: f32,
-    pub irotor: f32,
-    pub rrotor: f32,
+    pub i_in: f32,
+    pub i_rotor: f32,
+    pub r_rotor: f32,
 }
 
 impl GeneratorLogEntry {
@@ -232,19 +299,19 @@ impl fmt::Display for GeneratorLogEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{timestamp}: {vout} {vbat} {iout} {rpm} {load} {pwm} {temp1} {temp2} {iin} {irotor} {rrotor}",
+            "{timestamp}: {vout} {vbat} {i_out} {rpm} {load} {pwm} {temp1} {temp2} {i_in} {i_rotor} {r_rotor}",
             timestamp = self.timestamp,
             vout = self.vout,
             vbat =  self.vbat,
-            iout = self.iout,
+            i_out = self.i_out,
             rpm = self.rpm,
             load = self.load,
             pwm = self.pwm,
             temp1 = self.temp1,
             temp2 = self.temp2,
-            iin = self.iin,
-            irotor = self.irotor,
-            rrotor = self.rrotor
+            i_in = self.i_in,
+            i_rotor = self.i_rotor,
+            r_rotor = self.r_rotor
         )
     }
 }
@@ -271,7 +338,7 @@ impl FromStr for GeneratorLogEntry {
             vbat: parts[4]
                 .parse::<f32>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
-            iout: parts[6]
+            i_out: parts[6]
                 .parse::<f32>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
             rpm: parts[8]
@@ -289,13 +356,13 @@ impl FromStr for GeneratorLogEntry {
             temp2: parts[16]
                 .parse::<f32>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
-            iin: parts[18]
+            i_in: parts[18]
                 .parse::<f32>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
-            irotor: parts[20]
+            i_rotor: parts[20]
                 .parse::<f32>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
-            rrotor: parts[22]
+            r_rotor: parts[22]
                 .parse::<f32>()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
         })
@@ -327,15 +394,15 @@ mod tests {
         );
         assert_eq!(first_entry.vout, 74.3);
         assert_eq!(first_entry.vbat, 0.1);
-        assert_eq!(first_entry.iout, 0.0);
+        assert_eq!(first_entry.i_out, 0.0);
         assert_eq!(first_entry.rpm, 6075);
         assert_eq!(first_entry.load, 10.2);
         assert_eq!(first_entry.pwm, 10.2);
         assert_eq!(first_entry.temp1, 6.9);
         assert_eq!(first_entry.temp2, 8.4);
-        assert_eq!(first_entry.iin, 8.8);
-        assert_eq!(first_entry.irotor, 0.7);
-        assert_eq!(first_entry.rrotor, 11.2);
+        assert_eq!(first_entry.i_in, 8.8);
+        assert_eq!(first_entry.i_rotor, 0.7);
+        assert_eq!(first_entry.r_rotor, 11.2);
 
         let last_entry = log.entries().last().unwrap();
         assert_eq!(
@@ -347,15 +414,15 @@ mod tests {
         );
         assert_eq!(last_entry.vout, 78.3);
         assert_eq!(last_entry.vbat, 0.1);
-        assert_eq!(last_entry.iout, 0.0);
+        assert_eq!(last_entry.i_out, 0.0);
         assert_eq!(last_entry.rpm, 5932);
         assert_eq!(last_entry.load, 9.7);
         assert_eq!(last_entry.pwm, 9.7);
         assert_eq!(last_entry.temp1, 6.9);
         assert_eq!(last_entry.temp2, 8.5);
-        assert_eq!(last_entry.iin, 8.3);
-        assert_eq!(last_entry.irotor, 0.7);
-        assert_eq!(last_entry.rrotor, 11.0);
+        assert_eq!(last_entry.i_in, 8.3);
+        assert_eq!(last_entry.i_rotor, 0.7);
+        assert_eq!(last_entry.r_rotor, 11.0);
 
         Ok(())
     }

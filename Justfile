@@ -23,6 +23,7 @@ ntest *ARGS:
 # Lint
 lint *ARGS:
     cargo clippy {{ARGS}}
+    typos
 
 fmt *ARGS:
     cargo fmt --all -- {{ARGS}}
@@ -32,6 +33,7 @@ fmt *ARGS:
 install-devtools:
     cargo install trunk --locked 
     cargo install cargo-dist --locked
+    cargo install typos-cli
 
 # Install nice-to-have devtools
 install-extra-devtools:

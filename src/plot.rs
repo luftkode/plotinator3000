@@ -339,58 +339,9 @@ impl LogPlot {
                     .include_y(0.0);
 
                 gen_log_plot.show(ui, |plot_ui| {
-                    plot_ui.line(gen_log.rrotor_plot().width(*line_width));
-                    plot_ui.line(
-                        Line::new(gen_log.power_over_time())
-                            .name("Power [W]")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.pwm_over_time())
-                            .name("PWM")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.rpm_over_time())
-                            .name("RPM")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.load_over_time())
-                            .name("Load")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.irotor_over_time())
-                            .name("rotor [I]")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.temp1_over_time())
-                            .name("Temp1")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.temp2_over_time())
-                            .name("Temp2")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.iin_over_time())
-                            .name("Iin")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.iout_over_time())
-                            .name("Iout")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(
-                        Line::new(gen_log.vbat_over_time())
-                            .name("Vbat [V]")
-                            .width(*line_width),
-                    );
-                    plot_ui.line(gen_log.vout_plot().width(*line_width));
+                    for line_plot in gen_log.all_plots() {
+                        plot_ui.line(line_plot.width(*line_width));
+                    }
                     if let Some(t) = timer {
                         let mut bounds = plot_ui.plot_bounds();
                         bounds.translate_x(t); // Divide by 1000 because this plot is in seconds but timer is in ms
