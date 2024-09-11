@@ -22,7 +22,7 @@ pub fn file_info(file: &DroppedFile) -> String {
 pub fn draw_empty_state(ui: &mut egui::Ui) {
     ui.vertical_centered(|ui| {
         ui.add_space(100.0);
-        ui.heading("Drag and drop logfiles onto this window");
+        ui.heading(RichText::new("Drag and drop logfiles onto this window").size(40.0));
         ui.add_space(40.0);
 
         let table_width = ui.available_width() * 0.8;
