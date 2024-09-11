@@ -1,3 +1,5 @@
+
+
 use crate::plot::LogPlot;
 use egui::{DroppedFile, Hyperlink};
 use supported_logs::SupportedLogs;
@@ -19,7 +21,7 @@ pub struct App {
     picked_path: Option<String>,
     logs: SupportedLogs,
     plot: LogPlot,
-    font_size: f32,
+    font_size: Option<f32>,
     playback_event: Option<PlayBackButtonEvent>,
 }
 
@@ -30,7 +32,7 @@ impl Default for App {
             picked_path: None,
             logs: SupportedLogs::default(),
             plot: LogPlot::default(),
-            font_size: Self::DEFAULT_FONT_SIZE,
+            font_size: Some(Self::DEFAULT_FONT_SIZE),
             playback_event: None,
         }
     }
@@ -54,14 +56,15 @@ impl App {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
 
-        // Set default font size for all font styles
-        let mut style = (*cc.egui_ctx.style()).clone();
-        for (_text_style, font_id) in style.text_styles.iter_mut() {
-            font_id.size = Self::DEFAULT_FONT_SIZE;
-        }
-        cc.egui_ctx.set_style(style);
-
         Default::default()
+    }
+
+    fn configure_text_styles(ctx: &egui::Context, font_size: f32) {
+        let mut style = (*ctx.style()).clone();
+        for (_text_style, font_id) in style.text_styles.iter_mut() {
+            font_id.size = font_size;
+        }
+        ctx.set_style(style);
     }
 }
 
@@ -76,6 +79,7 @@ impl eframe::App for App {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        Self::configure_text_styles(ctx, self.font_size.unwrap_or_default());
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 // NOTE: no File->Quit on web pages!
@@ -94,22 +98,18 @@ impl eframe::App for App {
                 }
 
                 ui.label("Font size:");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut self.font_size)
-                            .speed(0.1)
-                            .range(8.0..=32.0)
-                            .suffix("px"),
-                    )
-                    .changed()
-                {
-                    // Update the font size for all text styles
-                    let mut style = (*ctx.style()).clone();
-                    for (_text_style, font_id) in style.text_styles.iter_mut() {
-                        font_id.size = self.font_size;
-                    }
-                    ctx.set_style(style);
+                if let Some(ref mut font_size) = self.font_size {
+                    if ui
+                        .add(
+                            egui::DragValue::new(font_size)
+                                .speed(0.1)
+                                .range(8.0..=32.0)
+                                .suffix("px"),
+                        )
+                        .changed()
+                    {}
                 }
+
                 egui::widgets::global_dark_light_mode_buttons(ui);
                 ui.add(Hyperlink::from_label_and_url(
                     "Homepage",
@@ -135,8 +135,6 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-
             self.plot.ui(
                 ui,
                 self.logs.mbed_pid_log(),
