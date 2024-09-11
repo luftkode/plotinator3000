@@ -1,5 +1,3 @@
-
-
 use crate::plot::LogPlot;
 use egui::{DroppedFile, Hyperlink};
 use supported_logs::SupportedLogs;
