@@ -1,15 +1,16 @@
-# Logviewer-rs
+# SkyTEM Logviewer-rs
 
 ## Purpose
 
-Inspect logs from the [Swiss Auto motor control](https://github.com/luftkode/mbed-motor-control) and generator. More log support can be added.
+Inspect logs from the [Swiss Auto motor control](https://github.com/luftkode/mbed-motor-control) and generator. More log support will be added as needed.
 
+## Why is this repository public?
 
+For inspiration/educational purposes. Anyone developing `egui`/`eframe` apps may or may not find any of the solutions in this repository useful for their own project(s).
 
 ## Quick start
 
 Check the [Justfile](Justfile) for recipes to get started, or invoke `just` to list available recipes.
-
 
 Run as a native app
 
