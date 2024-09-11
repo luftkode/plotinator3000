@@ -10,7 +10,13 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([800.0, 800.0])
             .with_min_inner_size([500.0, 400.0])
-            .with_drag_and_drop(true),
+            .with_drag_and_drop(true)
+            .with_icon(
+                eframe::icon_data::from_png_bytes(
+                    &include_bytes!("../assets/skytem-icon-256.png")[..],
+                )
+                .expect("Failed to load icon"),
+            ),
         ..Default::default()
     };
     eframe::run_native(
