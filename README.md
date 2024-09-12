@@ -1,6 +1,6 @@
 <div align="center">
-  <a href="https://github.com/CramBL/fidelityfetch/releases" title="Latest Stable GitHub Release">
-      <img src="https://img.shields.io/github/release/CramBL/fidelityfetch/all.svg?style=flat&logo=github&logoColor=white&colorB=blue&label=Latest Release" alt="GitHub release"></a>
+  <a href="https://github.com/luftkode/logviewer-rs/releases" title="Latest Stable GitHub Release">
+      <img src="https://img.shields.io/github/release/luftkode/logviewer-rs/all.svg?style=flat&logo=github&logoColor=white&colorB=blue&label=Latest Release" alt="GitHub release"></a>
   <a href="https://www.codefactor.io/repository/github/luftkode/logviewer-rs"><img src="https://www.codefactor.io/repository/github/luftkode/logviewer-rs/badge" alt="CodeFactor" /></a>
   <a href="https://github.com/luftkode/logviewer-rs/actions/workflows/CI.yml"><img src="https://github.com/luftkode/logviewer-rs/actions/workflows/CI.yml/badge.svg" alt="CodeFactor" /></a>
 </div>
