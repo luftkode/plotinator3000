@@ -1,23 +1,18 @@
-use std::{
-    cell::OnceCell,
-    ops::RangeInclusive,
-    sync::{Arc, OnceLock},
-    time::Duration,
-};
+use std::{ops::RangeInclusive, time::Duration};
 
 use crate::{
     app::PlayBackButtonEvent,
     logs::{
         generator::GeneratorLog,
         mbed_motor_control::{
-            pid::{PidLog, PidLogEntry},
+            pid::{entry::PidLogEntry, PidLog},
             status::{StatusLog, StatusLogEntry},
         },
         Log, LogEntry,
     },
 };
 use chrono::{DateTime, Timelike};
-use egui::{mutex::Mutex, Color32, Response, RichText};
+use egui::{Color32, Response, RichText};
 use egui_plot::{
     AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement,
 };
@@ -39,28 +34,6 @@ impl Default for AxisConfig {
             link_cursor_x: true,
             show_axes: true,
         }
-    }
-}
-
-type SharedState = Vec<(Vec<[f64; 2]>, String)>;
-
-fn global_plots() -> &'static Mutex<SharedState> {
-    static ARRAY: OnceLock<Mutex<SharedState>> = OnceLock::new();
-    ARRAY.get_or_init(|| Mutex::new(vec![]))
-}
-
-fn global_plots_contains(logtype: &str) -> bool {
-    global_plots()
-        .lock()
-        .iter()
-        .find(|(_plot, ptype)| ptype == logtype)
-        .is_some()
-}
-
-fn add_line(line: Vec<[f64; 2]>, logtype: String) {
-    if !global_plots_contains(&logtype) {
-        // only add it if it isn't already there
-        global_plots().lock().push((line, logtype));
     }
 }
 
@@ -366,15 +339,8 @@ impl LogPlot {
                     .include_y(0.0);
 
                 gen_log_plot.show(ui, |plot_ui| {
-                    for (i, line_plot) in gen_log.all_plots_raw().into_iter().enumerate() {
-                        add_line(line_plot, String::from(format!("{i}")));
-                    }
-
-                    for (raw_plotpoints, id) in global_plots().lock().iter() {
-                        let line = Line::new(raw_plotpoints.to_owned())
-                            .name(id)
-                            .width(*line_width);
-                        plot_ui.line(line);
+                    for line_plot in gen_log.all_plots() {
+                        plot_ui.line(line_plot.width(*line_width));
                     }
                     if let Some(t) = timer {
                         let mut bounds = plot_ui.plot_bounds();
