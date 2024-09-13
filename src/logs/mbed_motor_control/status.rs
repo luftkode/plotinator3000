@@ -2,7 +2,7 @@ use crate::logs::{parse_to_vec, GitMetadata, Log, LogEntry};
 use crate::util::parse_timestamp;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde_big_array::BigArray;
-use std::io;
+use std::{fmt, io};
 use strum_macros::{Display, FromRepr};
 
 use super::{
@@ -61,8 +61,8 @@ impl StatusLog {
     }
 }
 
-impl std::fmt::Display for StatusLog {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for StatusLog {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Header: {}", self.header)?;
         for e in &self.entries {
             writeln!(f, "{e}")?;
@@ -98,6 +98,12 @@ pub struct StatusLogHeader {
 }
 
 impl GitMetadata for StatusLogHeader {
+    fn project_version(&self) -> String {
+        String::from_utf8_lossy(self.project_version_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
+
     fn git_short_sha(&self) -> String {
         String::from_utf8_lossy(self.git_short_sha_raw())
             .trim_end_matches(char::from(0))
@@ -163,9 +169,23 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
     }
 }
 
-impl std::fmt::Display for StatusLogHeader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-v{}", self.unique_description(), self.version)
+impl fmt::Display for StatusLogHeader {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
+        writeln!(f, "Project Version: {}", self.project_version())?;
+        let git_branch = self.git_branch();
+        if !git_branch.is_empty() {
+            writeln!(f, "Branch: {}", self.git_branch())?;
+        }
+        let git_short_sha = self.git_short_sha();
+        if !git_short_sha.is_empty() {
+            writeln!(f, "SHA: {}", git_short_sha)?;
+        }
+        let is_dirty = self.git_repo_status();
+        if !is_dirty.is_empty() {
+            writeln!(f, "Repo status: dirty")?;
+        }
+        Ok(())
     }
 }
 
@@ -232,11 +252,13 @@ impl LogEntry for StatusLogEntry {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::fs::{self, File};
     use testresult::TestResult;
 
     const TEST_DATA: &str =
         "test_data/mbed_motor_control/old_rpm_algo/status_20240912_122203_00.bin";
+
+    use crate::logs::parse_and_display_log_entries;
 
     use super::*;
 
@@ -250,18 +272,30 @@ mod tests {
             StatusLogHeader::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log.header.version, 0);
+        assert_eq!(status_log.header.project_version(), "1.0.0");
+        assert_eq!(status_log.header.git_branch(), "fix-release-workflow");
+        assert_eq!(status_log.header.git_short_sha(), "56fc61b");
+
         let first_entry = status_log.entries.first().unwrap();
-        assert_eq!(first_entry.engine_temp, 0.0);
-        assert!(first_entry.fan_on);
-        assert_eq!(first_entry.vbat, 2.0);
-        assert_eq!(first_entry.setpoint, 3.0);
-        assert_eq!(first_entry.motor_state, MotorState::IGNITION_END);
+        assert_eq!(first_entry.engine_temp, 4.770642);
+        assert!(!first_entry.fan_on);
+        assert_eq!(first_entry.vbat, 4.211966);
+        assert_eq!(first_entry.setpoint, 2500.0);
+        assert_eq!(first_entry.motor_state, MotorState::POWER_HOLD);
         let second_entry = status_log.entries.get(1).unwrap();
-        assert_eq!(second_entry.engine_temp, 123.4);
+        assert_eq!(second_entry.engine_temp, 4.770642);
         assert!(!second_entry.fan_on);
-        assert_eq!(second_entry.vbat, 2.34);
-        assert_eq!(second_entry.setpoint, 3.45);
-        assert_eq!(second_entry.motor_state, MotorState::WAIT_FOR_T_STANDBY);
+        assert_eq!(second_entry.vbat, 4.219487);
+        assert_eq!(second_entry.setpoint, 2500.0);
+        assert_eq!(second_entry.motor_state, MotorState::POWER_HOLD);
+
+        let last_entry = status_log.entries().last().unwrap();
+        assert_eq!(last_entry.timestamp_ms(), 17492);
+        assert_eq!(last_entry.engine_temp, 4.770642);
+        assert!(!last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 4.219487);
+        assert_eq!(last_entry.setpoint, 0.0);
+        assert_eq!(last_entry.motor_state, MotorState::WAIT_TIME_SHUTDOWN);
         //eprintln!("{status_log}");
         Ok(())
     }
@@ -273,6 +307,16 @@ mod tests {
             MotorState::WAIT_TIME_SHUTDOWN,
             MotorState::from_repr(10).unwrap()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_and_display() -> TestResult {
+        let file = File::open(TEST_DATA)?;
+        let mut reader = io::BufReader::new(file);
+        let header = StatusLogHeader::from_reader(&mut reader)?;
+        println!("{header}");
+        parse_and_display_log_entries::<StatusLogEntry, _>(&mut reader, Some(10));
         Ok(())
     }
 }

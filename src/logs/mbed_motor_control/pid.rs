@@ -56,6 +56,11 @@ pub struct PidLogHeader {
 }
 
 impl GitMetadata for PidLogHeader {
+    fn project_version(&self) -> String {
+        String::from_utf8_lossy(self.project_version_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
     fn git_branch(&self) -> String {
         String::from_utf8_lossy(self.git_branch_raw())
             .trim_end_matches(char::from(0))
@@ -121,9 +126,23 @@ impl MbedMotorControlLogHeader for PidLogHeader {
     }
 }
 
-impl std::fmt::Display for PidLogHeader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-v{}", self.unique_description(), self.version)
+impl fmt::Display for PidLogHeader {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
+        writeln!(f, "Project Version: {}", self.project_version())?;
+        let git_branch = self.git_branch();
+        if !git_branch.is_empty() {
+            writeln!(f, "Branch: {}", self.git_branch())?;
+        }
+        let git_short_sha = self.git_short_sha();
+        if !git_short_sha.is_empty() {
+            writeln!(f, "SHA: {}", git_short_sha)?;
+        }
+        let is_dirty = self.git_repo_status();
+        if !is_dirty.is_empty() {
+            writeln!(f, "Repo status: dirty")?;
+        }
+        Ok(())
     }
 }
 
@@ -192,14 +211,18 @@ mod tests {
             PidLogHeader::UNIQUE_DESCRIPTION
         );
         assert_eq!(pidlog.header.version, 0);
+        assert_eq!(pidlog.header.project_version(), "1.0.0");
+        assert_eq!(pidlog.header.git_branch(), "fix-release-workflow");
+        assert_eq!(pidlog.header.git_short_sha(), "56fc61b");
+
         let first_entry = pidlog.entries.first().unwrap();
         assert_eq!(first_entry.rpm, 0.0);
-        assert_eq!(first_entry.pid_err, 1.0);
-        assert_eq!(first_entry.servo_duty_cycle, 2.0);
+        assert_eq!(first_entry.pid_err, 0.0);
+        assert_eq!(first_entry.servo_duty_cycle, 0.03075);
         let second_entry = pidlog.entries.get(1).unwrap();
-        assert_eq!(second_entry.rpm, 123.0);
-        assert_eq!(second_entry.pid_err, 456.0);
-        assert_eq!(second_entry.servo_duty_cycle, 789.0);
+        assert_eq!(second_entry.rpm, 0.0);
+        assert_eq!(second_entry.pid_err, 0.0);
+        assert_eq!(second_entry.servo_duty_cycle, 0.03075);
         //eprintln!("{pidlog}");
         Ok(())
     }
