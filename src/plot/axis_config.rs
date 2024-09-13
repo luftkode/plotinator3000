@@ -49,7 +49,7 @@ impl AxisConfig {
         ui.toggle_value(&mut self.link_x(), "Linked Axes");
         ui.toggle_value(&mut self.link_cursor_x(), "Linked Cursors");
         ui.toggle_value(&mut self.show_axes(), "Show Axes");
-        ui.toggle_value(&mut self.y_axis_lock(), "Lock Y-axis");
+        ui.toggle_value(self.y_axis_lock(), "Lock Y-axis");
     }
 }
 

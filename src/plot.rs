@@ -13,11 +13,13 @@ use chrono::{DateTime, Timelike};
 use egui::{Color32, Response, RichText};
 use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
+use plot_visibility_config::PlotVisibilityConfig;
 use util::{ExpectedPlotRange, PlotWithName};
 
 mod axis_config;
 pub mod mipmap;
 mod play_state;
+mod plot_visibility_config;
 pub mod util;
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
@@ -27,11 +29,9 @@ pub struct LogPlot {
     axis_config: AxisConfig,
     play_state: PlayState,
     percentage_plots: Vec<PlotWithName>,
-    show_percentage_plot: bool,
     to_hundreds_plots: Vec<PlotWithName>,
-    show_to_hundreds_plot: bool,
     to_thousands_plots: Vec<PlotWithName>,
-    show_to_thousands_plot: bool,
+    plot_visibility: PlotVisibilityConfig,
 }
 
 impl Default for LogPlot {
@@ -42,11 +42,9 @@ impl Default for LogPlot {
             axis_config: Default::default(),
             play_state: PlayState::default(),
             percentage_plots: vec![],
-            show_percentage_plot: true,
             to_hundreds_plots: vec![],
-            show_to_hundreds_plot: true,
             to_thousands_plots: vec![],
-            show_to_thousands_plot: true,
+            plot_visibility: PlotVisibilityConfig::default(),
         }
     }
 }
@@ -72,11 +70,9 @@ impl LogPlot {
             axis_config,
             play_state,
             percentage_plots,
-            show_percentage_plot,
             to_hundreds_plots,
-            show_to_hundreds_plot,
-            show_to_thousands_plot,
             to_thousands_plots,
+            plot_visibility,
         } = self;
 
         let mut playback_button_event = None;
@@ -87,9 +83,7 @@ impl LogPlot {
             &mut playback_button_event,
             line_width,
             axis_config,
-            show_percentage_plot,
-            show_to_hundreds_plot,
-            show_to_thousands_plot,
+            plot_visibility,
         );
         if let Some(e) = playback_button_event {
             play_state.handle_playback_button_press(e);
@@ -147,13 +141,16 @@ impl LogPlot {
                     }
                 }
             }
+            // Calculate the number of plots to display
             let mut total_plot_count: u8 = 0;
-            let display_percentage_plot = !percentage_plots.is_empty() && *show_percentage_plot;
+            let display_percentage_plot =
+                plot_visibility.should_display_percentage(percentage_plots);
             total_plot_count += display_percentage_plot as u8;
-            let display_to_hundred_plot = !to_hundreds_plots.is_empty() && *show_to_hundreds_plot;
+            let display_to_hundred_plot =
+                plot_visibility.should_display_to_hundreds(to_hundreds_plots);
             total_plot_count += display_to_hundred_plot as u8;
             let display_to_thousands_plot =
-                !to_thousands_plots.is_empty() && *show_to_thousands_plot;
+                plot_visibility.should_display_to_thousands(to_thousands_plots);
             total_plot_count += display_to_thousands_plot as u8;
 
             if generator_log.is_some() {
@@ -307,9 +304,7 @@ impl LogPlot {
         playback_button_event: &mut Option<PlayBackButtonEvent>,
         line_width: &mut f32,
         axis_cfg: &mut AxisConfig,
-        show_percentage_plot: &mut bool,
-        show_to_hundreds_plot: &mut bool,
-        show_to_thousands_plot: &mut bool,
+        plot_visibility_cfg: &mut PlotVisibilityConfig,
     ) {
         egui::Grid::new("settings").show(ui, |ui| {
             ui.label("Line width");
@@ -319,14 +314,9 @@ impl LogPlot {
                     .range(0.5..=20.0),
             );
             ui.horizontal_top(|ui| {
-                ui.toggle_value(&mut axis_cfg.link_x(), "Linked Axes");
-                ui.toggle_value(&mut axis_cfg.link_cursor_x(), "Linked Cursors");
-                ui.toggle_value(&mut axis_cfg.show_axes(), "Show Axes");
-                ui.toggle_value(axis_cfg.y_axis_lock(), "Lock Y-axis");
+                axis_cfg.toggle_axis_cfg_ui(ui);
                 ui.label("|");
-                ui.toggle_value(show_percentage_plot, "Show % plot");
-                ui.toggle_value(show_to_hundreds_plot, "Show 0-100 plot");
-                ui.toggle_value(show_to_thousands_plot, "Show 0-1000 plot");
+                plot_visibility_cfg.toggle_visibility_ui(ui);
             });
 
             ui.horizontal_centered(|ui| {
