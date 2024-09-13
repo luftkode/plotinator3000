@@ -12,6 +12,14 @@ pub trait Log: Sized + Display {
     fn entries(&self) -> &[Self::Entry];
 }
 
+/// A given log header should implement this
+pub trait GitMetadata {
+    fn project_version(&self) -> String;
+    fn git_short_sha(&self) -> String;
+    fn git_branch(&self) -> String;
+    fn git_repo_status(&self) -> String;
+}
+
 /// A given log entry should implement this trait
 pub trait LogEntry: Sized + Display {
     /// Create a [LogEntry] instance from a reader
@@ -57,7 +65,7 @@ pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
 ///
 /// fn main() -> std::io::Result<()> {
 ///     // Open the log file
-///     let file = File::open("test_data/mbed_motor_control/old_rpm_algo/pid_20240906_110538_00.bin")?;
+///     let file = File::open("test_data/mbed_motor_control/old_rpm_algo/pid_20240912_122203_00.bin")?;
 ///     let mut reader = BufReader::new(file);
 ///     
 ///     // First, read the header
