@@ -2,6 +2,7 @@ use crate::plot::LogPlot;
 use egui::{DroppedFile, Hyperlink};
 use supported_logs::SupportedLogs;
 
+mod preview_dropped;
 mod supported_logs;
 mod util;
 
@@ -155,7 +156,7 @@ impl eframe::App for App {
                 });
             }
 
-            util::preview_files_being_dropped(ctx);
+            preview_dropped::preview_files_being_dropped(ctx);
             // Collect dropped files:
             ctx.input(|i| {
                 if !i.raw.dropped_files.is_empty() {
