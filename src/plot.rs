@@ -8,34 +8,17 @@ use crate::{
     },
     util::format_ms_timestamp,
 };
+use axis_config::{AxisConfig, PlotType};
 use chrono::{DateTime, Timelike};
 use egui::{Color32, Response, RichText};
-use egui_plot::{
-    AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotBounds, PlotPoint, Text, VPlacement,
-};
+use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use util::{ExpectedPlotRange, PlotWithName};
 
+mod axis_config;
 pub mod mipmap;
 mod play_state;
 pub mod util;
-
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
-struct AxisConfig {
-    link_x: bool,
-    link_cursor_x: bool,
-    show_axes: bool,
-}
-
-impl Default for AxisConfig {
-    fn default() -> Self {
-        Self {
-            link_x: true,
-            link_cursor_x: true,
-            show_axes: true,
-        }
-    }
-}
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct LogPlot {
@@ -49,11 +32,6 @@ pub struct LogPlot {
     show_to_hundreds_plot: bool,
     to_thousands_plots: Vec<PlotWithName>,
     show_to_thousands_plot: bool,
-    lock_y_axis: bool,
-    y_bounds_percentage: Option<PlotBounds>,
-    y_bounds_hundreds: Option<PlotBounds>,
-    y_bounds_thousands: Option<PlotBounds>,
-    y_bounds_generator: Option<PlotBounds>,
 }
 
 impl Default for LogPlot {
@@ -69,11 +47,6 @@ impl Default for LogPlot {
             show_to_hundreds_plot: true,
             to_thousands_plots: vec![],
             show_to_thousands_plot: true,
-            lock_y_axis: false,
-            y_bounds_percentage: None,
-            y_bounds_hundreds: None,
-            y_bounds_thousands: None,
-            y_bounds_generator: None,
         }
     }
 }
@@ -104,11 +77,6 @@ impl LogPlot {
             show_to_hundreds_plot,
             show_to_thousands_plot,
             to_thousands_plots,
-            lock_y_axis,
-            y_bounds_percentage,
-            y_bounds_hundreds,
-            y_bounds_thousands,
-            y_bounds_generator,
         } = self;
 
         let mut playback_button_event = None;
@@ -118,13 +86,10 @@ impl LogPlot {
             play_state,
             &mut playback_button_event,
             line_width,
-            &mut axis_config.link_x,
-            &mut axis_config.link_cursor_x,
-            &mut axis_config.show_axes,
+            axis_config,
             show_percentage_plot,
             show_to_hundreds_plot,
             show_to_thousands_plot,
-            lock_y_axis,
         );
         if let Some(e) = playback_button_event {
             play_state.handle_playback_button_press(e);
@@ -201,12 +166,12 @@ impl LogPlot {
                 Plot::new(name)
                     .legend(config.clone())
                     .height(plot_height)
-                    .show_axes(self.axis_config.show_axes)
+                    .show_axes(axis_config.show_axes())
                     .y_axis_position(HPlacement::Right)
                     .include_y(0.0)
                     .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
-                    .link_axis(link_group_id, self.axis_config.link_x, false)
-                    .link_cursor(link_group_id, self.axis_config.link_cursor_x, false)
+                    .link_axis(link_group_id, axis_config.link_x(), false)
+                    .link_cursor(link_group_id, axis_config.link_cursor_x(), false)
             };
 
             let percentage_plot = create_plot("percentage")
@@ -218,7 +183,7 @@ impl LogPlot {
 
             if display_percentage_plot {
                 percentage_plot.show(ui, |plot_ui| {
-                    Self::handle_plot(plot_ui, y_bounds_percentage, *lock_y_axis, |plot_ui| {
+                    Self::handle_plot(plot_ui, |plot_ui| {
                         if let Some(status_log) = status_log {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
                                 plot_ui.text(Text::new(
@@ -233,6 +198,9 @@ impl LogPlot {
                             plot_ui.line(line.width(*line_width));
                         }
                         playback_update_plot(timer, plot_ui, is_reset_pressed);
+                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Percentage, |plot_ui| {
+                            playback_update_plot(timer, plot_ui, is_reset_pressed)
+                        });
                     });
                 });
             }
@@ -240,13 +208,15 @@ impl LogPlot {
             if display_to_hundred_plot {
                 ui.separator();
                 to_hundred.show(ui, |plot_ui| {
-                    Self::handle_plot(plot_ui, y_bounds_hundreds, *lock_y_axis, |plot_ui| {
+                    Self::handle_plot(plot_ui, |plot_ui| {
                         for plot_with_name in to_hundreds_plots {
                             let line = Line::new(plot_with_name.raw_plot.to_vec())
                                 .name(plot_with_name.name.to_owned());
                             plot_ui.line(line.width(*line_width));
                         }
-                        playback_update_plot(timer, plot_ui, is_reset_pressed);
+                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Hundreds, |plot_ui| {
+                            playback_update_plot(timer, plot_ui, is_reset_pressed)
+                        });
                     });
                 });
             }
@@ -254,7 +224,7 @@ impl LogPlot {
             if display_to_thousands_plot {
                 ui.separator();
                 thousands.show(ui, |plot_ui| {
-                    Self::handle_plot(plot_ui, y_bounds_thousands, *lock_y_axis, |plot_ui| {
+                    Self::handle_plot(plot_ui, |plot_ui| {
                         for plot_with_name in to_thousands_plots {
                             let line = Line::new(plot_with_name.raw_plot.to_vec())
                                 .name(plot_with_name.name.to_owned());
@@ -269,7 +239,9 @@ impl LogPlot {
                                 ))
                             }
                         }
-                        playback_update_plot(timer, plot_ui, is_reset_pressed);
+                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Thousands, |plot_ui| {
+                            playback_update_plot(timer, plot_ui, is_reset_pressed)
+                        });
                     });
                 });
             }
@@ -295,7 +267,7 @@ impl LogPlot {
                 let gen_log_plot = Plot::new("generator_log_plot")
                     .legend(config.clone())
                     .height(plot_height)
-                    .show_axes(self.axis_config.show_axes)
+                    .show_axes(axis_config.show_axes())
                     .x_axis_position(VPlacement::Top)
                     .y_axis_position(HPlacement::Right)
                     .custom_x_axes(x_axes)
@@ -303,16 +275,18 @@ impl LogPlot {
                     .include_y(0.0);
 
                 gen_log_plot.show(ui, |plot_ui| {
-                    Self::handle_plot(plot_ui, y_bounds_generator, *lock_y_axis, |plot_ui| {
+                    Self::handle_plot(plot_ui, |plot_ui| {
                         for line_plot in gen_log.all_plots() {
                             plot_ui.line(line_plot.width(*line_width));
                         }
-                        playback_update_generator_plot(
-                            timer,
-                            plot_ui,
-                            is_reset_pressed,
-                            gen_log.first_timestamp().unwrap_or(0.0),
-                        );
+                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Generator, |plot_ui| {
+                            playback_update_generator_plot(
+                                timer,
+                                plot_ui,
+                                is_reset_pressed,
+                                gen_log.first_timestamp().unwrap_or(0.0),
+                            )
+                        });
                     });
                 });
             }
@@ -320,27 +294,11 @@ impl LogPlot {
         .response
     }
 
-    fn handle_plot<F>(
-        plot_ui: &mut egui_plot::PlotUi,
-        bounds: &mut Option<PlotBounds>,
-        is_y_axis_locked: bool,
-        plot_function: F,
-    ) where
+    fn handle_plot<F>(plot_ui: &mut egui_plot::PlotUi, plot_function: F)
+    where
         F: FnOnce(&mut egui_plot::PlotUi),
     {
-        if is_y_axis_locked {
-            if let Some(y_bounds) = bounds {
-                let mut plot_bounds = plot_ui.plot_bounds();
-                plot_bounds.set_y(y_bounds);
-                plot_ui.set_plot_bounds(plot_bounds);
-            }
-        }
-
         plot_function(plot_ui);
-
-        if !is_y_axis_locked {
-            bounds.replace(plot_ui.plot_bounds());
-        }
     }
 
     fn show_settings_grid(
@@ -348,13 +306,10 @@ impl LogPlot {
         play_state: &PlayState,
         playback_button_event: &mut Option<PlayBackButtonEvent>,
         line_width: &mut f32,
-        link_x: &mut bool,
-        link_cursor_x: &mut bool,
-        show_axes: &mut bool,
+        axis_cfg: &mut AxisConfig,
         show_percentage_plot: &mut bool,
         show_to_hundreds_plot: &mut bool,
         show_to_thousands_plot: &mut bool,
-        lock_y_axis: &mut bool,
     ) {
         egui::Grid::new("settings").show(ui, |ui| {
             ui.label("Line width");
@@ -364,10 +319,10 @@ impl LogPlot {
                     .range(0.5..=20.0),
             );
             ui.horizontal_top(|ui| {
-                ui.toggle_value(link_x, "Linked Axes");
-                ui.toggle_value(link_cursor_x, "Linked Cursors");
-                ui.toggle_value(show_axes, "Show Axes");
-                ui.toggle_value(lock_y_axis, "Lock Y-axis");
+                ui.toggle_value(&mut axis_cfg.link_x(), "Linked Axes");
+                ui.toggle_value(&mut axis_cfg.link_cursor_x(), "Linked Cursors");
+                ui.toggle_value(&mut axis_cfg.show_axes(), "Show Axes");
+                ui.toggle_value(axis_cfg.y_axis_lock(), "Lock Y-axis");
                 ui.label("|");
                 ui.toggle_value(show_percentage_plot, "Show % plot");
                 ui.toggle_value(show_to_hundreds_plot, "Show 0-100 plot");
