@@ -1,11 +1,14 @@
-use crate::logs::{parse_to_vec, Log, LogEntry};
+use crate::logs::{parse_to_vec, GitMetadata, Log, LogEntry};
 use crate::util::parse_timestamp;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde_big_array::BigArray;
 use std::io;
 use strum_macros::{Display, FromRepr};
 
-use super::MbedMotorControlLogHeader;
+use super::{
+    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
+    ProjectVersionData, UniqueDescriptionData,
+};
 
 #[allow(non_camel_case_types)]
 #[derive(
@@ -85,12 +88,37 @@ fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct StatusLogHeader {
     #[serde(with = "BigArray")]
-    unique_description: [u8; 128],
+    unique_description: UniqueDescriptionData,
     version: u16,
+    project_version: ProjectVersionData,
+    git_short_sha: GitShortShaData,
+    #[serde(with = "BigArray")]
+    git_branch: GitBranchData,
+    git_repo_status: GitRepoStatusData,
+}
+
+impl GitMetadata for StatusLogHeader {
+    fn git_short_sha(&self) -> String {
+        String::from_utf8_lossy(self.git_short_sha_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
+
+    fn git_branch(&self) -> String {
+        String::from_utf8_lossy(self.git_branch_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
+
+    fn git_repo_status(&self) -> String {
+        String::from_utf8_lossy(self.git_repo_status_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
 }
 
 impl MbedMotorControlLogHeader for StatusLogHeader {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG";
+    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
 
     fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description
@@ -100,11 +128,38 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
         self.version
     }
 
-    fn new(unique_description: [u8; 128], version: u16) -> Self {
-        StatusLogHeader {
+    fn new(
+        unique_description: UniqueDescriptionData,
+        version: u16,
+        project_version: ProjectVersionData,
+        git_short_sha: GitShortShaData,
+        git_branch: GitBranchData,
+        git_repo_status: GitRepoStatusData,
+    ) -> Self {
+        Self {
             unique_description,
             version,
+            project_version,
+            git_short_sha,
+            git_branch,
+            git_repo_status,
         }
+    }
+
+    fn project_version_raw(&self) -> &ProjectVersionData {
+        &self.project_version
+    }
+
+    fn git_short_sha_raw(&self) -> &GitShortShaData {
+        &self.git_short_sha
+    }
+
+    fn git_branch_raw(&self) -> &GitBranchData {
+        &self.git_branch
+    }
+
+    fn git_repo_status_raw(&self) -> &GitRepoStatusData {
+        &self.git_repo_status
     }
 }
 
@@ -178,16 +233,16 @@ impl LogEntry for StatusLogEntry {
 #[cfg(test)]
 mod tests {
     use std::fs;
-
     use testresult::TestResult;
+
+    const TEST_DATA: &str =
+        "test_data/mbed_motor_control/old_rpm_algo/status_20240912_122203_00.bin";
 
     use super::*;
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let data = fs::read(
-            "test_data/mbed_motor_control/fake_controlled_data/status_20240906_081236_00.bin",
-        )?;
+        let data = fs::read(TEST_DATA)?;
         let status_log = StatusLog::from_reader(&mut data.as_slice())?;
         eprintln!("{}", status_log.header);
         assert_eq!(

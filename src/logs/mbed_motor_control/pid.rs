@@ -2,9 +2,12 @@ use crate::logs::{parse_to_vec, Log, LogEntry};
 use crate::util::parse_timestamp;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde_big_array::BigArray;
-use std::io;
+use std::{fmt, io};
 
-use super::MbedMotorControlLogHeader;
+use super::{
+    GitBranchData, GitMetadata, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
+    ProjectVersionData, UniqueDescriptionData,
+};
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PidLog {
@@ -31,7 +34,7 @@ impl Log for PidLog {
 }
 
 impl std::fmt::Display for PidLog {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Header: {}", self.header)?;
         for e in &self.entries {
             writeln!(f, "{e}")?;
@@ -43,14 +46,39 @@ impl std::fmt::Display for PidLog {
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PidLogHeader {
     #[serde(with = "BigArray")]
-    unique_description: [u8; 128],
+    unique_description: UniqueDescriptionData,
     version: u16,
+    project_version: ProjectVersionData,
+    git_short_sha: GitShortShaData,
+    #[serde(with = "BigArray")]
+    git_branch: GitBranchData,
+    git_repo_status: GitRepoStatusData,
+}
+
+impl GitMetadata for PidLogHeader {
+    fn git_branch(&self) -> String {
+        String::from_utf8_lossy(self.git_branch_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
+
+    fn git_repo_status(&self) -> String {
+        String::from_utf8_lossy(self.git_repo_status_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
+
+    fn git_short_sha(&self) -> String {
+        String::from_utf8_lossy(self.git_short_sha_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
 }
 
 impl MbedMotorControlLogHeader for PidLogHeader {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG";
+    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
 
-    fn unique_description_bytes(&self) -> &[u8; 128] {
+    fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description
     }
 
@@ -58,11 +86,38 @@ impl MbedMotorControlLogHeader for PidLogHeader {
         self.version
     }
 
-    fn new(unique_description: [u8; 128], version: u16) -> Self {
-        PidLogHeader {
+    fn new(
+        unique_description: UniqueDescriptionData,
+        version: u16,
+        project_version: ProjectVersionData,
+        git_short_sha: GitShortShaData,
+        git_branch: GitBranchData,
+        git_repo_status: GitRepoStatusData,
+    ) -> Self {
+        Self {
             unique_description,
             version,
+            project_version,
+            git_short_sha,
+            git_branch,
+            git_repo_status,
         }
+    }
+
+    fn project_version_raw(&self) -> &ProjectVersionData {
+        &self.project_version
+    }
+
+    fn git_short_sha_raw(&self) -> &GitShortShaData {
+        &self.git_short_sha
+    }
+
+    fn git_branch_raw(&self) -> &GitBranchData {
+        &self.git_branch
+    }
+
+    fn git_repo_status_raw(&self) -> &GitRepoStatusData {
+        &self.git_repo_status
     }
 }
 
@@ -119,8 +174,7 @@ impl std::fmt::Display for PidLogEntry {
 mod tests {
     use std::fs::{self, File};
 
-    const TEST_DATA: &str =
-        "test_data/mbed_motor_control/fake_controlled_data/pid_20240906_081235_00.bin";
+    const TEST_DATA: &str = "test_data/mbed_motor_control/old_rpm_algo/pid_20240912_122203_00.bin";
 
     use testresult::TestResult;
 
@@ -154,7 +208,8 @@ mod tests {
     fn test_parse_and_display() -> TestResult {
         let file = File::open(TEST_DATA)?;
         let mut reader = io::BufReader::new(file);
-        let _ = PidLogHeader::from_reader(&mut reader)?;
+        let header = PidLogHeader::from_reader(&mut reader)?;
+        println!("{header}");
         parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
         Ok(())
     }

@@ -12,6 +12,13 @@ pub trait Log: Sized + Display {
     fn entries(&self) -> &[Self::Entry];
 }
 
+/// A given log header should implement this
+pub trait GitMetadata {
+    fn git_short_sha(&self) -> String;
+    fn git_branch(&self) -> String;
+    fn git_repo_status(&self) -> String;
+}
+
 /// A given log entry should implement this trait
 pub trait LogEntry: Sized + Display {
     /// Create a [LogEntry] instance from a reader
