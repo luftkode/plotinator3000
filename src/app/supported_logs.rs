@@ -1,7 +1,7 @@
 use crate::logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
     mbed_motor_control::{
-        pid::{PidLog, PidLogHeader},
+        pid::{header::PidLogHeader, PidLog},
         status::{StatusLog, StatusLogHeader},
         MbedMotorControlLogHeader,
     },
