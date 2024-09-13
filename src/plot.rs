@@ -84,7 +84,7 @@ impl LogPlot {
         let Self {
             config,
             line_width,
-            axis_config: _,
+            axis_config,
             play_state,
             percentage_plots,
             show_percentage_plot,
@@ -96,51 +96,23 @@ impl LogPlot {
 
         let mut playback_button_event = None;
 
-        egui::Grid::new("settings").show(ui, |ui| {
-            ui.label("Line width");
-            ui.add(
-                egui::DragValue::new(line_width)
-                    .speed(0.02)
-                    .range(0.5..=20.0),
-            );
-            ui.horizontal_top(|ui| {
-                ui.toggle_value(&mut self.axis_config.link_x, "Linked Axes");
-                ui.toggle_value(&mut self.axis_config.link_cursor_x, "Linked Cursors");
-                ui.toggle_value(&mut self.axis_config.show_axes, "Show Axes");
-                ui.label("|");
-                ui.toggle_value(show_percentage_plot, "Show % plot");
-                ui.toggle_value(show_to_hundreds_plot, "Show 0-100 plot");
-                ui.toggle_value(show_to_thousands_plot, "Show 0-1000 plot");
-            });
-
-            ui.horizontal_centered(|ui| {
-                ui.label("| ");
-                // Reset button
-                let reset_text = RichText::new(egui_phosphor::regular::REWIND);
-                if ui.button(reset_text).clicked() {
-                    playback_button_event = Some(PlayBackButtonEvent::Reset);
-                }
-                let playpause_text = if play_state.is_playing() {
-                    RichText::new(egui_phosphor::regular::PAUSE).color(Color32::YELLOW)
-                } else {
-                    RichText::new(egui_phosphor::regular::PLAY).color(Color32::GREEN)
-                };
-                if ui.button(playpause_text).clicked() {
-                    playback_button_event = Some(PlayBackButtonEvent::PlayPause);
-                }
-
-                ui.label(RichText::new(play_state.formatted_time()));
-                ui.label(" |");
-            });
-
-            ui.end_row();
-        });
+        Self::show_settings_grid(
+            ui,
+            play_state,
+            &mut playback_button_event,
+            line_width,
+            &mut axis_config.link_x,
+            &mut axis_config.link_cursor_x,
+            &mut axis_config.show_axes,
+            show_percentage_plot,
+            show_to_hundreds_plot,
+            show_to_thousands_plot,
+        );
         if let Some(e) = playback_button_event {
             play_state.handle_playback_button_press(e);
         };
         let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
         let timer = play_state.time_since_update();
-
         let link_group_id = ui.id().with("linked_plots");
 
         ui.vertical(|ui| {
@@ -342,5 +314,58 @@ impl LogPlot {
             }
         })
         .response
+    }
+
+    fn show_settings_grid(
+        ui: &mut egui::Ui,
+        play_state: &PlayState,
+        playback_button_event: &mut Option<PlayBackButtonEvent>,
+        line_width: &mut f32,
+        link_x: &mut bool,
+        link_cursor_x: &mut bool,
+        show_axes: &mut bool,
+        show_percentage_plot: &mut bool,
+        show_to_hundreds_plot: &mut bool,
+        show_to_thousands_plot: &mut bool,
+    ) {
+        egui::Grid::new("settings").show(ui, |ui| {
+            ui.label("Line width");
+            ui.add(
+                egui::DragValue::new(line_width)
+                    .speed(0.02)
+                    .range(0.5..=20.0),
+            );
+            ui.horizontal_top(|ui| {
+                ui.toggle_value(link_x, "Linked Axes");
+                ui.toggle_value(link_cursor_x, "Linked Cursors");
+                ui.toggle_value(show_axes, "Show Axes");
+                ui.label("|");
+                ui.toggle_value(show_percentage_plot, "Show % plot");
+                ui.toggle_value(show_to_hundreds_plot, "Show 0-100 plot");
+                ui.toggle_value(show_to_thousands_plot, "Show 0-1000 plot");
+            });
+
+            ui.horizontal_centered(|ui| {
+                ui.label("| ");
+                // Reset button
+                let reset_text = RichText::new(egui_phosphor::regular::REWIND);
+                if ui.button(reset_text).clicked() {
+                    *playback_button_event = Some(PlayBackButtonEvent::Reset);
+                }
+                let playpause_text = if play_state.is_playing() {
+                    RichText::new(egui_phosphor::regular::PAUSE).color(Color32::YELLOW)
+                } else {
+                    RichText::new(egui_phosphor::regular::PLAY).color(Color32::GREEN)
+                };
+                if ui.button(playpause_text).clicked() {
+                    *playback_button_event = Some(PlayBackButtonEvent::PlayPause);
+                }
+
+                ui.label(RichText::new(play_state.formatted_time()));
+                ui.label(" |");
+            });
+
+            ui.end_row();
+        });
     }
 }
