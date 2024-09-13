@@ -60,7 +60,7 @@ pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
 /// ```
 /// use std::fs::File;
 /// use std::io::{self, BufReader, ErrorKind};
-/// use logviewer_rs::logs::{mbed_motor_control::pid::{PidLogHeader, PidLogEntry}, parse_and_display_log_entries};
+/// use logviewer_rs::logs::{mbed_motor_control::pid::{header::PidLogHeader, entry::PidLogEntry}, parse_and_display_log_entries};
 /// use logviewer_rs::logs::mbed_motor_control::MbedMotorControlLogHeader;
 ///
 /// fn main() -> std::io::Result<()> {

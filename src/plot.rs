@@ -6,7 +6,7 @@ use crate::{
         generator::GeneratorLog,
         mbed_motor_control::{
             pid::{entry::PidLogEntry, PidLog},
-            status::{StatusLog, StatusLogEntry},
+            status::{entry::StatusLogEntry, StatusLog},
         },
         Log, LogEntry,
     },
