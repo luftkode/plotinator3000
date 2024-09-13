@@ -1,4 +1,4 @@
-use std::{ops::RangeInclusive, time::Duration};
+use std::ops::RangeInclusive;
 
 use crate::{
     app::PlayBackButtonEvent,
@@ -6,6 +6,7 @@ use crate::{
         generator::GeneratorLog,
         mbed_motor_control::{pid::PidLog, status::StatusLog},
     },
+    util::format_ms_timestamp,
 };
 use chrono::{DateTime, Timelike};
 use egui::{Color32, Response, RichText};
@@ -181,26 +182,15 @@ impl LogPlot {
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
-            // Function to format milliseconds into HH:MM.ms
-            let format_time = |x: f64| {
-                let duration = Duration::from_millis(x as u64);
-                let hours = duration.as_secs() / 3600;
-                let minutes = (duration.as_secs() % 3600) / 60;
-                let seconds = duration.as_secs() % 60;
-
-                format!("{:1}:{:02}:{:02}.{x:03}", hours, minutes, seconds)
-            };
-
             let percentage_plot = Plot::new("percentage_plot")
                 .legend(config.clone())
                 .height(plot_height)
                 .show_axes(self.axis_config.show_axes)
-                .x_axis_position(VPlacement::Top)
                 .y_axis_position(HPlacement::Right)
                 .include_y(0.0) // Force Y-axis to include 0%
                 .include_y(1.0) // Force Y-axis to include 100%
                 .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0))
-                .x_axis_formatter(move |x, _range| format_time(x.value))
+                .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
@@ -210,7 +200,7 @@ impl LogPlot {
                 .include_y(0.0) // Force Y-axis to include 0
                 .show_axes(self.axis_config.show_axes)
                 .y_axis_position(HPlacement::Right)
-                .x_axis_formatter(move |x, _range| format_time(x.value))
+                .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
@@ -220,7 +210,7 @@ impl LogPlot {
                 .show_axes(self.axis_config.show_axes)
                 .y_axis_position(HPlacement::Right)
                 .include_y(0.0) // Force Y-axis to include 0
-                .x_axis_formatter(move |x, _range| format_time(x.value))
+                .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
