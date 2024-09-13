@@ -1,4 +1,5 @@
 use egui::RichText;
+use egui_phosphor::regular;
 use egui_plot::PlotBounds;
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
@@ -47,18 +48,42 @@ impl AxisConfig {
     }
 
     pub fn toggle_axis_cfg_ui(&mut self, ui: &mut egui::Ui) {
-        ui.toggle_value(&mut self.link_x(), "Linked Axes");
-        ui.toggle_value(&mut self.link_cursor_x(), "Linked Cursors");
-        ui.toggle_value(&mut self.show_axes(), "Show Axes");
+        let linked_x_axis_text = format!(
+            "{} Linked Axes",
+            if self.link_x {
+                regular::LINK_SIMPLE
+            } else {
+                regular::LINK_BREAK
+            }
+        );
+        ui.toggle_value(&mut self.link_x, linked_x_axis_text);
+        let linked_x_cursor_text = format!(
+            "{} Linked Cursors",
+            if self.link_cursor_x {
+                regular::LINK_SIMPLE
+            } else {
+                regular::LINK_BREAK
+            }
+        );
+        ui.toggle_value(&mut self.link_cursor_x, linked_x_cursor_text);
+        let show_axes_text = format!(
+            "{} Axes",
+            if self.show_axes {
+                regular::EYE
+            } else {
+                regular::EYE_SLASH
+            }
+        );
+        ui.toggle_value(&mut self.show_axes, show_axes_text);
         let is_y_axis_locked = self.y_axis_lock.lock_y_axis;
         ui.toggle_value(
             self.y_axis_lock(),
             RichText::new(format!(
                 "{} Lock Y-axis",
                 if is_y_axis_locked {
-                    egui_phosphor::regular::LOCK_LAMINATED
+                    regular::LOCK_LAMINATED
                 } else {
-                    egui_phosphor::regular::LOCK_SIMPLE_OPEN
+                    regular::LOCK_SIMPLE_OPEN
                 }
             )),
         );
