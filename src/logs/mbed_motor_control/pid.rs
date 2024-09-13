@@ -1,4 +1,7 @@
-use crate::logs::{parse_to_vec, Log};
+use crate::{
+    logs::{parse_to_vec, Log},
+    plot::util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot},
+};
 use entry::PidLogEntry;
 use header::PidLogHeader;
 
@@ -13,6 +16,8 @@ pub mod header;
 pub struct PidLog {
     header: PidLogHeader,
     entries: Vec<PidLogEntry>,
+    timestamps_ms: Vec<f64>,
+    all_plots_raw: Vec<RawPlot>,
 }
 
 impl Log for PidLog {
@@ -21,10 +26,49 @@ impl Log for PidLog {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = PidLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<PidLogEntry> = parse_to_vec(reader);
+        let timestamps_ms: Vec<f64> = vec_of_entries
+            .iter()
+            .map(|e| e.timestamp_ms() as f64)
+            .collect();
+
+        let rpm_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.rpm as f64,
+        );
+        let pid_err_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.pid_err as f64,
+        );
+        let servo_duty_cycle_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.servo_duty_cycle as f64,
+        );
+        let all_plots_raw = vec![
+            (
+                rpm_plot_raw,
+                String::from("RPM"),
+                ExpectedPlotRange::Thousands,
+            ),
+            (
+                pid_err_plot_raw,
+                String::from("Pid Error"),
+                ExpectedPlotRange::Percentage,
+            ),
+            (
+                servo_duty_cycle_plot_raw,
+                String::from("Servo Duty Cycle"),
+                ExpectedPlotRange::Percentage,
+            ),
+        ];
 
         Ok(Self {
             header,
             entries: vec_of_entries,
+            timestamps_ms,
+            all_plots_raw,
         })
     }
 
@@ -33,8 +77,14 @@ impl Log for PidLog {
     }
 }
 
-impl std::fmt::Display for PidLog {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+impl PidLog {
+    pub fn all_plots_raw(&self) -> &[RawPlot] {
+        &self.all_plots_raw
+    }
+}
+
+impl fmt::Display for PidLog {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Header: {}", self.header)?;
         for e in &self.entries {
             writeln!(f, "{e}")?;
