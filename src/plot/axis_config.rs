@@ -29,7 +29,7 @@ impl AxisConfig {
     pub fn link_cursor_x(&self) -> bool {
         self.link_cursor_x
     }
-    pub fn y_axis_lock(&mut self) -> &mut bool {
+    fn y_axis_lock(&mut self) -> &mut bool {
         &mut self.y_axis_lock.lock_y_axis
     }
 
@@ -43,6 +43,13 @@ impl AxisConfig {
     {
         self.y_axis_lock
             .handle(plot_ui, plot_type, between_bounds_update_fn);
+    }
+
+    pub fn toggle_axis_cfg_ui(&mut self, ui: &mut egui::Ui) {
+        ui.toggle_value(&mut self.link_x(), "Linked Axes");
+        ui.toggle_value(&mut self.link_cursor_x(), "Linked Cursors");
+        ui.toggle_value(&mut self.show_axes(), "Show Axes");
+        ui.toggle_value(&mut self.y_axis_lock(), "Lock Y-axis");
     }
 }
 
