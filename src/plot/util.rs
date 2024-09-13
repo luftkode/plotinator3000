@@ -2,8 +2,11 @@ use egui_plot::{Line, PlotPoints};
 
 use crate::logs::LogEntry;
 
+use super::mipmap::MipMap1D;
+
 pub type RawPlot = (Vec<[f64; 2]>, String, ExpectedPlotRange);
 
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,
     pub name: String,
@@ -12,6 +15,19 @@ pub struct PlotWithName {
 impl PlotWithName {
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String) -> Self {
         Self { raw_plot, name }
+    }
+}
+
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct MipMapWithName {
+    pub mip_map: MipMap1D<f64>,
+    pub name: String,
+}
+
+impl MipMapWithName {
+    pub fn new(raw_y: Vec<f64>, name: String) -> Self {
+        let mip_map = MipMap1D::new(raw_y);
+        Self { mip_map, name }
     }
 }
 

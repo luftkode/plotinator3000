@@ -14,6 +14,7 @@ use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, 
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use util::{ExpectedPlotRange, PlotWithName};
 
+pub mod mipmap;
 mod play_state;
 pub mod util;
 
@@ -40,8 +41,11 @@ pub struct LogPlot {
     line_width: f32,
     axis_config: AxisConfig,
     play_state: PlayState,
+    percentage_plots: Vec<PlotWithName>,
     show_percentage_plot: bool,
+    to_hundreds_plots: Vec<PlotWithName>,
     show_to_hundreds_plot: bool,
+    to_thousands_plots: Vec<PlotWithName>,
     show_to_thousands_plot: bool,
 }
 
@@ -52,8 +56,11 @@ impl Default for LogPlot {
             line_width: 1.5,
             axis_config: Default::default(),
             play_state: PlayState::default(),
+            percentage_plots: vec![],
             show_percentage_plot: true,
+            to_hundreds_plots: vec![],
             show_to_hundreds_plot: true,
+            to_thousands_plots: vec![],
             show_to_thousands_plot: true,
         }
     }
@@ -79,9 +86,12 @@ impl LogPlot {
             line_width,
             axis_config: _,
             play_state,
+            percentage_plots,
             show_percentage_plot,
+            to_hundreds_plots,
             show_to_hundreds_plot,
             show_to_thousands_plot,
+            to_thousands_plots,
         } = self;
 
         let mut playback_button_event = None;
@@ -134,21 +144,30 @@ impl LogPlot {
         let link_group_id = ui.id().with("linked_plots");
 
         ui.vertical(|ui| {
-            let mut percentage_plots: Vec<PlotWithName> = vec![];
-            let mut to_hundred_plots: Vec<PlotWithName> = vec![];
-            let mut thousands_plots: Vec<PlotWithName> = vec![];
-
             if let Some(pid_log) = pid_log {
                 for (points, name, range) in pid_log.all_plots_raw().iter() {
                     match range {
                         ExpectedPlotRange::Percentage => {
-                            percentage_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                            if !percentage_plots.iter().find(|p| p.name == *name).is_some() {
+                                percentage_plots
+                                    .push(PlotWithName::new(points.clone(), name.clone()))
+                            }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
-                            to_hundred_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                            if !to_hundreds_plots.iter().find(|p| p.name == *name).is_some() {
+                                to_hundreds_plots
+                                    .push(PlotWithName::new(points.clone(), name.clone()))
+                            }
                         }
                         ExpectedPlotRange::Thousands => {
-                            thousands_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                            if !to_thousands_plots
+                                .iter()
+                                .find(|p| p.name == *name)
+                                .is_some()
+                            {
+                                to_thousands_plots
+                                    .push(PlotWithName::new(points.clone(), name.clone()))
+                            }
                         }
                     }
                 }
@@ -157,13 +176,26 @@ impl LogPlot {
                 for (points, name, range) in status_log.all_plots_raw().iter() {
                     match range {
                         ExpectedPlotRange::Percentage => {
-                            percentage_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                            if !percentage_plots.iter().find(|p| p.name == *name).is_some() {
+                                percentage_plots
+                                    .push(PlotWithName::new(points.clone(), name.clone()))
+                            }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
-                            to_hundred_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                            if !to_hundreds_plots.iter().find(|p| p.name == *name).is_some() {
+                                to_hundreds_plots
+                                    .push(PlotWithName::new(points.clone(), name.clone()))
+                            }
                         }
                         ExpectedPlotRange::Thousands => {
-                            thousands_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                            if !to_thousands_plots
+                                .iter()
+                                .find(|p| p.name == *name)
+                                .is_some()
+                            {
+                                to_thousands_plots
+                                    .push(PlotWithName::new(points.clone(), name.clone()))
+                            }
                         }
                     }
                 }
@@ -171,9 +203,10 @@ impl LogPlot {
             let mut total_plot_count: u8 = 0;
             let display_percentage_plot = !percentage_plots.is_empty() && *show_percentage_plot;
             total_plot_count += display_percentage_plot as u8;
-            let display_to_hundred_plot = !to_hundred_plots.is_empty() && *show_to_hundreds_plot;
+            let display_to_hundred_plot = !to_hundreds_plots.is_empty() && *show_to_hundreds_plot;
             total_plot_count += display_to_hundred_plot as u8;
-            let display_to_thousands_plot = !thousands_plots.is_empty() && *show_to_thousands_plot;
+            let display_to_thousands_plot =
+                !to_thousands_plots.is_empty() && *show_to_thousands_plot;
             total_plot_count += display_to_thousands_plot as u8;
 
             if generator_log.is_some() {
@@ -225,8 +258,8 @@ impl LogPlot {
                         }
                     }
                     for plot_with_name in percentage_plots {
-                        let line =
-                            Line::new(plot_with_name.raw_plot.to_vec()).name(plot_with_name.name);
+                        let line = Line::new(plot_with_name.raw_plot.to_vec())
+                            .name(plot_with_name.name.to_owned());
                         plot_ui.line(line.width(*line_width));
                     }
 
@@ -237,9 +270,9 @@ impl LogPlot {
             if display_to_hundred_plot {
                 ui.separator();
                 to_hundred.show(ui, |plot_ui| {
-                    for plot_with_name in to_hundred_plots {
-                        let line =
-                            Line::new(plot_with_name.raw_plot.to_vec()).name(plot_with_name.name);
+                    for plot_with_name in to_hundreds_plots {
+                        let line = Line::new(plot_with_name.raw_plot.to_vec())
+                            .name(plot_with_name.name.to_owned());
                         plot_ui.line(line.width(*line_width));
                     }
                     playback_update_plot(timer, plot_ui, is_reset_pressed);
@@ -249,9 +282,9 @@ impl LogPlot {
             if display_to_thousands_plot {
                 ui.separator();
                 thousands.show(ui, |plot_ui| {
-                    for plot_with_name in thousands_plots {
-                        let line =
-                            Line::new(plot_with_name.raw_plot.to_vec()).name(plot_with_name.name);
+                    for plot_with_name in to_thousands_plots {
+                        let line = Line::new(plot_with_name.raw_plot.to_vec())
+                            .name(plot_with_name.name.to_owned());
                         plot_ui.line(line.width(*line_width));
                     }
 
