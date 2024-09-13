@@ -1,3 +1,4 @@
+use egui::RichText;
 use egui_plot::PlotBounds;
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
@@ -49,7 +50,18 @@ impl AxisConfig {
         ui.toggle_value(&mut self.link_x(), "Linked Axes");
         ui.toggle_value(&mut self.link_cursor_x(), "Linked Cursors");
         ui.toggle_value(&mut self.show_axes(), "Show Axes");
-        ui.toggle_value(self.y_axis_lock(), "Lock Y-axis");
+        let is_y_axis_locked = self.y_axis_lock.lock_y_axis;
+        ui.toggle_value(
+            self.y_axis_lock(),
+            RichText::new(format!(
+                "{} Lock Y-axis",
+                if is_y_axis_locked {
+                    egui_phosphor::regular::LOCK_LAMINATED
+                } else {
+                    egui_phosphor::regular::LOCK_SIMPLE_OPEN
+                }
+            )),
+        );
     }
 }
 
