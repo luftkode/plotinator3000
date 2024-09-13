@@ -1,5 +1,5 @@
 use crate::plot::LogPlot;
-use egui::{DroppedFile, Hyperlink};
+use egui::{Color32, DroppedFile, Hyperlink, RichText, TextStyle};
 use supported_logs::SupportedLogs;
 
 mod preview_dropped;
@@ -22,6 +22,7 @@ pub struct App {
     plot: LogPlot,
     font_size: Option<f32>,
     playback_event: Option<PlayBackButtonEvent>,
+    error_message: Option<String>,
 }
 
 impl Default for App {
@@ -33,6 +34,7 @@ impl Default for App {
             plot: LogPlot::default(),
             font_size: Some(Self::DEFAULT_FONT_SIZE),
             playback_event: None,
+            error_message: None,
         }
     }
 }
@@ -161,13 +163,65 @@ impl eframe::App for App {
             ctx.input(|i| {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
-                    SupportedLogs::parse_dropped_files(&self.dropped_files, &mut self.logs);
+                    match SupportedLogs::parse_dropped_files(&self.dropped_files, &mut self.logs) {
+                        Ok(_) => {
+                            self.error_message = None; // Clear any previous error message on success
+                        }
+                        Err(e) => {
+                            self.error_message =
+                                Some(format!("Error parsing dropped files: {}", e));
+                        }
+                    }
                 }
             });
+
+            self.show_error(ui);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 egui::warn_if_debug_build(ui);
             });
         });
+    }
+}
+
+impl App {
+    fn show_error(&mut self, ui: &mut egui::Ui) {
+        if let Some(error) = self.error_message.clone() {
+            let screen_rect = ui.ctx().screen_rect();
+            let window_width = screen_rect.width().min(600.0).max(400.0);
+            let window_height = screen_rect.height().min(300.0).max(200.0);
+
+            egui::Window::new(RichText::new("⚠").size(40.0))
+                .fixed_size([window_width, window_height])
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+                .show(ui.ctx(), |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(10.0);
+                        let error_text = RichText::new(&error)
+                            .text_style(TextStyle::Body)
+                            .size(18.0)
+                            .color(Color32::RED);
+                        ui.label(error_text);
+                        ui.add_space(20.0);
+
+                        let button_text = RichText::new("OK")
+                            .text_style(TextStyle::Heading)
+                            .size(18.0)
+                            .strong();
+
+                        let button_size = egui::Vec2::new(100.0, 40.0);
+                        if ui
+                            .add_sized(button_size, egui::Button::new(button_text))
+                            .on_hover_text("Click to dismiss the error")
+                            .clicked()
+                        {
+                            self.error_message = None;
+                        }
+                        ui.add_space(20.0);
+                    });
+                });
+        }
     }
 }
