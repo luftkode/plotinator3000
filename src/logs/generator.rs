@@ -164,20 +164,20 @@ impl GeneratorLog {
         ]
     }
 
-    pub fn all_plots_raw(&self) -> Vec<Vec<[f64; 2]>> {
+    pub fn all_plots_raw(&self) -> Vec<(Vec<[f64; 2]>, String)> {
         vec![
-            self.rrotor_over_time(),
-            self.rpm_over_time(),
-            self.power_over_time(),
-            self.pwm_over_time(),
-            self.load_over_time(),
-            self.irotor_over_time(),
-            self.temp1_over_time(),
-            self.temp2_over_time(),
-            self.i_in_over_time(),
-            self.i_out_over_time(),
-            self.vbat_over_time(),
-            self.vout_over_time(),
+            (self.rrotor_over_time(), String::from("rotor [R]")),
+            (self.rpm_over_time(), String::from("RPM")),
+            (self.power_over_time(), String::from("Power [W]")),
+            (self.pwm_over_time(), String::from("PWM")),
+            (self.load_over_time(), String::from("Load")),
+            (self.irotor_over_time(), String::from("rotor [I]")),
+            (self.temp1_over_time(), String::from("Temp1")),
+            (self.temp2_over_time(), String::from("Temp2")),
+            (self.i_in_over_time(), String::from("I_in")),
+            (self.i_out_over_time(), String::from("Iout")),
+            (self.vbat_over_time(), String::from("Vbat [V]")),
+            (self.vout_over_time(), String::from("Vout [V]")),
         ]
     }
 }
