@@ -87,42 +87,50 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
             })?;
         pos += SIZEOF_UNIQ_DESC;
         let size_of_version = size_of::<u16>();
-        let version = u16::from_le_bytes(slice[pos..size_of_version].try_into().map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Failed to read version: {e}"),
-            )
-        })?);
+        let version =
+            u16::from_le_bytes(slice[pos..pos + size_of_version].try_into().map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Failed to read version: {e}"),
+                )
+            })?);
         pos += size_of_version;
-        let project_version: ProjectVersionData =
-            slice[pos..SIZEOF_PROJECT_VERSION].try_into().map_err(|e| {
+        let project_version: ProjectVersionData = slice[pos..pos + SIZEOF_PROJECT_VERSION]
+            .try_into()
+            .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!("Failed to read project version: {e}"),
                 )
             })?;
         pos += SIZEOF_PROJECT_VERSION;
-        let git_short_sha: GitShortShaData =
-            slice[pos..SIZEOF_GIT_SHORT_SHA].try_into().map_err(|e| {
+        let git_short_sha: GitShortShaData = slice[pos..pos + SIZEOF_GIT_SHORT_SHA]
+            .try_into()
+            .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!("Failed to read git short SHA: {e}"),
                 )
             })?;
         pos += SIZEOF_GIT_SHORT_SHA;
-        let git_branch: GitBranchData = slice[pos..SIZEOF_GIT_BRANCH].try_into().map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Failed to read Git Branch: {e}"),
-            )
-        })?;
+        let git_branch: GitBranchData =
+            slice[pos..pos + SIZEOF_GIT_BRANCH]
+                .try_into()
+                .map_err(|e| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Failed to read Git Branch: {e}"),
+                    )
+                })?;
         pos += SIZEOF_GIT_BRANCH;
-        let git_repo_status = slice[pos..SIZEOF_GIT_REPO_STATUS].try_into().map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Failed to read Git Repo Status: {e}"),
-            )
-        })?;
+        let git_repo_status = slice[pos..pos + SIZEOF_GIT_REPO_STATUS]
+            .try_into()
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Failed to read Git Repo Status: {e}"),
+                )
+            })?;
 
         Ok(Self::new(
             unique_description,
