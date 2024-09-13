@@ -1,4 +1,4 @@
-use egui::RichText;
+use egui::{Color32, RichText};
 use egui_phosphor::regular;
 use egui_plot::PlotBounds;
 
@@ -31,10 +31,6 @@ impl AxisConfig {
     pub fn link_cursor_x(&self) -> bool {
         self.link_cursor_x
     }
-    fn y_axis_lock(&mut self) -> &mut bool {
-        &mut self.y_axis_lock.lock_y_axis
-    }
-
     pub fn handle_y_axis_lock<F>(
         &mut self,
         plot_ui: &mut egui_plot::PlotUi,
@@ -76,17 +72,21 @@ impl AxisConfig {
         );
         ui.toggle_value(&mut self.show_axes, show_axes_text);
         let is_y_axis_locked = self.y_axis_lock.lock_y_axis;
-        ui.toggle_value(
-            self.y_axis_lock(),
-            RichText::new(format!(
-                "{} Lock Y-axis",
-                if is_y_axis_locked {
-                    regular::LOCK_LAMINATED
-                } else {
-                    regular::LOCK_SIMPLE_OPEN
-                }
-            )),
-        );
+        let lock_y_axis_text = RichText::new(format!(
+            "{} Lock Y-axis",
+            if is_y_axis_locked {
+                regular::LOCK_LAMINATED
+            } else {
+                regular::LOCK_SIMPLE_OPEN
+            }
+        ));
+        let lock_y_axis_text = if is_y_axis_locked {
+            lock_y_axis_text.color(Color32::RED)
+        } else {
+            lock_y_axis_text
+        };
+
+        ui.toggle_value(&mut self.y_axis_lock.lock_y_axis, lock_y_axis_text);
     }
 }
 
