@@ -123,7 +123,6 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
                 format!("Failed to read Git Repo Status: {e}"),
             )
         })?;
-        pos += SIZEOF_GIT_REPO_STATUS;
 
         Ok(Self::new(
             unique_description,
