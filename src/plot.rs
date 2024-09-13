@@ -10,7 +10,7 @@ use crate::{
 use chrono::{DateTime, Timelike};
 use egui::{Color32, Response, RichText};
 use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
-use play_state::PlayState;
+use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use util::{ExpectedPlotRange, PlotWithName};
 
 mod play_state;
@@ -240,16 +240,7 @@ impl LogPlot {
                         plot_ui.line(line.width(*line_width));
                     }
 
-                    if let Some(t) = timer {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
-                        plot_ui.set_plot_bounds(bounds);
-                    }
-                    if is_reset_pressed {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(-bounds.min()[0]);
-                        plot_ui.set_plot_bounds(bounds);
-                    }
+                    playback_update_plot(timer, plot_ui, is_reset_pressed);
                 });
             }
 
@@ -261,16 +252,7 @@ impl LogPlot {
                             Line::new(plot_with_name.raw_plot.to_vec()).name(plot_with_name.name);
                         plot_ui.line(line.width(*line_width));
                     }
-                    if let Some(t) = timer {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
-                        plot_ui.set_plot_bounds(bounds);
-                    }
-                    if is_reset_pressed {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(-bounds.min()[0]);
-                        plot_ui.set_plot_bounds(bounds);
-                    }
+                    playback_update_plot(timer, plot_ui, is_reset_pressed);
                 });
             }
 
@@ -291,16 +273,7 @@ impl LogPlot {
                             ))
                         }
                     }
-                    if let Some(t) = timer {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
-                        plot_ui.set_plot_bounds(bounds);
-                    }
-                    if is_reset_pressed {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(-bounds.min()[0]);
-                        plot_ui.set_plot_bounds(bounds);
-                    }
+                    playback_update_plot(timer, plot_ui, is_reset_pressed);
                 });
             }
 
@@ -336,19 +309,12 @@ impl LogPlot {
                     for line_plot in gen_log.all_plots() {
                         plot_ui.line(line_plot.width(*line_width));
                     }
-                    if let Some(t) = timer {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t); // Divide by 1000 because this plot is in seconds but timer is in ms
-                        plot_ui.set_plot_bounds(bounds);
-                    }
-                    if is_reset_pressed {
-                        let mut bounds = plot_ui.plot_bounds();
-                        let first_timestamp = gen_log.first_timestamp().unwrap_or(0.0);
-
-                        // Translate X to start from the first data point timestamp
-                        bounds.translate_x(-bounds.min()[0] + first_timestamp);
-                        plot_ui.set_plot_bounds(bounds);
-                    }
+                    playback_update_generator_plot(
+                        timer,
+                        plot_ui,
+                        is_reset_pressed,
+                        gen_log.first_timestamp().unwrap_or(0.0),
+                    );
                 });
             }
         })
