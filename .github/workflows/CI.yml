@@ -37,6 +37,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check ${{matrix.flags}} --target ${{matrix.TARGET}}
 
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit
+        run: cargo audit
+
   test:
     name: Test Suite
     runs-on: ubuntu-latest
