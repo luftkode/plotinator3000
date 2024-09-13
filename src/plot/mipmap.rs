@@ -2,21 +2,6 @@
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
-/// Creates several downsampled versions of given vector.
-/// This data structure takes 2x space of original data.
-/// Example:
-/// ```rust
-/// use mipmap_1d::MipMap1D;
-///
-/// let data = vec![2, 4, 6, 8, 9];
-/// let mipmap = MipMap1D::new(data);
-/// assert_eq!(mipmap.num_levels(), 4);
-/// assert_eq!(*mipmap.get_level(0).unwrap(), [2, 4, 6, 8, 9]);
-/// assert_eq!(*mipmap.get_level(1).unwrap(), [3, 7, 9]);
-/// assert_eq!(*mipmap.get_level(2).unwrap(), [5, 9]);
-/// assert_eq!(*mipmap.get_level(3).unwrap(), [7]);
-/// assert_eq!(mipmap.get_level(4), None);
-/// ```
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct MipMap1D<T: Num + ToPrimitive + FromPrimitive> {
     data: Vec<Vec<T>>,
