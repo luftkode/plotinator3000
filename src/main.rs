@@ -20,7 +20,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "Logviewer",
+        &format!("Logviewer v{}", env!("CARGO_PKG_VERSION")),
         native_options,
         Box::new(|cc| Ok(Box::new(logviewer_rs::App::new(cc)))),
     )

@@ -117,6 +117,9 @@ impl eframe::App for App {
                 if self.plot.is_playing() {
                     ctx.request_repaint();
                 }
+                if is_web {
+                    ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
+                }
             });
             ui.collapsing("Instructions", |ui| {
                 ui.label("Pan by dragging, or scroll (+ shift = horizontal).");
