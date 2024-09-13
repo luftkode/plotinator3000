@@ -1,24 +1,21 @@
-use std::{ops::RangeInclusive, time::Duration};
+use std::ops::RangeInclusive;
 
 use crate::{
     app::PlayBackButtonEvent,
     logs::{
         generator::GeneratorLog,
-        mbed_motor_control::{
-            pid::{PidLog, PidLogEntry},
-            status::{StatusLog, StatusLogEntry},
-        },
-        Log, LogEntry,
+        mbed_motor_control::{pid::PidLog, status::StatusLog},
     },
+    util::format_ms_timestamp,
 };
 use chrono::{DateTime, Timelike};
 use egui::{Color32, Response, RichText};
-use egui_plot::{
-    AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, PlotPoints, Text, VPlacement,
-};
-use play_state::PlayState;
+use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
+use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
+use util::{ExpectedPlotRange, PlotWithName};
 
 mod play_state;
+pub mod util;
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 struct AxisConfig {
@@ -43,15 +40,21 @@ pub struct LogPlot {
     line_width: f32,
     axis_config: AxisConfig,
     play_state: PlayState,
+    show_percentage_plot: bool,
+    show_to_hundreds_plot: bool,
+    show_to_thousands_plot: bool,
 }
 
 impl Default for LogPlot {
     fn default() -> Self {
         Self {
             config: Default::default(),
-            line_width: 1.0,
+            line_width: 1.5,
             axis_config: Default::default(),
             play_state: PlayState::default(),
+            show_percentage_plot: true,
+            show_to_hundreds_plot: true,
+            show_to_thousands_plot: true,
         }
     }
 }
@@ -62,75 +65,6 @@ impl LogPlot {
     }
     pub fn is_playing(&self) -> bool {
         self.play_state.is_playing()
-    }
-
-    fn line_from_log_entry<XF, YF, L: LogEntry>(
-        pid_logs: &[L],
-        x_extractor: XF,
-        y_extractor: YF,
-    ) -> Line
-    where
-        XF: Fn(&L) -> f64,
-        YF: Fn(&L) -> f64,
-    {
-        let points: PlotPoints = pid_logs
-            .iter()
-            .map(|e| [x_extractor(e), y_extractor(e)])
-            .collect();
-        Line::new(points)
-    }
-
-    fn pid_log_lines(pid_logs: &[PidLogEntry]) -> (Vec<Line>, Vec<Line>) {
-        let zero_to_one_range = vec![
-            Self::line_from_log_entry(pid_logs, |e| e.timestamp_ms() as f64, |e| e.pid_err as f64)
-                .name("PID Error"),
-            Self::line_from_log_entry(
-                pid_logs,
-                |e| e.timestamp_ms() as f64,
-                |e| e.servo_duty_cycle as f64,
-            )
-            .name("Servo Duty Cycle"),
-        ];
-        let big_range = vec![Self::line_from_log_entry(
-            pid_logs,
-            |e| e.timestamp_ms() as f64,
-            |e| e.rpm as f64,
-        )
-        .name("RPM")];
-        (zero_to_one_range, big_range)
-    }
-
-    fn status_log_lines(status_log: &[StatusLogEntry]) -> (Vec<Line>, Vec<Line>) {
-        let zero_to_one_range = vec![Self::line_from_log_entry(
-            status_log,
-            |e| e.timestamp_ms() as f64,
-            |e| (e.fan_on as u8) as f64,
-        )
-        .name("Fan On")];
-
-        let big_range = vec![
-            Self::line_from_log_entry(
-                status_log,
-                |e| e.timestamp_ms() as f64,
-                |e| e.engine_temp as f64,
-            )
-            .name("Engine Temp °C"),
-            Self::line_from_log_entry(status_log, |e| e.timestamp_ms() as f64, |e| e.vbat.into())
-                .name("Vbat"),
-            Self::line_from_log_entry(
-                status_log,
-                |e| e.timestamp_ms() as f64,
-                |e| (e.motor_state as u8) as f64,
-            )
-            .name("Motor State"),
-            Self::line_from_log_entry(
-                status_log,
-                |e| e.timestamp_ms() as f64,
-                |e| e.setpoint.into(),
-            )
-            .name("Setpoint"),
-        ];
-        (zero_to_one_range, big_range)
     }
 
     pub fn ui(
@@ -145,6 +79,9 @@ impl LogPlot {
             line_width,
             axis_config: _,
             play_state,
+            show_percentage_plot,
+            show_to_hundreds_plot,
+            show_to_thousands_plot,
         } = self;
 
         let mut playback_button_event = None;
@@ -157,9 +94,13 @@ impl LogPlot {
                     .range(0.5..=20.0),
             );
             ui.horizontal_top(|ui| {
-                ui.checkbox(&mut self.axis_config.link_x, "Linked Axes");
-                ui.checkbox(&mut self.axis_config.link_cursor_x, "Linked Cursors");
-                ui.checkbox(&mut self.axis_config.show_axes, "Show Axes");
+                ui.toggle_value(&mut self.axis_config.link_x, "Linked Axes");
+                ui.toggle_value(&mut self.axis_config.link_cursor_x, "Linked Cursors");
+                ui.toggle_value(&mut self.axis_config.show_axes, "Show Axes");
+                ui.label("|");
+                ui.toggle_value(show_percentage_plot, "Show % plot");
+                ui.toggle_value(show_to_hundreds_plot, "Show 0-100 plot");
+                ui.toggle_value(show_to_thousands_plot, "Show 0-1000 plot");
             });
 
             ui.horizontal_centered(|ui| {
@@ -191,69 +132,90 @@ impl LogPlot {
         let timer = play_state.time_since_update();
 
         let link_group_id = ui.id().with("linked_plots");
+
         ui.vertical(|ui| {
-            // Determining plot count really needs a refactor
-            // the generator and pid logs count as 2 if any of them is there, just because they both have values that fall on the 0-1 plot and the "large values"-plot
-            // hopefully future plots with be compatible with this format or the format needs refactoring (it will at some point) such that many logs can be plotted on the same
-            // few plots that handle different value ranges (or look into custom axes in egui_plot)
-            let mut total_plot_count: u8 = 0;
-            if pid_log.is_some() || status_log.is_some() {
-                total_plot_count += 2;
+            let mut percentage_plots: Vec<PlotWithName> = vec![];
+            let mut to_hundred_plots: Vec<PlotWithName> = vec![];
+            let mut thousands_plots: Vec<PlotWithName> = vec![];
+
+            if let Some(pid_log) = pid_log {
+                for (points, name, range) in pid_log.all_plots_raw().iter() {
+                    match range {
+                        ExpectedPlotRange::Percentage => {
+                            percentage_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                        }
+                        ExpectedPlotRange::OneToOneHundred => {
+                            to_hundred_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                        }
+                        ExpectedPlotRange::Thousands => {
+                            thousands_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                        }
+                    }
+                }
             }
+            if let Some(status_log) = status_log {
+                for (points, name, range) in status_log.all_plots_raw().iter() {
+                    match range {
+                        ExpectedPlotRange::Percentage => {
+                            percentage_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                        }
+                        ExpectedPlotRange::OneToOneHundred => {
+                            to_hundred_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                        }
+                        ExpectedPlotRange::Thousands => {
+                            thousands_plots.push(PlotWithName::new(points.clone(), name.clone()))
+                        }
+                    }
+                }
+            }
+            let mut total_plot_count: u8 = 0;
+            let display_percentage_plot = !percentage_plots.is_empty() && *show_percentage_plot;
+            total_plot_count += display_percentage_plot as u8;
+            let display_to_hundred_plot = !to_hundred_plots.is_empty() && *show_to_hundreds_plot;
+            total_plot_count += display_to_hundred_plot as u8;
+            let display_to_thousands_plot = !thousands_plots.is_empty() && *show_to_thousands_plot;
+            total_plot_count += display_to_thousands_plot as u8;
+
             if generator_log.is_some() {
                 total_plot_count += 1;
             }
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
-            // Function to format milliseconds into HH:MM.ms
-            let format_time = |x: f64| {
-                let duration = Duration::from_millis(x as u64);
-                let hours = duration.as_secs() / 3600;
-                let minutes = (duration.as_secs() % 3600) / 60;
-                let seconds = duration.as_secs() % 60;
-
-                format!("{:1}:{:02}:{:02}.{x:03}", hours, minutes, seconds)
-            };
-
-            let zero_to_one_range_plot = Plot::new("zero_to_one_range_plot")
+            let percentage_plot = Plot::new("percentage_plot")
                 .legend(config.clone())
                 .height(plot_height)
                 .show_axes(self.axis_config.show_axes)
-                .x_axis_position(VPlacement::Top)
                 .y_axis_position(HPlacement::Right)
                 .include_y(0.0) // Force Y-axis to include 0%
                 .include_y(1.0) // Force Y-axis to include 100%
                 .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0))
-                .x_axis_formatter(move |x, _range| format_time(x.value))
+                .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
-            // Plot for values outside 0-1 range
-            let large_range_plot = Plot::new("large_range_plot")
+            let to_hundred = Plot::new("to_hundreds")
+                .legend(config.clone())
+                .height(plot_height)
+                .include_y(0.0) // Force Y-axis to include 0
+                .show_axes(self.axis_config.show_axes)
+                .y_axis_position(HPlacement::Right)
+                .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
+                .link_axis(link_group_id, self.axis_config.link_x, false)
+                .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
+
+            let thousands = Plot::new("thousands")
                 .legend(config.clone())
                 .height(plot_height)
                 .show_axes(self.axis_config.show_axes)
                 .y_axis_position(HPlacement::Right)
-                .x_axis_formatter(move |x, _range| format_time(x.value))
+                .include_y(0.0) // Force Y-axis to include 0
+                .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
                 .link_axis(link_group_id, self.axis_config.link_x, false)
                 .link_cursor(link_group_id, self.axis_config.link_cursor_x, false);
 
-            let (zero_to_one_range_pid, large_range_pid) = pid_log
-                .map(|log| Self::pid_log_lines(log.entries()))
-                .unwrap_or((vec![], vec![]));
-            let (zero_to_one_range_status, large_range_status) = status_log
-                .map(|log| Self::status_log_lines(log.entries()))
-                .unwrap_or((vec![], vec![]));
-
-            let has_zero_to_one_data =
-                !zero_to_one_range_pid.is_empty() || !zero_to_one_range_status.is_empty();
-            let has_large_range_data = !large_range_pid.is_empty()
-                || !large_range_status.is_empty()
-                || status_log.is_some();
-
-            if has_zero_to_one_data {
-                zero_to_one_range_plot.show(ui, |plot_ui| {
+            if display_percentage_plot {
+                percentage_plot.show(ui, |plot_ui| {
                     if let Some(status_log) = status_log {
                         for (ts, st_change) in status_log.timestamps_with_state_changes() {
                             plot_ui.text(Text::new(
@@ -262,31 +224,37 @@ impl LogPlot {
                             ))
                         }
                     }
-                    for lineplot in zero_to_one_range_pid {
-                        plot_ui.line(lineplot.width(*line_width));
-                    }
-                    for lineplot in zero_to_one_range_status {
-                        plot_ui.line(lineplot.width(*line_width));
+                    for plot_with_name in percentage_plots {
+                        let line =
+                            Line::new(plot_with_name.raw_plot.to_vec()).name(plot_with_name.name);
+                        plot_ui.line(line.width(*line_width));
                     }
 
-                    if let Some(t) = timer {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
-                        plot_ui.set_plot_bounds(bounds);
-                    }
-                    if is_reset_pressed {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(-bounds.min()[0]);
-                        plot_ui.set_plot_bounds(bounds);
-                    }
+                    playback_update_plot(timer, plot_ui, is_reset_pressed);
                 });
             }
 
-            if has_large_range_data {
-                large_range_plot.show(ui, |plot_ui| {
-                    for lineplot in large_range_pid {
-                        plot_ui.line(lineplot.width(*line_width));
+            if display_to_hundred_plot {
+                ui.separator();
+                to_hundred.show(ui, |plot_ui| {
+                    for plot_with_name in to_hundred_plots {
+                        let line =
+                            Line::new(plot_with_name.raw_plot.to_vec()).name(plot_with_name.name);
+                        plot_ui.line(line.width(*line_width));
                     }
+                    playback_update_plot(timer, plot_ui, is_reset_pressed);
+                });
+            }
+
+            if display_to_thousands_plot {
+                ui.separator();
+                thousands.show(ui, |plot_ui| {
+                    for plot_with_name in thousands_plots {
+                        let line =
+                            Line::new(plot_with_name.raw_plot.to_vec()).name(plot_with_name.name);
+                        plot_ui.line(line.width(*line_width));
+                    }
+
                     if let Some(log) = status_log {
                         for (ts, st_change) in log.timestamps_with_state_changes() {
                             plot_ui.text(Text::new(
@@ -294,24 +262,13 @@ impl LogPlot {
                                 st_change.to_string(),
                             ))
                         }
-                        for lineplot in large_range_status {
-                            plot_ui.line(lineplot.width(*line_width));
-                        }
                     }
-                    if let Some(t) = timer {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
-                        plot_ui.set_plot_bounds(bounds);
-                    }
-                    if is_reset_pressed {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(-bounds.min()[0]);
-                        plot_ui.set_plot_bounds(bounds);
-                    }
+                    playback_update_plot(timer, plot_ui, is_reset_pressed);
                 });
             }
 
             if let Some(gen_log) = generator_log {
+                ui.separator();
                 let time_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
                     let sec = mark.value;
                     let dt = DateTime::from_timestamp(sec as i64, 0).unwrap();
@@ -342,19 +299,12 @@ impl LogPlot {
                     for line_plot in gen_log.all_plots() {
                         plot_ui.line(line_plot.width(*line_width));
                     }
-                    if let Some(t) = timer {
-                        let mut bounds = plot_ui.plot_bounds();
-                        bounds.translate_x(t); // Divide by 1000 because this plot is in seconds but timer is in ms
-                        plot_ui.set_plot_bounds(bounds);
-                    }
-                    if is_reset_pressed {
-                        let mut bounds = plot_ui.plot_bounds();
-                        let first_timestamp = gen_log.first_timestamp().unwrap_or(0.0);
-
-                        // Translate X to start from the first data point timestamp
-                        bounds.translate_x(-bounds.min()[0] + first_timestamp);
-                        plot_ui.set_plot_bounds(bounds);
-                    }
+                    playback_update_generator_plot(
+                        timer,
+                        plot_ui,
+                        is_reset_pressed,
+                        gen_log.first_timestamp().unwrap_or(0.0),
+                    );
                 });
             }
         })

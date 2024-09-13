@@ -1,18 +1,23 @@
-use crate::logs::{parse_to_vec, Log, LogEntry};
-use crate::util::parse_timestamp;
-use byteorder::{LittleEndian, ReadBytesExt};
-use serde_big_array::BigArray;
+use crate::{
+    logs::{parse_to_vec, Log},
+    plot::util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot},
+};
+use entry::PidLogEntry;
+use header::PidLogHeader;
+
 use std::{fmt, io};
 
-use super::{
-    GitBranchData, GitMetadata, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
-    ProjectVersionData, UniqueDescriptionData,
-};
+use super::MbedMotorControlLogHeader;
+
+pub mod entry;
+pub mod header;
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PidLog {
     header: PidLogHeader,
     entries: Vec<PidLogEntry>,
+    timestamps_ms: Vec<f64>,
+    all_plots_raw: Vec<RawPlot>,
 }
 
 impl Log for PidLog {
@@ -21,10 +26,49 @@ impl Log for PidLog {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = PidLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<PidLogEntry> = parse_to_vec(reader);
+        let timestamps_ms: Vec<f64> = vec_of_entries
+            .iter()
+            .map(|e| e.timestamp_ms() as f64)
+            .collect();
+
+        let rpm_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.rpm as f64,
+        );
+        let pid_err_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.pid_err as f64,
+        );
+        let servo_duty_cycle_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.servo_duty_cycle as f64,
+        );
+        let all_plots_raw = vec![
+            (
+                rpm_plot_raw,
+                String::from("RPM"),
+                ExpectedPlotRange::Thousands,
+            ),
+            (
+                pid_err_plot_raw,
+                String::from("Pid Error"),
+                ExpectedPlotRange::Percentage,
+            ),
+            (
+                servo_duty_cycle_plot_raw,
+                String::from("Servo Duty Cycle"),
+                ExpectedPlotRange::Percentage,
+            ),
+        ];
 
         Ok(Self {
             header,
             entries: vec_of_entries,
+            timestamps_ms,
+            all_plots_raw,
         })
     }
 
@@ -33,159 +77,19 @@ impl Log for PidLog {
     }
 }
 
-impl std::fmt::Display for PidLog {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+impl PidLog {
+    pub fn all_plots_raw(&self) -> &[RawPlot] {
+        &self.all_plots_raw
+    }
+}
+
+impl fmt::Display for PidLog {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Header: {}", self.header)?;
         for e in &self.entries {
             writeln!(f, "{e}")?;
         }
         Ok(())
-    }
-}
-
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct PidLogHeader {
-    #[serde(with = "BigArray")]
-    unique_description: UniqueDescriptionData,
-    version: u16,
-    project_version: ProjectVersionData,
-    git_short_sha: GitShortShaData,
-    #[serde(with = "BigArray")]
-    git_branch: GitBranchData,
-    git_repo_status: GitRepoStatusData,
-}
-
-impl GitMetadata for PidLogHeader {
-    fn project_version(&self) -> String {
-        String::from_utf8_lossy(self.project_version_raw())
-            .trim_end_matches(char::from(0))
-            .to_owned()
-    }
-    fn git_branch(&self) -> String {
-        String::from_utf8_lossy(self.git_branch_raw())
-            .trim_end_matches(char::from(0))
-            .to_owned()
-    }
-
-    fn git_repo_status(&self) -> String {
-        String::from_utf8_lossy(self.git_repo_status_raw())
-            .trim_end_matches(char::from(0))
-            .to_owned()
-    }
-
-    fn git_short_sha(&self) -> String {
-        String::from_utf8_lossy(self.git_short_sha_raw())
-            .trim_end_matches(char::from(0))
-            .to_owned()
-    }
-}
-
-impl MbedMotorControlLogHeader for PidLogHeader {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
-
-    fn unique_description_bytes(&self) -> &UniqueDescriptionData {
-        &self.unique_description
-    }
-
-    fn version(&self) -> u16 {
-        self.version
-    }
-
-    fn new(
-        unique_description: UniqueDescriptionData,
-        version: u16,
-        project_version: ProjectVersionData,
-        git_short_sha: GitShortShaData,
-        git_branch: GitBranchData,
-        git_repo_status: GitRepoStatusData,
-    ) -> Self {
-        Self {
-            unique_description,
-            version,
-            project_version,
-            git_short_sha,
-            git_branch,
-            git_repo_status,
-        }
-    }
-
-    fn project_version_raw(&self) -> &ProjectVersionData {
-        &self.project_version
-    }
-
-    fn git_short_sha_raw(&self) -> &GitShortShaData {
-        &self.git_short_sha
-    }
-
-    fn git_branch_raw(&self) -> &GitBranchData {
-        &self.git_branch
-    }
-
-    fn git_repo_status_raw(&self) -> &GitRepoStatusData {
-        &self.git_repo_status
-    }
-}
-
-impl fmt::Display for PidLogHeader {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
-        writeln!(f, "Project Version: {}", self.project_version())?;
-        let git_branch = self.git_branch();
-        if !git_branch.is_empty() {
-            writeln!(f, "Branch: {}", self.git_branch())?;
-        }
-        let git_short_sha = self.git_short_sha();
-        if !git_short_sha.is_empty() {
-            writeln!(f, "SHA: {}", git_short_sha)?;
-        }
-        let is_dirty = self.git_repo_status();
-        if !is_dirty.is_empty() {
-            writeln!(f, "Repo status: dirty")?;
-        }
-        Ok(())
-    }
-}
-
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct PidLogEntry {
-    timestamp_ms_str: String,
-    pub timestamp_ms: u32,
-    pub rpm: f32,
-    pub pid_err: f32,
-    pub servo_duty_cycle: f32,
-}
-
-impl PidLogEntry {
-    pub fn timestamp_ms(&self) -> u32 {
-        self.timestamp_ms
-    }
-}
-
-impl LogEntry for PidLogEntry {
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        let timestamp_ms = reader.read_u32::<LittleEndian>()?;
-        let timestamp_ms_str = parse_timestamp(timestamp_ms);
-        let rpm = reader.read_f32::<LittleEndian>()?;
-        let pid_err = reader.read_f32::<LittleEndian>()?;
-        let servo_duty_cycle = reader.read_f32::<LittleEndian>()?;
-
-        Ok(Self {
-            timestamp_ms_str,
-            timestamp_ms,
-            rpm,
-            pid_err,
-            servo_duty_cycle,
-        })
-    }
-}
-
-impl std::fmt::Display for PidLogEntry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}: {} {} {}",
-            self.timestamp_ms, self.rpm, self.pid_err, self.servo_duty_cycle
-        )
     }
 }
 
@@ -195,9 +99,12 @@ mod tests {
 
     const TEST_DATA: &str = "test_data/mbed_motor_control/old_rpm_algo/pid_20240912_122203_00.bin";
 
+    use header::PidLogHeader;
     use testresult::TestResult;
 
-    use crate::logs::parse_and_display_log_entries;
+    use crate::logs::{
+        mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries,
+    };
 
     use super::*;
 
@@ -205,15 +112,6 @@ mod tests {
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
         let pidlog = PidLog::from_reader(&mut data.as_slice())?;
-        eprintln!("{}", pidlog.header);
-        assert_eq!(
-            pidlog.header.unique_description(),
-            PidLogHeader::UNIQUE_DESCRIPTION
-        );
-        assert_eq!(pidlog.header.version, 0);
-        assert_eq!(pidlog.header.project_version(), "1.0.0");
-        assert_eq!(pidlog.header.git_branch(), "fix-release-workflow");
-        assert_eq!(pidlog.header.git_short_sha(), "56fc61b");
 
         let first_entry = pidlog.entries.first().unwrap();
         assert_eq!(first_entry.rpm, 0.0);

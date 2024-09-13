@@ -1,3 +1,5 @@
+use egui_plot::PlotUi;
+
 use crate::app;
 
 /// Get the current time with support for wasm and native.
@@ -18,6 +20,40 @@ fn now() -> f64 {
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards")
             .as_secs_f64()
+    }
+}
+
+pub fn playback_update_plot(timer: Option<f64>, plot_ui: &mut PlotUi, is_reset_pressed: bool) {
+    if let Some(t) = timer {
+        let mut bounds = plot_ui.plot_bounds();
+        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
+        plot_ui.set_plot_bounds(bounds);
+    }
+    if is_reset_pressed {
+        let mut bounds = plot_ui.plot_bounds();
+        bounds.translate_x(-bounds.min()[0]);
+        plot_ui.set_plot_bounds(bounds);
+    }
+}
+
+/// A special case right now, cause we didn't yet figure out how to generalize over the kinds of logs the generator produces
+pub fn playback_update_generator_plot(
+    timer: Option<f64>,
+    plot_ui: &mut PlotUi,
+    is_reset_pressed: bool,
+    first_timestamp: f64,
+) {
+    if let Some(t) = timer {
+        let mut bounds = plot_ui.plot_bounds();
+        bounds.translate_x(t); // Divide by 1000 because this plot is in seconds but timer is in ms
+        plot_ui.set_plot_bounds(bounds);
+    }
+    if is_reset_pressed {
+        let mut bounds = plot_ui.plot_bounds();
+
+        // Translate X to start from the first data point timestamp
+        bounds.translate_x(-bounds.min()[0] + first_timestamp);
+        plot_ui.set_plot_bounds(bounds);
     }
 }
 
