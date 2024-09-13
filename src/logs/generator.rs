@@ -125,12 +125,12 @@ impl GeneratorLog {
         Line::new(self.i_in_over_time()).name("I_in")
     }
 
-    pub fn iout_over_time(&self) -> Vec<[f64; 2]> {
+    pub fn i_out_over_time(&self) -> Vec<[f64; 2]> {
         self.y_over_time(|e| e.i_out.into())
     }
 
     pub fn i_out_plot(&self) -> Line {
-        Line::new(self.iout_over_time()).name("Iout")
+        Line::new(self.i_out_over_time()).name("Iout")
     }
 
     pub fn vbat_over_time(&self) -> Vec<[f64; 2]> {
@@ -161,6 +161,23 @@ impl GeneratorLog {
             self.i_out_plot(),
             self.vbat_plot(),
             self.vout_plot(),
+        ]
+    }
+
+    pub fn all_plots_raw(&self) -> Vec<Vec<[f64; 2]>> {
+        vec![
+            self.rrotor_over_time(),
+            self.rpm_over_time(),
+            self.power_over_time(),
+            self.pwm_over_time(),
+            self.load_over_time(),
+            self.irotor_over_time(),
+            self.temp1_over_time(),
+            self.temp2_over_time(),
+            self.i_in_over_time(),
+            self.i_out_over_time(),
+            self.vbat_over_time(),
+            self.vout_over_time(),
         ]
     }
 }
