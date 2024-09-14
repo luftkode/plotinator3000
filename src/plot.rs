@@ -177,17 +177,6 @@ impl LogPlot {
             let to_hundred = create_plot("to_hundreds");
             let thousands = create_plot("to_thousands");
 
-            let plot_lines = |plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName]| {
-                for plot_with_name in plots {
-                    let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds());
-                    let filtered_points =
-                        filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
-
-                    let line = Line::new(filtered_points).name(plot_with_name.name.to_owned());
-                    plot_ui.line(line.width(*line_width));
-                }
-            };
-
             if display_percentage_plot {
                 percentage_plot.show(ui, |plot_ui| {
                     Self::handle_plot(plot_ui, |plot_ui| {
@@ -199,7 +188,7 @@ impl LogPlot {
                                 ));
                             }
                         }
-                        plot_lines(plot_ui, percentage_plots);
+                        plot_lines(plot_ui, percentage_plots, *line_width);
                         playback_update_plot(timer, plot_ui, is_reset_pressed);
                         axis_config.handle_y_axis_lock(plot_ui, PlotType::Percentage, |plot_ui| {
                             playback_update_plot(timer, plot_ui, is_reset_pressed)
@@ -212,7 +201,7 @@ impl LogPlot {
                 ui.separator();
                 to_hundred.show(ui, |plot_ui| {
                     Self::handle_plot(plot_ui, |plot_ui| {
-                        plot_lines(plot_ui, to_hundreds_plots);
+                        plot_lines(plot_ui, to_hundreds_plots, *line_width);
                         axis_config.handle_y_axis_lock(plot_ui, PlotType::Hundreds, |plot_ui| {
                             playback_update_plot(timer, plot_ui, is_reset_pressed)
                         });
@@ -224,7 +213,7 @@ impl LogPlot {
                 ui.separator();
                 thousands.show(ui, |plot_ui| {
                     Self::handle_plot(plot_ui, |plot_ui| {
-                        plot_lines(plot_ui, to_thousands_plots);
+                        plot_lines(plot_ui, to_thousands_plots, *line_width);
 
                         for status_log in status_logs {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
@@ -412,4 +401,14 @@ fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]>
     }
 
     filtered
+}
+
+fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_width: f32) {
+    for plot_with_name in plots {
+        let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds());
+        let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
+
+        let line = Line::new(filtered_points).name(plot_with_name.name.to_owned());
+        plot_ui.line(line.width(line_width));
+    }
 }
