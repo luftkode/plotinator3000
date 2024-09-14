@@ -22,7 +22,7 @@ pub trait GitMetadata {
 
 /// A given log entry should implement this trait
 pub trait LogEntry: Sized + Display {
-    /// Create a [LogEntry] instance from a reader
+    /// Create a [`LogEntry`] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
 }
 
@@ -42,8 +42,8 @@ pub fn parse_unique_description(raw_uniq_desc: [u8; 128]) -> String {
         .to_owned()
 }
 
-/// Take a reader and parse [LogEntry]s from it until it returns an error,
-/// then return a vector of all [LogEntry]s.
+/// Take a reader and parse [`LogEntry`]s from it until it returns an error,
+/// then return a vector of all [`LogEntry`]s.
 pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
     let mut v = Vec::new();
     while let Ok(e) = T::from_reader(reader) {

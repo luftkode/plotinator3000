@@ -63,14 +63,11 @@ impl LogEntry for StatusLogEntry {
         let fan_on = reader.read_u8()? == 1;
         let vbat = reader.read_f32::<LittleEndian>()?;
         let setpoint = reader.read_f32::<LittleEndian>()?;
-        let motor_state = match MotorState::from_repr(reader.read_u8()?.into()) {
-            Some(st) => st,
-            None => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "Invalid motor state",
-                ))
-            }
+        let Some(motor_state) = MotorState::from_repr(reader.read_u8()?.into()) else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Invalid motor state",
+            ));
         };
         Ok(Self {
             timestamp_ms_str,
@@ -86,17 +83,17 @@ impl LogEntry for StatusLogEntry {
 
 #[cfg(test)]
 mod tests {
-    use testresult::TestResult;
-
     use super::*;
 
     #[test]
-    fn test_motor_state_deserialize() -> TestResult {
-        assert_eq!(MotorState::DO_IGNITION, MotorState::from_repr(3).unwrap());
+    fn test_motor_state_deserialize() {
+        assert_eq!(
+            MotorState::DO_IGNITION,
+            MotorState::from_repr(3).expect("Value doesn't map to variant")
+        );
         assert_eq!(
             MotorState::WAIT_TIME_SHUTDOWN,
-            MotorState::from_repr(10).unwrap()
+            MotorState::from_repr(10).expect("Value doesn't map to variant")
         );
-        Ok(())
     }
 }

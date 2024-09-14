@@ -39,10 +39,7 @@ impl SupportedLogs {
     /// ### Note to developers who are not seasoned Rust devs :)
     /// This cannot take `&mut self` as that breaks ownership rules when looping over dropped files
     /// meaning you would be forced to make a copy which isn't actually needed, but required for it to compile.
-    pub fn parse_dropped_files(
-        dropped_files: &[DroppedFile],
-        logs: &mut SupportedLogs,
-    ) -> io::Result<()> {
+    pub fn parse_dropped_files(dropped_files: &[DroppedFile], logs: &mut Self) -> io::Result<()> {
         for file in dropped_files {
             parse_file(file, logs)?;
         }

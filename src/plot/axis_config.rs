@@ -2,7 +2,7 @@ use egui::{Color32, RichText};
 use egui_phosphor::regular;
 use egui_plot::PlotBounds;
 
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct AxisConfig {
     link_x: bool,
     link_cursor_x: bool,
@@ -52,7 +52,7 @@ impl AxisConfig {
                 regular::LINK_BREAK
             }
         );
-        ui.toggle_value(&mut self.link_x, linked_x_axis_text);
+        _ = ui.toggle_value(&mut self.link_x, linked_x_axis_text);
         let linked_x_cursor_text = format!(
             "{} Linked Cursors",
             if self.link_cursor_x {
@@ -61,7 +61,7 @@ impl AxisConfig {
                 regular::LINK_BREAK
             }
         );
-        ui.toggle_value(&mut self.link_cursor_x, linked_x_cursor_text);
+        _ = ui.toggle_value(&mut self.link_cursor_x, linked_x_cursor_text);
         let show_axes_text = format!(
             "{} Axes",
             if self.show_axes {
@@ -70,7 +70,7 @@ impl AxisConfig {
                 regular::EYE_SLASH
             }
         );
-        ui.toggle_value(&mut self.show_axes, show_axes_text);
+        _ = ui.toggle_value(&mut self.show_axes, show_axes_text);
         let is_y_axis_locked = self.y_axis_lock.lock_y_axis;
         let lock_y_axis_text = RichText::new(format!(
             "{} Lock Y-axis",
@@ -86,7 +86,7 @@ impl AxisConfig {
             lock_y_axis_text
         };
 
-        ui.toggle_value(&mut self.y_axis_lock.lock_y_axis, lock_y_axis_text);
+        _ = ui.toggle_value(&mut self.y_axis_lock.lock_y_axis, lock_y_axis_text);
     }
 }
 
@@ -98,7 +98,7 @@ pub enum PlotType {
     Generator,
 }
 
-#[derive(Default, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct YAxisLock {
     lock_y_axis: bool,
     y_bounds_percentage: Option<PlotBounds>,
@@ -118,7 +118,7 @@ impl YAxisLock {
     {
         let bounds = self.get_bounds(plot_type);
         if self.lock_y_axis {
-            if let Some(ref y_bounds) = bounds {
+            if let Some(y_bounds) = &bounds {
                 let mut plot_bounds = plot_ui.plot_bounds();
                 plot_bounds.set_y(y_bounds);
                 plot_ui.set_plot_bounds(plot_bounds);

@@ -2,7 +2,7 @@ use egui_phosphor::regular;
 
 use super::util::PlotWithName;
 
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct PlotVisibilityConfig {
     show_percentage_plot: bool,
     show_to_hundreds_plot: bool,
@@ -41,7 +41,7 @@ impl PlotVisibilityConfig {
                 regular::EYE_SLASH
             }
         );
-        ui.toggle_value(&mut self.show_percentage_plot, show_perc_plot_text);
+        _ = ui.toggle_value(&mut self.show_percentage_plot, show_perc_plot_text);
         let show_to_hundr_plot_text = format!(
             "{} 0-100 plot",
             if self.show_to_hundreds_plot {
@@ -50,7 +50,8 @@ impl PlotVisibilityConfig {
                 regular::EYE_SLASH
             }
         );
-        ui.toggle_value(&mut self.show_to_hundreds_plot, show_to_hundr_plot_text);
+
+        _ = ui.toggle_value(&mut self.show_to_hundreds_plot, show_to_hundr_plot_text);
         let show_to_thousands_plot_text = format!(
             "{} 0-1000s plot",
             if self.show_to_thousands_plot {
@@ -59,7 +60,7 @@ impl PlotVisibilityConfig {
                 regular::EYE_SLASH
             }
         );
-        ui.toggle_value(
+        _ = ui.toggle_value(
             &mut self.show_to_thousands_plot,
             show_to_thousands_plot_text,
         );

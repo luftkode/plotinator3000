@@ -8,9 +8,9 @@ pub fn preview_files_being_dropped(ctx: &egui::Context) {
             let mut text = "Dropping files:\n".to_owned();
             for file in &i.raw.hovered_files {
                 if let Some(path) = &file.path {
-                    write!(text, "\n{}", path.display()).ok();
+                    _ = write!(text, "\n{}", path.display());
                 } else if !file.mime.is_empty() {
-                    write!(text, "\n{}", file.mime).ok();
+                    _ = write!(text, "\n{}", file.mime).ok();
                 } else {
                     text += "\n???";
                 }
@@ -22,8 +22,8 @@ pub fn preview_files_being_dropped(ctx: &egui::Context) {
             ctx.layer_painter(LayerId::new(Order::Foreground, Id::new("file_drop_target")));
 
         let screen_rect = ctx.screen_rect();
-        painter.rect_filled(screen_rect, 0.0, Color32::from_black_alpha(192));
-        painter.text(
+        _ = painter.rect_filled(screen_rect, 0.0, Color32::from_black_alpha(192));
+        _ = painter.text(
             screen_rect.center(),
             Align2::CENTER_CENTER,
             text,

@@ -123,7 +123,7 @@ fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, 
     let mut result = Vec::new();
     let mut last_state = None;
 
-    for entry in entries.iter() {
+    for entry in entries {
         // Check if the current state is different from the last recorded state
         if last_state != Some(entry.motor_state) {
             result.push((entry.timestamp_ms, entry.motor_state));
@@ -153,20 +153,20 @@ mod tests {
         let status_log = StatusLog::from_reader(&mut data.as_slice())?;
         eprintln!("{}", status_log.header);
 
-        let first_entry = status_log.entries.first().unwrap();
+        let first_entry = status_log.entries().first().expect("Empty entries vec");
         assert_eq!(first_entry.engine_temp, 4.770642);
         assert!(!first_entry.fan_on);
         assert_eq!(first_entry.vbat, 4.211966);
         assert_eq!(first_entry.setpoint, 2500.0);
         assert_eq!(first_entry.motor_state, MotorState::POWER_HOLD);
-        let second_entry = status_log.entries.get(1).unwrap();
+        let second_entry = &status_log.entries[1];
         assert_eq!(second_entry.engine_temp, 4.770642);
         assert!(!second_entry.fan_on);
         assert_eq!(second_entry.vbat, 4.219487);
         assert_eq!(second_entry.setpoint, 2500.0);
         assert_eq!(second_entry.motor_state, MotorState::POWER_HOLD);
 
-        let last_entry = status_log.entries().last().unwrap();
+        let last_entry = status_log.entries().last().expect("Empty entries vec");
         assert_eq!(last_entry.timestamp_ms(), 17492);
         assert_eq!(last_entry.engine_temp, 4.770642);
         assert!(!last_entry.fan_on);

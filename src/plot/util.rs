@@ -1,4 +1,5 @@
 use egui_plot::{Line, PlotBounds, PlotPoints};
+use serde::{Deserialize, Serialize};
 
 use crate::logs::LogEntry;
 
@@ -6,7 +7,7 @@ use super::mipmap::MipMap1D;
 
 pub type RawPlot = (Vec<[f64; 2]>, String, ExpectedPlotRange);
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,
     pub name: String,
@@ -18,7 +19,7 @@ impl PlotWithName {
     }
 }
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct MipMapWithName {
     pub mip_map: MipMap1D<f64>,
     pub name: String,
@@ -58,7 +59,7 @@ where
 }
 
 /// Where does the plot values typically fit within
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
 pub enum ExpectedPlotRange {
     /// For plots where the value is 0.0-1.0 and corresponds to percentage 0-100%
     Percentage,
@@ -71,7 +72,7 @@ pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_
         let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
         let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
 
-        let line = Line::new(filtered_points).name(plot_with_name.name.to_owned());
+        let line = Line::new(filtered_points).name(plot_with_name.name.clone());
         plot_ui.line(line.width(line_width));
     }
 }
@@ -120,13 +121,14 @@ pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64;
             .skip(1)
             .take(points.len() - 2)
             .filter(|point| point_within(point[0], x_range))
-            .cloned(),
+            .copied(),
     );
 
     // Always include the last point if it's different from the first point
-    let last_point = *points.last().unwrap();
-    if last_point != filtered[0] {
-        filtered.push(last_point);
+    if let Some(last_point) = points.last() {
+        if *last_point != filtered[0] {
+            filtered.push(*last_point);
+        }
     }
 
     filtered

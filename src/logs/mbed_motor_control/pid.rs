@@ -113,11 +113,11 @@ mod tests {
         let data = fs::read(TEST_DATA)?;
         let pidlog = PidLog::from_reader(&mut data.as_slice())?;
 
-        let first_entry = pidlog.entries.first().unwrap();
+        let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_err, 0.0);
         assert_eq!(first_entry.servo_duty_cycle, 0.03075);
-        let second_entry = pidlog.entries.get(1).unwrap();
+        let second_entry = &pidlog.entries[1];
         assert_eq!(second_entry.rpm, 0.0);
         assert_eq!(second_entry.pid_err, 0.0);
         assert_eq!(second_entry.servo_duty_cycle, 0.03075);

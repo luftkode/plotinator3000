@@ -8,28 +8,28 @@ use super::{
 };
 
 pub fn show_settings_grid(
-    ui: &mut egui::Ui,
+    gui: &mut egui::Ui,
     play_state: &PlayState,
     playback_button_event: &mut Option<PlayBackButtonEvent>,
     line_width: &mut f32,
     axis_cfg: &mut AxisConfig,
     plot_visibility_cfg: &mut PlotVisibilityConfig,
 ) {
-    egui::Grid::new("settings").show(ui, |ui| {
-        ui.label("Line width");
-        ui.add(
+    _ = egui::Grid::new("settings").show(gui, |arg_ui| {
+        _ = arg_ui.label("Line width");
+        _ = arg_ui.add(
             egui::DragValue::new(line_width)
                 .speed(0.02)
                 .range(0.5..=20.0),
         );
-        ui.horizontal_top(|ui| {
+        _ = arg_ui.horizontal_top(|ui| {
             axis_cfg.toggle_axis_cfg_ui(ui);
-            ui.label("|");
+            _ = ui.label("|");
             plot_visibility_cfg.toggle_visibility_ui(ui);
         });
 
-        ui.horizontal_centered(|ui| {
-            ui.label("| ");
+        _ = arg_ui.horizontal_centered(|ui| {
+            _ = ui.label("| ");
             // Reset button
             let reset_text = RichText::new(egui_phosphor::regular::REWIND);
             if ui.button(reset_text).clicked() {
@@ -44,10 +44,10 @@ pub fn show_settings_grid(
                 *playback_button_event = Some(PlayBackButtonEvent::PlayPause);
             }
 
-            ui.label(RichText::new(play_state.formatted_time()));
-            ui.label(" |");
+            _ = ui.label(RichText::new(play_state.formatted_time()));
+            _ = ui.label(" |");
         });
 
-        ui.end_row();
+        arg_ui.end_row();
     });
 }

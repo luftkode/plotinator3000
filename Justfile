@@ -1,3 +1,4 @@
+mod ci
 
 @_default:
     just --list --no-aliases
@@ -38,13 +39,5 @@ install-devtools:
 # Install nice-to-have devtools
 install-extra-devtools:
     cargo install cargo-nextest --locked
-    
 
-[group("CI")]
-ci-fmt: (fmt " --check")
 
-[group("CI")]
-ci-lint: (lint "--workspace --all-targets --all-features --  -D warnings -W clippy::all")
-
-[group("CI")]
-ci-test: (test "--lib")

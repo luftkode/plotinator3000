@@ -8,10 +8,7 @@ pub fn parse_timestamp(timestamp_ms: u32) -> String {
     let seconds = duration.as_secs() % 60;
     let milliseconds = duration.subsec_millis();
 
-    format!(
-        "{:02}:{:02}:{:02}.{:03}",
-        hours, minutes, seconds, milliseconds
-    )
+    format!("{hours:02}:{minutes:02}:{seconds:02}.{milliseconds:03}")
 }
 
 /// Function to format milliseconds into HH:MM:SS.ms

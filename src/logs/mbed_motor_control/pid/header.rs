@@ -4,9 +4,10 @@ use super::super::{
     GitBranchData, GitMetadata, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
     ProjectVersionData, UniqueDescriptionData,
 };
+use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
 pub struct PidLogHeader {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
@@ -99,7 +100,7 @@ impl fmt::Display for PidLogHeader {
         }
         let git_short_sha = self.git_short_sha();
         if !git_short_sha.is_empty() {
-            writeln!(f, "SHA: {}", git_short_sha)?;
+            writeln!(f, "SHA: {git_short_sha}")?;
         }
         let is_dirty = self.git_repo_status();
         if !is_dirty.is_empty() {
