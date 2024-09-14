@@ -1,4 +1,4 @@
-use egui_plot::{Line, PlotPoints};
+use egui_plot::{Line, PlotBounds, PlotPoints};
 
 use crate::logs::LogEntry;
 
@@ -64,4 +64,70 @@ pub enum ExpectedPlotRange {
     Percentage,
     OneToOneHundred,
     Thousands,
+}
+
+pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_width: f32) {
+    for plot_with_name in plots {
+        let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
+        let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
+
+        let line = Line::new(filtered_points).name(plot_with_name.name.to_owned());
+        plot_ui.line(line.width(line_width));
+    }
+}
+
+fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
+    let range = bounds.range_x();
+    (*range.start(), *range.end())
+}
+
+/// Extends the x plot bounds by a specified percentage in both directions
+pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (f64, f64) {
+    let (x_bound_min, x_bound_max) = x_plot_bound(bounds);
+
+    // Calculate the extension values based on the magnitude of the bounds
+    let x_extension = (x_bound_max - x_bound_min).abs() * extension_percentage;
+
+    // Extend the bounds
+    let extended_x_bound_min = x_bound_min - x_extension;
+    let extended_x_bound_max = x_bound_max + x_extension;
+
+    (extended_x_bound_min, extended_x_bound_max)
+}
+
+#[inline(always)]
+fn point_within(point: f64, bounds: (f64, f64)) -> bool {
+    let (min, max) = bounds;
+    min < point && point < max
+}
+
+/// Filter plot points based on the x plot bounds. Always includes the first and last plot point
+/// such that resetting zooms works well even when the plot bounds are outside the data range.
+pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
+    if points.is_empty() {
+        return Vec::new();
+    }
+
+    let mut filtered = Vec::with_capacity(points.len());
+
+    // Always include the first point
+    filtered.push(points[0]);
+
+    // Filter points within the extended range
+    filtered.extend(
+        points
+            .iter()
+            .skip(1)
+            .take(points.len() - 2)
+            .filter(|point| point_within(point[0], x_range))
+            .cloned(),
+    );
+
+    // Always include the last point if it's different from the first point
+    let last_point = *points.last().unwrap();
+    if last_point != filtered[0] {
+        filtered.push(last_point);
+    }
+
+    filtered
 }
