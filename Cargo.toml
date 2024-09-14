@@ -87,3 +87,26 @@ targets = [
 install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = true
+
+[lints.clippy]
+
+as_ptr_cast_mut = "warn"
+await_holding_lock = "warn"
+bool_to_int_with_if = "warn"
+char_lit_as_u8 = "warn"
+checked_conversions = "warn"
+clear_with_drain = "warn"
+cloned_instead_of_copied = "warn"
+dbg_macro = "warn"
+debug_assert_with_mut_call = "warn"
+derive_partial_eq_without_eq = "warn"
+doc_link_with_quotes = "warn"
+doc_markdown = "warn"
+empty_enum = "warn"
+enum_glob_use = "warn"
+equatable_if_let = "warn"
+exit = "warn"
+expl_impl_clone_on_copy = "warn"
+explicit_deref_methods = "warn"
+explicit_into_iter_loop = "warn"
+explicit_iter_loop = "warn"
