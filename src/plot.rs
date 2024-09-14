@@ -190,20 +190,8 @@ impl LogPlot {
                         }
                         for plot_with_name in percentage_plots {
                             let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds());
-                            // Always render the first point such that the plot will always be within reasonable range
-                            let mut filtered_points: Vec<[f64; 2]> =
-                                Vec::with_capacity(plot_with_name.raw_plot.len());
-                            if let Some(first_point) = plot_with_name.raw_plot.first() {
-                                filtered_points.push(*first_point);
-                            }
-                            let mut filtered: Vec<_> = plot_with_name
-                                .raw_plot
-                                .iter()
-                                .skip(1)
-                                .filter(|point| point_within(point[0], x_min_max_ext))
-                                .cloned()
-                                .collect();
-                            filtered_points.append(&mut filtered);
+                            let filtered_points =
+                                filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
 
                             let line =
                                 Line::new(filtered_points).name(plot_with_name.name.to_owned());
@@ -222,20 +210,9 @@ impl LogPlot {
                 to_hundred.show(ui, |plot_ui| {
                     Self::handle_plot(plot_ui, |plot_ui| {
                         for plot_with_name in to_hundreds_plots {
-                            // Always render the first point such that the plot will always be within reasonable range
-                            let mut filtered_points: Vec<[f64; 2]> =
-                                Vec::with_capacity(plot_with_name.raw_plot.len());
-                            if let Some(first_point) = plot_with_name.raw_plot.first() {
-                                filtered_points.push(*first_point);
-                            }
                             let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds());
-                            let mut filtered: Vec<_> = plot_with_name
-                                .raw_plot
-                                .iter()
-                                .filter(|point| point_within(point[0], x_min_max_ext))
-                                .cloned()
-                                .collect();
-                            filtered_points.append(&mut filtered);
+                            let filtered_points =
+                                filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
 
                             let line =
                                 Line::new(filtered_points).name(plot_with_name.name.to_owned());
@@ -253,20 +230,9 @@ impl LogPlot {
                 thousands.show(ui, |plot_ui| {
                     Self::handle_plot(plot_ui, |plot_ui| {
                         for plot_with_name in to_thousands_plots {
-                            // Always render the first point such that the plot will always be within reasonable range
-                            let mut filtered_points: Vec<[f64; 2]> =
-                                Vec::with_capacity(plot_with_name.raw_plot.len());
-                            if let Some(first_point) = plot_with_name.raw_plot.first() {
-                                filtered_points.push(*first_point);
-                            }
                             let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds());
-                            let mut filtered: Vec<_> = plot_with_name
-                                .raw_plot
-                                .iter()
-                                .filter(|point| point_within(point[0], x_min_max_ext))
-                                .cloned()
-                                .collect();
-                            filtered_points.append(&mut filtered);
+                            let filtered_points =
+                                filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
 
                             let line =
                                 Line::new(filtered_points).name(plot_with_name.name.to_owned());
@@ -330,19 +296,8 @@ impl LogPlot {
 
                                 let x_min_max_ext = (x_min - 16.0, x_max + 16.0);
                                 // Always render the first point such that the plot will always be within reasonable range
-                                let mut filtered_points: Vec<[f64; 2]> =
-                                    Vec::with_capacity(raw_plot.len());
-                                if let Some(first_point) = raw_plot.first() {
-                                    filtered_points.push(*first_point);
-                                }
+                                let filtered_points = filter_plot_points(&raw_plot, x_min_max_ext);
 
-                                let mut filtered: Vec<[f64; 2]> = raw_plot
-                                    .iter()
-                                    .skip(1)
-                                    .filter(|point| point_within(point[0], x_min_max_ext))
-                                    .cloned()
-                                    .collect();
-                                filtered_points.append(&mut filtered);
                                 let legend_name = if gen_log_count == 1 {
                                     name
                                 } else {
@@ -439,4 +394,35 @@ fn extended_x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
 fn point_within(point: f64, bounds: (f64, f64)) -> bool {
     let (min, max) = bounds;
     min < point && point < max
+}
+
+/// Filter plot points based on the x plot bounds. Always includes the first and last plot point
+/// such that resetting zooms works well even when the plot bounds are outside the data range.
+fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
+    if points.is_empty() {
+        return Vec::new();
+    }
+
+    let mut filtered = Vec::with_capacity(points.len());
+
+    // Always include the first point
+    filtered.push(points[0]);
+
+    // Filter points within the extended range
+    filtered.extend(
+        points
+            .iter()
+            .skip(1)
+            .take(points.len() - 2)
+            .filter(|point| point_within(point[0], x_range))
+            .cloned(),
+    );
+
+    // Always include the last point if it's different from the first point
+    let last_point = *points.last().unwrap();
+    if last_point != filtered[0] {
+        filtered.push(last_point);
+    }
+
+    filtered
 }
