@@ -11,9 +11,7 @@ use crate::{
 use axis_config::{AxisConfig, PlotType};
 use chrono::{DateTime, Timelike};
 use egui::{Color32, Response, RichText};
-use egui_plot::{
-    AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotBounds, PlotPoint, Text, VPlacement,
-};
+use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 use util::{ExpectedPlotRange, PlotWithName};
@@ -188,7 +186,7 @@ impl LogPlot {
                                 ));
                             }
                         }
-                        plot_lines(plot_ui, percentage_plots, *line_width);
+                        util::plot_lines(plot_ui, percentage_plots, *line_width);
                         playback_update_plot(timer, plot_ui, is_reset_pressed);
                         axis_config.handle_y_axis_lock(plot_ui, PlotType::Percentage, |plot_ui| {
                             playback_update_plot(timer, plot_ui, is_reset_pressed)
@@ -201,7 +199,7 @@ impl LogPlot {
                 ui.separator();
                 to_hundred.show(ui, |plot_ui| {
                     Self::handle_plot(plot_ui, |plot_ui| {
-                        plot_lines(plot_ui, to_hundreds_plots, *line_width);
+                        util::plot_lines(plot_ui, to_hundreds_plots, *line_width);
                         axis_config.handle_y_axis_lock(plot_ui, PlotType::Hundreds, |plot_ui| {
                             playback_update_plot(timer, plot_ui, is_reset_pressed)
                         });
@@ -213,7 +211,7 @@ impl LogPlot {
                 ui.separator();
                 thousands.show(ui, |plot_ui| {
                     Self::handle_plot(plot_ui, |plot_ui| {
-                        plot_lines(plot_ui, to_thousands_plots, *line_width);
+                        util::plot_lines(plot_ui, to_thousands_plots, *line_width);
 
                         for status_log in status_logs {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
@@ -268,11 +266,12 @@ impl LogPlot {
                                     Some(gen_log.first_timestamp().unwrap_or(0.0));
                             }
                             for (raw_plot, name) in gen_log.all_plots_raw() {
-                                let (x_min, x_max) = x_plot_bound(plot_ui.plot_bounds());
+                                let (x_min, x_max) = util::x_plot_bound(plot_ui.plot_bounds());
 
                                 let x_min_max_ext = (x_min - 16.0, x_max + 16.0);
                                 // Always render the first point such that the plot will always be within reasonable range
-                                let filtered_points = filter_plot_points(&raw_plot, x_min_max_ext);
+                                let filtered_points =
+                                    util::filter_plot_points(&raw_plot, x_min_max_ext);
 
                                 let legend_name = if gen_log_count == 1 {
                                     name
@@ -348,67 +347,5 @@ impl LogPlot {
 
             ui.end_row();
         });
-    }
-}
-
-fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
-    let x_bound_min = *bounds.range_x().start();
-    let x_bound_max = *bounds.range_x().end();
-    (x_bound_min, x_bound_max)
-}
-
-// Takes the x plot bounds and extends them 10% in both directions
-fn extended_x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
-    let x_bound_min = *bounds.range_x().start();
-    let x_bound_max = *bounds.range_x().end();
-    let extended_x_bound_min = x_bound_min - x_bound_min * 0.1;
-    let extended_x_bound_max = x_bound_max * 1.1;
-    (extended_x_bound_min, extended_x_bound_max)
-}
-
-#[inline(always)]
-fn point_within(point: f64, bounds: (f64, f64)) -> bool {
-    let (min, max) = bounds;
-    min < point && point < max
-}
-
-/// Filter plot points based on the x plot bounds. Always includes the first and last plot point
-/// such that resetting zooms works well even when the plot bounds are outside the data range.
-fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
-    if points.is_empty() {
-        return Vec::new();
-    }
-
-    let mut filtered = Vec::with_capacity(points.len());
-
-    // Always include the first point
-    filtered.push(points[0]);
-
-    // Filter points within the extended range
-    filtered.extend(
-        points
-            .iter()
-            .skip(1)
-            .take(points.len() - 2)
-            .filter(|point| point_within(point[0], x_range))
-            .cloned(),
-    );
-
-    // Always include the last point if it's different from the first point
-    let last_point = *points.last().unwrap();
-    if last_point != filtered[0] {
-        filtered.push(last_point);
-    }
-
-    filtered
-}
-
-fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_width: f32) {
-    for plot_with_name in plots {
-        let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds());
-        let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
-
-        let line = Line::new(filtered_points).name(plot_with_name.name.to_owned());
-        plot_ui.line(line.width(line_width));
     }
 }
