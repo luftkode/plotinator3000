@@ -83,17 +83,17 @@ impl LogEntry for StatusLogEntry {
 
 #[cfg(test)]
 mod tests {
-    use testresult::TestResult;
-
     use super::*;
 
     #[test]
-    fn test_motor_state_deserialize() -> TestResult {
-        assert_eq!(MotorState::DO_IGNITION, MotorState::from_repr(3).unwrap());
+    fn test_motor_state_deserialize() {
+        assert_eq!(
+            MotorState::DO_IGNITION,
+            MotorState::from_repr(3).expect("Value doesn't map to variant")
+        );
         assert_eq!(
             MotorState::WAIT_TIME_SHUTDOWN,
-            MotorState::from_repr(10).unwrap()
+            MotorState::from_repr(10).expect("Value doesn't map to variant")
         );
-        Ok(())
     }
 }

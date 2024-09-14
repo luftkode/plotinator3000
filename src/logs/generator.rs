@@ -401,13 +401,13 @@ mod tests {
         let data = fs::read(TEST_DATA)?;
         let log = GeneratorLog::from_reader(&mut data.as_slice())?;
 
-        let first_entry = log.entries().first().unwrap();
+        let first_entry = log.entries().first().expect("Empty entries");
         assert_eq!(
             first_entry.timestamp,
             NaiveDate::from_ymd_opt(2023, 1, 24)
-                .unwrap()
+                .expect("Invalid arguments")
                 .and_hms_opt(13, 47, 45)
-                .unwrap()
+                .expect("Invalid arguments")
         );
         assert_eq!(first_entry.vout, 74.3);
         assert_eq!(first_entry.vbat, 0.1);
@@ -421,13 +421,13 @@ mod tests {
         assert_eq!(first_entry.i_rotor, 0.7);
         assert_eq!(first_entry.r_rotor, 11.2);
 
-        let last_entry = log.entries().last().unwrap();
+        let last_entry = log.entries().last().expect("Empty entries");
         assert_eq!(
             last_entry.timestamp,
             NaiveDate::from_ymd_opt(2023, 1, 24)
-                .unwrap()
+                .expect("Invalid arguments")
                 .and_hms_opt(15, 3, 30)
-                .unwrap()
+                .expect("Invalid arguments")
         );
         assert_eq!(last_entry.vout, 78.3);
         assert_eq!(last_entry.vbat, 0.1);
@@ -445,47 +445,41 @@ mod tests {
     }
 
     #[test]
-    fn test_is_valid_line_valid() -> TestResult {
+    fn test_is_valid_line_valid() {
         let valid_line = "20230124_134852 Vout: 77.8 Vbat: 0.1 Iout: 0.0 RPM: 5925 Load: 17.6 PWM: 17.5 Temp1 7.2 Temp2 9.9 IIn: 61.6 Irotor: 1.4 Rrotor: 9.7";
 
         assert!(GeneratorLogEntry::is_line_valid_generator_log_entry(
             valid_line
         ));
-
-        Ok(())
     }
 
     #[test]
-    fn test_is_valid_line_invalid() -> TestResult {
+    fn test_is_valid_line_invalid() {
         let invalid_line =
             "20230124_134852 Vout: 77.8 Vbat: 0.1 Iout: 0.0 RPM: 5925 something_else: 9.7";
 
         assert!(!GeneratorLogEntry::is_line_valid_generator_log_entry(
             invalid_line
         ));
-
-        Ok(())
     }
 
     #[test]
-    fn test_is_bytes_valid_line_valid() -> TestResult {
+    fn test_is_bytes_valid_line_valid() {
         let valid_line_as_bytes = b"20230124_134745 Vout: 74.3 Vbat: 0.1 Iout: 0.0 RPM: 6075 Load: 10.2 PWM: 10.2 Temp1 6.9 Temp2 8.4 IIn: 8.8 Irotor: 0.7 Rrotor: 11.2
 20230124_134746 Vout: 59.3 Vbat: 0.1 Iout: 0.0 RPM: 5438 Load: 81.2 PWM: 18.0 Temp1 6.9 Temp2 8.6 IIn: 35.5 Irotor: 0.9 Rrotor: 11.5";
 
         assert!(GeneratorLogEntry::is_bytes_valid_generator_log_entry(
             valid_line_as_bytes
         ));
-        Ok(())
     }
 
     #[test]
-    fn test_is_bytes_valid_line_invalid() -> TestResult {
+    fn test_is_bytes_valid_line_invalid() {
         let invalid_bytes = b"20230124_134745 Vo 74. 0.1 Iout: 0.0 RPM: 6075 Load: 10.2 PWM:  8.4 IIn: 8.8 Irotor: 0.7 Rrotor: 11.2
 20230124_134746 Vout: 59.3 Vbat: 0.1 Iout: 0.0 RPM: 5438 Load: 81.2 PWM: 18.0 Temp1 6.9 Temp2 8.6 IIn: 35.5 Irotor: 0.9 Rrotor: 11.5";
 
         assert!(!GeneratorLogEntry::is_bytes_valid_generator_log_entry(
             invalid_bytes
         ));
-        Ok(())
     }
 }
