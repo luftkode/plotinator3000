@@ -71,7 +71,7 @@ pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_
         let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
         let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
 
-        let line = Line::new(filtered_points).name(plot_with_name.name.to_owned());
+        let line = Line::new(filtered_points).name(plot_with_name.name.clone());
         plot_ui.line(line.width(line_width));
     }
 }
@@ -124,9 +124,10 @@ pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64;
     );
 
     // Always include the last point if it's different from the first point
-    let last_point = *points.last().unwrap();
-    if last_point != filtered[0] {
-        filtered.push(last_point);
+    if let Some(last_point) = points.last() {
+        if *last_point != filtered[0] {
+            filtered.push(*last_point);
+        }
     }
 
     filtered

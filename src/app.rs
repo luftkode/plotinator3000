@@ -168,8 +168,7 @@ impl eframe::App for App {
                             self.error_message = None; // Clear any previous error message on success
                         }
                         Err(e) => {
-                            self.error_message =
-                                Some(format!("Error parsing dropped files: {}", e));
+                            self.error_message = Some(format!("Error parsing dropped files: {e}"));
                         }
                     }
                 }
@@ -185,11 +184,11 @@ impl eframe::App for App {
 }
 
 impl App {
-    fn show_error(&mut self, ui: &mut egui::Ui) {
+    fn show_error(&mut self, ui: &egui::Ui) {
         if let Some(error) = self.error_message.clone() {
             let screen_rect = ui.ctx().screen_rect();
-            let window_width = screen_rect.width().min(600.0).max(400.0);
-            let window_height = screen_rect.height().min(300.0).max(200.0);
+            let window_width = screen_rect.width().clamp(400.0, 600.0);
+            let window_height = screen_rect.height().clamp(200.0, 300.0);
 
             egui::Window::new(RichText::new("⚠").size(40.0))
                 .fixed_size([window_width, window_height])

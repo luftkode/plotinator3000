@@ -65,7 +65,7 @@ enum PlaybackState {
 
 impl Default for PlaybackState {
     fn default() -> Self {
-        PlaybackState::Paused { pause_time: now() }
+        Self::Paused { pause_time: now() }
     }
 }
 

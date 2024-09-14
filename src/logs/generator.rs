@@ -208,7 +208,7 @@ impl Log for GeneratorLog {
             timestamps_as_secs.push(entry.timestamp.and_utc().timestamp() as f64);
         }
 
-        Ok(GeneratorLog {
+        Ok(Self {
             entries,
             power: power_vals,
             timestamps_as_secs,
@@ -346,7 +346,7 @@ impl FromStr for GeneratorLogEntry {
             ));
         }
 
-        Ok(GeneratorLogEntry {
+        Ok(Self {
             timestamp: NaiveDateTime::parse_from_str(parts[0], "%Y%m%d_%H%M%S")
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
             vout: parts[2]

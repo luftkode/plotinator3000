@@ -45,7 +45,13 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy> MipMap1D<T> {
             .chunks(2)
             .map(|pair| match pair.len() {
                 1 => pair[0],
-                2 => T::from_f64((pair[0] + pair[1]).to_f64().unwrap() / 2.0).unwrap(),
+                2 => T::from_f64(
+                    (pair[0] + pair[1])
+                        .to_f64()
+                        .expect("Value not representable as an f64")
+                        / 2.0,
+                )
+                .expect("Value not representable as an f64"),
                 _ => panic!("Unsound condition"),
             })
             .collect()

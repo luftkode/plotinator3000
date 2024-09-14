@@ -63,14 +63,11 @@ impl LogEntry for StatusLogEntry {
         let fan_on = reader.read_u8()? == 1;
         let vbat = reader.read_f32::<LittleEndian>()?;
         let setpoint = reader.read_f32::<LittleEndian>()?;
-        let motor_state = match MotorState::from_repr(reader.read_u8()?.into()) {
-            Some(st) => st,
-            None => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "Invalid motor state",
-                ))
-            }
+        let Some(motor_state) = MotorState::from_repr(reader.read_u8()?.into()) else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Invalid motor state",
+            ));
         };
         Ok(Self {
             timestamp_ms_str,

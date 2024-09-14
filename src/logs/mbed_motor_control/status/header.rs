@@ -102,7 +102,7 @@ impl fmt::Display for StatusLogHeader {
         }
         let git_short_sha = self.git_short_sha();
         if !git_short_sha.is_empty() {
-            writeln!(f, "SHA: {}", git_short_sha)?;
+            writeln!(f, "SHA: {git_short_sha}")?;
         }
         let is_dirty = self.git_repo_status();
         if !is_dirty.is_empty() {

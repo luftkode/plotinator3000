@@ -58,6 +58,8 @@ impl LogPlot {
         self.play_state.is_playing()
     }
 
+    // TODO: Fix this lint
+    #[allow(clippy::too_many_lines)]
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
@@ -101,18 +103,19 @@ impl LogPlot {
                     match range {
                         ExpectedPlotRange::Percentage => {
                             if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name))
+                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name));
                             }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
                             if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
-                                to_hundreds_plots.push(PlotWithName::new(points.clone(), plot_name))
+                                to_hundreds_plots
+                                    .push(PlotWithName::new(points.clone(), plot_name));
                             }
                         }
                         ExpectedPlotRange::Thousands => {
                             if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
                                 to_thousands_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name))
+                                    .push(PlotWithName::new(points.clone(), plot_name));
                             }
                         }
                     }
@@ -124,18 +127,19 @@ impl LogPlot {
                     match range {
                         ExpectedPlotRange::Percentage => {
                             if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name))
+                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name));
                             }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
                             if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
-                                to_hundreds_plots.push(PlotWithName::new(points.clone(), plot_name))
+                                to_hundreds_plots
+                                    .push(PlotWithName::new(points.clone(), plot_name));
                             }
                         }
                         ExpectedPlotRange::Thousands => {
                             if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
                                 to_thousands_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name))
+                                    .push(PlotWithName::new(points.clone(), plot_name));
                             }
                         }
                     }
@@ -190,7 +194,7 @@ impl LogPlot {
                         util::plot_lines(plot_ui, percentage_plots, *line_width);
                         playback_update_plot(timer, plot_ui, is_reset_pressed);
                         axis_config.handle_y_axis_lock(plot_ui, PlotType::Percentage, |plot_ui| {
-                            playback_update_plot(timer, plot_ui, is_reset_pressed)
+                            playback_update_plot(timer, plot_ui, is_reset_pressed);
                         });
                     });
                 });
@@ -202,7 +206,7 @@ impl LogPlot {
                     Self::handle_plot(plot_ui, |plot_ui| {
                         util::plot_lines(plot_ui, to_hundreds_plots, *line_width);
                         axis_config.handle_y_axis_lock(plot_ui, PlotType::Hundreds, |plot_ui| {
-                            playback_update_plot(timer, plot_ui, is_reset_pressed)
+                            playback_update_plot(timer, plot_ui, is_reset_pressed);
                         });
                     });
                 });
@@ -219,11 +223,11 @@ impl LogPlot {
                                 plot_ui.text(Text::new(
                                     PlotPoint::new(*ts as f64, (*st_change as u8) as f64),
                                     st_change.to_string(),
-                                ))
+                                ));
                             }
                         }
                         axis_config.handle_y_axis_lock(plot_ui, PlotType::Thousands, |plot_ui| {
-                            playback_update_plot(timer, plot_ui, is_reset_pressed)
+                            playback_update_plot(timer, plot_ui, is_reset_pressed);
                         });
                     });
                 });
@@ -233,12 +237,14 @@ impl LogPlot {
                 ui.separator();
                 let time_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
                     let sec = mark.value;
-                    let dt = DateTime::from_timestamp(sec as i64, 0).unwrap();
+                    let dt = DateTime::from_timestamp(sec as i64, 0)
+                        .unwrap_or_else(|| panic!("Timestamp value out of range: {sec}"));
                     dt.format("%Y-%m-%d %H:%M:%S").to_string()
                 };
                 let x_axes = vec![AxisHints::new_x().label("Time").formatter(time_formatter)];
                 let label_fmt = |_s: &str, val: &PlotPoint| {
-                    let dt = DateTime::from_timestamp(val.x as i64, 0).unwrap();
+                    let dt = DateTime::from_timestamp(val.x as i64, 0)
+                        .unwrap_or_else(|| panic!("Timestamp value out of range: {}", val.x));
                     format!(
                         "{h:02}:{m:02}:{s:02}",
                         h = dt.hour(),
@@ -289,7 +295,7 @@ impl LogPlot {
                                 plot_ui,
                                 is_reset_pressed,
                                 gen_log_first_timestamp.unwrap_or_default(),
-                            )
+                            );
                         });
                     });
                 });
