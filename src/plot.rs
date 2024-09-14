@@ -10,7 +10,7 @@ use crate::{
 };
 use axis_config::{AxisConfig, PlotType};
 use chrono::{DateTime, Timelike};
-use egui::{Color32, Response, RichText};
+use egui::Response;
 use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
@@ -19,6 +19,7 @@ use util::{ExpectedPlotRange, PlotWithName};
 mod axis_config;
 pub mod mipmap;
 mod play_state;
+mod plot_ui;
 mod plot_visibility_config;
 pub mod util;
 
@@ -77,7 +78,7 @@ impl LogPlot {
 
         let mut playback_button_event = None;
 
-        Self::show_settings_grid(
+        plot_ui::show_settings_grid(
             ui,
             play_state,
             &mut playback_button_event,
@@ -302,50 +303,5 @@ impl LogPlot {
         F: FnOnce(&mut egui_plot::PlotUi),
     {
         plot_function(plot_ui);
-    }
-
-    fn show_settings_grid(
-        ui: &mut egui::Ui,
-        play_state: &PlayState,
-        playback_button_event: &mut Option<PlayBackButtonEvent>,
-        line_width: &mut f32,
-        axis_cfg: &mut AxisConfig,
-        plot_visibility_cfg: &mut PlotVisibilityConfig,
-    ) {
-        egui::Grid::new("settings").show(ui, |ui| {
-            ui.label("Line width");
-            ui.add(
-                egui::DragValue::new(line_width)
-                    .speed(0.02)
-                    .range(0.5..=20.0),
-            );
-            ui.horizontal_top(|ui| {
-                axis_cfg.toggle_axis_cfg_ui(ui);
-                ui.label("|");
-                plot_visibility_cfg.toggle_visibility_ui(ui);
-            });
-
-            ui.horizontal_centered(|ui| {
-                ui.label("| ");
-                // Reset button
-                let reset_text = RichText::new(egui_phosphor::regular::REWIND);
-                if ui.button(reset_text).clicked() {
-                    *playback_button_event = Some(PlayBackButtonEvent::Reset);
-                }
-                let playpause_text = if play_state.is_playing() {
-                    RichText::new(egui_phosphor::regular::PAUSE).color(Color32::YELLOW)
-                } else {
-                    RichText::new(egui_phosphor::regular::PLAY).color(Color32::GREEN)
-                };
-                if ui.button(playpause_text).clicked() {
-                    *playback_button_event = Some(PlayBackButtonEvent::PlayPause);
-                }
-
-                ui.label(RichText::new(play_state.formatted_time()));
-                ui.label(" |");
-            });
-
-            ui.end_row();
-        });
     }
 }
