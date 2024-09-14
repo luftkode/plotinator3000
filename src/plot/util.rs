@@ -1,4 +1,5 @@
 use egui_plot::{Line, PlotBounds, PlotPoints};
+use serde::{Deserialize, Serialize};
 
 use crate::logs::LogEntry;
 
@@ -6,7 +7,7 @@ use super::mipmap::MipMap1D;
 
 pub type RawPlot = (Vec<[f64; 2]>, String, ExpectedPlotRange);
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,
     pub name: String,
@@ -18,7 +19,7 @@ impl PlotWithName {
     }
 }
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct MipMapWithName {
     pub mip_map: MipMap1D<f64>,
     pub name: String,
@@ -58,7 +59,7 @@ where
 }
 
 /// Where does the plot values typically fit within
-#[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
 pub enum ExpectedPlotRange {
     /// For plots where the value is 0.0-1.0 and corresponds to percentage 0-100%
     Percentage,

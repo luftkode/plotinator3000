@@ -4,9 +4,10 @@ use super::super::{
     GitBranchData, GitMetadata, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
     ProjectVersionData, UniqueDescriptionData,
 };
+use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
-#[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
 pub struct PidLogHeader {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,

@@ -7,10 +7,11 @@ use std::{
 
 use chrono::NaiveDateTime;
 use egui_plot::Line;
+use serde::{Deserialize, Serialize};
 
 use super::{Log, LogEntry};
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
     entries: Vec<GeneratorLogEntry>,
     pub power: Vec<f64>, // Calculated from Vout * Vin
@@ -27,7 +28,7 @@ impl GeneratorLog {
         let file = fs::File::open(fpath)?;
         let mut buf_reader = BufReader::new(file);
         let mut first_line = String::new();
-        buf_reader.read_line(&mut first_line)?;
+        _ = buf_reader.read_line(&mut first_line)?;
         let is_first_line_gen_log_entry =
             GeneratorLogEntry::is_line_valid_generator_log_entry(&first_line);
 
@@ -230,7 +231,7 @@ impl fmt::Display for GeneratorLog {
     }
 }
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
 pub struct GeneratorLogEntry {
     pub timestamp: NaiveDateTime,
     pub vout: f32,
@@ -250,7 +251,7 @@ impl GeneratorLogEntry {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, io::Error> {
         let mut bufreader = BufReader::new(bytes);
         let mut line = String::new();
-        bufreader.read_line(&mut line)?;
+        _ = bufreader.read_line(&mut line)?;
         Self::from_str(&line)
     }
 
@@ -306,7 +307,7 @@ impl LogEntry for GeneratorLogEntry {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let mut line = String::new();
         let mut bufreader = BufReader::new(reader);
-        bufreader.read_line(&mut line)?;
+        _ = bufreader.read_line(&mut line)?;
 
         Self::from_str(&line)
     }

@@ -57,7 +57,7 @@ pub fn playback_update_generator_plot(
     }
 }
 
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 enum PlaybackState {
     Playing { start_time: f64 },
     Paused { pause_time: f64 },
@@ -69,7 +69,7 @@ impl Default for PlaybackState {
     }
 }
 
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PlayState {
     state: PlaybackState,
     elapsed: f64,
