@@ -1,8 +1,8 @@
-/// Adapted from: https://github.com/nchechulin/mipmap-1d
+/// Adapted from: <https://github.com/nchechulin/mipmap-1d/>
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MipMap1D<T: Num + ToPrimitive + FromPrimitive> {
     data: Vec<Vec<T>>,
 }
@@ -38,7 +38,7 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy> MipMap1D<T> {
         Some(&self.data[level])
     }
 
-    /// Downsamples a vector to `ceil(len / 2)`` elements.
+    /// Downsamples a vector to `ceil(len / 2)` elements.
     /// Currently, downsampling is done by averaging the pair of elements
     fn downsample(source: &[T]) -> Vec<T> {
         source

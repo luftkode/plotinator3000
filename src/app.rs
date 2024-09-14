@@ -62,7 +62,7 @@ impl App {
 
     fn configure_text_styles(ctx: &egui::Context, font_size: f32) {
         let mut style = (*ctx.style()).clone();
-        for (_text_style, font_id) in style.text_styles.iter_mut() {
+        for font_id in style.text_styles.values_mut() {
             font_id.size = font_size;
         }
         ctx.set_style(style);

@@ -2,7 +2,7 @@ use egui_phosphor::regular;
 
 use super::util::PlotWithName;
 
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct PlotVisibilityConfig {
     show_percentage_plot: bool,
     show_to_hundreds_plot: bool,

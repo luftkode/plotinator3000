@@ -141,7 +141,7 @@ impl GeneratorLog {
         Line::new(self.vbat_over_time()).name("Vbat [V]")
     }
 
-    /// Return all the plots that a [GeneratorLog] can produce
+    /// Return all the plots that a [`GeneratorLog`] can produce
     ///
     /// ### Note to developer
     ///

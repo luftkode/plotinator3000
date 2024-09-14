@@ -6,7 +6,7 @@ use super::super::{
 };
 use serde_big_array::BigArray;
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct PidLogHeader {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,

@@ -123,7 +123,7 @@ fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, 
     let mut result = Vec::new();
     let mut last_state = None;
 
-    for entry in entries.iter() {
+    for entry in entries {
         // Check if the current state is different from the last recorded state
         if last_state != Some(entry.motor_state) {
             result.push((entry.timestamp_ms, entry.motor_state));

@@ -58,7 +58,7 @@ where
 }
 
 /// Where does the plot values typically fit within
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub enum ExpectedPlotRange {
     /// For plots where the value is 0.0-1.0 and corresponds to percentage 0-100%
     Percentage,
@@ -120,7 +120,7 @@ pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64;
             .skip(1)
             .take(points.len() - 2)
             .filter(|point| point_within(point[0], x_range))
-            .cloned(),
+            .copied(),
     );
 
     // Always include the last point if it's different from the first point

@@ -95,7 +95,7 @@ impl LogPlot {
 
         ui.vertical(|ui| {
             for (idx, pid_log) in pid_logs.iter().enumerate() {
-                for (points, name, range) in pid_log.all_plots_raw().iter() {
+                for (points, name, range) in pid_log.all_plots_raw() {
                     let plot_name = format!("{name} #{}", idx + 1);
 
                     match range {
@@ -119,7 +119,7 @@ impl LogPlot {
                 }
             }
             for (idx, status_log) in status_logs.iter().enumerate() {
-                for (points, name, range) in status_log.all_plots_raw().iter() {
+                for (points, name, range) in status_log.all_plots_raw() {
                     let plot_name = format!("{name} #{}", idx + 1);
                     match range {
                         ExpectedPlotRange::Percentage => {
