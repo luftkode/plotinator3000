@@ -88,6 +88,16 @@ install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = true
 
+[lints.rust]
+missing_debug_implementations = "warn"
+missing_copy_implementations = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unused_results = "warn"
+unused_import_braces = "warn"
+variant_size_differences = "warn"
+
+
 [lints.clippy]
 as_ptr_cast_mut = "warn"
 await_holding_lock = "warn"
@@ -163,6 +173,7 @@ needless_continue = "warn"
 needless_for_each = "warn"
 needless_pass_by_ref_mut = "warn"
 needless_pass_by_value = "warn"
+needless_range_loop = "warn"
 negative_feature_names = "warn"
 nonstandard_macro_braces = "warn"
 option_option = "warn"
@@ -214,3 +225,13 @@ wildcard_dependencies = "warn"
 wildcard_imports = "warn"
 zero_sized_map_values = "warn"
 ref_patterns = "warn"
+maybe_infinite_iter = "warn"
+large_enum_variant = "warn"
+shadow_unrelated = "warn"
+shadow_same = "warn"
+int_plus_one = "warn"
+range_plus_one = "warn"
+nonminimal_bool = "warn"
+if_not_else = "warn"
+manual_filter_map = "warn"
+option_filter_map = "warn"
