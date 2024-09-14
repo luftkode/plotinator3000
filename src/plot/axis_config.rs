@@ -118,7 +118,7 @@ impl YAxisLock {
     {
         let bounds = self.get_bounds(plot_type);
         if self.lock_y_axis {
-            if let Some(ref y_bounds) = bounds {
+            if let Some(y_bounds) = &bounds {
                 let mut plot_bounds = plot_ui.plot_bounds();
                 plot_bounds.set_y(y_bounds);
                 plot_ui.set_plot_bounds(plot_bounds);
