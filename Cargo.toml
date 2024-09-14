@@ -55,10 +55,10 @@ version = "0.3.7"
 [profile.release]
 opt-level = 3
 debug = false
-panic = "unwind"
+panic = "abort"
+strip = true
 lto = true
 codegen-units = 1
-strip = true
 
 # Optimize all dependencies even in debug builds:
 [profile.dev.package."*"]
