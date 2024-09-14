@@ -267,9 +267,8 @@ impl LogPlot {
                                     Some(gen_log.first_timestamp().unwrap_or(0.0));
                             }
                             for (raw_plot, name) in gen_log.all_plots_raw() {
-                                let (x_min, x_max) = util::x_plot_bound(plot_ui.plot_bounds());
-
-                                let x_min_max_ext = (x_min - 16.0, x_max + 16.0);
+                                let x_min_max_ext =
+                                    util::extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
                                 // Always render the first point such that the plot will always be within reasonable range
                                 let filtered_points =
                                     util::filter_plot_points(&raw_plot, x_min_max_ext);
@@ -279,6 +278,7 @@ impl LogPlot {
                                 } else {
                                     format!("{name} #{}", idx + 1)
                                 };
+
                                 let line = Line::new(filtered_points).name(legend_name);
                                 plot_ui.line(line.width(*line_width));
                             }

@@ -68,7 +68,7 @@ pub enum ExpectedPlotRange {
 
 pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_width: f32) {
     for plot_with_name in plots {
-        let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds());
+        let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
         let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
 
         let line = Line::new(filtered_points).name(plot_with_name.name.to_owned());
@@ -76,17 +76,22 @@ pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_
     }
 }
 
-pub fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
-    let x_bound_min = *bounds.range_x().start();
-    let x_bound_max = *bounds.range_x().end();
-    (x_bound_min, x_bound_max)
+fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
+    let range = bounds.range_x();
+    (*range.start(), *range.end())
 }
 
-// Takes the x plot bounds and extends them 10% in both directions
-fn extended_x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
+/// Extends the x plot bounds by a specified percentage in both directions
+pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (f64, f64) {
     let (x_bound_min, x_bound_max) = x_plot_bound(bounds);
-    let extended_x_bound_min = x_bound_min - x_bound_min * 0.1;
-    let extended_x_bound_max = x_bound_max * 1.1;
+
+    // Calculate the extension values based on the magnitude of the bounds
+    let x_extension = (x_bound_max - x_bound_min).abs() * extension_percentage;
+
+    // Extend the bounds
+    let extended_x_bound_min = x_bound_min - x_extension;
+    let extended_x_bound_max = x_bound_max + x_extension;
+
     (extended_x_bound_min, extended_x_bound_max)
 }
 
