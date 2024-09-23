@@ -7,13 +7,13 @@ edition = "2021"
 egui_plot = { workspace = true }
 plot_util = { version = "*", path = "../plot_util" }
 log_if = { version = "*", path = "../log_if" }
-serde = { version = "1", features = ["derive"] }
-serde-big-array = "0.5.1"
-strum = "0.26.3"
-strum_macros = "0.26.3"
-byteorder = "1.5.0"
-chrono = { version = "0.4.38", features = ["serde"] }
-num-traits = "0.2.19"
+serde = { workspace = true }
+serde-big-array = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+byteorder = { workspace = true }
+chrono = { workspace = true }
+
 
 [dev-dependencies]
 testresult = { workspace = true }
