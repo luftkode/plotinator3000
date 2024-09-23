@@ -1,13 +1,13 @@
-use crate::logs::{
+use egui::DroppedFile;
+use log_if::Log;
+use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
     mbed_motor_control::{
         pid::{header::PidLogHeader, PidLog},
         status::{header::StatusLogHeader, StatusLog},
         MbedMotorControlLogHeader,
     },
-    Log,
 };
-use egui::DroppedFile;
 use std::{
     fs,
     io::{self, BufReader},

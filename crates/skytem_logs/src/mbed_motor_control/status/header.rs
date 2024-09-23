@@ -1,11 +1,10 @@
-use crate::logs::GitMetadata;
-
 use super::super::{
     GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
     ProjectVersionData, UniqueDescriptionData,
 };
 use std::fmt;
 
+use log_if::GitMetadata;
 use serde_big_array::BigArray;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]
@@ -114,13 +113,12 @@ impl fmt::Display for StatusLogHeader {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::fs::{self};
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "test_data/mbed_motor_control/old_rpm_algo/status_20240912_122203_00.bin";
-
-    use super::*;
+        "../../test_data/mbed_motor_control/new_rpm_algo/status_20240923_120015_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {
@@ -132,9 +130,12 @@ mod tests {
             StatusLogHeader::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log_header.version, 0);
-        assert_eq!(status_log_header.project_version(), "1.0.0");
-        assert_eq!(status_log_header.git_branch(), "fix-release-workflow");
-        assert_eq!(status_log_header.git_short_sha(), "56fc61b");
+        assert_eq!(status_log_header.project_version(), "1.1.0");
+        assert_eq!(
+            status_log_header.git_branch(),
+            "add-rpm-error-counter-to-log"
+        );
+        assert_eq!(status_log_header.git_short_sha(), "bec2ee2");
         Ok(())
     }
 }

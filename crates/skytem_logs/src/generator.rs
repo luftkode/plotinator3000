@@ -7,9 +7,8 @@ use std::{
 
 use chrono::NaiveDateTime;
 use egui_plot::Line;
+use log_if::Log;
 use serde::{Deserialize, Serialize};
-
-use super::{Log, LogEntry};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
@@ -303,7 +302,7 @@ impl GeneratorLogEntry {
     }
 }
 
-impl LogEntry for GeneratorLogEntry {
+impl log_if::LogEntry for GeneratorLogEntry {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let mut line = String::new();
         let mut bufreader = BufReader::new(reader);
@@ -393,9 +392,10 @@ mod tests {
     use std::fs;
 
     use chrono::NaiveDate;
+    use log_if::Log;
     use testresult::TestResult;
 
-    const TEST_DATA: &str = "test_data/generator/20230124_134738_Gen.log";
+    const TEST_DATA: &str = "../../test_data/generator/20230124_134738_Gen.log";
 
     #[test]
     fn test_deserialize() -> TestResult {

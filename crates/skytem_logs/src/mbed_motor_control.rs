@@ -1,5 +1,6 @@
-use super::{parse_unique_description, GitMetadata};
+use super::parse_unique_description;
 use byteorder::{LittleEndian, ReadBytesExt};
+use log_if::GitMetadata;
 use std::{
     fs,
     io::{self, Read},

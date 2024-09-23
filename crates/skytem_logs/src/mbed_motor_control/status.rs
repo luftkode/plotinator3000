@@ -1,14 +1,10 @@
 use std::{fmt, io};
 
+use super::MbedMotorControlLogHeader;
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
-
-use crate::{
-    logs::{parse_to_vec, Log},
-    plot::util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot},
-};
-
-use super::MbedMotorControlLogHeader;
+use log_if::util::parse_to_vec;
+use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
 
 pub mod entry;
 pub mod header;
@@ -22,7 +18,7 @@ pub struct StatusLog {
     all_plots_raw: Vec<RawPlot>,
 }
 
-impl Log for StatusLog {
+impl log_if::Log for StatusLog {
     type Entry = StatusLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -135,15 +131,14 @@ fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, 
 
 #[cfg(test)]
 mod tests {
+    use log_if::Log;
     use std::fs::{self, File};
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "test_data/mbed_motor_control/old_rpm_algo/status_20240912_122203_00.bin";
+        "../../test_data/mbed_motor_control/new_rpm_algo/status_20240923_120015_00.bin";
 
-    use crate::logs::{
-        mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries,
-    };
+    use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
 
     use super::*;
 
@@ -154,23 +149,23 @@ mod tests {
         eprintln!("{}", status_log.header);
 
         let first_entry = status_log.entries().first().expect("Empty entries vec");
-        assert_eq!(first_entry.engine_temp, 4.770642);
+        assert_eq!(first_entry.engine_temp, 66.63043);
         assert!(!first_entry.fan_on);
-        assert_eq!(first_entry.vbat, 4.211966);
+        assert_eq!(first_entry.vbat, 12.222223);
         assert_eq!(first_entry.setpoint, 2500.0);
-        assert_eq!(first_entry.motor_state, MotorState::POWER_HOLD);
+        assert_eq!(first_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
         let second_entry = &status_log.entries[1];
-        assert_eq!(second_entry.engine_temp, 4.770642);
+        assert_eq!(second_entry.engine_temp, 65.76087);
         assert!(!second_entry.fan_on);
-        assert_eq!(second_entry.vbat, 4.219487);
+        assert_eq!(second_entry.vbat, 12.229744);
         assert_eq!(second_entry.setpoint, 2500.0);
-        assert_eq!(second_entry.motor_state, MotorState::POWER_HOLD);
+        assert_eq!(second_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
 
         let last_entry = status_log.entries().last().expect("Empty entries vec");
-        assert_eq!(last_entry.timestamp_ms(), 17492);
-        assert_eq!(last_entry.engine_temp, 4.770642);
-        assert!(!last_entry.fan_on);
-        assert_eq!(last_entry.vbat, 4.219487);
+        assert_eq!(last_entry.timestamp_ms(), 736113);
+        assert_eq!(last_entry.engine_temp, 81.32979);
+        assert!(last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 11.665642);
         assert_eq!(last_entry.setpoint, 0.0);
         assert_eq!(last_entry.motor_state, MotorState::WAIT_TIME_SHUTDOWN);
         //eprintln!("{status_log}");

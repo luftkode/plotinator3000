@@ -1,9 +1,9 @@
+pub mod mipmap;
+
 use egui_plot::{Line, PlotBounds, PlotPoints};
+use log_if::LogEntry;
+use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
-
-use crate::logs::LogEntry;
-
-use super::mipmap::MipMap1D;
 
 pub type RawPlot = (Vec<[f64; 2]>, String, ExpectedPlotRange);
 

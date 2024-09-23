@@ -1,27 +1,22 @@
+use skytem_logs::{
+    generator::GeneratorLog,
+    mbed_motor_control::{pid::PidLog, status::StatusLog},
+};
 use std::ops::RangeInclusive;
 
-use crate::{
-    app::PlayBackButtonEvent,
-    logs::{
-        generator::GeneratorLog,
-        mbed_motor_control::{pid::PidLog, status::StatusLog},
-    },
-    util::format_ms_timestamp,
-};
+use crate::{app::PlayBackButtonEvent, util::format_ms_timestamp};
 use axis_config::{AxisConfig, PlotType};
 use chrono::{DateTime, Timelike};
 use egui::Response;
 use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
+use plot_util::{ExpectedPlotRange, PlotWithName};
 use plot_visibility_config::PlotVisibilityConfig;
-use util::{ExpectedPlotRange, PlotWithName};
 
 mod axis_config;
-pub mod mipmap;
 mod play_state;
 mod plot_ui;
 mod plot_visibility_config;
-pub mod util;
 
 #[allow(missing_debug_implementations)] // Legend is from egui_plot and doesn't implement debug
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
@@ -192,7 +187,7 @@ impl LogPlot {
                                 ));
                             }
                         }
-                        util::plot_lines(arg_plot_ui, percentage_plots, *line_width);
+                        plot_util::plot_lines(arg_plot_ui, percentage_plots, *line_width);
                         playback_update_plot(timer, arg_plot_ui, is_reset_pressed);
                         axis_config.handle_y_axis_lock(
                             arg_plot_ui,
@@ -209,7 +204,7 @@ impl LogPlot {
                 _ = ui.separator();
                 _ = to_hundred.show(ui, |to_hundred_plot_ui| {
                     Self::handle_plot(to_hundred_plot_ui, |arg_plot_ui| {
-                        util::plot_lines(arg_plot_ui, to_hundreds_plots, *line_width);
+                        plot_util::plot_lines(arg_plot_ui, to_hundreds_plots, *line_width);
                         axis_config.handle_y_axis_lock(
                             arg_plot_ui,
                             PlotType::Hundreds,
@@ -225,7 +220,7 @@ impl LogPlot {
                 _ = ui.separator();
                 _ = thousands.show(ui, |thousands_plot_ui| {
                     Self::handle_plot(thousands_plot_ui, |arg_plot_ui| {
-                        util::plot_lines(arg_plot_ui, to_thousands_plots, *line_width);
+                        plot_util::plot_lines(arg_plot_ui, to_thousands_plots, *line_width);
 
                         for status_log in status_logs {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
@@ -286,11 +281,13 @@ impl LogPlot {
                                     Some(gen_log.first_timestamp().unwrap_or(0.0));
                             }
                             for (raw_plot, name) in gen_log.all_plots_raw() {
-                                let x_min_max_ext =
-                                    util::extended_x_plot_bound(gen_plot_ui.plot_bounds(), 0.1);
+                                let x_min_max_ext = plot_util::extended_x_plot_bound(
+                                    gen_plot_ui.plot_bounds(),
+                                    0.1,
+                                );
                                 // Always render the first point such that the plot will always be within reasonable range
                                 let filtered_points =
-                                    util::filter_plot_points(&raw_plot, x_min_max_ext);
+                                    plot_util::filter_plot_points(&raw_plot, x_min_max_ext);
 
                                 let legend_name = if gen_log_count == 1 {
                                     name

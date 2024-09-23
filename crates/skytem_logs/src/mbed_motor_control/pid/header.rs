@@ -114,7 +114,9 @@ impl fmt::Display for PidLogHeader {
 mod tests {
     use std::fs;
 
-    const TEST_DATA: &str = "test_data/mbed_motor_control/old_rpm_algo/pid_20240912_122203_00.bin";
+    const TEST_DATA: &str =
+        "../../test_data/mbed_motor_control/new_rpm_algo/pid_20240923_120015_00.bin";
+
     use testresult::TestResult;
 
     use super::*;
@@ -129,9 +131,9 @@ mod tests {
             PidLogHeader::UNIQUE_DESCRIPTION
         );
         assert_eq!(pid_log_header.version, 0);
-        assert_eq!(pid_log_header.project_version(), "1.0.0");
-        assert_eq!(pid_log_header.git_branch(), "fix-release-workflow");
-        assert_eq!(pid_log_header.git_short_sha(), "56fc61b");
+        assert_eq!(pid_log_header.project_version(), "1.1.0");
+        assert_eq!(pid_log_header.git_branch(), "add-rpm-error-counter-to-log");
+        assert_eq!(pid_log_header.git_short_sha(), "bec2ee2");
         Ok(())
     }
 }
