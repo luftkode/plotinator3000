@@ -12,7 +12,7 @@ alias t := test
     just --list --no-aliases
 
 init: install-devtools
-    echo "Run 'install-extra-devtools' for some aditional productivity tools that fit into the existent workflow"
+    echo "Run 'install-extra-devtools' for some adittional productivity tools that fit into the existent workflow"
 
 # Check if it compiles without compiling
 [no-exit-message]
@@ -36,7 +36,7 @@ test *ARGS:
 
 # Lint
 [no-exit-message]
-lint *ARGS:
+lint *ARGS: && fmt
     cargo {{clippy}} {{ARGS}}
     typos
 

@@ -7,6 +7,7 @@ run := if path_exists(join(cargo_binaries, "cargo-lrun")) == "true" { "lrun" } e
 build := if path_exists(join(cargo_binaries, "cargo-lbuild")) == "true" { "lbuild" } else { "build" }
 doc := if path_exists(join(cargo_binaries, "cargo-ldoc")) == "true" { "ldoc" } else { "doc" }
 
+
 # if nextest is installed, nextest is used, otherwise ltest if cargo-limit is installed, otherwise default.
 USING_NEX_TEST := if path_exists(join(cargo_binaries, "cargo-nextest")) == "true" { "true" } else { "false" }
 USING_LTEST := if USING_NEX_TEST == "true" { 
