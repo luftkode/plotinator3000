@@ -62,12 +62,12 @@ pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
 /// ```
 /// use std::fs::File;
 /// use std::io::{self, BufReader, ErrorKind};
-/// use logviewer_rs::logs::{mbed_motor_control::pid::{header::PidLogHeader, entry::PidLogEntry}, parse_and_display_log_entries};
-/// use logviewer_rs::logs::mbed_motor_control::MbedMotorControlLogHeader;
+/// use skytem_logs::{mbed_motor_control::pid::{header::PidLogHeader, entry::PidLogEntry}, parse_and_display_log_entries};
+/// use skytem_logs::mbed_motor_control::MbedMotorControlLogHeader;
 ///
 /// fn main() -> std::io::Result<()> {
 ///     // Open the log file
-///     let file = File::open("test_data/mbed_motor_control/old_rpm_algo/pid_20240912_122203_00.bin")?;
+///     let file = File::open("../../test_data/mbed_motor_control/new_rpm_algo/pid_20240923_120015_00.bin")?;
 ///     let mut reader = BufReader::new(file);
 ///
 ///     // First, read the header
