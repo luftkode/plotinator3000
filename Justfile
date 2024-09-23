@@ -1,4 +1,6 @@
-mod ci
+mod ci 'just/ci.just'
+
+PROJECT_NAME := "logviewer-rs"
 
 @_default:
     just --list --no-aliases
