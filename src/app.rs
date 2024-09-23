@@ -95,8 +95,10 @@ impl eframe::App for App {
                     });
                     inner_arg_ui.add_space(16.0);
                 }
-                if inner_arg_ui.button("Reset").clicked() {
-                    *self = Self::default();
+                if inner_arg_ui.button("Reset plot").clicked() {
+                    self.logs = SupportedLogs::default();
+                    self.plot = LogPlot::default();
+                    self.dropped_files.clear();
                 }
 
                 _ = inner_arg_ui.label("Font size:");
