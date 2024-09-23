@@ -14,7 +14,6 @@ use plot_util::{ExpectedPlotRange, PlotWithName};
 use plot_visibility_config::PlotVisibilityConfig;
 
 mod axis_config;
-pub mod mipmap;
 mod play_state;
 mod plot_ui;
 mod plot_visibility_config;
