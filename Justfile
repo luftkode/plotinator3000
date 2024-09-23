@@ -31,8 +31,8 @@ run *ARGS:
 
 # Run tests
 [no-exit-message]
-test *ARGS:
-    cargo {{test}}
+test *ARGS="--workspace":
+    cargo {{test}} {{ARGS}}
 
 # Lint
 [no-exit-message]
@@ -62,7 +62,7 @@ audit *ARGS:
 # Trunk is used to serve the app with a webserver, cargo-dist is used to generate and update workflows for distributing installers for various platforms
 [doc("Install the required tools for performing all dev tasks for the project")]
 install-devtools:
-    cargo install trunk --locked 
+    cargo install trunk --locked
     cargo install cargo-dist --locked
     cargo install typos-cli
     cargo install cargo-audit
