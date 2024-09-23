@@ -46,6 +46,17 @@ impl Log for PidLog {
             |e| e.timestamp_ms() as f64,
             |e| e.servo_duty_cycle as f64,
         );
+        let rpm_error_count_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.rpm_error_count as f64,
+        );
+        let first_valid_rpm_count_plot_raw = raw_plot_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms() as f64,
+            |e| e.first_valid_rpm_count as f64,
+        );
+
         let all_plots_raw = vec![
             (
                 rpm_plot_raw,
@@ -61,6 +72,16 @@ impl Log for PidLog {
                 servo_duty_cycle_plot_raw,
                 String::from("Servo Duty Cycle"),
                 ExpectedPlotRange::Percentage,
+            ),
+            (
+                rpm_error_count_plot_raw,
+                String::from("RPM Error Count"),
+                ExpectedPlotRange::Thousands,
+            ),
+            (
+                first_valid_rpm_count_plot_raw,
+                String::from("First Valid RPM Count"),
+                ExpectedPlotRange::Thousands,
             ),
         ];
 

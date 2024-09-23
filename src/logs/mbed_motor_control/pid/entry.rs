@@ -10,6 +10,8 @@ pub struct PidLogEntry {
     pub rpm: f32,
     pub pid_err: f32,
     pub servo_duty_cycle: f32,
+    pub rpm_error_count: u32,
+    pub first_valid_rpm_count: u32,
 }
 
 impl PidLogEntry {
@@ -25,6 +27,8 @@ impl LogEntry for PidLogEntry {
         let rpm = reader.read_f32::<LittleEndian>()?;
         let pid_err = reader.read_f32::<LittleEndian>()?;
         let servo_duty_cycle = reader.read_f32::<LittleEndian>()?;
+        let rpm_error_count = reader.read_u32::<LittleEndian>()?;
+        let first_valid_rpm_count = reader.read_u32::<LittleEndian>()?;
 
         Ok(Self {
             timestamp_ms_str,
@@ -32,6 +36,8 @@ impl LogEntry for PidLogEntry {
             rpm,
             pid_err,
             servo_duty_cycle,
+            rpm_error_count,
+            first_valid_rpm_count,
         })
     }
 }
@@ -40,8 +46,13 @@ impl std::fmt::Display for PidLogEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}: {} {} {}",
-            self.timestamp_ms, self.rpm, self.pid_err, self.servo_duty_cycle
+            "{}: {} {} {} {} {}",
+            self.timestamp_ms,
+            self.rpm,
+            self.pid_err,
+            self.servo_duty_cycle,
+            self.rpm_error_count,
+            self.first_valid_rpm_count
         )
     }
 }
