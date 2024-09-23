@@ -1,11 +1,10 @@
-use crate::GitMetadata;
-
 use super::super::{
     GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
     ProjectVersionData, UniqueDescriptionData,
 };
 use std::fmt;
 
+use log_if::GitMetadata;
 use serde_big_array::BigArray;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]

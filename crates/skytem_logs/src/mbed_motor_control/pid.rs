@@ -1,10 +1,7 @@
-use crate::{
-    plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot},
-    {parse_to_vec, Log},
-};
 use entry::PidLogEntry;
 use header::PidLogHeader;
-
+use log_if::util::parse_to_vec;
+use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
 use std::{fmt, io};
 
 use super::MbedMotorControlLogHeader;
@@ -20,7 +17,7 @@ pub struct PidLog {
     all_plots_raw: Vec<RawPlot>,
 }
 
-impl Log for PidLog {
+impl log_if::Log for PidLog {
     type Entry = PidLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -122,6 +119,7 @@ mod tests {
         "../../test_data/mbed_motor_control/new_rpm_algo/pid_20240923_120015_00.bin";
 
     use header::PidLogHeader;
+    use log_if::Log;
     use testresult::TestResult;
 
     use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};

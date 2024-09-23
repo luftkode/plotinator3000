@@ -16,7 +16,7 @@ eula = false
 
 
 [workspace]
-members = ["crates/skytem_logs"]
+members = ["crates/log_if", "crates/plot_util", "crates/skytem_logs"]
 
 [workspace.dependencies]
 egui_plot = { git = "https://github.com/emilk/egui_plot.git", rev = "d00fa85a84f4d443e2803b5185e230be56da123f", features = [
@@ -28,6 +28,8 @@ testresult = "0.4.1"
 
 [dependencies]
 skytem_logs = { version = "*", path = "crates/skytem_logs" }
+log_if = { version = "*", path = "crates/log_if" }
+plot_util = { version = "*", path = "crates/plot_util" }
 egui_plot = { workspace = true }
 log = { workspace = true }
 egui = { version = "0.28" }

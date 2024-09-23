@@ -1,4 +1,4 @@
-use std::io;
+use std::{fmt, io};
 
 use crate::{util::parse_timestamp, LogEntry};
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -42,8 +42,8 @@ impl LogEntry for PidLogEntry {
     }
 }
 
-impl std::fmt::Display for PidLogEntry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for PidLogEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}: {} {} {} {} {}",

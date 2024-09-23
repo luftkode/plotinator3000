@@ -1,32 +1,10 @@
-use std::{fmt::Display, io};
+use std::io;
+
+use log_if::LogEntry;
 
 pub mod generator;
 pub mod mbed_motor_control;
-pub mod plot_util;
 pub mod util;
-
-/// A given log should implement this trait
-pub trait Log: Sized + Display {
-    type Entry: LogEntry;
-    /// Create a [Log] instance from a reader
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
-    /// Return a borrowed slice (list) of log entries
-    fn entries(&self) -> &[Self::Entry];
-}
-
-/// A given log header should implement this
-pub trait GitMetadata {
-    fn project_version(&self) -> String;
-    fn git_short_sha(&self) -> String;
-    fn git_branch(&self) -> String;
-    fn git_repo_status(&self) -> String;
-}
-
-/// A given log entry should implement this trait
-pub trait LogEntry: Sized + Display {
-    /// Create a [`LogEntry`] instance from a reader
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
-}
 
 /// Parse the unique description string from a 128-byte array
 ///
@@ -42,16 +20,6 @@ pub fn parse_unique_description(raw_uniq_desc: [u8; 128]) -> String {
     String::from_utf8_lossy(&raw_uniq_desc)
         .trim_end_matches(char::from(0))
         .to_owned()
-}
-
-/// Take a reader and parse [`LogEntry`]s from it until it returns an error,
-/// then return a vector of all [`LogEntry`]s.
-pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
-    let mut v = Vec::new();
-    while let Ok(e) = T::from_reader(reader) {
-        v.push(e);
-    }
-    v
 }
 
 /// Parse log entries and display them, optionally only display up to `limit` entries

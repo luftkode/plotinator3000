@@ -1,14 +1,10 @@
 use std::{fmt, io};
 
+use super::MbedMotorControlLogHeader;
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
-
-use crate::{
-    plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot},
-    {parse_to_vec, Log},
-};
-
-use super::MbedMotorControlLogHeader;
+use log_if::util::parse_to_vec;
+use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
 
 pub mod entry;
 pub mod header;
@@ -22,7 +18,7 @@ pub struct StatusLog {
     all_plots_raw: Vec<RawPlot>,
 }
 
-impl Log for StatusLog {
+impl log_if::Log for StatusLog {
     type Entry = StatusLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -135,6 +131,7 @@ fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, 
 
 #[cfg(test)]
 mod tests {
+    use log_if::Log;
     use std::fs::{self, File};
     use testresult::TestResult;
 

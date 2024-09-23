@@ -1442,6 +1442,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "log_if"
+version = "0.1.0"
+
+[[package]]
 name = "logviewer-rs"
 version = "0.7.0"
 dependencies = [
@@ -1453,7 +1457,9 @@ dependencies = [
  "egui_plot",
  "env_logger",
  "log",
+ "log_if",
  "num-traits",
+ "plot_util",
  "rfd",
  "serde",
  "serde-big-array",
@@ -1846,6 +1852,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 
 [[package]]
+name = "plot_util"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "chrono",
+ "egui_plot",
+ "log_if",
+ "num-traits",
+ "serde",
+ "serde-big-array",
+ "strum",
+ "strum_macros",
+ "testresult",
+]
+
+[[package]]
 name = "png"
 version = "0.17.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2187,7 +2209,9 @@ dependencies = [
  "byteorder",
  "chrono",
  "egui_plot",
+ "log_if",
  "num-traits",
+ "plot_util",
  "serde",
  "serde-big-array",
  "strum",

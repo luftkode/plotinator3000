@@ -1,12 +1,11 @@
 [package]
-name = "skytem_logs"
+name = "plot_util"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-egui_plot = { workspace = true }
-plot_util = { version = "*", path = "../plot_util" }
 log_if = { version = "*", path = "../log_if" }
+egui_plot = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde-big-array = "0.5.1"
 strum = "0.26.3"

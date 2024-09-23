@@ -1,4 +1,5 @@
 use egui::DroppedFile;
+use log_if::Log;
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
     mbed_motor_control::{
@@ -6,7 +7,6 @@ use skytem_logs::{
         status::{header::StatusLogHeader, StatusLog},
         MbedMotorControlLogHeader,
     },
-    Log,
 };
 use std::{
     fs,
