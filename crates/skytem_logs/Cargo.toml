@@ -7,16 +7,16 @@ edition = "2021"
 workspace = true
 
 [dependencies]
-egui_plot = { workspace = true }
 plot_util = { version = "*", path = "../plot_util" }
 log_if = { version = "*", path = "../log_if" }
-serde = { workspace = true }
-serde-big-array = { workspace = true }
-strum = { workspace = true }
-strum_macros = { workspace = true }
-byteorder = { workspace = true }
-chrono = { workspace = true }
+egui_plot.workspace = true
+serde.workspace = true
+serde-big-array.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+byteorder.workspace = true
+chrono.workspace = true
 
 
 [dev-dependencies]
-testresult = { workspace = true }
+testresult.workspace = true

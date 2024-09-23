@@ -37,14 +37,12 @@ testresult = "0.4.1"
 skytem_logs = { version = "*", path = "crates/skytem_logs" }
 log_if = { version = "*", path = "crates/log_if" }
 plot_util = { version = "*", path = "crates/plot_util" }
-egui_plot = { workspace = true }
-log = { workspace = true }
-serde = { workspace = true }
-serde-big-array = { workspace = true }
-strum = { workspace = true }
-strum_macros = { workspace = true }
-byteorder = { workspace = true }
-chrono = { workspace = true }
+egui_plot.workspace = true
+log.workspace = true
+serde.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+chrono.workspace = true
 egui = { version = "0.28" }
 eframe = { version = "0.28", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
@@ -55,7 +53,7 @@ rfd = "0.14.1"
 egui-phosphor = "0.6.0"
 
 [dev-dependencies]
-testresult = { workspace = true }
+testresult.workspace = true
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

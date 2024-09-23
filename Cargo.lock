@@ -1449,7 +1449,6 @@ version = "0.1.0"
 name = "logviewer-rs"
 version = "0.8.0"
 dependencies = [
- "byteorder",
  "chrono",
  "eframe",
  "egui",
@@ -1461,7 +1460,6 @@ dependencies = [
  "plot_util",
  "rfd",
  "serde",
- "serde-big-array",
  "skytem_logs",
  "strum",
  "strum_macros",
