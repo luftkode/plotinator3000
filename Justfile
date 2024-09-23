@@ -1,3 +1,4 @@
+import 'just/default_cmd.just'
 mod ci 'just/ci.just'
 
 PROJECT_NAME := "logviewer-rs"
@@ -41,5 +42,6 @@ install-devtools:
 # Install nice-to-have devtools
 install-extra-devtools:
     cargo install cargo-nextest --locked
+    cargo install cargo-limit --locked
 
 
