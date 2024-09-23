@@ -3,6 +3,9 @@ name = "plot_util"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 log_if = { version = "*", path = "../log_if" }
 egui_plot = { workspace = true }

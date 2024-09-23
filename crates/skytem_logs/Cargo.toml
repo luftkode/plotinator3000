@@ -3,6 +3,9 @@ name = "skytem_logs"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 egui_plot = { workspace = true }
 plot_util = { version = "*", path = "../plot_util" }
