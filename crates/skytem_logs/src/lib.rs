@@ -2,6 +2,8 @@ use std::{fmt::Display, io};
 
 pub mod generator;
 pub mod mbed_motor_control;
+pub mod plot_util;
+pub mod util;
 
 /// A given log should implement this trait
 pub trait Log: Sized + Display {
@@ -67,19 +69,19 @@ pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
 ///     // Open the log file
 ///     let file = File::open("test_data/mbed_motor_control/old_rpm_algo/pid_20240912_122203_00.bin")?;
 ///     let mut reader = BufReader::new(file);
-///     
+///
 ///     // First, read the header
 ///     let header = PidLogHeader::from_reader(&mut reader)?;
 ///     println!("Log Header: {:?}", header);
-///     
+///
 ///     if !header.is_valid_header() {
 ///         return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid Header"));
 ///     }
-///     
+///
 ///     // Now parse and display the log entries
 ///     println!("Log Entries:");
 ///     parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
-///     
+///
 ///     Ok(())
 /// }
 /// ```

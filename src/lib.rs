@@ -3,6 +3,5 @@
 pub use app::App;
 mod app;
 
-pub mod logs;
 pub mod plot;
 pub mod util;

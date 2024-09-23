@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{logs::LogEntry, util::parse_timestamp};
+use crate::{util::parse_timestamp, LogEntry};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]

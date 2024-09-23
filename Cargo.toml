@@ -15,17 +15,27 @@ license = false
 eula = false
 
 
-[dependencies]
+[workspace]
+members = ["crates/skytem_logs"]
+
+[workspace.dependencies]
 egui_plot = { git = "https://github.com/emilk/egui_plot.git", rev = "d00fa85a84f4d443e2803b5185e230be56da123f", features = [
     "serde",
 ] }
+log = "0.4"
+# Dev dependencies
+testresult = "0.4.1"
+
+[dependencies]
+skytem_logs = { version = "*", path = "crates/skytem_logs" }
+egui_plot = { workspace = true }
+log = { workspace = true }
 egui = { version = "0.28" }
 eframe = { version = "0.28", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
-log = "0.4"
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 rfd = "0.14.1"
@@ -38,7 +48,7 @@ egui-phosphor = "0.6.0"
 num-traits = "0.2.19"
 
 [dev-dependencies]
-testresult = "0.4.1"
+testresult = { workspace = true }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

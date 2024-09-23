@@ -1,6 +1,6 @@
 use egui_phosphor::regular;
 
-use super::util::PlotWithName;
+use skytem_logs::plot_util::PlotWithName;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct PlotVisibilityConfig {

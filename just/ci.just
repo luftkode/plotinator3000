@@ -17,7 +17,7 @@ lint:
     typos
 
 test:
-    cargo test --lib
+    cargo test --workspace
 
 audit:
     cargo audit

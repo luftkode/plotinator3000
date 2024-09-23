@@ -395,7 +395,7 @@ mod tests {
     use chrono::NaiveDate;
     use testresult::TestResult;
 
-    const TEST_DATA: &str = "test_data/generator/20230124_134738_Gen.log";
+    const TEST_DATA: &str = "../../test_data/generator/20230124_134738_Gen.log";
 
     #[test]
     fn test_deserialize() -> TestResult {

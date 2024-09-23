@@ -1,15 +1,14 @@
-use crate::logs::GitMetadata;
-
-use super::super::{
-    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
-    ProjectVersionData, UniqueDescriptionData,
-};
 use std::fmt;
 
+use super::super::{
+    GitBranchData, GitMetadata, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
+    ProjectVersionData, UniqueDescriptionData,
+};
+use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
-#[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]
-pub struct StatusLogHeader {
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
+pub struct PidLogHeader {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -20,19 +19,12 @@ pub struct StatusLogHeader {
     git_repo_status: GitRepoStatusData,
 }
 
-impl GitMetadata for StatusLogHeader {
+impl GitMetadata for PidLogHeader {
     fn project_version(&self) -> String {
         String::from_utf8_lossy(self.project_version_raw())
             .trim_end_matches(char::from(0))
             .to_owned()
     }
-
-    fn git_short_sha(&self) -> String {
-        String::from_utf8_lossy(self.git_short_sha_raw())
-            .trim_end_matches(char::from(0))
-            .to_owned()
-    }
-
     fn git_branch(&self) -> String {
         String::from_utf8_lossy(self.git_branch_raw())
             .trim_end_matches(char::from(0))
@@ -44,12 +36,18 @@ impl GitMetadata for StatusLogHeader {
             .trim_end_matches(char::from(0))
             .to_owned()
     }
+
+    fn git_short_sha(&self) -> String {
+        String::from_utf8_lossy(self.git_short_sha_raw())
+            .trim_end_matches(char::from(0))
+            .to_owned()
+    }
 }
 
-impl MbedMotorControlLogHeader for StatusLogHeader {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
+impl MbedMotorControlLogHeader for PidLogHeader {
+    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
 
-    fn unique_description_bytes(&self) -> &[u8; 128] {
+    fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description
     }
 
@@ -92,7 +90,7 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
     }
 }
 
-impl fmt::Display for StatusLogHeader {
+impl fmt::Display for PidLogHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(f, "Project Version: {}", self.project_version())?;
@@ -114,27 +112,28 @@ impl fmt::Display for StatusLogHeader {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{self};
-    use testresult::TestResult;
+    use std::fs;
 
     const TEST_DATA: &str =
-        "test_data/mbed_motor_control/old_rpm_algo/status_20240912_122203_00.bin";
+        "../../test_data/mbed_motor_control/new_rpm_algo/pid_20240923_120015_00.bin";
+
+    use testresult::TestResult;
 
     use super::*;
 
     #[test]
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
-        let status_log_header = StatusLogHeader::from_reader(&mut data.as_slice())?;
-        eprintln!("{status_log_header}");
+        let pid_log_header = PidLogHeader::from_reader(&mut data.as_slice())?;
+        eprintln!("{pid_log_header}");
         assert_eq!(
-            status_log_header.unique_description(),
-            StatusLogHeader::UNIQUE_DESCRIPTION
+            pid_log_header.unique_description(),
+            PidLogHeader::UNIQUE_DESCRIPTION
         );
-        assert_eq!(status_log_header.version, 0);
-        assert_eq!(status_log_header.project_version(), "1.0.0");
-        assert_eq!(status_log_header.git_branch(), "fix-release-workflow");
-        assert_eq!(status_log_header.git_short_sha(), "56fc61b");
+        assert_eq!(pid_log_header.version, 0);
+        assert_eq!(pid_log_header.project_version(), "1.1.0");
+        assert_eq!(pid_log_header.git_branch(), "add-rpm-error-counter-to-log");
+        assert_eq!(pid_log_header.git_short_sha(), "bec2ee2");
         Ok(())
     }
 }
