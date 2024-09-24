@@ -34,7 +34,7 @@ pub trait LogEntry: Sized + Display {
     fn timestamp_ms(&self) -> f64;
 }
 
-/// [RawPlot] represents some plottable data from a log, e.g. RPM measurements
+/// [`RawPlot`] represents some plottable data from a log, e.g. RPM measurements
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct RawPlot {
     name: String,

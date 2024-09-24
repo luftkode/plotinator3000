@@ -13,8 +13,8 @@ pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
     v
 }
 
-/// Utility function for converting a slice of [LogEntry] to plot points by supplying extractor functions
-/// detailing how to extract the timestamp (X) and the data (Y) from [LogEntry]s.
+/// Utility function for converting a slice of [`LogEntry`] to plot points by supplying extractor functions
+/// detailing how to extract the timestamp (X) and the data (Y) from [`LogEntry`]s.
 pub fn plot_points_from_log_entry<XF, YF, L: LogEntry>(
     log: &[L],
     x_extractor: XF,
@@ -29,8 +29,8 @@ where
         .collect()
 }
 
-/// Utility function for converting a slice of [LogEntry] to plot points by supplying a slice of normalized timestamps
-/// and an extractor function detailing how to extract the data (Y) from [LogEntry]s.
+/// Utility function for converting a slice of [`LogEntry`] to plot points by supplying a slice of normalized timestamps
+/// and an extractor function detailing how to extract the data (Y) from [`LogEntry`]s.
 pub fn plot_points_from_normalized_timestamp<F, L: LogEntry>(
     log: &[L],
     normalized_timestamps_ms: &[f64],
