@@ -8,9 +8,9 @@ use skytem_logs::{
 use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
-use egui_plot::{AxisHints, HPlacement, Legend, Line, Plot, PlotPoint, Text};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint, Text};
 use log_if::{util::ExpectedPlotRange, Plotable};
-use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
+use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 
 mod axis_config;
@@ -143,6 +143,32 @@ impl LogPlot {
                     }
                 }
             }
+            for (idx, gen_log) in generator_logs.iter().enumerate() {
+                for raw_plot in gen_log.raw_plots() {
+                    let plot_name = format!("{}, #{}", raw_plot.name(), idx + 1);
+                    match raw_plot.expected_range() {
+                        ExpectedPlotRange::Percentage => {
+                            if !percentage_plots.iter().any(|p| p.name == plot_name) {
+                                percentage_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
+                            }
+                        }
+                        ExpectedPlotRange::OneToOneHundred => {
+                            if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
+                                to_hundreds_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
+                            }
+                        }
+                        ExpectedPlotRange::Thousands => {
+                            if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
+                                to_thousands_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
+                            }
+                        }
+                    }
+                }
+            }
+
             // Calculate the number of plots to display
             let mut total_plot_count: u8 = 0;
             let display_percentage_plot =
@@ -154,8 +180,6 @@ impl LogPlot {
             let display_to_thousands_plot =
                 plot_visibility.should_display_to_thousands(to_thousands_plots);
             total_plot_count += display_to_thousands_plot as u8;
-            let display_generator_plot = !generator_logs.is_empty();
-            total_plot_count += display_generator_plot as u8;
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
@@ -182,8 +206,6 @@ impl LogPlot {
 
             let to_hundred = create_plot("to_hundreds");
             let thousands = create_plot("to_thousands");
-
-            let gen_log_plot = create_plot("generator_log_plot");
 
             if display_percentage_plot {
                 _ = percentage_plot.show(ui, |percentage_plot_ui| {
@@ -244,48 +266,6 @@ impl LogPlot {
                             PlotType::Thousands,
                             |plot_ui| {
                                 playback_update_plot(timer, plot_ui, is_reset_pressed);
-                            },
-                        );
-                    });
-                });
-            }
-
-            if display_generator_plot {
-                _ = ui.separator();
-
-                _ = gen_log_plot.show(ui, |gen_plot_uui| {
-                    Self::handle_plot(gen_plot_uui, |gen_plot_ui| {
-                        let gen_log_count = generator_logs.len();
-                        for (idx, gen_log) in generator_logs.iter().enumerate() {
-                            for raw_plot in gen_log.raw_plots() {
-                                let x_min_max_ext = plot_util::extended_x_plot_bound(
-                                    gen_plot_ui.plot_bounds(),
-                                    0.1,
-                                );
-                                // Always render the first point such that the plot will always be within reasonable range
-                                let filtered_points =
-                                    plot_util::filter_plot_points(raw_plot.points(), x_min_max_ext);
-
-                                let legend_name = if gen_log_count == 1 {
-                                    raw_plot.name().to_owned()
-                                } else {
-                                    format!("{} #{}", raw_plot.name(), idx + 1)
-                                };
-
-                                let line = Line::new(filtered_points).name(legend_name);
-                                gen_plot_ui.line(line.width(*line_width));
-                            }
-                        }
-                        axis_config.handle_y_axis_lock(
-                            gen_plot_ui,
-                            PlotType::Generator,
-                            |plot_ui| {
-                                playback_update_generator_plot(
-                                    timer,
-                                    plot_ui,
-                                    is_reset_pressed,
-                                    0.0,
-                                );
                             },
                         );
                     });
