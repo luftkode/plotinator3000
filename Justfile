@@ -37,7 +37,7 @@ test *ARGS="--workspace":
 
 # Lint
 [no-exit-message]
-lint *ARGS: && fmt
+lint *ARGS="--workspace --tests": && fmt
     cargo {{clippy}} {{ARGS}}
     typos
 
