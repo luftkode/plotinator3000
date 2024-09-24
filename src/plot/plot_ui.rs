@@ -1,11 +1,12 @@
-use chrono::{DateTime, Utc};
-use egui::{Color32, RichText};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use egui::{Color32, RichText, TextEdit};
 use egui_phosphor::regular;
 
 use crate::app::PlayBackButtonEvent;
 
 use super::{
     axis_config::AxisConfig, play_state::PlayState, plot_visibility_config::PlotVisibilityConfig,
+    LogStartDateSettings,
 };
 
 pub fn show_settings_grid(
@@ -15,7 +16,7 @@ pub fn show_settings_grid(
     line_width: &mut f32,
     axis_cfg: &mut AxisConfig,
     plot_visibility_cfg: &mut PlotVisibilityConfig,
-    log_start_dates: &mut Vec<(String, DateTime<Utc>)>,
+    log_start_date_settings: &mut [LogStartDateSettings],
 ) {
     _ = egui::Grid::new("settings").show(gui, |arg_ui| {
         _ = arg_ui.label("Line width");
@@ -49,8 +50,61 @@ pub fn show_settings_grid(
             _ = ui.label(RichText::new(play_state.formatted_time()));
             _ = ui.label(" |");
         });
-        for (log_name, log_start_dt) in log_start_dates {
-            arg_ui.label(format!("{log_name} [{log_start_dt}]"));
+        for settings in log_start_date_settings {
+            let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date);
+            if arg_ui.button(log_name_date.clone()).clicked() {
+                settings.clicked = !settings.clicked;
+            }
+            if settings.tmp_date_buf.is_empty() {
+                settings.tmp_date_buf = settings
+                    .start_date
+                    .format("%Y-%m-%d %H:%M:%S%.f")
+                    .to_string();
+            }
+            if settings.clicked {
+                egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
+                    .collapsible(false)
+                    .movable(false)
+                    .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+                    .show(arg_ui.ctx(), |ui| {
+                        ui.vertical_centered(|ui| {
+                            ui.label("Modify the start date to offset the plots of this log");
+                            ui.label(format!("original date: {}", settings.original_start_date));
+                            ui.label(RichText::new("YYYY-mm-dd HH:MM:SS.ms").strong());
+                            let response = ui.add(TextEdit::singleline(&mut settings.tmp_date_buf));
+                            if response.changed() {
+                                log::debug!("Changed to {}", settings.tmp_date_buf);
+                                match NaiveDateTime::parse_from_str(
+                                    &settings.tmp_date_buf,
+                                    "%Y-%m-%d %H:%M:%S%.f",
+                                ) {
+                                    Ok(new_dt) => {
+                                        settings.err_msg.clear();
+                                        settings.new_date_candidate = Some(new_dt);
+                                    }
+                                    Err(e) => {
+                                        _ = {
+                                            settings.err_msg = format!("⚠ {e} ⚠");
+                                        }
+                                    }
+                                };
+                            }
+                            if settings.err_msg.is_empty() {
+                                if let Some(new_date) = settings.new_date_candidate {
+                                    if ui.button("Apply").clicked() {
+                                        settings.start_date = new_date.and_utc();
+                                        log::info!("New date: {}", settings.start_date);
+                                    }
+                                }
+                            } else {
+                                ui.label(settings.err_msg.clone());
+                            }
+                            if ui.button("Cancel").clicked() {
+                                settings.clicked = false;
+                            }
+                        })
+                    });
+            }
         }
         arg_ui.end_row();
     });
