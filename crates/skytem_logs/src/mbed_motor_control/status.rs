@@ -3,7 +3,7 @@ use std::{fmt, io};
 use super::MbedMotorControlLogHeader;
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
-use log_if::util::{raw_plot_from_log_entry, ExpectedPlotRange};
+use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
 use log_if::RawPlot;
 use log_if::{util::parse_to_vec, LogEntry};
 
@@ -27,21 +27,24 @@ impl log_if::Log for StatusLog {
         let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
         let timestamps_with_state_changes = parse_timestamps_with_state_changes(&vec_of_entries);
         let timestamps_ms: Vec<f64> = vec_of_entries.iter().map(|e| e.timestamp_ms()).collect();
-        let engine_temp_plot_raw = raw_plot_from_log_entry(
+        let engine_temp_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
             |e| e.timestamp_ms(),
             |e| e.engine_temp as f64,
         );
-        let fan_on_plot_raw = raw_plot_from_log_entry(
+        let fan_on_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
             |e| e.timestamp_ms(),
             |e| (e.fan_on as u8) as f64,
         );
         let vbat_plot_raw =
-            raw_plot_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.vbat as f64);
-        let setpoint_plot_raw =
-            raw_plot_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.setpoint as f64);
-        let motor_state_plot_raw = raw_plot_from_log_entry(
+            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.vbat as f64);
+        let setpoint_plot_raw = plot_points_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ms(),
+            |e| e.setpoint as f64,
+        );
+        let motor_state_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
             |e| e.timestamp_ms(),
             |e| (e.motor_state as u8) as f64,

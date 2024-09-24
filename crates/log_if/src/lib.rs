@@ -5,32 +5,6 @@ use util::ExpectedPlotRange;
 
 pub mod util;
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct RawPlot {
-    name: String,
-    points: Vec<[f64; 2]>,
-    expected_range: ExpectedPlotRange,
-}
-
-impl RawPlot {
-    pub fn new(name: String, points: Vec<[f64; 2]>, expected_range: ExpectedPlotRange) -> Self {
-        Self {
-            name,
-            points,
-            expected_range,
-        }
-    }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-    pub fn points(&self) -> &[[f64; 2]] {
-        &self.points
-    }
-    pub fn expected_range(&self) -> ExpectedPlotRange {
-        self.expected_range
-    }
-}
-
 pub trait Plotable {
     fn raw_plots(&self) -> &[RawPlot];
 }
@@ -58,4 +32,31 @@ pub trait LogEntry: Sized + Display {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
     /// Timestamp in milliseconds
     fn timestamp_ms(&self) -> f64;
+}
+
+/// [RawPlot] represents some plottable data from a log, e.g. RPM measurements
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct RawPlot {
+    name: String,
+    points: Vec<[f64; 2]>,
+    expected_range: ExpectedPlotRange,
+}
+
+impl RawPlot {
+    pub fn new(name: String, points: Vec<[f64; 2]>, expected_range: ExpectedPlotRange) -> Self {
+        Self {
+            name,
+            points,
+            expected_range,
+        }
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn points(&self) -> &[[f64; 2]] {
+        &self.points
+    }
+    pub fn expected_range(&self) -> ExpectedPlotRange {
+        self.expected_range
+    }
 }

@@ -7,7 +7,7 @@ use std::{
 
 use chrono::NaiveDateTime;
 use egui_plot::Line;
-use log_if::util::raw_plot_from_normalized_timestamp;
+use log_if::util::plot_points_from_normalized_timestamp;
 use log_if::{Log, LogEntry};
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +32,7 @@ impl GeneratorLog {
     }
 
     pub fn vout_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.vout.into()
         })
     }
@@ -41,7 +41,7 @@ impl GeneratorLog {
     }
 
     pub fn rrotor_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.r_rotor.into()
         })
     }
@@ -50,7 +50,7 @@ impl GeneratorLog {
     }
 
     pub fn rpm_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.rpm.into()
         })
     }
@@ -59,7 +59,7 @@ impl GeneratorLog {
     }
 
     pub fn pwm_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.pwm.into()
         })
     }
@@ -68,7 +68,7 @@ impl GeneratorLog {
     }
 
     pub fn power_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             (e.vout as f64) * (e.i_in as f64)
         })
     }
@@ -78,7 +78,7 @@ impl GeneratorLog {
     }
 
     pub fn load_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.load.into()
         })
     }
@@ -88,7 +88,7 @@ impl GeneratorLog {
     }
 
     pub fn irotor_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.i_rotor.into()
         })
     }
@@ -98,7 +98,7 @@ impl GeneratorLog {
     }
 
     pub fn temp1_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.temp1.into()
         })
     }
@@ -108,7 +108,7 @@ impl GeneratorLog {
     }
 
     pub fn temp2_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.temp2.into()
         })
     }
@@ -118,7 +118,7 @@ impl GeneratorLog {
     }
 
     pub fn i_in_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.i_in.into()
         })
     }
@@ -128,7 +128,7 @@ impl GeneratorLog {
     }
 
     pub fn i_out_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.i_out.into()
         })
     }
@@ -138,7 +138,7 @@ impl GeneratorLog {
     }
 
     pub fn vbat_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+        plot_points_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
             e.vbat.into()
         })
     }
