@@ -307,6 +307,14 @@ impl Plotable for GeneratorLog {
     fn raw_plots(&self) -> &[log_if::RawPlot] {
         &self.all_plots_raw
     }
+
+    fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        self.entries()
+            .first()
+            .expect("No entries")
+            .timestamp
+            .and_utc()
+    }
 }
 
 impl fmt::Display for GeneratorLog {

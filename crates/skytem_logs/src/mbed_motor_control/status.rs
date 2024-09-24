@@ -95,6 +95,11 @@ impl Plotable for StatusLog {
     fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
     }
+
+    /// Currently the log does not have an initial timestamp, TODO!!
+    fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::default()
+    }
 }
 
 impl StatusLog {

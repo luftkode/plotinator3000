@@ -1,5 +1,6 @@
 use std::{fmt::Display, io};
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use util::ExpectedPlotRange;
 
@@ -8,6 +9,8 @@ pub mod util;
 pub trait Plotable {
     /// Returns a slice of all the plottable data.
     fn raw_plots(&self) -> &[RawPlot];
+    /// Return the first timestamp, meaning the timestamp of the first entry
+    fn first_timestamp(&self) -> DateTime<Utc>;
 }
 
 /// A given log should implement this trait
