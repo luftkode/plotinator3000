@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(second_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
 
         let last_entry = status_log.entries().last().expect("Empty entries vec");
-        assert_eq!(last_entry.timestamp_ns(), 736113.0 * 1000_000.0);
+        assert_eq!(last_entry.timestamp_ns(), 736113.0 * 1_000_000.0);
         assert_eq!(last_entry.engine_temp, 81.32979);
         assert!(last_entry.fan_on);
         assert_eq!(last_entry.vbat, 11.665642);
