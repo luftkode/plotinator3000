@@ -23,4 +23,5 @@ pub trait GitMetadata {
 pub trait LogEntry: Sized + Display {
     /// Create a [`LogEntry`] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
+    fn timestamp_ms(&self) -> f64;
 }

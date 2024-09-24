@@ -3,7 +3,7 @@ use std::{fmt, io};
 use super::MbedMotorControlLogHeader;
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
-use log_if::util::parse_to_vec;
+use log_if::{util::parse_to_vec, LogEntry};
 use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
 
 pub mod entry;
@@ -25,33 +25,24 @@ impl log_if::Log for StatusLog {
         let header = StatusLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
         let timestamps_with_state_changes = parse_timestamps_with_state_changes(&vec_of_entries);
-        let timestamps_ms: Vec<f64> = vec_of_entries
-            .iter()
-            .map(|e| e.timestamp_ms() as f64)
-            .collect();
+        let timestamps_ms: Vec<f64> = vec_of_entries.iter().map(|e| e.timestamp_ms()).collect();
         let engine_temp_plot_raw = raw_plot_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ms(),
             |e| e.engine_temp as f64,
         );
         let fan_on_plot_raw = raw_plot_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ms(),
             |e| (e.fan_on as u8) as f64,
         );
-        let vbat_plot_raw = raw_plot_from_log_entry(
-            &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
-            |e| e.vbat as f64,
-        );
-        let setpoint_plot_raw = raw_plot_from_log_entry(
-            &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
-            |e| e.setpoint as f64,
-        );
+        let vbat_plot_raw =
+            raw_plot_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.vbat as f64);
+        let setpoint_plot_raw =
+            raw_plot_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.setpoint as f64);
         let motor_state_plot_raw = raw_plot_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ms(),
             |e| (e.motor_state as u8) as f64,
         );
         let all_plots_raw = vec![
@@ -162,7 +153,7 @@ mod tests {
         assert_eq!(second_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
 
         let last_entry = status_log.entries().last().expect("Empty entries vec");
-        assert_eq!(last_entry.timestamp_ms(), 736113);
+        assert_eq!(last_entry.timestamp_ms(), 736113.0);
         assert_eq!(last_entry.engine_temp, 81.32979);
         assert!(last_entry.fan_on);
         assert_eq!(last_entry.vbat, 11.665642);

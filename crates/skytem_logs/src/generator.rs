@@ -7,23 +7,19 @@ use std::{
 
 use chrono::NaiveDateTime;
 use egui_plot::Line;
-use log_if::Log;
-use plot_util::raw_plot_from_log_entry;
+use log_if::{Log, LogEntry};
+use plot_util::raw_plot_from_normalized_timestamp;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
     entries: Vec<GeneratorLogEntry>,
     pub power: Vec<f64>, // Calculated from Vout * Vin
-    timestamps_as_secs: Vec<f64>,
+    // Normalized to start at 0, meaning the first timestamp starts at 0 and the rest are their distance to the first timestamp
+    normalized_timestamps_ms: Vec<f64>,
 }
 
 impl GeneratorLog {
-    /// Returns the first timestamp of the dataset or None if the data is empty.
-    pub fn first_timestamp(&self) -> Option<f64> {
-        self.timestamp_as_secs().first().copied()
-    }
-
     pub fn file_is_generator_log(fpath: &Path) -> io::Result<bool> {
         let file = fs::File::open(fpath)?;
         let mut buf_reader = BufReader::new(file);
@@ -35,44 +31,46 @@ impl GeneratorLog {
         Ok(is_first_line_gen_log_entry)
     }
 
-    pub fn timestamp_as_secs(&self) -> &[f64] {
-        &self.timestamps_as_secs
-    }
-
     pub fn vout_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.vout.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.vout.into()
+        })
     }
     pub fn vout_plot(&self) -> Line {
         Line::new(self.vout_over_time()).name("Vout [V]")
     }
 
     pub fn rrotor_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.r_rotor.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.r_rotor.into()
+        })
     }
     pub fn rrotor_plot(&self) -> Line {
         Line::new(self.rrotor_over_time()).name("rotor [R]")
     }
 
     pub fn rpm_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.rpm.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.rpm.into()
+        })
     }
     pub fn rpm_plot(&self) -> Line {
         Line::new(self.rpm_over_time()).name("RPM")
     }
 
     pub fn pwm_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.pwm.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.pwm.into()
+        })
     }
     pub fn pwm_plot(&self) -> Line {
         Line::new(self.pwm_over_time()).name("PWM")
     }
 
     pub fn power_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(
-            self.entries(),
-            |t| t.timestamp_ms(),
-            |e| (e.vout as f64) * (e.i_in as f64),
-        )
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            (e.vout as f64) * (e.i_in as f64)
+        })
     }
 
     pub fn power_plot(&self) -> Line {
@@ -80,7 +78,9 @@ impl GeneratorLog {
     }
 
     pub fn load_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.load.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.load.into()
+        })
     }
 
     pub fn load_plot(&self) -> Line {
@@ -88,7 +88,9 @@ impl GeneratorLog {
     }
 
     pub fn irotor_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.i_rotor.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.i_rotor.into()
+        })
     }
 
     pub fn irotor_plot(&self) -> Line {
@@ -96,7 +98,9 @@ impl GeneratorLog {
     }
 
     pub fn temp1_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.temp1.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.temp1.into()
+        })
     }
 
     pub fn temp1_plot(&self) -> Line {
@@ -104,7 +108,9 @@ impl GeneratorLog {
     }
 
     pub fn temp2_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.temp2.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.temp2.into()
+        })
     }
 
     pub fn temp2_plot(&self) -> Line {
@@ -112,7 +118,9 @@ impl GeneratorLog {
     }
 
     pub fn i_in_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.i_in.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.i_in.into()
+        })
     }
 
     pub fn i_in_plot(&self) -> Line {
@@ -120,7 +128,9 @@ impl GeneratorLog {
     }
 
     pub fn i_out_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.i_out.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.i_out.into()
+        })
     }
 
     pub fn i_out_plot(&self) -> Line {
@@ -128,7 +138,9 @@ impl GeneratorLog {
     }
 
     pub fn vbat_over_time(&self) -> Vec<[f64; 2]> {
-        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.vbat.into())
+        raw_plot_from_normalized_timestamp(self.entries(), &self.normalized_timestamps_ms, |e| {
+            e.vbat.into()
+        })
     }
 
     pub fn vbat_plot(&self) -> Line {
@@ -174,15 +186,23 @@ impl Log for GeneratorLog {
             power_vals.push(power);
         }
 
-        let mut timestamps_as_secs: Vec<f64> = Vec::with_capacity(entries.len());
-        for entry in &entries {
-            timestamps_as_secs.push(entry.timestamp.and_utc().timestamp() as f64);
+        let mut normalized_timestamps_ms: Vec<f64> = Vec::with_capacity(entries.len());
+        normalized_timestamps_ms.push(0.0);
+        let first_timestamp = entries
+            .first()
+            .expect("Log entries is empty")
+            .timestamp
+            .and_utc()
+            .timestamp_millis() as f64;
+        for entry in entries.iter().skip(1) {
+            let normalized_ts = entry.timestamp_ms() - first_timestamp;
+            normalized_timestamps_ms.push(normalized_ts);
         }
 
         Ok(Self {
             entries,
             power: power_vals,
-            timestamps_as_secs,
+            normalized_timestamps_ms,
         })
     }
 
@@ -271,11 +291,6 @@ impl GeneratorLogEntry {
         }
         true
     }
-
-    /// Timestamp in milliseconds since the epoch
-    pub fn timestamp_ms(&self) -> f64 {
-        self.timestamp.and_utc().timestamp_millis() as f64
-    }
 }
 
 impl log_if::LogEntry for GeneratorLogEntry {
@@ -285,6 +300,11 @@ impl log_if::LogEntry for GeneratorLogEntry {
         _ = bufreader.read_line(&mut line)?;
 
         Self::from_str(&line)
+    }
+
+    /// Timestamp in milliseconds since the epoch
+    fn timestamp_ms(&self) -> f64 {
+        self.timestamp.and_utc().timestamp_millis() as f64
     }
 }
 

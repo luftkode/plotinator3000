@@ -3,6 +3,7 @@ mod ci 'just/ci.just'
 
 PROJECT_NAME := "logviewer-rs"
 
+alias r := run
 alias l := lint
 alias c := check
 alias f := fmt

@@ -2,13 +2,11 @@ use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::PidLog, status::StatusLog},
 };
-use std::ops::RangeInclusive;
 
 use crate::{app::PlayBackButtonEvent, util::format_ms_timestamp};
 use axis_config::{AxisConfig, PlotType};
-use chrono::{DateTime, Timelike};
 use egui::Response;
-use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
+use egui_plot::{HPlacement, Legend, Line, Plot, PlotPoint, Text};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use plot_util::{ExpectedPlotRange, PlotWithName};
 use plot_visibility_config::PlotVisibilityConfig;
@@ -175,6 +173,7 @@ impl LogPlot {
 
             let to_hundred = create_plot("to_hundreds");
             let thousands = create_plot("to_thousands");
+            let gen_log_plot = create_plot("generator_log_plot");
 
             if display_percentage_plot {
                 _ = percentage_plot.show(ui, |percentage_plot_ui| {
@@ -243,43 +242,11 @@ impl LogPlot {
 
             if display_generator_plot {
                 _ = ui.separator();
-                let time_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
-                    let sec = mark.value;
-                    let dt = DateTime::from_timestamp(sec as i64, 0)
-                        .unwrap_or_else(|| panic!("Timestamp value out of range: {sec}"));
-                    dt.format("%Y-%m-%d %H:%M:%S").to_string()
-                };
-                let x_axes = vec![AxisHints::new_x().label("Time").formatter(time_formatter)];
-                let label_fmt = |_s: &str, val: &PlotPoint| {
-                    let dt = DateTime::from_timestamp(val.x as i64, 0)
-                        .unwrap_or_else(|| panic!("Timestamp value out of range: {}", val.x));
-                    format!(
-                        "{h:02}:{m:02}:{s:02}",
-                        h = dt.hour(),
-                        m = dt.minute(),
-                        s = dt.second()
-                    )
-                };
-
-                let gen_log_plot = Plot::new("generator_log_plot")
-                    .legend(config.clone())
-                    .height(plot_height)
-                    .show_axes(axis_config.show_axes())
-                    .x_axis_position(VPlacement::Top)
-                    .y_axis_position(HPlacement::Right)
-                    .custom_x_axes(x_axes)
-                    .label_formatter(label_fmt)
-                    .include_y(0.0);
 
                 _ = gen_log_plot.show(ui, |gen_plot_uui| {
                     Self::handle_plot(gen_plot_uui, |gen_plot_ui| {
                         let gen_log_count = generator_logs.len();
-                        let mut gen_log_first_timestamp = None;
                         for (idx, gen_log) in generator_logs.iter().enumerate() {
-                            if gen_log_first_timestamp.is_none() {
-                                gen_log_first_timestamp =
-                                    Some(gen_log.first_timestamp().unwrap_or(0.0));
-                            }
                             for (raw_plot, name) in gen_log.all_plots_raw() {
                                 let x_min_max_ext = plot_util::extended_x_plot_bound(
                                     gen_plot_ui.plot_bounds(),
@@ -307,7 +274,7 @@ impl LogPlot {
                                     timer,
                                     plot_ui,
                                     is_reset_pressed,
-                                    gen_log_first_timestamp.unwrap_or_default(),
+                                    0.0,
                                 );
                             },
                         );

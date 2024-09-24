@@ -1,6 +1,6 @@
 use entry::PidLogEntry;
 use header::PidLogHeader;
-use log_if::util::parse_to_vec;
+use log_if::{util::parse_to_vec, LogEntry};
 use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
 use std::{fmt, io};
 
@@ -23,34 +23,25 @@ impl log_if::Log for PidLog {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = PidLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<PidLogEntry> = parse_to_vec(reader);
-        let timestamps_ms: Vec<f64> = vec_of_entries
-            .iter()
-            .map(|e| e.timestamp_ms() as f64)
-            .collect();
+        let timestamps_ms: Vec<f64> = vec_of_entries.iter().map(|e| e.timestamp_ms()).collect();
 
-        let rpm_plot_raw = raw_plot_from_log_entry(
-            &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
-            |e| e.rpm as f64,
-        );
-        let pid_err_plot_raw = raw_plot_from_log_entry(
-            &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
-            |e| e.pid_err as f64,
-        );
+        let rpm_plot_raw =
+            raw_plot_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.rpm as f64);
+        let pid_err_plot_raw =
+            raw_plot_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.pid_err as f64);
         let servo_duty_cycle_plot_raw = raw_plot_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ms(),
             |e| e.servo_duty_cycle as f64,
         );
         let rpm_error_count_plot_raw = raw_plot_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ms(),
             |e| e.rpm_error_count as f64,
         );
         let first_valid_rpm_count_plot_raw = raw_plot_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ms(),
             |e| e.first_valid_rpm_count as f64,
         );
 

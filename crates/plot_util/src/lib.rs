@@ -58,6 +58,20 @@ where
         .collect()
 }
 
+pub fn raw_plot_from_normalized_timestamp<F, L: LogEntry>(
+    log: &[L],
+    normalized_timestamps_ms: &[f64],
+    y_extractor: F,
+) -> Vec<[f64; 2]>
+where
+    F: Fn(&L) -> f64,
+{
+    log.iter()
+        .zip(normalized_timestamps_ms)
+        .map(|(e, ts)| [*ts, y_extractor(e)])
+        .collect()
+}
+
 /// Where does the plot values typically fit within
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
 pub enum ExpectedPlotRange {
