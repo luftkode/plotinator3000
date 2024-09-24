@@ -1447,9 +1447,8 @@ version = "0.1.0"
 
 [[package]]
 name = "logviewer-rs"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
- "byteorder",
  "chrono",
  "eframe",
  "egui",
@@ -1458,11 +1457,9 @@ dependencies = [
  "env_logger",
  "log",
  "log_if",
- "num-traits",
  "plot_util",
  "rfd",
  "serde",
- "serde-big-array",
  "skytem_logs",
  "strum",
  "strum_macros",
@@ -1855,15 +1852,10 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 name = "plot_util"
 version = "0.1.0"
 dependencies = [
- "byteorder",
- "chrono",
  "egui_plot",
  "log_if",
  "num-traits",
  "serde",
- "serde-big-array",
- "strum",
- "strum_macros",
  "testresult",
 ]
 
@@ -2210,7 +2202,6 @@ dependencies = [
  "chrono",
  "egui_plot",
  "log_if",
- "num-traits",
  "plot_util",
  "serde",
  "serde-big-array",

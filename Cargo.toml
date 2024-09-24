@@ -2,7 +2,7 @@
 name = "logviewer-rs"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 repository = "https://github.com/luftkode/logviewer-rs"
 homepage = "https://github.com/luftkode/logviewer-rs"
@@ -23,6 +23,13 @@ egui_plot = { git = "https://github.com/emilk/egui_plot.git", rev = "d00fa85a84f
     "serde",
 ] }
 log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde-big-array = "0.5.1"
+strum = "0.26.3"
+strum_macros = "0.26.3"
+byteorder = "1.5.0"
+chrono = { version = "0.4.38", features = ["serde"] }
+
 # Dev dependencies
 testresult = "0.4.1"
 
@@ -30,27 +37,23 @@ testresult = "0.4.1"
 skytem_logs = { version = "*", path = "crates/skytem_logs" }
 log_if = { version = "*", path = "crates/log_if" }
 plot_util = { version = "*", path = "crates/plot_util" }
-egui_plot = { workspace = true }
-log = { workspace = true }
+egui_plot.workspace = true
+log.workspace = true
+serde.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+chrono.workspace = true
 egui = { version = "0.28" }
 eframe = { version = "0.28", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
-# You only need serde if you want app persistence:
-serde = { version = "1", features = ["derive"] }
 rfd = "0.14.1"
-serde-big-array = "0.5.1"
-strum = "0.26.3"
-strum_macros = "0.26.3"
-byteorder = "1.5.0"
-chrono = { version = "0.4.38", features = ["serde"] }
 egui-phosphor = "0.6.0"
-num-traits = "0.2.19"
 
 [dev-dependencies]
-testresult = { workspace = true }
+testresult.workspace = true
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -100,7 +103,7 @@ install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = true
 
-[lints.rust]
+[workspace.lints.rust]
 missing_debug_implementations = "warn"
 missing_copy_implementations = "warn"
 trivial_casts = "warn"
@@ -110,7 +113,7 @@ unused_import_braces = "warn"
 variant_size_differences = "warn"
 unexpected_cfgs = "warn"
 
-[lints.clippy]
+[workspace.lints.clippy]
 as_ptr_cast_mut = "warn"
 await_holding_lock = "warn"
 bool_to_int_with_if = "warn"

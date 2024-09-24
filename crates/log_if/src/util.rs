@@ -1,6 +1,5 @@
-use std::io;
-
 use crate::LogEntry;
+use std::io;
 
 /// Take a reader and parse [`LogEntry`]s from it until it returns an error,
 /// then return a vector of all [`LogEntry`]s.
