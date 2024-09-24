@@ -15,7 +15,7 @@ pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
     timestamps_ms: Vec<f64>,
-    timestamps_with_state_changes: Vec<(u32, MotorState)>, // for memoization
+    timestamps_with_state_changes: Vec<(f64, MotorState)>, // for memoization
     all_plots_raw: Vec<RawPlot>,
 }
 
@@ -103,7 +103,7 @@ impl Plotable for StatusLog {
 }
 
 impl StatusLog {
-    pub fn timestamps_with_state_changes(&self) -> &[(u32, MotorState)] {
+    pub fn timestamps_with_state_changes(&self) -> &[(f64, MotorState)] {
         &self.timestamps_with_state_changes
     }
 }
@@ -118,14 +118,14 @@ impl fmt::Display for StatusLog {
     }
 }
 
-fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, MotorState)> {
+fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(f64, MotorState)> {
     let mut result = Vec::new();
     let mut last_state = None;
 
     for entry in entries {
         // Check if the current state is different from the last recorded state
         if last_state != Some(entry.motor_state) {
-            result.push((entry.timestamp_ms, entry.motor_state));
+            result.push((entry.timestamp_ns(), entry.motor_state));
             last_state = Some(entry.motor_state);
         }
     }

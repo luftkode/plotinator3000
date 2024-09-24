@@ -113,7 +113,7 @@ fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
         ),
         RawPlot::new(
             "RPM".into(),
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vout.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.rpm.into()),
             ExpectedPlotRange::Thousands,
         ),
         RawPlot::new(
@@ -123,17 +123,19 @@ fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
                 |e| e.timestamp_ns(),
                 |e| f64::from(e.vout) * f64::from(e.i_in),
             ),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Thousands,
         ),
         RawPlot::new(
-            "PWM".into(),
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.pwm.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            "PWM [%]".into(),
+            // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.pwm / 100.0).into()),
+            ExpectedPlotRange::Percentage,
         ),
         RawPlot::new(
-            "Load".into(),
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.load.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            "Load [%]".into(),
+            // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.load / 100.0).into()),
+            ExpectedPlotRange::Percentage,
         ),
         RawPlot::new(
             "Rotor [I]".into(),
@@ -141,12 +143,12 @@ fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
             ExpectedPlotRange::OneToOneHundred,
         ),
         RawPlot::new(
-            "Temp1".into(),
+            "Temp1 °C".into(),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp1.into()),
             ExpectedPlotRange::OneToOneHundred,
         ),
         RawPlot::new(
-            "Temp2".into(),
+            "Temp2 °C".into(),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp2.into()),
             ExpectedPlotRange::OneToOneHundred,
         ),
