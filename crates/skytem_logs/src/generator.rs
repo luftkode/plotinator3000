@@ -8,6 +8,7 @@ use std::{
 use chrono::NaiveDateTime;
 use egui_plot::Line;
 use log_if::Log;
+use plot_util::raw_plot_from_log_entry;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -38,47 +39,40 @@ impl GeneratorLog {
         &self.timestamps_as_secs
     }
 
-    fn y_over_time<F>(&self, y_extractor: F) -> Vec<[f64; 2]>
-    where
-        F: Fn(&GeneratorLogEntry) -> f64,
-    {
-        self.timestamp_as_secs()
-            .iter()
-            .zip(self.entries().iter())
-            .map(|(x, e)| [*x, y_extractor(e)])
-            .collect()
-    }
-
     pub fn vout_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.vout.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.vout.into())
     }
     pub fn vout_plot(&self) -> Line {
         Line::new(self.vout_over_time()).name("Vout [V]")
     }
 
     pub fn rrotor_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.r_rotor.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.r_rotor.into())
     }
     pub fn rrotor_plot(&self) -> Line {
         Line::new(self.rrotor_over_time()).name("rotor [R]")
     }
 
     pub fn rpm_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.rpm.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.rpm.into())
     }
     pub fn rpm_plot(&self) -> Line {
         Line::new(self.rpm_over_time()).name("RPM")
     }
 
     pub fn pwm_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.pwm.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.pwm.into())
     }
     pub fn pwm_plot(&self) -> Line {
         Line::new(self.pwm_over_time()).name("PWM")
     }
 
     pub fn power_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| (e.vout as f64) * (e.i_in as f64))
+        raw_plot_from_log_entry(
+            self.entries(),
+            |t| t.timestamp_ms(),
+            |e| (e.vout as f64) * (e.i_in as f64),
+        )
     }
 
     pub fn power_plot(&self) -> Line {
@@ -86,7 +80,7 @@ impl GeneratorLog {
     }
 
     pub fn load_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.load.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.load.into())
     }
 
     pub fn load_plot(&self) -> Line {
@@ -94,7 +88,7 @@ impl GeneratorLog {
     }
 
     pub fn irotor_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.i_rotor.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.i_rotor.into())
     }
 
     pub fn irotor_plot(&self) -> Line {
@@ -102,7 +96,7 @@ impl GeneratorLog {
     }
 
     pub fn temp1_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.temp1.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.temp1.into())
     }
 
     pub fn temp1_plot(&self) -> Line {
@@ -110,7 +104,7 @@ impl GeneratorLog {
     }
 
     pub fn temp2_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.temp2.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.temp2.into())
     }
 
     pub fn temp2_plot(&self) -> Line {
@@ -118,7 +112,7 @@ impl GeneratorLog {
     }
 
     pub fn i_in_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.i_in.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.i_in.into())
     }
 
     pub fn i_in_plot(&self) -> Line {
@@ -126,7 +120,7 @@ impl GeneratorLog {
     }
 
     pub fn i_out_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.i_out.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.i_out.into())
     }
 
     pub fn i_out_plot(&self) -> Line {
@@ -134,34 +128,11 @@ impl GeneratorLog {
     }
 
     pub fn vbat_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.vbat.into())
+        raw_plot_from_log_entry(self.entries(), |t| t.timestamp_ms(), |e| e.vbat.into())
     }
 
     pub fn vbat_plot(&self) -> Line {
         Line::new(self.vbat_over_time()).name("Vbat [V]")
-    }
-
-    /// Return all the plots that a [`GeneratorLog`] can produce
-    ///
-    /// ### Note to developer
-    ///
-    /// Don't be tempted to comment out stuff just because it's easy to leave out
-    /// "irrelevant" plots that way. Creat a new `selective_plots` functions or similar
-    pub fn all_plots(&self) -> Vec<Line> {
-        vec![
-            self.rrotor_plot(),
-            self.rpm_plot(),
-            self.power_plot(),
-            self.pwm_plot(),
-            self.load_plot(),
-            self.irotor_plot(),
-            self.temp1_plot(),
-            self.temp2_plot(),
-            self.i_in_plot(),
-            self.i_out_plot(),
-            self.vbat_plot(),
-            self.vout_plot(),
-        ]
     }
 
     pub fn all_plots_raw(&self) -> Vec<(Vec<[f64; 2]>, String)> {
@@ -299,6 +270,11 @@ impl GeneratorLogEntry {
             return false;
         }
         true
+    }
+
+    /// Timestamp in milliseconds since the epoch
+    pub fn timestamp_ms(&self) -> f64 {
+        self.timestamp.and_utc().timestamp_millis() as f64
     }
 }
 
