@@ -1,8 +1,8 @@
 use entry::PidLogEntry;
 use header::PidLogHeader;
 use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
-use log_if::RawPlot;
 use log_if::{util::parse_to_vec, LogEntry};
+use log_if::{Log, Plotable, RawPlot};
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
 
@@ -19,7 +19,7 @@ pub struct PidLog {
     all_plots_raw: Vec<RawPlot>,
 }
 
-impl log_if::Log for PidLog {
+impl Log for PidLog {
     type Entry = PidLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -84,8 +84,8 @@ impl log_if::Log for PidLog {
     }
 }
 
-impl PidLog {
-    pub fn all_plots_raw(&self) -> &[RawPlot] {
+impl Plotable for PidLog {
+    fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
     }
 }

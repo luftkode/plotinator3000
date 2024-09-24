@@ -6,11 +6,12 @@ use util::ExpectedPlotRange;
 pub mod util;
 
 pub trait Plotable {
+    /// Returns a slice of all the plottable data.
     fn raw_plots(&self) -> &[RawPlot];
 }
 
 /// A given log should implement this trait
-pub trait Log: Sized + Display {
+pub trait Log: Plotable + Sized + Display {
     type Entry: LogEntry;
     /// Create a [Log] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;

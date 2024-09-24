@@ -4,8 +4,8 @@ use super::MbedMotorControlLogHeader;
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
 use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
-use log_if::RawPlot;
 use log_if::{util::parse_to_vec, LogEntry};
+use log_if::{Log, Plotable, RawPlot};
 
 pub mod entry;
 pub mod header;
@@ -19,7 +19,7 @@ pub struct StatusLog {
     all_plots_raw: Vec<RawPlot>,
 }
 
-impl log_if::Log for StatusLog {
+impl Log for StatusLog {
     type Entry = StatusLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -91,12 +91,15 @@ impl log_if::Log for StatusLog {
     }
 }
 
+impl Plotable for StatusLog {
+    fn raw_plots(&self) -> &[RawPlot] {
+        &self.all_plots_raw
+    }
+}
+
 impl StatusLog {
     pub fn timestamps_with_state_changes(&self) -> &[(u32, MotorState)] {
         &self.timestamps_with_state_changes
-    }
-    pub fn all_plots_raw(&self) -> &[RawPlot] {
-        &self.all_plots_raw
     }
 }
 

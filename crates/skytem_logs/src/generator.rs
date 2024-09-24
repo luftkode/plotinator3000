@@ -7,7 +7,10 @@ use std::{
 
 use chrono::NaiveDateTime;
 use egui_plot::Line;
-use log_if::util::plot_points_from_normalized_timestamp;
+use log_if::{
+    util::{plot_points_from_normalized_timestamp, ExpectedPlotRange},
+    Plotable, RawPlot,
+};
 use log_if::{Log, LogEntry};
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +20,7 @@ pub struct GeneratorLog {
     pub power: Vec<f64>, // Calculated from Vout * Vin
     // Normalized to start at 0, meaning the first timestamp starts at 0 and the rest are their distance to the first timestamp
     normalized_timestamps_ms: Vec<f64>,
+    all_plots_raw: Vec<RawPlot>,
 }
 
 impl GeneratorLog {
@@ -199,15 +203,109 @@ impl Log for GeneratorLog {
             normalized_timestamps_ms.push(normalized_ts);
         }
 
+        let all_plots_raw = vec![
+            RawPlot::new(
+                "Rotor [R]".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.r_rotor.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "RPM".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.vout.into()
+                }),
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "Power [W]".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    f64::from(e.vout) * f64::from(e.i_in)
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "PWM".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.pwm.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Load".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.load.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Rotor [I]".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.i_rotor.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Temp1".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.temp1.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Temp2".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.temp2.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "I_in".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.i_in.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Iout".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.i_out.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Vbat [V]".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.vbat.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Vout [V]".into(),
+                plot_points_from_normalized_timestamp(&entries, &normalized_timestamps_ms, |e| {
+                    e.vout.into()
+                }),
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+        ];
+
         Ok(Self {
             entries,
             power: power_vals,
             normalized_timestamps_ms,
+            all_plots_raw,
         })
     }
 
     fn entries(&self) -> &[Self::Entry] {
         &self.entries
+    }
+}
+
+impl Plotable for GeneratorLog {
+    fn raw_plots(&self) -> &[log_if::RawPlot] {
+        &self.all_plots_raw
     }
 }
 

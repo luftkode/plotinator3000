@@ -9,7 +9,7 @@ use crate::{app::PlayBackButtonEvent, util::format_ms_timestamp};
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
 use egui_plot::{HPlacement, Legend, Line, Plot, PlotPoint, Text};
-use log_if::util::ExpectedPlotRange;
+use log_if::{util::ExpectedPlotRange, Plotable};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 
@@ -93,7 +93,7 @@ impl LogPlot {
 
         gui.vertical(|ui| {
             for (idx, pid_log) in pid_logs.iter().enumerate() {
-                for raw_plot in pid_log.all_plots_raw() {
+                for raw_plot in pid_log.raw_plots() {
                     let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
 
                     match raw_plot.expected_range() {
@@ -119,7 +119,7 @@ impl LogPlot {
                 }
             }
             for (idx, status_log) in status_logs.iter().enumerate() {
-                for raw_plot in status_log.all_plots_raw() {
+                for raw_plot in status_log.raw_plots() {
                     let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
                     match raw_plot.expected_range() {
                         ExpectedPlotRange::Percentage => {
