@@ -1,7 +1,9 @@
 use entry::PidLogEntry;
 use header::PidLogHeader;
-use log_if::util::parse_to_vec;
-use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
+use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
+use log_if::{util::parse_to_vec, LogEntry};
+use log_if::{Log, Plotable, RawPlot};
+use serde::{Deserialize, Serialize};
 use std::{fmt, io};
 
 use super::MbedMotorControlLogHeader;
@@ -9,75 +11,65 @@ use super::MbedMotorControlLogHeader;
 pub mod entry;
 pub mod header;
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
     header: PidLogHeader,
     entries: Vec<PidLogEntry>,
-    timestamps_ms: Vec<f64>,
+    timestamps_ns: Vec<f64>,
     all_plots_raw: Vec<RawPlot>,
 }
 
-impl log_if::Log for PidLog {
+impl Log for PidLog {
     type Entry = PidLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = PidLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<PidLogEntry> = parse_to_vec(reader);
-        let timestamps_ms: Vec<f64> = vec_of_entries
+        let timestamps_ns: Vec<f64> = vec_of_entries
             .iter()
-            .map(|e| e.timestamp_ms() as f64)
+            .map(|e| e.timestamp_ns() * 1_000_000.0)
             .collect();
 
-        let rpm_plot_raw = raw_plot_from_log_entry(
+        let rpm_plot_raw =
+            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ns(), |e| e.rpm as f64);
+        let pid_err_plot_raw =
+            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ns(), |e| e.pid_err as f64);
+        let servo_duty_cycle_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
-            |e| e.rpm as f64,
-        );
-        let pid_err_plot_raw = raw_plot_from_log_entry(
-            &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
-            |e| e.pid_err as f64,
-        );
-        let servo_duty_cycle_plot_raw = raw_plot_from_log_entry(
-            &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ns(),
             |e| e.servo_duty_cycle as f64,
         );
-        let rpm_error_count_plot_raw = raw_plot_from_log_entry(
+        let rpm_error_count_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ns(),
             |e| e.rpm_error_count as f64,
         );
-        let first_valid_rpm_count_plot_raw = raw_plot_from_log_entry(
+        let first_valid_rpm_count_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ns(),
             |e| e.first_valid_rpm_count as f64,
         );
 
         let all_plots_raw = vec![
-            (
-                rpm_plot_raw,
-                String::from("RPM"),
-                ExpectedPlotRange::Thousands,
-            ),
-            (
+            RawPlot::new("RPM".into(), rpm_plot_raw, ExpectedPlotRange::Thousands),
+            RawPlot::new(
+                "Pid Error".into(),
                 pid_err_plot_raw,
-                String::from("Pid Error"),
                 ExpectedPlotRange::Percentage,
             ),
-            (
+            RawPlot::new(
+                "Servo Duty Cycle".into(),
                 servo_duty_cycle_plot_raw,
-                String::from("Servo Duty Cycle"),
                 ExpectedPlotRange::Percentage,
             ),
-            (
+            RawPlot::new(
+                "RPM Error Count".into(),
                 rpm_error_count_plot_raw,
-                String::from("RPM Error Count"),
                 ExpectedPlotRange::Thousands,
             ),
-            (
+            RawPlot::new(
+                "First Valid RPM Count".into(),
                 first_valid_rpm_count_plot_raw,
-                String::from("First Valid RPM Count"),
                 ExpectedPlotRange::Thousands,
             ),
         ];
@@ -85,7 +77,7 @@ impl log_if::Log for PidLog {
         Ok(Self {
             header,
             entries: vec_of_entries,
-            timestamps_ms,
+            timestamps_ns,
             all_plots_raw,
         })
     }
@@ -95,9 +87,14 @@ impl log_if::Log for PidLog {
     }
 }
 
-impl PidLog {
-    pub fn all_plots_raw(&self) -> &[RawPlot] {
+impl Plotable for PidLog {
+    fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
+    }
+
+    /// Currently the log does not have an initial timestamp, TODO!!
+    fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::default()
     }
 }
 

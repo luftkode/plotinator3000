@@ -36,27 +36,6 @@ pub fn playback_update_plot(timer: Option<f64>, plot_ui: &mut PlotUi, is_reset_p
     }
 }
 
-/// A special case right now, cause we didn't yet figure out how to generalize over the kinds of logs the generator produces
-pub fn playback_update_generator_plot(
-    timer: Option<f64>,
-    plot_ui: &mut PlotUi,
-    is_reset_pressed: bool,
-    first_timestamp: f64,
-) {
-    if let Some(t) = timer {
-        let mut bounds = plot_ui.plot_bounds();
-        bounds.translate_x(t); // Divide by 1000 because this plot is in seconds but timer is in ms
-        plot_ui.set_plot_bounds(bounds);
-    }
-    if is_reset_pressed {
-        let mut bounds = plot_ui.plot_bounds();
-
-        // Translate X to start from the first data point timestamp
-        bounds.translate_x(-bounds.min()[0] + first_timestamp);
-        plot_ui.set_plot_bounds(bounds);
-    }
-}
-
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 enum PlaybackState {
     Playing { start_time: f64 },

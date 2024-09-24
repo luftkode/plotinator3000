@@ -6,23 +6,23 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
-use egui_plot::Line;
-use log_if::Log;
+use log_if::{
+    util::{plot_points_from_log_entry, ExpectedPlotRange},
+    Plotable, RawPlot,
+};
+use log_if::{Log, LogEntry};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
     entries: Vec<GeneratorLogEntry>,
     pub power: Vec<f64>, // Calculated from Vout * Vin
-    timestamps_as_secs: Vec<f64>,
+    /// timestamps in nanoseconds since the epoch
+    timestamps_ns: Vec<f64>,
+    all_plots_raw: Vec<RawPlot>,
 }
 
 impl GeneratorLog {
-    /// Returns the first timestamp of the dataset or None if the data is empty.
-    pub fn first_timestamp(&self) -> Option<f64> {
-        self.timestamp_as_secs().first().copied()
-    }
-
     pub fn file_is_generator_log(fpath: &Path) -> io::Result<bool> {
         let file = fs::File::open(fpath)?;
         let mut buf_reader = BufReader::new(file);
@@ -32,153 +32,6 @@ impl GeneratorLog {
             GeneratorLogEntry::is_line_valid_generator_log_entry(&first_line);
 
         Ok(is_first_line_gen_log_entry)
-    }
-
-    pub fn timestamp_as_secs(&self) -> &[f64] {
-        &self.timestamps_as_secs
-    }
-
-    fn y_over_time<F>(&self, y_extractor: F) -> Vec<[f64; 2]>
-    where
-        F: Fn(&GeneratorLogEntry) -> f64,
-    {
-        self.timestamp_as_secs()
-            .iter()
-            .zip(self.entries().iter())
-            .map(|(x, e)| [*x, y_extractor(e)])
-            .collect()
-    }
-
-    pub fn vout_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.vout.into())
-    }
-    pub fn vout_plot(&self) -> Line {
-        Line::new(self.vout_over_time()).name("Vout [V]")
-    }
-
-    pub fn rrotor_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.r_rotor.into())
-    }
-    pub fn rrotor_plot(&self) -> Line {
-        Line::new(self.rrotor_over_time()).name("rotor [R]")
-    }
-
-    pub fn rpm_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.rpm.into())
-    }
-    pub fn rpm_plot(&self) -> Line {
-        Line::new(self.rpm_over_time()).name("RPM")
-    }
-
-    pub fn pwm_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.pwm.into())
-    }
-    pub fn pwm_plot(&self) -> Line {
-        Line::new(self.pwm_over_time()).name("PWM")
-    }
-
-    pub fn power_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| (e.vout as f64) * (e.i_in as f64))
-    }
-
-    pub fn power_plot(&self) -> Line {
-        Line::new(self.power_over_time()).name("Power [W]")
-    }
-
-    pub fn load_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.load.into())
-    }
-
-    pub fn load_plot(&self) -> Line {
-        Line::new(self.load_over_time()).name("Load")
-    }
-
-    pub fn irotor_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.i_rotor.into())
-    }
-
-    pub fn irotor_plot(&self) -> Line {
-        Line::new(self.irotor_over_time()).name("rotor [I]")
-    }
-
-    pub fn temp1_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.temp1.into())
-    }
-
-    pub fn temp1_plot(&self) -> Line {
-        Line::new(self.temp1_over_time()).name("Temp1")
-    }
-
-    pub fn temp2_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.temp2.into())
-    }
-
-    pub fn temp2_plot(&self) -> Line {
-        Line::new(self.temp2_over_time()).name("Temp2")
-    }
-
-    pub fn i_in_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.i_in.into())
-    }
-
-    pub fn i_in_plot(&self) -> Line {
-        Line::new(self.i_in_over_time()).name("I_in")
-    }
-
-    pub fn i_out_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.i_out.into())
-    }
-
-    pub fn i_out_plot(&self) -> Line {
-        Line::new(self.i_out_over_time()).name("Iout")
-    }
-
-    pub fn vbat_over_time(&self) -> Vec<[f64; 2]> {
-        self.y_over_time(|e| e.vbat.into())
-    }
-
-    pub fn vbat_plot(&self) -> Line {
-        Line::new(self.vbat_over_time()).name("Vbat [V]")
-    }
-
-    /// Return all the plots that a [`GeneratorLog`] can produce
-    ///
-    /// ### Note to developer
-    ///
-    /// Don't be tempted to comment out stuff just because it's easy to leave out
-    /// "irrelevant" plots that way. Creat a new `selective_plots` functions or similar
-    pub fn all_plots(&self) -> Vec<Line> {
-        vec![
-            self.rrotor_plot(),
-            self.rpm_plot(),
-            self.power_plot(),
-            self.pwm_plot(),
-            self.load_plot(),
-            self.irotor_plot(),
-            self.temp1_plot(),
-            self.temp2_plot(),
-            self.i_in_plot(),
-            self.i_out_plot(),
-            self.vbat_plot(),
-            self.vout_plot(),
-        ]
-    }
-
-    pub fn all_plots_raw(&self) -> Vec<(Vec<[f64; 2]>, String)> {
-        vec![
-            (self.rrotor_over_time(), String::from("rotor [R]")),
-            (self.rpm_over_time(), String::from("RPM")),
-            (self.power_over_time(), String::from("Power [W]")),
-            (self.pwm_over_time(), String::from("PWM")),
-            (self.load_over_time(), String::from("Load")),
-            (self.irotor_over_time(), String::from("rotor [I]")),
-            (self.temp1_over_time(), String::from("Temp1")),
-            (self.temp2_over_time(), String::from("Temp2")),
-            (self.i_in_over_time(), String::from("I_in")),
-            (self.i_out_over_time(), String::from("Iout")),
-            (self.vbat_over_time(), String::from("Vbat [V]")),
-            (self.vout_over_time(), String::from("Vout [V]")),
-        ]
     }
 }
 
@@ -203,21 +56,123 @@ impl Log for GeneratorLog {
             power_vals.push(power);
         }
 
-        let mut timestamps_as_secs: Vec<f64> = Vec::with_capacity(entries.len());
+        let mut timestamps_ns: Vec<f64> = Vec::with_capacity(entries.len());
         for entry in &entries {
-            timestamps_as_secs.push(entry.timestamp.and_utc().timestamp() as f64);
+            timestamps_ns.push(entry.timestamp_ns());
         }
 
+        let mut normalized_timestamps_ms: Vec<f64> = Vec::with_capacity(entries.len());
+        normalized_timestamps_ms.push(0.0);
+        let first_timestamp = entries
+            .first()
+            .expect("Log entries is empty")
+            .timestamp
+            .and_utc()
+            .timestamp_nanos_opt()
+            .expect("timestamp as nanoseconds out of range") as f64;
+        for entry in entries.iter().skip(1) {
+            let normalized_ts = entry.timestamp_ns() - first_timestamp;
+            normalized_timestamps_ms.push(normalized_ts);
+        }
+
+        let all_plots_raw = build_all_plots(&entries);
         Ok(Self {
             entries,
             power: power_vals,
-            timestamps_as_secs,
+            all_plots_raw,
+            timestamps_ns,
         })
     }
 
     fn entries(&self) -> &[Self::Entry] {
         &self.entries
     }
+}
+
+impl Plotable for GeneratorLog {
+    fn raw_plots(&self) -> &[log_if::RawPlot] {
+        &self.all_plots_raw
+    }
+
+    fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        self.entries()
+            .first()
+            .expect("No entries")
+            .timestamp
+            .and_utc()
+    }
+}
+
+// Helper function to keep all the boiler plate of building each plot
+fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
+    vec![
+        RawPlot::new(
+            "Rotor [R]".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.r_rotor.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            "RPM".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.rpm.into()),
+            ExpectedPlotRange::Thousands,
+        ),
+        RawPlot::new(
+            "Power [W]".into(),
+            plot_points_from_log_entry(
+                entries,
+                |e| e.timestamp_ns(),
+                |e| f64::from(e.vout) * f64::from(e.i_in),
+            ),
+            ExpectedPlotRange::Thousands,
+        ),
+        RawPlot::new(
+            "PWM [%]".into(),
+            // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.pwm / 100.0).into()),
+            ExpectedPlotRange::Percentage,
+        ),
+        RawPlot::new(
+            "Load [%]".into(),
+            // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.load / 100.0).into()),
+            ExpectedPlotRange::Percentage,
+        ),
+        RawPlot::new(
+            "Rotor [I]".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_rotor.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            "Temp1 °C".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp1.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            "Temp2 °C".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp2.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            "I_in".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_in.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            "Iout".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_out.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            "Vbat [V]".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vbat.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            "Vout [V]".into(),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vout.into()),
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+    ]
 }
 
 impl fmt::Display for GeneratorLog {
@@ -309,6 +264,14 @@ impl log_if::LogEntry for GeneratorLogEntry {
         _ = bufreader.read_line(&mut line)?;
 
         Self::from_str(&line)
+    }
+
+    /// Timestamp in nanoseconds since the epoch
+    fn timestamp_ns(&self) -> f64 {
+        self.timestamp
+            .and_utc()
+            .timestamp_nanos_opt()
+            .expect("timestamp as nanoseconds out of range") as f64
     }
 }
 

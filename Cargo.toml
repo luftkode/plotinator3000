@@ -2,7 +2,7 @@
 name = "logviewer-rs"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 repository = "https://github.com/luftkode/logviewer-rs"
 homepage = "https://github.com/luftkode/logviewer-rs"
@@ -112,6 +112,7 @@ unused_results = "warn"
 unused_import_braces = "warn"
 variant_size_differences = "warn"
 unexpected_cfgs = "warn"
+unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 as_ptr_cast_mut = "warn"

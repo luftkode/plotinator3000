@@ -3,8 +3,9 @@ use std::{fmt, io};
 use super::MbedMotorControlLogHeader;
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
-use log_if::util::parse_to_vec;
-use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
+use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
+use log_if::{util::parse_to_vec, LogEntry};
+use log_if::{Log, Plotable, RawPlot};
 
 pub mod entry;
 pub mod header;
@@ -14,70 +15,64 @@ pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
     timestamps_ms: Vec<f64>,
-    timestamps_with_state_changes: Vec<(u32, MotorState)>, // for memoization
+    timestamps_with_state_changes: Vec<(f64, MotorState)>, // for memoization
     all_plots_raw: Vec<RawPlot>,
 }
 
-impl log_if::Log for StatusLog {
+impl Log for StatusLog {
     type Entry = StatusLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = StatusLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
         let timestamps_with_state_changes = parse_timestamps_with_state_changes(&vec_of_entries);
-        let timestamps_ms: Vec<f64> = vec_of_entries
-            .iter()
-            .map(|e| e.timestamp_ms() as f64)
-            .collect();
-        let engine_temp_plot_raw = raw_plot_from_log_entry(
+        let timestamps_ms: Vec<f64> = vec_of_entries.iter().map(|e| e.timestamp_ns()).collect();
+        let engine_temp_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ns(),
             |e| e.engine_temp as f64,
         );
-        let fan_on_plot_raw = raw_plot_from_log_entry(
+        let fan_on_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ns(),
             |e| (e.fan_on as u8) as f64,
         );
-        let vbat_plot_raw = raw_plot_from_log_entry(
+        let vbat_plot_raw =
+            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ns(), |e| e.vbat as f64);
+        let setpoint_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
-            |e| e.vbat as f64,
-        );
-        let setpoint_plot_raw = raw_plot_from_log_entry(
-            &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ns(),
             |e| e.setpoint as f64,
         );
-        let motor_state_plot_raw = raw_plot_from_log_entry(
+        let motor_state_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms() as f64,
+            |e| e.timestamp_ns(),
             |e| (e.motor_state as u8) as f64,
         );
         let all_plots_raw = vec![
-            (
+            RawPlot::new(
+                "Engine Temp °C".into(),
                 engine_temp_plot_raw,
-                String::from("Engine Temp °C"),
                 ExpectedPlotRange::OneToOneHundred,
             ),
-            (
+            RawPlot::new(
+                "Fan On".into(),
                 fan_on_plot_raw,
-                String::from("Fan On"),
                 ExpectedPlotRange::Percentage,
             ),
-            (
+            RawPlot::new(
+                "Vbat [V]".into(),
                 vbat_plot_raw,
-                String::from("Vbat [V]"),
                 ExpectedPlotRange::OneToOneHundred,
             ),
-            (
+            RawPlot::new(
+                "Setpoint".into(),
                 setpoint_plot_raw,
-                String::from("Setpoint"),
                 ExpectedPlotRange::Thousands,
             ),
-            (
+            RawPlot::new(
+                "Motor State".into(),
                 motor_state_plot_raw,
-                String::from("Motor State"),
                 ExpectedPlotRange::OneToOneHundred,
             ),
         ];
@@ -96,12 +91,20 @@ impl log_if::Log for StatusLog {
     }
 }
 
-impl StatusLog {
-    pub fn timestamps_with_state_changes(&self) -> &[(u32, MotorState)] {
-        &self.timestamps_with_state_changes
-    }
-    pub fn all_plots_raw(&self) -> &[RawPlot] {
+impl Plotable for StatusLog {
+    fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
+    }
+
+    /// Currently the log does not have an initial timestamp, TODO!!
+    fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::default()
+    }
+}
+
+impl StatusLog {
+    pub fn timestamps_with_state_changes(&self) -> &[(f64, MotorState)] {
+        &self.timestamps_with_state_changes
     }
 }
 
@@ -115,14 +118,14 @@ impl fmt::Display for StatusLog {
     }
 }
 
-fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(u32, MotorState)> {
+fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(f64, MotorState)> {
     let mut result = Vec::new();
     let mut last_state = None;
 
     for entry in entries {
         // Check if the current state is different from the last recorded state
         if last_state != Some(entry.motor_state) {
-            result.push((entry.timestamp_ms, entry.motor_state));
+            result.push((entry.timestamp_ns(), entry.motor_state));
             last_state = Some(entry.motor_state);
         }
     }
@@ -162,7 +165,7 @@ mod tests {
         assert_eq!(second_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
 
         let last_entry = status_log.entries().last().expect("Empty entries vec");
-        assert_eq!(last_entry.timestamp_ms(), 736113);
+        assert_eq!(last_entry.timestamp_ns(), 736113.0 * 1_000_000.0);
         assert_eq!(last_entry.engine_temp, 81.32979);
         assert!(last_entry.fan_on);
         assert_eq!(last_entry.vbat, 11.665642);

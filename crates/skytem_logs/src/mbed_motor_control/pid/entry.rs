@@ -14,12 +14,6 @@ pub struct PidLogEntry {
     pub first_valid_rpm_count: u32,
 }
 
-impl PidLogEntry {
-    pub fn timestamp_ms(&self) -> u32 {
-        self.timestamp_ms
-    }
-}
-
 impl LogEntry for PidLogEntry {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let timestamp_ms = reader.read_u32::<LittleEndian>()?;
@@ -39,6 +33,10 @@ impl LogEntry for PidLogEntry {
             rpm_error_count,
             first_valid_rpm_count,
         })
+    }
+
+    fn timestamp_ns(&self) -> f64 {
+        (self.timestamp_ms as u64 * 1_000_000) as f64
     }
 }
 

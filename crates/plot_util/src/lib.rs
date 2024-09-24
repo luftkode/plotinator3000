@@ -5,8 +5,6 @@ use log_if::LogEntry;
 use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
 
-pub type RawPlot = (Vec<[f64; 2]>, String, ExpectedPlotRange);
-
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,
@@ -42,29 +40,6 @@ where
         .map(|e| [x_extractor(e), y_extractor(e)])
         .collect();
     Line::new(points)
-}
-
-pub fn raw_plot_from_log_entry<XF, YF, L: LogEntry>(
-    log: &[L],
-    x_extractor: XF,
-    y_extractor: YF,
-) -> Vec<[f64; 2]>
-where
-    XF: Fn(&L) -> f64,
-    YF: Fn(&L) -> f64,
-{
-    log.iter()
-        .map(|e| [x_extractor(e), y_extractor(e)])
-        .collect()
-}
-
-/// Where does the plot values typically fit within
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
-pub enum ExpectedPlotRange {
-    /// For plots where the value is 0.0-1.0 and corresponds to percentage 0-100%
-    Percentage,
-    OneToOneHundred,
-    Thousands,
 }
 
 pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_width: f32) {

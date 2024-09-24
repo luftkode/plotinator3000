@@ -1,16 +1,16 @@
+use plot_util::PlotWithName;
+use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::PidLog, status::StatusLog},
 };
-use std::ops::RangeInclusive;
 
-use crate::{app::PlayBackButtonEvent, util::format_ms_timestamp};
+use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
-use chrono::{DateTime, Timelike};
 use egui::Response;
-use egui_plot::{AxisHints, GridMark, HPlacement, Legend, Line, Plot, PlotPoint, Text, VPlacement};
-use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
-use plot_util::{ExpectedPlotRange, PlotWithName};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint, Text};
+use log_if::{util::ExpectedPlotRange, Plotable};
+use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 
 mod axis_config;
@@ -19,7 +19,7 @@ mod plot_ui;
 mod plot_visibility_config;
 
 #[allow(missing_debug_implementations)] // Legend is from egui_plot and doesn't implement debug
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(PartialEq, Deserialize, Serialize)]
 pub struct LogPlot {
     config: Legend,
     line_width: f32,
@@ -93,54 +93,82 @@ impl LogPlot {
 
         gui.vertical(|ui| {
             for (idx, pid_log) in pid_logs.iter().enumerate() {
-                for (points, name, range) in pid_log.all_plots_raw() {
-                    let plot_name = format!("{name} #{}", idx + 1);
+                for raw_plot in pid_log.raw_plots() {
+                    let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
 
-                    match range {
+                    match raw_plot.expected_range() {
                         ExpectedPlotRange::Percentage => {
                             if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name));
+                                percentage_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
                             if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
                                 to_hundreds_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::Thousands => {
                             if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
                                 to_thousands_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                     }
                 }
             }
             for (idx, status_log) in status_logs.iter().enumerate() {
-                for (points, name, range) in status_log.all_plots_raw() {
-                    let plot_name = format!("{name} #{}", idx + 1);
-                    match range {
+                for raw_plot in status_log.raw_plots() {
+                    let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
+                    match raw_plot.expected_range() {
                         ExpectedPlotRange::Percentage => {
                             if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name));
+                                percentage_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
                             if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
                                 to_hundreds_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::Thousands => {
                             if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
                                 to_thousands_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                     }
                 }
             }
+            for (idx, gen_log) in generator_logs.iter().enumerate() {
+                for raw_plot in gen_log.raw_plots() {
+                    let plot_name = format!("{}, #{}", raw_plot.name(), idx + 1);
+                    match raw_plot.expected_range() {
+                        ExpectedPlotRange::Percentage => {
+                            if !percentage_plots.iter().any(|p| p.name == plot_name) {
+                                percentage_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
+                            }
+                        }
+                        ExpectedPlotRange::OneToOneHundred => {
+                            if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
+                                to_hundreds_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
+                            }
+                        }
+                        ExpectedPlotRange::Thousands => {
+                            if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
+                                to_thousands_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
+                            }
+                        }
+                    }
+                }
+            }
+
             // Calculate the number of plots to display
             let mut total_plot_count: u8 = 0;
             let display_percentage_plot =
@@ -152,10 +180,12 @@ impl LogPlot {
             let display_to_thousands_plot =
                 plot_visibility.should_display_to_thousands(to_thousands_plots);
             total_plot_count += display_to_thousands_plot as u8;
-            let display_generator_plot = !generator_logs.is_empty();
-            total_plot_count += display_generator_plot as u8;
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
+
+            let x_axes = vec![AxisHints::new_x()
+                .label("Time")
+                .formatter(crate::util::format_time)];
 
             let create_plot = |name: &str| {
                 Plot::new(name)
@@ -164,7 +194,8 @@ impl LogPlot {
                     .show_axes(axis_config.show_axes())
                     .y_axis_position(HPlacement::Right)
                     .include_y(0.0)
-                    .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
+                    .custom_x_axes(x_axes.clone())
+                    .label_formatter(crate::util::format_label_ns)
                     .link_axis(link_group_id, axis_config.link_x(), false)
                     .link_cursor(link_group_id, axis_config.link_cursor_x(), false)
             };
@@ -182,7 +213,7 @@ impl LogPlot {
                         for status_log in status_logs {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
                                 arg_plot_ui.text(Text::new(
-                                    PlotPoint::new(*ts as f64, ((*st_change as u8) as f64) / 10.0),
+                                    PlotPoint::new(*ts, ((*st_change as u8) as f64) / 10.0),
                                     st_change.to_string(),
                                 ));
                             }
@@ -225,7 +256,7 @@ impl LogPlot {
                         for status_log in status_logs {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
                                 arg_plot_ui.text(Text::new(
-                                    PlotPoint::new(*ts as f64, (*st_change as u8) as f64),
+                                    PlotPoint::new(*ts, (*st_change as u8) as f64),
                                     st_change.to_string(),
                                 ));
                             }
@@ -235,80 +266,6 @@ impl LogPlot {
                             PlotType::Thousands,
                             |plot_ui| {
                                 playback_update_plot(timer, plot_ui, is_reset_pressed);
-                            },
-                        );
-                    });
-                });
-            }
-
-            if display_generator_plot {
-                _ = ui.separator();
-                let time_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
-                    let sec = mark.value;
-                    let dt = DateTime::from_timestamp(sec as i64, 0)
-                        .unwrap_or_else(|| panic!("Timestamp value out of range: {sec}"));
-                    dt.format("%Y-%m-%d %H:%M:%S").to_string()
-                };
-                let x_axes = vec![AxisHints::new_x().label("Time").formatter(time_formatter)];
-                let label_fmt = |_s: &str, val: &PlotPoint| {
-                    let dt = DateTime::from_timestamp(val.x as i64, 0)
-                        .unwrap_or_else(|| panic!("Timestamp value out of range: {}", val.x));
-                    format!(
-                        "{h:02}:{m:02}:{s:02}",
-                        h = dt.hour(),
-                        m = dt.minute(),
-                        s = dt.second()
-                    )
-                };
-
-                let gen_log_plot = Plot::new("generator_log_plot")
-                    .legend(config.clone())
-                    .height(plot_height)
-                    .show_axes(axis_config.show_axes())
-                    .x_axis_position(VPlacement::Top)
-                    .y_axis_position(HPlacement::Right)
-                    .custom_x_axes(x_axes)
-                    .label_formatter(label_fmt)
-                    .include_y(0.0);
-
-                _ = gen_log_plot.show(ui, |gen_plot_uui| {
-                    Self::handle_plot(gen_plot_uui, |gen_plot_ui| {
-                        let gen_log_count = generator_logs.len();
-                        let mut gen_log_first_timestamp = None;
-                        for (idx, gen_log) in generator_logs.iter().enumerate() {
-                            if gen_log_first_timestamp.is_none() {
-                                gen_log_first_timestamp =
-                                    Some(gen_log.first_timestamp().unwrap_or(0.0));
-                            }
-                            for (raw_plot, name) in gen_log.all_plots_raw() {
-                                let x_min_max_ext = plot_util::extended_x_plot_bound(
-                                    gen_plot_ui.plot_bounds(),
-                                    0.1,
-                                );
-                                // Always render the first point such that the plot will always be within reasonable range
-                                let filtered_points =
-                                    plot_util::filter_plot_points(&raw_plot, x_min_max_ext);
-
-                                let legend_name = if gen_log_count == 1 {
-                                    name
-                                } else {
-                                    format!("{name} #{}", idx + 1)
-                                };
-
-                                let line = Line::new(filtered_points).name(legend_name);
-                                gen_plot_ui.line(line.width(*line_width));
-                            }
-                        }
-                        axis_config.handle_y_axis_lock(
-                            gen_plot_ui,
-                            PlotType::Generator,
-                            |plot_ui| {
-                                playback_update_generator_plot(
-                                    timer,
-                                    plot_ui,
-                                    is_reset_pressed,
-                                    gen_log_first_timestamp.unwrap_or_default(),
-                                );
                             },
                         );
                     });

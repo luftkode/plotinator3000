@@ -1,4 +1,4 @@
-use std::io;
+use std::{fmt, io};
 
 use crate::{util::parse_timestamp, LogEntry};
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -34,14 +34,8 @@ pub struct StatusLogEntry {
     pub motor_state: MotorState,
 }
 
-impl StatusLogEntry {
-    pub fn timestamp_ms(&self) -> u32 {
-        self.timestamp_ms
-    }
-}
-
-impl std::fmt::Display for StatusLogEntry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for StatusLogEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}: {} {} {} {} {}",
@@ -78,6 +72,10 @@ impl LogEntry for StatusLogEntry {
             setpoint,
             motor_state,
         })
+    }
+
+    fn timestamp_ns(&self) -> f64 {
+        (self.timestamp_ms as u64 * 1_000_000) as f64
     }
 }
 
