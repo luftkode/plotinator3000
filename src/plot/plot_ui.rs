@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use egui::{Color32, RichText, TextEdit};
 use egui_phosphor::regular;
 
@@ -83,9 +83,7 @@ pub fn show_settings_grid(
                                         settings.new_date_candidate = Some(new_dt);
                                     }
                                     Err(e) => {
-                                        _ = {
-                                            settings.err_msg = format!("⚠ {e} ⚠");
-                                        }
+                                        settings.err_msg = format!("⚠ {e} ⚠");
                                     }
                                 };
                             }
