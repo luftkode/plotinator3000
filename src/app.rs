@@ -167,7 +167,7 @@ impl eframe::App for App {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
                     match SupportedLogs::parse_dropped_files(&self.dropped_files, &mut self.logs) {
-                        Ok(_) => {
+                        Ok(()) => {
                             self.error_message = None; // Clear any previous error message on success
                         }
                         Err(e) => {
@@ -193,7 +193,7 @@ impl App {
             let window_width = screen_rect.width().clamp(400.0, 600.0);
             let window_height = screen_rect.height().clamp(200.0, 300.0);
 
-            _ = egui::Window::new(RichText::new("⚠").size(40.0))
+            egui::Window::new(RichText::new("⚠").size(40.0))
                 .fixed_size([window_width, window_height])
                 .collapsible(false)
                 .resizable(false)
