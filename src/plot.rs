@@ -10,7 +10,7 @@ use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint, Text};
-use log_if::{util::ExpectedPlotRange, Plotable};
+use log_if::{util::ExpectedPlotRange, Plotable, RawPlot};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 
@@ -75,6 +75,47 @@ impl Default for LogPlot {
 }
 
 impl LogPlot {
+    fn add_plot_data_to_plot_collections(
+        log_start_date_settings: &mut Vec<LogStartDateSettings>,
+        percentage_plots: &mut Vec<PlotWithName>,
+        to_hundreds_plots: &mut Vec<PlotWithName>,
+        to_thousands_plots: &mut Vec<PlotWithName>,
+        log: &impl Plotable,
+        idx: usize,
+    ) {
+        let log_id = format!("#{} {}", idx + 1, log.unique_name());
+        if !log_start_date_settings
+            .iter()
+            .any(|settings| *settings.log_id == log_id)
+        {
+            log_start_date_settings.push(LogStartDateSettings::new(log_id, log.first_timestamp()));
+        }
+
+        for raw_plot in log.raw_plots() {
+            let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
+            match raw_plot.expected_range() {
+                ExpectedPlotRange::Percentage => {
+                    Self::add_plot_to_vector(percentage_plots, raw_plot, &plot_name)
+                }
+                ExpectedPlotRange::OneToOneHundred => {
+                    Self::add_plot_to_vector(to_hundreds_plots, raw_plot, &plot_name)
+                }
+                ExpectedPlotRange::Thousands => {
+                    Self::add_plot_to_vector(to_thousands_plots, raw_plot, &plot_name)
+                }
+            }
+        }
+    }
+
+    fn add_plot_to_vector(plots: &mut Vec<PlotWithName>, raw_plot: &RawPlot, plot_name: &str) {
+        if !plots.iter().any(|p| p.name == *plot_name) {
+            plots.push(PlotWithName::new(
+                raw_plot.points().to_vec(),
+                plot_name.to_string(),
+            ));
+        }
+    }
+
     pub fn formatted_playback_time(&self) -> String {
         self.play_state.formatted_time()
     }
@@ -123,106 +164,34 @@ impl LogPlot {
 
         gui.vertical(|ui| {
             for (idx, pid_log) in pid_logs.iter().enumerate() {
-                let log_id = format!("#{} {}", idx + 1, pid_log.unique_name());
-                if !log_start_date_settings
-                    .iter()
-                    .any(|settings| *settings.log_id == log_id)
-                {
-                    log_start_date_settings
-                        .push(LogStartDateSettings::new(log_id, pid_log.first_timestamp()));
-                }
-                for raw_plot in pid_log.raw_plots() {
-                    let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
-
-                    match raw_plot.expected_range() {
-                        ExpectedPlotRange::Percentage => {
-                            if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                        ExpectedPlotRange::OneToOneHundred => {
-                            if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
-                                to_hundreds_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                        ExpectedPlotRange::Thousands => {
-                            if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
-                                to_thousands_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                    }
-                }
+                Self::add_plot_data_to_plot_collections(
+                    log_start_date_settings,
+                    percentage_plots,
+                    to_hundreds_plots,
+                    to_thousands_plots,
+                    pid_log,
+                    idx,
+                );
             }
             for (idx, status_log) in status_logs.iter().enumerate() {
-                let log_id = format!("#{} {}", idx + 1, status_log.unique_name());
-                if !log_start_date_settings
-                    .iter()
-                    .any(|settings| *settings.log_id == log_id)
-                {
-                    log_start_date_settings.push(LogStartDateSettings::new(
-                        log_id,
-                        status_log.first_timestamp(),
-                    ));
-                }
-                for raw_plot in status_log.raw_plots() {
-                    let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
-                    match raw_plot.expected_range() {
-                        ExpectedPlotRange::Percentage => {
-                            if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                        ExpectedPlotRange::OneToOneHundred => {
-                            if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
-                                to_hundreds_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                        ExpectedPlotRange::Thousands => {
-                            if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
-                                to_thousands_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                    }
-                }
+                Self::add_plot_data_to_plot_collections(
+                    log_start_date_settings,
+                    percentage_plots,
+                    to_hundreds_plots,
+                    to_thousands_plots,
+                    status_log,
+                    idx,
+                );
             }
             for (idx, gen_log) in generator_logs.iter().enumerate() {
-                let log_id = format!("#{} {}", idx + 1, gen_log.unique_name());
-                if !log_start_date_settings
-                    .iter()
-                    .any(|settings| *settings.log_id == log_id)
-                {
-                    log_start_date_settings
-                        .push(LogStartDateSettings::new(log_id, gen_log.first_timestamp()));
-                }
-                for raw_plot in gen_log.raw_plots() {
-                    let plot_name = format!("{}, #{}", raw_plot.name(), idx + 1);
-                    match raw_plot.expected_range() {
-                        ExpectedPlotRange::Percentage => {
-                            if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                        ExpectedPlotRange::OneToOneHundred => {
-                            if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
-                                to_hundreds_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                        ExpectedPlotRange::Thousands => {
-                            if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
-                                to_thousands_plots
-                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
-                            }
-                        }
-                    }
-                }
+                Self::add_plot_data_to_plot_collections(
+                    log_start_date_settings,
+                    percentage_plots,
+                    to_hundreds_plots,
+                    to_thousands_plots,
+                    gen_log,
+                    idx,
+                );
             }
 
             // Calculate the number of plots to display
