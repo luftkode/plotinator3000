@@ -95,7 +95,6 @@ pub enum PlotType {
     Percentage,
     Hundreds,
     Thousands,
-    Generator,
 }
 
 #[derive(Debug, Default, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -136,7 +135,6 @@ impl YAxisLock {
             PlotType::Percentage => self.y_bounds_percentage,
             PlotType::Hundreds => self.y_bounds_hundreds,
             PlotType::Thousands => self.y_bounds_thousands,
-            PlotType::Generator => self.y_bounds_generator,
         }
     }
 
@@ -145,7 +143,6 @@ impl YAxisLock {
             PlotType::Percentage => self.y_bounds_percentage = Some(bounds),
             PlotType::Hundreds => self.y_bounds_hundreds = Some(bounds),
             PlotType::Thousands => self.y_bounds_thousands = Some(bounds),
-            PlotType::Generator => self.y_bounds_generator = Some(bounds),
         }
     }
 }

@@ -213,7 +213,7 @@ impl LogPlot {
                         for status_log in status_logs {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
                                 arg_plot_ui.text(Text::new(
-                                    PlotPoint::new(*ts as f64, ((*st_change as u8) as f64) / 10.0),
+                                    PlotPoint::new(*ts, ((*st_change as u8) as f64) / 10.0),
                                     st_change.to_string(),
                                 ));
                             }
@@ -256,7 +256,7 @@ impl LogPlot {
                         for status_log in status_logs {
                             for (ts, st_change) in status_log.timestamps_with_state_changes() {
                                 arg_plot_ui.text(Text::new(
-                                    PlotPoint::new(*ts as f64, (*st_change as u8) as f64),
+                                    PlotPoint::new(*ts, (*st_change as u8) as f64),
                                     st_change.to_string(),
                                 ));
                             }
