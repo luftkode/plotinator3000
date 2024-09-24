@@ -1,3 +1,5 @@
+use plot_util::PlotWithName;
+use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::PidLog, status::StatusLog},
@@ -7,8 +9,8 @@ use crate::{app::PlayBackButtonEvent, util::format_ms_timestamp};
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
 use egui_plot::{HPlacement, Legend, Line, Plot, PlotPoint, Text};
+use log_if::util::ExpectedPlotRange;
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
-use plot_util::{ExpectedPlotRange, PlotWithName};
 use plot_visibility_config::PlotVisibilityConfig;
 
 mod axis_config;
@@ -17,7 +19,7 @@ mod plot_ui;
 mod plot_visibility_config;
 
 #[allow(missing_debug_implementations)] // Legend is from egui_plot and doesn't implement debug
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(PartialEq, Deserialize, Serialize)]
 pub struct LogPlot {
     config: Legend,
     line_width: f32,
@@ -91,49 +93,51 @@ impl LogPlot {
 
         gui.vertical(|ui| {
             for (idx, pid_log) in pid_logs.iter().enumerate() {
-                for (points, name, range) in pid_log.all_plots_raw() {
-                    let plot_name = format!("{name} #{}", idx + 1);
+                for raw_plot in pid_log.all_plots_raw() {
+                    let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
 
-                    match range {
+                    match raw_plot.expected_range() {
                         ExpectedPlotRange::Percentage => {
                             if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name));
+                                percentage_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
                             if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
                                 to_hundreds_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::Thousands => {
                             if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
                                 to_thousands_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                     }
                 }
             }
             for (idx, status_log) in status_logs.iter().enumerate() {
-                for (points, name, range) in status_log.all_plots_raw() {
-                    let plot_name = format!("{name} #{}", idx + 1);
-                    match range {
+                for raw_plot in status_log.all_plots_raw() {
+                    let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
+                    match raw_plot.expected_range() {
                         ExpectedPlotRange::Percentage => {
                             if !percentage_plots.iter().any(|p| p.name == plot_name) {
-                                percentage_plots.push(PlotWithName::new(points.clone(), plot_name));
+                                percentage_plots
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::OneToOneHundred => {
                             if !to_hundreds_plots.iter().any(|p| p.name == plot_name) {
                                 to_hundreds_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                         ExpectedPlotRange::Thousands => {
                             if !to_thousands_plots.iter().any(|p| p.name == plot_name) {
                                 to_thousands_plots
-                                    .push(PlotWithName::new(points.clone(), plot_name));
+                                    .push(PlotWithName::new(raw_plot.points().to_vec(), plot_name));
                             }
                         }
                     }

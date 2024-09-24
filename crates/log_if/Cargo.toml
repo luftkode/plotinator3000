@@ -7,3 +7,4 @@ edition = "2021"
 workspace = true
 
 [dependencies]
+serde.workspace = true

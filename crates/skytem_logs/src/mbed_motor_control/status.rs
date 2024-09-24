@@ -3,8 +3,9 @@ use std::{fmt, io};
 use super::MbedMotorControlLogHeader;
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
+use log_if::util::{raw_plot_from_log_entry, ExpectedPlotRange};
+use log_if::RawPlot;
 use log_if::{util::parse_to_vec, LogEntry};
-use plot_util::{raw_plot_from_log_entry, ExpectedPlotRange, RawPlot};
 
 pub mod entry;
 pub mod header;
@@ -46,29 +47,29 @@ impl log_if::Log for StatusLog {
             |e| (e.motor_state as u8) as f64,
         );
         let all_plots_raw = vec![
-            (
+            RawPlot::new(
+                "Engine Temp °C".into(),
                 engine_temp_plot_raw,
-                String::from("Engine Temp °C"),
                 ExpectedPlotRange::OneToOneHundred,
             ),
-            (
+            RawPlot::new(
+                "Fan On".into(),
                 fan_on_plot_raw,
-                String::from("Fan On"),
                 ExpectedPlotRange::Percentage,
             ),
-            (
+            RawPlot::new(
+                "Vbat [V]".into(),
                 vbat_plot_raw,
-                String::from("Vbat [V]"),
                 ExpectedPlotRange::OneToOneHundred,
             ),
-            (
+            RawPlot::new(
+                "Setpoint".into(),
                 setpoint_plot_raw,
-                String::from("Setpoint"),
                 ExpectedPlotRange::Thousands,
             ),
-            (
+            RawPlot::new(
+                "Motor State".into(),
                 motor_state_plot_raw,
-                String::from("Motor State"),
                 ExpectedPlotRange::OneToOneHundred,
             ),
         ];

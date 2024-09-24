@@ -7,8 +7,8 @@ use std::{
 
 use chrono::NaiveDateTime;
 use egui_plot::Line;
+use log_if::util::raw_plot_from_normalized_timestamp;
 use log_if::{Log, LogEntry};
-use plot_util::raw_plot_from_normalized_timestamp;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
