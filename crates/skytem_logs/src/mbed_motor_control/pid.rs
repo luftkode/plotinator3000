@@ -96,6 +96,10 @@ impl Plotable for PidLog {
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::default()
     }
+
+    fn unique_name(&self) -> &str {
+        "Mbed PID log 2024"
+    }
 }
 
 impl fmt::Display for PidLog {

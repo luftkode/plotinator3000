@@ -100,6 +100,10 @@ impl Plotable for StatusLog {
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::default()
     }
+
+    fn unique_name(&self) -> &str {
+        "Mbed Status log 2024"
+    }
 }
 
 impl StatusLog {
