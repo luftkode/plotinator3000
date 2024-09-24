@@ -34,8 +34,8 @@ pub trait GitMetadata {
 pub trait LogEntry: Sized + Display {
     /// Create a [`LogEntry`] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
-    /// Timestamp in milliseconds
-    fn timestamp_ms(&self) -> f64;
+    /// Timestamp in nanoseconds
+    fn timestamp_ns(&self) -> f64;
 }
 
 /// [`RawPlot`] represents some plottable data from a log, e.g. RPM measurements

@@ -15,7 +15,7 @@ pub mod header;
 pub struct PidLog {
     header: PidLogHeader,
     entries: Vec<PidLogEntry>,
-    timestamps_ms: Vec<f64>,
+    timestamps_ns: Vec<f64>,
     all_plots_raw: Vec<RawPlot>,
 }
 
@@ -25,25 +25,28 @@ impl Log for PidLog {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = PidLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<PidLogEntry> = parse_to_vec(reader);
-        let timestamps_ms: Vec<f64> = vec_of_entries.iter().map(|e| e.timestamp_ms()).collect();
+        let timestamps_ns: Vec<f64> = vec_of_entries
+            .iter()
+            .map(|e| e.timestamp_ns() * 1_000_000.0)
+            .collect();
 
         let rpm_plot_raw =
-            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.rpm as f64);
+            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ns(), |e| e.rpm as f64);
         let pid_err_plot_raw =
-            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ms(), |e| e.pid_err as f64);
+            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ns(), |e| e.pid_err as f64);
         let servo_duty_cycle_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms(),
+            |e| e.timestamp_ns(),
             |e| e.servo_duty_cycle as f64,
         );
         let rpm_error_count_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms(),
+            |e| e.timestamp_ns(),
             |e| e.rpm_error_count as f64,
         );
         let first_valid_rpm_count_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ms(),
+            |e| e.timestamp_ns(),
             |e| e.first_valid_rpm_count as f64,
         );
 
@@ -74,7 +77,7 @@ impl Log for PidLog {
         Ok(Self {
             header,
             entries: vec_of_entries,
-            timestamps_ms,
+            timestamps_ns,
             all_plots_raw,
         })
     }

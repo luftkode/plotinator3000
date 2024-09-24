@@ -5,10 +5,10 @@ use skytem_logs::{
     mbed_motor_control::{pid::PidLog, status::StatusLog},
 };
 
-use crate::{app::PlayBackButtonEvent, util::format_ms_timestamp};
+use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
-use egui_plot::{HPlacement, Legend, Line, Plot, PlotPoint, Text};
+use egui_plot::{AxisHints, HPlacement, Legend, Line, Plot, PlotPoint, Text};
 use log_if::{util::ExpectedPlotRange, Plotable};
 use play_state::{playback_update_generator_plot, playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
@@ -159,6 +159,10 @@ impl LogPlot {
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
+            let x_axes = vec![AxisHints::new_x()
+                .label("Time")
+                .formatter(crate::util::format_time)];
+
             let create_plot = |name: &str| {
                 Plot::new(name)
                     .legend(config.clone())
@@ -166,7 +170,8 @@ impl LogPlot {
                     .show_axes(axis_config.show_axes())
                     .y_axis_position(HPlacement::Right)
                     .include_y(0.0)
-                    .x_axis_formatter(move |x, _range| format_ms_timestamp(x.value))
+                    .custom_x_axes(x_axes.clone())
+                    .label_formatter(crate::util::format_label_ns)
                     .link_axis(link_group_id, axis_config.link_x(), false)
                     .link_cursor(link_group_id, axis_config.link_cursor_x(), false)
             };
@@ -177,6 +182,7 @@ impl LogPlot {
 
             let to_hundred = create_plot("to_hundreds");
             let thousands = create_plot("to_thousands");
+
             let gen_log_plot = create_plot("generator_log_plot");
 
             if display_percentage_plot {
@@ -251,19 +257,19 @@ impl LogPlot {
                     Self::handle_plot(gen_plot_uui, |gen_plot_ui| {
                         let gen_log_count = generator_logs.len();
                         for (idx, gen_log) in generator_logs.iter().enumerate() {
-                            for (raw_plot, name) in gen_log.all_plots_raw() {
+                            for raw_plot in gen_log.raw_plots() {
                                 let x_min_max_ext = plot_util::extended_x_plot_bound(
                                     gen_plot_ui.plot_bounds(),
                                     0.1,
                                 );
                                 // Always render the first point such that the plot will always be within reasonable range
                                 let filtered_points =
-                                    plot_util::filter_plot_points(&raw_plot, x_min_max_ext);
+                                    plot_util::filter_plot_points(raw_plot.points(), x_min_max_ext);
 
                                 let legend_name = if gen_log_count == 1 {
-                                    name
+                                    raw_plot.name().to_owned()
                                 } else {
-                                    format!("{name} #{}", idx + 1)
+                                    format!("{} #{}", raw_plot.name(), idx + 1)
                                 };
 
                                 let line = Line::new(filtered_points).name(legend_name);

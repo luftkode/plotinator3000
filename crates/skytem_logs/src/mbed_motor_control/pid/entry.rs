@@ -35,8 +35,8 @@ impl LogEntry for PidLogEntry {
         })
     }
 
-    fn timestamp_ms(&self) -> f64 {
-        self.timestamp_ms.into()
+    fn timestamp_ns(&self) -> f64 {
+        (self.timestamp_ms as u64 * 1_000_000) as f64
     }
 }
 
