@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use egui::{Color32, RichText};
 use egui_phosphor::regular;
 
@@ -14,6 +15,7 @@ pub fn show_settings_grid(
     line_width: &mut f32,
     axis_cfg: &mut AxisConfig,
     plot_visibility_cfg: &mut PlotVisibilityConfig,
+    log_start_dates: &mut Vec<(String, DateTime<Utc>)>,
 ) {
     _ = egui::Grid::new("settings").show(gui, |arg_ui| {
         _ = arg_ui.label("Line width");
@@ -47,7 +49,9 @@ pub fn show_settings_grid(
             _ = ui.label(RichText::new(play_state.formatted_time()));
             _ = ui.label(" |");
         });
-
+        for (log_name, log_start_dt) in log_start_dates {
+            arg_ui.label(format!("{log_name} [{log_start_dt}]"));
+        }
         arg_ui.end_row();
     });
 }

@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use plot_util::PlotWithName;
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
@@ -29,6 +30,7 @@ pub struct LogPlot {
     to_hundreds_plots: Vec<PlotWithName>,
     to_thousands_plots: Vec<PlotWithName>,
     plot_visibility: PlotVisibilityConfig,
+    log_start_dates: Vec<(String, DateTime<Utc>)>,
 }
 
 impl Default for LogPlot {
@@ -42,6 +44,7 @@ impl Default for LogPlot {
             to_hundreds_plots: vec![],
             to_thousands_plots: vec![],
             plot_visibility: PlotVisibilityConfig::default(),
+            log_start_dates: vec![],
         }
     }
 }
@@ -72,6 +75,7 @@ impl LogPlot {
             to_hundreds_plots,
             to_thousands_plots,
             plot_visibility,
+            log_start_dates,
         } = self;
 
         let mut playback_button_event = None;
@@ -83,6 +87,7 @@ impl LogPlot {
             line_width,
             axis_config,
             plot_visibility,
+            log_start_dates,
         );
         if let Some(e) = playback_button_event {
             play_state.handle_playback_button_press(e);
@@ -93,6 +98,13 @@ impl LogPlot {
 
         gui.vertical(|ui| {
             for (idx, pid_log) in pid_logs.iter().enumerate() {
+                let log_id = format!("#{} {}", idx + 1, pid_log.unique_name());
+                if !log_start_dates
+                    .iter()
+                    .any(|(element_log_id, _)| *element_log_id == log_id)
+                {
+                    log_start_dates.push((log_id, pid_log.first_timestamp()));
+                }
                 for raw_plot in pid_log.raw_plots() {
                     let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
 
@@ -119,6 +131,13 @@ impl LogPlot {
                 }
             }
             for (idx, status_log) in status_logs.iter().enumerate() {
+                let log_id = format!("#{} {}", idx + 1, status_log.unique_name());
+                if !log_start_dates
+                    .iter()
+                    .any(|(element_log_id, _)| *element_log_id == log_id)
+                {
+                    log_start_dates.push((log_id, status_log.first_timestamp()));
+                }
                 for raw_plot in status_log.raw_plots() {
                     let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
                     match raw_plot.expected_range() {
@@ -144,6 +163,13 @@ impl LogPlot {
                 }
             }
             for (idx, gen_log) in generator_logs.iter().enumerate() {
+                let log_id = format!("#{} {}", idx + 1, gen_log.unique_name());
+                if !log_start_dates
+                    .iter()
+                    .any(|(element_log_id, _)| *element_log_id == log_id)
+                {
+                    log_start_dates.push((log_id, gen_log.first_timestamp()));
+                }
                 for raw_plot in gen_log.raw_plots() {
                     let plot_name = format!("{}, #{}", raw_plot.name(), idx + 1);
                     match raw_plot.expected_range() {
