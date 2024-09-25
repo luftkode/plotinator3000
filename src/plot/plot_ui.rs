@@ -51,62 +51,74 @@ pub fn show_settings_grid(
             _ = ui.label(" |");
         });
         for settings in log_start_date_settings {
-            arg_ui.end_row();
-            let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date);
-            if arg_ui.button(log_name_date.clone()).clicked() {
-                settings.clicked = !settings.clicked;
-            }
-            if settings.tmp_date_buf.is_empty() {
-                settings.tmp_date_buf = settings
-                    .start_date
-                    .format("%Y-%m-%d %H:%M:%S%.f")
-                    .to_string();
-            }
-            if settings.clicked {
-                egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
-                    .collapsible(false)
-                    .movable(false)
-                    .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
-                    .show(arg_ui.ctx(), |ui| {
-                        ui.vertical_centered(|ui| {
-                            ui.label("Modify the start date to offset the plots of this log");
-                            ui.label(format!("original date: {}", settings.original_start_date));
-                            ui.label(RichText::new("YYYY-mm-dd HH:MM:SS.ms").strong());
-                            let response = ui.add(TextEdit::singleline(&mut settings.tmp_date_buf));
-                            if response.changed() {
-                                log::debug!("Changed to {}", settings.tmp_date_buf);
-                                match NaiveDateTime::parse_from_str(
-                                    &settings.tmp_date_buf,
-                                    "%Y-%m-%d %H:%M:%S%.f",
-                                ) {
-                                    Ok(new_dt) => {
-                                        settings.err_msg.clear();
-                                        settings.new_date_candidate = Some(new_dt);
-                                    }
-                                    Err(e) => {
-                                        settings.err_msg = format!("⚠ {e} ⚠");
-                                    }
-                                };
-                            }
-                            if settings.err_msg.is_empty() {
-                                if let Some(new_date) = settings.new_date_candidate {
-                                    if ui.button("Apply").clicked() {
-                                        settings.start_date = new_date.and_utc();
-                                        settings.date_changed = true;
-                                        log::info!("New date: {}", settings.start_date);
-                                    }
-                                }
-                            } else {
-                                ui.label(settings.err_msg.clone());
-                            }
-                            if ui.button("Cancel").clicked() {
-                                settings.clicked = false;
-                            }
-                        })
-                    });
-            }
+            log_date_settings_ui(arg_ui, settings);
         }
 
         arg_ui.end_row();
     });
+}
+
+pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
+    ui.end_row();
+    let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date);
+    if ui.button(log_name_date.clone()).clicked() {
+        settings.clicked = !settings.clicked;
+    }
+    if settings.tmp_date_buf.is_empty() {
+        settings.tmp_date_buf = settings
+            .start_date
+            .format("%Y-%m-%d %H:%M:%S%.f")
+            .to_string();
+    }
+    if settings.clicked {
+        log_settings_window(ui, settings, &log_name_date);
+    }
+}
+
+fn log_settings_window(
+    ui: &mut egui::Ui,
+    settings: &mut LogStartDateSettings,
+    log_name_date: &str,
+) {
+    egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
+        .collapsible(false)
+        .movable(false)
+        .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+        .show(ui.ctx(), |ui| {
+            ui.vertical_centered(|ui| {
+                ui.label("Modify the start date to offset the plots of this log");
+                ui.label(format!("original date: {}", settings.original_start_date));
+                ui.label(RichText::new("YYYY-mm-dd HH:MM:SS.ms").strong());
+                let response = ui.add(TextEdit::singleline(&mut settings.tmp_date_buf));
+                if response.changed() {
+                    log::debug!("Changed to {}", settings.tmp_date_buf);
+                    match NaiveDateTime::parse_from_str(
+                        &settings.tmp_date_buf,
+                        "%Y-%m-%d %H:%M:%S%.f",
+                    ) {
+                        Ok(new_dt) => {
+                            settings.err_msg.clear();
+                            settings.new_date_candidate = Some(new_dt);
+                        }
+                        Err(e) => {
+                            settings.err_msg = format!("⚠ {e} ⚠");
+                        }
+                    };
+                }
+                if settings.err_msg.is_empty() {
+                    if let Some(new_date) = settings.new_date_candidate {
+                        if ui.button("Apply").clicked() {
+                            settings.start_date = new_date.and_utc();
+                            settings.date_changed = true;
+                            log::info!("New date: {}", settings.start_date);
+                        }
+                    }
+                } else {
+                    ui.label(settings.err_msg.clone());
+                }
+                if ui.button("Cancel").clicked() {
+                    settings.clicked = false;
+                }
+            })
+        });
 }
