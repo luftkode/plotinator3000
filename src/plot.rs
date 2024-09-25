@@ -355,9 +355,9 @@ where
 }
 
 fn update_plot_dates(
-    percentage_plots: &mut Vec<PlotWithName>,
-    to_hundreds_plots: &mut Vec<PlotWithName>,
-    to_thousands_plots: &mut Vec<PlotWithName>,
+    percentage_plots: &mut [PlotWithName],
+    to_hundreds_plots: &mut [PlotWithName],
+    to_thousands_plots: &mut [PlotWithName],
     settings: &mut LogStartDateSettings,
 ) {
     if settings.date_changed {
