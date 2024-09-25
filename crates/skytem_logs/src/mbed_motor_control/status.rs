@@ -100,9 +100,29 @@ impl Plotable for StatusLog {
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::default()
     }
+
+    fn unique_name(&self) -> &str {
+        "Mbed Status log 2024"
+    }
 }
 
 impl StatusLog {
+    /// If we don't match up with other plot points it is because the date was offset so we need to apply the offset here as well
+    pub fn update_timestamp_with_state_changes(&mut self) {
+        if let Some((first_st_change_timestamp, _)) = self.timestamps_with_state_changes.first_mut()
+        {
+            if let Some(first_entry) = self.entries.first() {
+                let first_entry_timestamp = first_entry.timestamp_ns();
+                if first_entry_timestamp != *first_st_change_timestamp {
+                    let offset = first_entry_timestamp - *first_st_change_timestamp;
+                    for (timestamp, _) in &mut self.timestamps_with_state_changes {
+                        *timestamp += offset;
+                    }
+                }
+            }
+        }
+    }
+
     pub fn timestamps_with_state_changes(&self) -> &[(f64, MotorState)] {
         &self.timestamps_with_state_changes
     }

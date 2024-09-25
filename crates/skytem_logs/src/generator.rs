@@ -101,6 +101,10 @@ impl Plotable for GeneratorLog {
             .timestamp
             .and_utc()
     }
+
+    fn unique_name(&self) -> &str {
+        "Legacy Generator Log 2016"
+    }
 }
 
 // Helper function to keep all the boiler plate of building each plot
