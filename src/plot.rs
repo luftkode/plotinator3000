@@ -9,7 +9,7 @@ use skytem_logs::{
 use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
-use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint, Text};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use log_if::{util::ExpectedPlotRange, Plotable, RawPlot};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
@@ -269,14 +269,6 @@ impl LogPlot {
             if display_percentage_plot {
                 _ = percentage_plot.show(ui, |percentage_plot_ui| {
                     Self::handle_plot(percentage_plot_ui, |arg_plot_ui| {
-                        for status_log in status_logs {
-                            for (ts, st_change) in status_log.timestamps_with_state_changes() {
-                                arg_plot_ui.text(Text::new(
-                                    PlotPoint::new(*ts, ((*st_change as u8) as f64) / 10.0),
-                                    st_change.to_string(),
-                                ));
-                            }
-                        }
                         plot_util::plot_lines(arg_plot_ui, percentage_plots, *line_width);
                         playback_update_plot(timer, arg_plot_ui, is_reset_pressed);
                         axis_config.handle_y_axis_lock(
@@ -312,14 +304,6 @@ impl LogPlot {
                     Self::handle_plot(thousands_plot_ui, |arg_plot_ui| {
                         plot_util::plot_lines(arg_plot_ui, to_thousands_plots, *line_width);
 
-                        for status_log in status_logs {
-                            for (ts, st_change) in status_log.timestamps_with_state_changes() {
-                                arg_plot_ui.text(Text::new(
-                                    PlotPoint::new(*ts, (*st_change as u8) as f64),
-                                    st_change.to_string(),
-                                ));
-                            }
-                        }
                         axis_config.handle_y_axis_lock(
                             arg_plot_ui,
                             PlotType::Thousands,
