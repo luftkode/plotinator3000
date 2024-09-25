@@ -51,6 +51,7 @@ pub fn show_settings_grid(
             _ = ui.label(" |");
         });
         for settings in log_start_date_settings {
+            arg_ui.end_row();
             let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date);
             if arg_ui.button(log_name_date.clone()).clicked() {
                 settings.clicked = !settings.clicked;
@@ -91,6 +92,7 @@ pub fn show_settings_grid(
                                 if let Some(new_date) = settings.new_date_candidate {
                                     if ui.button("Apply").clicked() {
                                         settings.start_date = new_date.and_utc();
+                                        settings.date_changed = true;
                                         log::info!("New date: {}", settings.start_date);
                                     }
                                 }
@@ -104,6 +106,7 @@ pub fn show_settings_grid(
                     });
             }
         }
+
         arg_ui.end_row();
     });
 }

@@ -28,6 +28,7 @@ pub struct LogStartDateSettings {
     pub tmp_date_buf: String,
     pub err_msg: String,
     pub new_date_candidate: Option<NaiveDateTime>,
+    pub date_changed: bool,
 }
 
 impl LogStartDateSettings {
@@ -40,7 +41,15 @@ impl LogStartDateSettings {
             tmp_date_buf: String::new(),
             err_msg: String::new(),
             new_date_candidate: None,
+            date_changed: false,
         }
+    }
+
+    /// Get the offset in nanoseconds from the original start date and the adjusted start date
+    pub fn date_offset_ns(&self) -> i64 {
+        (self.start_date - self.original_start_date)
+            .num_nanoseconds()
+            .expect("Nanoseconds count exceeds capacity of i64")
     }
 }
 
@@ -88,30 +97,45 @@ impl LogPlot {
             .iter()
             .any(|settings| *settings.log_id == log_id)
         {
-            log_start_date_settings.push(LogStartDateSettings::new(log_id, log.first_timestamp()));
+            log_start_date_settings.push(LogStartDateSettings::new(
+                log_id.clone(),
+                log.first_timestamp(),
+            ));
         }
 
         for raw_plot in log.raw_plots() {
             let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
             match raw_plot.expected_range() {
                 ExpectedPlotRange::Percentage => {
-                    Self::add_plot_to_vector(percentage_plots, raw_plot, &plot_name)
+                    Self::add_plot_to_vector(percentage_plots, raw_plot, &plot_name, log_id.clone())
                 }
-                ExpectedPlotRange::OneToOneHundred => {
-                    Self::add_plot_to_vector(to_hundreds_plots, raw_plot, &plot_name)
-                }
-                ExpectedPlotRange::Thousands => {
-                    Self::add_plot_to_vector(to_thousands_plots, raw_plot, &plot_name)
-                }
+                ExpectedPlotRange::OneToOneHundred => Self::add_plot_to_vector(
+                    to_hundreds_plots,
+                    raw_plot,
+                    &plot_name,
+                    log_id.clone(),
+                ),
+                ExpectedPlotRange::Thousands => Self::add_plot_to_vector(
+                    to_thousands_plots,
+                    raw_plot,
+                    &plot_name,
+                    log_id.clone(),
+                ),
             }
         }
     }
 
-    fn add_plot_to_vector(plots: &mut Vec<PlotWithName>, raw_plot: &RawPlot, plot_name: &str) {
+    fn add_plot_to_vector(
+        plots: &mut Vec<PlotWithName>,
+        raw_plot: &RawPlot,
+        plot_name: &str,
+        log_id: String,
+    ) {
         if !plots.iter().any(|p| p.name == *plot_name) {
             plots.push(PlotWithName::new(
                 raw_plot.points().to_vec(),
                 plot_name.to_string(),
+                log_id,
             ));
         }
     }
@@ -155,6 +179,7 @@ impl LogPlot {
             plot_visibility,
             log_start_date_settings,
         );
+
         if let Some(e) = playback_button_event {
             play_state.handle_playback_button_press(e);
         };
@@ -191,6 +216,15 @@ impl LogPlot {
                     to_thousands_plots,
                     gen_log,
                     idx,
+                );
+            }
+
+            for settings in log_start_date_settings {
+                update_plot_dates(
+                    percentage_plots,
+                    to_hundreds_plots,
+                    to_thousands_plots,
+                    settings,
                 );
             }
 
@@ -305,5 +339,48 @@ impl LogPlot {
         F: FnOnce(&mut egui_plot::PlotUi),
     {
         plot_function(plot_ui);
+    }
+}
+
+fn offset_plot(plot: &mut PlotWithName, new_start_date: DateTime<Utc>) {
+    if let Some(first_point) = plot.raw_plot.first() {
+        let first_point_date = first_point[0];
+        let new_date_ns = new_start_date
+            .timestamp_nanos_opt()
+            .expect("Nanoseconds overflow") as f64;
+        let offset = new_date_ns - first_point_date;
+
+        log::debug!("Prev time: {first_point_date}, new: {new_date_ns}");
+        log::debug!("Offsetting by: {offset}");
+
+        for point in &mut plot.raw_plot {
+            point[0] += offset;
+        }
+    }
+}
+
+fn apply_offset_to_plots<'a, I>(plots: I, settings: &LogStartDateSettings)
+where
+    I: IntoIterator<Item = &'a mut PlotWithName>,
+{
+    for plot in plots {
+        if plot.log_id == settings.log_id {
+            offset_plot(plot, settings.start_date);
+        }
+    }
+}
+
+fn update_plot_dates(
+    percentage_plots: &mut Vec<PlotWithName>,
+    to_hundreds_plots: &mut Vec<PlotWithName>,
+    to_thousands_plots: &mut Vec<PlotWithName>,
+    settings: &mut LogStartDateSettings,
+) {
+    if settings.date_changed {
+        apply_offset_to_plots(percentage_plots.iter_mut(), settings);
+        apply_offset_to_plots(to_hundreds_plots.iter_mut(), settings);
+        apply_offset_to_plots(to_thousands_plots.iter_mut(), settings);
+
+        settings.date_changed = false;
     }
 }

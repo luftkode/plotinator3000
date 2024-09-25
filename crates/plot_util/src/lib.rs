@@ -9,11 +9,16 @@ use serde::{Deserialize, Serialize};
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,
     pub name: String,
+    pub log_id: String,
 }
 
 impl PlotWithName {
-    pub fn new(raw_plot: Vec<[f64; 2]>, name: String) -> Self {
-        Self { raw_plot, name }
+    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, id: String) -> Self {
+        Self {
+            raw_plot,
+            name,
+            log_id: id,
+        }
     }
 }
 
