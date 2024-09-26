@@ -127,7 +127,7 @@ mod tests {
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/new_rpm_algo/status_20240923_120015_00.bin";
+        "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {
@@ -138,13 +138,10 @@ mod tests {
             status_log_header.unique_description(),
             StatusLogHeader::UNIQUE_DESCRIPTION
         );
-        assert_eq!(status_log_header.version, 0);
-        assert_eq!(status_log_header.project_version(), "1.1.0");
-        assert_eq!(
-            status_log_header.git_branch(),
-            "add-rpm-error-counter-to-log"
-        );
-        assert_eq!(status_log_header.git_short_sha(), "bec2ee2");
+        assert_eq!(status_log_header.version, 1);
+        assert_eq!(status_log_header.project_version(), "1.3.0");
+        assert_eq!(status_log_header.git_branch(), "fix-23-pid-loop-in-standby");
+        assert_eq!(status_log_header.git_short_sha(), "fe6e412");
         Ok(())
     }
 }

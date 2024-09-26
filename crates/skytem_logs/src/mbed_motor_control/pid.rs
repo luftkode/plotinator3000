@@ -143,7 +143,7 @@ mod tests {
     use std::fs::{self, File};
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/new_rpm_algo/pid_20240923_120015_00.bin";
+        "../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin";
 
     use header::PidLogHeader;
     use log_if::Log;
@@ -160,15 +160,15 @@ mod tests {
 
         let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
-        assert_eq!(first_entry.pid_err, 0.0);
-        assert_eq!(first_entry.servo_duty_cycle, 0.0365);
+        assert_eq!(first_entry.pid_err, 0.17777778);
+        assert_eq!(first_entry.servo_duty_cycle, 0.04185);
         assert_eq!(first_entry.rpm_error_count, 0);
         assert_eq!(first_entry.first_valid_rpm_count, 0);
 
         let second_entry = &pidlog.entries[1];
         assert_eq!(second_entry.rpm, 0.0);
-        assert_eq!(second_entry.pid_err, 0.0);
-        assert_eq!(second_entry.servo_duty_cycle, 0.0365);
+        assert_eq!(second_entry.pid_err, 0.17777778);
+        assert_eq!(second_entry.servo_duty_cycle, 0.04185);
         assert_eq!(second_entry.rpm_error_count, 0);
         assert_eq!(second_entry.first_valid_rpm_count, 0);
         //eprintln!("{pidlog}");
