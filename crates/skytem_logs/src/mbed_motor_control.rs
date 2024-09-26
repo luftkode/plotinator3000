@@ -1,5 +1,8 @@
+use crate::util::timestamp_from_raw;
+
 use super::parse_unique_description;
 use byteorder::{LittleEndian, ReadBytesExt};
+use chrono::{NaiveDateTime, ParseResult};
 use log_if::GitMetadata;
 use std::{
     fs,
@@ -26,7 +29,13 @@ pub const SIZEOF_STARTUP_TIMESTAMP: usize = size_of::<StartupTimestamp>();
 
 pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
     /// Size of the header type in bytes if represented in raw binary
-    const RAW_SIZE: usize = 130;
+    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
+        + SIZEOF_PROJECT_VERSION
+        + SIZEOF_GIT_SHORT_SHA
+        + SIZEOF_GIT_BRANCH
+        + SIZEOF_GIT_REPO_STATUS
+        + SIZEOF_STARTUP_TIMESTAMP;
+
     /// Unique description is a field in the header that identifies the kind of log
     const UNIQUE_DESCRIPTION: &'static str;
 
@@ -37,6 +46,9 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
     fn git_branch_raw(&self) -> &GitBranchData;
     fn git_repo_status_raw(&self) -> &GitRepoStatusData;
     fn startup_timestamp_raw(&self) -> &StartupTimestamp;
+    fn startup_timestamp(&self) -> ParseResult<NaiveDateTime> {
+        timestamp_from_raw(self.startup_timestamp_raw(), "%Y-%m-%dT%H:%M:%S")
+    }
 
     fn unique_description(&self) -> String {
         parse_unique_description(*self.unique_description_bytes())

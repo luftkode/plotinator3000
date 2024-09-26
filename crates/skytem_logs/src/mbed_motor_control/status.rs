@@ -1,6 +1,7 @@
 use std::{fmt, io};
 
 use super::MbedMotorControlLogHeader;
+use chrono::{DateTime, Utc};
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
 use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
@@ -14,9 +15,10 @@ pub mod header;
 pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
-    timestamps_ms: Vec<f64>,
+    timestamp_ns: Vec<f64>,
     timestamps_with_state_changes: Vec<(f64, MotorState)>, // for memoization
     all_plots_raw: Vec<RawPlot>,
+    startup_timestamp: DateTime<Utc>,
 }
 
 impl Log for StatusLog {
@@ -25,28 +27,43 @@ impl Log for StatusLog {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = StatusLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
+        let startup_timestamp = header
+            .startup_timestamp()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+            .and_utc();
+        let startup_timestamp_ns = startup_timestamp
+            .timestamp_nanos_opt()
+            .expect("timestamp as nanoseconds out of range")
+            as f64;
+        let timestamp_ns: Vec<f64> = vec_of_entries
+            .iter()
+            .map(|e| startup_timestamp_ns + e.timestamp_ns())
+            .collect();
+
         let timestamps_with_state_changes = parse_timestamps_with_state_changes(&vec_of_entries);
-        let timestamps_ms: Vec<f64> = vec_of_entries.iter().map(|e| e.timestamp_ns()).collect();
         let engine_temp_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| e.engine_temp as f64,
         );
         let fan_on_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| (e.fan_on as u8) as f64,
         );
-        let vbat_plot_raw =
-            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ns(), |e| e.vbat as f64);
+        let vbat_plot_raw = plot_points_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ns() + startup_timestamp_ns,
+            |e| e.vbat as f64,
+        );
         let setpoint_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| e.setpoint as f64,
         );
         let motor_state_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| (e.motor_state as u8) as f64,
         );
         let all_plots_raw = vec![
@@ -76,13 +93,24 @@ impl Log for StatusLog {
                 ExpectedPlotRange::OneToOneHundred,
             ),
         ];
+        // Iterate through the plots and make sure all the first timestamps match
+        if let Some(first_plot) = all_plots_raw.first() {
+            if let Some([first_timestamp, ..]) = first_plot.points().first() {
+                for p in &all_plots_raw {
+                    if let Some([current_first_timestamp, ..]) = p.points().first() {
+                        debug_assert_eq!(current_first_timestamp, first_timestamp, "First timestamp of plots are not equal, was an offset applied to some plots but not all?");
+                    }
+                }
+            }
+        }
 
         Ok(Self {
             header,
             entries: vec_of_entries,
             timestamps_with_state_changes,
-            timestamps_ms,
+            timestamp_ns,
             all_plots_raw,
+            startup_timestamp,
         })
     }
 
@@ -96,9 +124,8 @@ impl Plotable for StatusLog {
         &self.all_plots_raw
     }
 
-    /// Currently the log does not have an initial timestamp, TODO!!
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
-        chrono::DateTime::default()
+        self.startup_timestamp
     }
 
     fn unique_name(&self) -> &str {
