@@ -1,5 +1,8 @@
+use crate::util::timestamp_from_raw;
+
 use super::parse_unique_description;
 use byteorder::{LittleEndian, ReadBytesExt};
+use chrono::{NaiveDateTime, ParseResult};
 use log_if::GitMetadata;
 use std::{
     fs,
@@ -21,10 +24,18 @@ pub type GitBranchData = [u8; 64];
 pub const SIZEOF_GIT_BRANCH: usize = size_of::<GitBranchData>();
 pub type GitRepoStatusData = [u8; 7];
 pub const SIZEOF_GIT_REPO_STATUS: usize = size_of::<GitRepoStatusData>();
+pub type StartupTimestamp = [u8; 20];
+pub const SIZEOF_STARTUP_TIMESTAMP: usize = size_of::<StartupTimestamp>();
 
 pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
     /// Size of the header type in bytes if represented in raw binary
-    const RAW_SIZE: usize = 130;
+    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
+        + SIZEOF_PROJECT_VERSION
+        + SIZEOF_GIT_SHORT_SHA
+        + SIZEOF_GIT_BRANCH
+        + SIZEOF_GIT_REPO_STATUS
+        + SIZEOF_STARTUP_TIMESTAMP;
+
     /// Unique description is a field in the header that identifies the kind of log
     const UNIQUE_DESCRIPTION: &'static str;
 
@@ -34,6 +45,10 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
     fn git_short_sha_raw(&self) -> &GitShortShaData;
     fn git_branch_raw(&self) -> &GitBranchData;
     fn git_repo_status_raw(&self) -> &GitRepoStatusData;
+    fn startup_timestamp_raw(&self) -> &StartupTimestamp;
+    fn startup_timestamp(&self) -> ParseResult<NaiveDateTime> {
+        timestamp_from_raw(self.startup_timestamp_raw(), "%Y-%m-%dT%H:%M:%S")
+    }
 
     fn unique_description(&self) -> String {
         parse_unique_description(*self.unique_description_bytes())
@@ -49,17 +64,19 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
 
     /// Deserialize a header for a `reader` that implements [Read]
     fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
-        let mut unique_description: UniqueDescriptionData = [0u8; 128];
+        let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
         reader.read_exact(&mut unique_description)?;
         let version = reader.read_u16::<LittleEndian>()?;
-        let mut project_version: ProjectVersionData = [0u8; 32];
+        let mut project_version: ProjectVersionData = ProjectVersionData::default();
         reader.read_exact(&mut project_version)?;
-        let mut git_short_sha: GitShortShaData = [0u8; 8];
+        let mut git_short_sha: GitShortShaData = GitShortShaData::default();
         reader.read_exact(&mut git_short_sha)?;
-        let mut git_branch: GitBranchData = [0u8; 64];
+        let mut git_branch: GitBranchData = [0u8; SIZEOF_GIT_BRANCH];
         reader.read_exact(&mut git_branch)?;
-        let mut git_repo_status: GitRepoStatusData = [0u8; 7];
+        let mut git_repo_status: GitRepoStatusData = GitRepoStatusData::default();
         reader.read_exact(&mut git_repo_status)?;
+        let mut startup_timestamp: StartupTimestamp = StartupTimestamp::default();
+        reader.read_exact(&mut startup_timestamp)?;
         Ok(Self::new(
             unique_description,
             version,
@@ -67,6 +84,7 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
             git_short_sha,
             git_branch,
             git_repo_status,
+            startup_timestamp,
         ))
     }
 
@@ -132,6 +150,15 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
                     format!("Failed to read Git Repo Status: {e}"),
                 )
             })?;
+        pos += SIZEOF_GIT_REPO_STATUS;
+        let startup_timestamp = slice[pos..pos + SIZEOF_STARTUP_TIMESTAMP]
+            .try_into()
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Failed to read startup timestamp: {e}"),
+                )
+            })?;
 
         Ok(Self::new(
             unique_description,
@@ -140,6 +167,7 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
             git_short_sha,
             git_branch,
             git_repo_status,
+            startup_timestamp,
         ))
     }
 
@@ -175,5 +203,6 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
         git_short_sha: GitShortShaData,
         git_branch: GitBranchData,
         git_repo_status: GitRepoStatusData,
+        startup_timestamp: StartupTimestamp,
     ) -> Self;
 }

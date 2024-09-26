@@ -1,6 +1,7 @@
 use std::{fmt, io};
 
 use super::MbedMotorControlLogHeader;
+use chrono::{DateTime, Utc};
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
 use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
@@ -14,9 +15,10 @@ pub mod header;
 pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
-    timestamps_ms: Vec<f64>,
+    timestamp_ns: Vec<f64>,
     timestamps_with_state_changes: Vec<(f64, MotorState)>, // for memoization
     all_plots_raw: Vec<RawPlot>,
+    startup_timestamp: DateTime<Utc>,
 }
 
 impl Log for StatusLog {
@@ -25,28 +27,43 @@ impl Log for StatusLog {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let header = StatusLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
+        let startup_timestamp = header
+            .startup_timestamp()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+            .and_utc();
+        let startup_timestamp_ns = startup_timestamp
+            .timestamp_nanos_opt()
+            .expect("timestamp as nanoseconds out of range")
+            as f64;
+        let timestamp_ns: Vec<f64> = vec_of_entries
+            .iter()
+            .map(|e| startup_timestamp_ns + e.timestamp_ns())
+            .collect();
+
         let timestamps_with_state_changes = parse_timestamps_with_state_changes(&vec_of_entries);
-        let timestamps_ms: Vec<f64> = vec_of_entries.iter().map(|e| e.timestamp_ns()).collect();
         let engine_temp_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| e.engine_temp as f64,
         );
         let fan_on_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| (e.fan_on as u8) as f64,
         );
-        let vbat_plot_raw =
-            plot_points_from_log_entry(&vec_of_entries, |e| e.timestamp_ns(), |e| e.vbat as f64);
+        let vbat_plot_raw = plot_points_from_log_entry(
+            &vec_of_entries,
+            |e| e.timestamp_ns() + startup_timestamp_ns,
+            |e| e.vbat as f64,
+        );
         let setpoint_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| e.setpoint as f64,
         );
         let motor_state_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
-            |e| e.timestamp_ns(),
+            |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| (e.motor_state as u8) as f64,
         );
         let all_plots_raw = vec![
@@ -76,13 +93,24 @@ impl Log for StatusLog {
                 ExpectedPlotRange::OneToOneHundred,
             ),
         ];
+        // Iterate through the plots and make sure all the first timestamps match
+        if let Some(first_plot) = all_plots_raw.first() {
+            if let Some([first_timestamp, ..]) = first_plot.points().first() {
+                for p in &all_plots_raw {
+                    if let Some([current_first_timestamp, ..]) = p.points().first() {
+                        debug_assert_eq!(current_first_timestamp, first_timestamp, "First timestamp of plots are not equal, was an offset applied to some plots but not all?");
+                    }
+                }
+            }
+        }
 
         Ok(Self {
             header,
             entries: vec_of_entries,
             timestamps_with_state_changes,
-            timestamps_ms,
+            timestamp_ns,
             all_plots_raw,
+            startup_timestamp,
         })
     }
 
@@ -96,9 +124,8 @@ impl Plotable for StatusLog {
         &self.all_plots_raw
     }
 
-    /// Currently the log does not have an initial timestamp, TODO!!
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
-        chrono::DateTime::default()
+        self.startup_timestamp
     }
 
     fn unique_name(&self) -> &str {
@@ -159,7 +186,7 @@ mod tests {
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/new_rpm_algo/status_20240923_120015_00.bin";
+        "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
 
     use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
 
@@ -172,25 +199,25 @@ mod tests {
         eprintln!("{}", status_log.header);
 
         let first_entry = status_log.entries().first().expect("Empty entries vec");
-        assert_eq!(first_entry.engine_temp, 66.63043);
+        assert_eq!(first_entry.engine_temp, 64.394905);
         assert!(!first_entry.fan_on);
-        assert_eq!(first_entry.vbat, 12.222223);
-        assert_eq!(first_entry.setpoint, 2500.0);
+        assert_eq!(first_entry.vbat, 11.76342);
+        assert_eq!(first_entry.setpoint, 1800.0);
         assert_eq!(first_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
         let second_entry = &status_log.entries[1];
-        assert_eq!(second_entry.engine_temp, 65.76087);
+        assert_eq!(second_entry.engine_temp, 64.394905);
         assert!(!second_entry.fan_on);
-        assert_eq!(second_entry.vbat, 12.229744);
-        assert_eq!(second_entry.setpoint, 2500.0);
+        assert_eq!(second_entry.vbat, 11.718291);
+        assert_eq!(second_entry.setpoint, 1800.0);
         assert_eq!(second_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
 
         let last_entry = status_log.entries().last().expect("Empty entries vec");
-        assert_eq!(last_entry.timestamp_ns(), 736113.0 * 1_000_000.0);
-        assert_eq!(last_entry.engine_temp, 81.32979);
-        assert!(last_entry.fan_on);
-        assert_eq!(last_entry.vbat, 11.665642);
-        assert_eq!(last_entry.setpoint, 0.0);
-        assert_eq!(last_entry.motor_state, MotorState::WAIT_TIME_SHUTDOWN);
+        assert_eq!(last_entry.timestamp_ns(), 930624.0 * 1_000_000.0);
+        assert_eq!(last_entry.engine_temp, 77.31132);
+        assert!(!last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 11.996582);
+        assert_eq!(last_entry.setpoint, 3600.0);
+        assert_eq!(last_entry.motor_state, MotorState::STANDBY_WAIT_FOR_CAP);
         //eprintln!("{status_log}");
         Ok(())
     }

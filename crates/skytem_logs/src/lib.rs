@@ -35,7 +35,7 @@ pub fn parse_unique_description(raw_uniq_desc: [u8; 128]) -> String {
 ///
 /// fn main() -> std::io::Result<()> {
 ///     // Open the log file
-///     let file = File::open("../../test_data/mbed_motor_control/new_rpm_algo/pid_20240923_120015_00.bin")?;
+///     let file = File::open("../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin")?;
 ///     let mut reader = BufReader::new(file);
 ///
 ///     // First, read the header
