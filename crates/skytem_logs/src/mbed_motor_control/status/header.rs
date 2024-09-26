@@ -1,3 +1,5 @@
+use crate::mbed_motor_control::StartupTimestamp;
+
 use super::super::{
     GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
     ProjectVersionData, UniqueDescriptionData,
@@ -17,6 +19,7 @@ pub struct StatusLogHeader {
     #[serde(with = "BigArray")]
     git_branch: GitBranchData,
     git_repo_status: GitRepoStatusData,
+    startup_timestamp: StartupTimestamp,
 }
 
 impl GitMetadata for StatusLogHeader {
@@ -63,6 +66,7 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
         git_short_sha: GitShortShaData,
         git_branch: GitBranchData,
         git_repo_status: GitRepoStatusData,
+        startup_timestamp: StartupTimestamp,
     ) -> Self {
         Self {
             unique_description,
@@ -71,6 +75,7 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
             git_short_sha,
             git_branch,
             git_repo_status,
+            startup_timestamp,
         }
     }
 
@@ -88,6 +93,10 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
 
     fn git_repo_status_raw(&self) -> &GitRepoStatusData {
         &self.git_repo_status
+    }
+
+    fn startup_timestamp_raw(&self) -> &StartupTimestamp {
+        &self.startup_timestamp
     }
 }
 
