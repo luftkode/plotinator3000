@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use egui::{Color32, RichText, TextEdit};
+use egui::{Color32, Key, RichText, TextEdit};
 use egui_phosphor::regular;
 
 use crate::app::PlayBackButtonEvent;
@@ -80,9 +80,12 @@ fn log_settings_window(
     settings: &mut LogStartDateSettings,
     log_name_date: &str,
 ) {
+    // State of window bound to the 'X'-button that closes the window
+    let mut open = true;
     egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
         .collapsible(false)
         .movable(false)
+        .open(&mut open)
         .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
         .show(ui.ctx(), |ui| {
             ui.vertical_centered(|ui| {
@@ -107,7 +110,7 @@ fn log_settings_window(
                 }
                 if settings.err_msg.is_empty() {
                     if let Some(new_date) = settings.new_date_candidate {
-                        if ui.button("Apply").clicked() {
+                        if ui.button("Apply").clicked() || ui.input(|i| i.key_pressed(Key::Enter)) {
                             settings.start_date = new_date.and_utc();
                             settings.date_changed = true;
                             log::info!("New date: {}", settings.start_date);
@@ -121,4 +124,8 @@ fn log_settings_window(
                 }
             })
         });
+
+    if !open || ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
+        settings.clicked = false;
+    }
 }
