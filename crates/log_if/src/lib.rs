@@ -16,7 +16,7 @@ pub trait Plotable {
 }
 
 /// A given log should implement this trait
-pub trait Log: Plotable + Sized + Display {
+pub trait Log: Plotable + Clone + Display + Send + Sync + Sized {
     type Entry: LogEntry;
     /// Create a [Log] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
@@ -24,16 +24,8 @@ pub trait Log: Plotable + Sized + Display {
     fn entries(&self) -> &[Self::Entry];
 }
 
-/// A given log header should implement this
-pub trait GitMetadata {
-    fn project_version(&self) -> String;
-    fn git_short_sha(&self) -> String;
-    fn git_branch(&self) -> String;
-    fn git_repo_status(&self) -> String;
-}
-
 /// A given log entry should implement this trait
-pub trait LogEntry: Sized + Display {
+pub trait LogEntry: Sized + Display + Send + Sync {
     /// Create a [`LogEntry`] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
     /// Timestamp in nanoseconds
@@ -41,7 +33,7 @@ pub trait LogEntry: Sized + Display {
 }
 
 /// [`RawPlot`] represents some plottable data from a log, e.g. RPM measurements
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RawPlot {
     name: String,
     points: Vec<[f64; 2]>,
@@ -65,4 +57,12 @@ impl RawPlot {
     pub fn expected_range(&self) -> ExpectedPlotRange {
         self.expected_range
     }
+}
+
+/// A given log header should implement this
+pub trait GitMetadata {
+    fn project_version(&self) -> String;
+    fn git_short_sha(&self) -> String;
+    fn git_branch(&self) -> String;
+    fn git_repo_status(&self) -> String;
 }
