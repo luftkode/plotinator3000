@@ -6,6 +6,7 @@ PROJECT_NAME := "logviewer-rs"
 alias r := run
 alias l := lint
 alias c := check
+alias ca := check-all
 alias f := fmt
 alias t := test
 
@@ -15,10 +16,15 @@ alias t := test
 init: install-devtools
     echo "Run 'install-extra-devtools' for some adittional productivity tools that fit into the existent workflow"
 
-# Check if it compiles without compiling
-[no-exit-message]
+[doc("Checks both native and wasm"), no-exit-message]
+check-all: check check-wasm
+
+[doc("Quickly check if it compiles without compiling (native target)"), no-exit-message]
 check *ARGS:
     cargo {{check}} {{ ARGS }}
+
+[doc("Quickly check if the WASM target compiles without compiling"), no-exit-message]
+check-wasm: (check "--target wasm32-unknown-unknown")
 
 # Get trunk: https://trunkrs.dev/guide/introduction.html
 [doc("serve as a local webserver with hot reloading and logging enabled (requires trunk)")]
