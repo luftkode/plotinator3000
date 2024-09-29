@@ -142,12 +142,7 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.plot.ui(
-                ui,
-                self.logs.mbed_pid_log(),
-                self.logs.mbed_status_log(),
-                self.logs.generator_log(),
-            );
+            self.plot.ui(ui, self.logs.logs());
 
             if self.dropped_files.is_empty() {
                 // Display the message when no files have been dropped and no logs are loaded

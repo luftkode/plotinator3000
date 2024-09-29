@@ -30,6 +30,7 @@ impl LogStartDateSettings {
 }
 
 pub fn update_plot_dates(
+    invalidate_plot: &mut bool,
     percentage_plots: &mut [PlotWithName],
     to_hundreds_plots: &mut [PlotWithName],
     to_thousands_plots: &mut [PlotWithName],
@@ -41,6 +42,7 @@ pub fn update_plot_dates(
         apply_offset_to_plots(to_thousands_plots.iter_mut(), settings);
 
         settings.date_changed = false;
+        *invalidate_plot = true;
     }
 }
 
