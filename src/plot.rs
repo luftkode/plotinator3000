@@ -9,7 +9,7 @@ use skytem_logs::{
 use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
-use egui_plot::{AxisHints, HPlacement, Legend, Plot};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use log_if::{util::ExpectedPlotRange, Plotable, RawPlot};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
@@ -32,6 +32,7 @@ pub struct LogPlot {
     to_thousands_plots: Vec<PlotWithName>,
     plot_visibility: PlotVisibilityConfig,
     log_start_date_settings: Vec<LogStartDateSettings>,
+    x_min_max: Option<PlotBounds>,
 }
 
 impl Default for LogPlot {
@@ -46,6 +47,7 @@ impl Default for LogPlot {
             to_thousands_plots: vec![],
             plot_visibility: PlotVisibilityConfig::default(),
             log_start_date_settings: vec![],
+            x_min_max: None,
         }
     }
 }
@@ -74,7 +76,12 @@ impl LogPlot {
             let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
             match raw_plot.expected_range() {
                 ExpectedPlotRange::Percentage => {
-                    Self::add_plot_to_vector(percentage_plots, raw_plot, &plot_name, log_id.clone())
+                    Self::add_plot_to_vector(
+                        percentage_plots,
+                        raw_plot,
+                        &plot_name,
+                        log_id.clone(),
+                    );
                 }
                 ExpectedPlotRange::OneToOneHundred => Self::add_plot_to_vector(
                     to_hundreds_plots,
@@ -92,6 +99,7 @@ impl LogPlot {
         }
     }
 
+    /// Add plot to the list of plots if a plot with the same name isn't already in the vector
     fn add_plot_to_vector(
         plots: &mut Vec<PlotWithName>,
         raw_plot: &RawPlot,
@@ -101,7 +109,7 @@ impl LogPlot {
         if !plots.iter().any(|p| p.name == *plot_name) {
             plots.push(PlotWithName::new(
                 raw_plot.points().to_vec(),
-                plot_name.to_string(),
+                plot_name.to_owned(),
                 log_id,
             ));
         }
@@ -112,6 +120,41 @@ impl LogPlot {
     }
     pub fn is_playing(&self) -> bool {
         self.play_state.is_playing()
+    }
+
+    // Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`
+    fn calc_plot_x_min_max(plots: &[PlotWithName], x_min_max: &mut Option<PlotBounds>) {
+        for plot in plots {
+            if plot.raw_plot.len() < 2 {
+                continue;
+            }
+            let Some(first_x) = plot.raw_plot.first().and_then(|f| f.first()) else {
+                continue;
+            };
+            let Some(last_x) = plot.raw_plot.last().and_then(|l| l.first()) else {
+                continue;
+            };
+            if let Some(current_x_min_max) = x_min_max {
+                let xrange = current_x_min_max.range_x();
+                let current_x_min = xrange.start();
+                let current_x_max = xrange.end();
+                if first_x < current_x_min {
+                    let tmp = PlotBounds::from_min_max([*first_x, *current_x_max], [0.0, 1.0]);
+                    current_x_min_max.set_x(&tmp);
+                }
+                if last_x > current_x_max {
+                    let x_min = if current_x_min < first_x {
+                        current_x_min
+                    } else {
+                        first_x
+                    };
+                    let tmp_max = PlotBounds::from_min_max([*x_min, *last_x], [0.0, 1.0]);
+                    current_x_min_max.set_x(&tmp_max);
+                }
+            } else {
+                x_min_max.replace(PlotBounds::from_min_max([*first_x, 0.0], [*last_x, 0.0]));
+            }
+        }
     }
 
     // TODO: Fix this lint
@@ -133,7 +176,12 @@ impl LogPlot {
             to_thousands_plots,
             plot_visibility,
             log_start_date_settings,
+            x_min_max,
         } = self;
+
+        Self::calc_plot_x_min_max(percentage_plots, x_min_max);
+        Self::calc_plot_x_min_max(to_hundreds_plots, x_min_max);
+        Self::calc_plot_x_min_max(to_thousands_plots, x_min_max);
 
         let mut playback_button_event = None;
 
@@ -237,12 +285,30 @@ impl LogPlot {
                 _ = percentage_plot.show(ui, |percentage_plot_ui| {
                     Self::handle_plot(percentage_plot_ui, |arg_plot_ui| {
                         plot_util::plot_lines(arg_plot_ui, percentage_plots, *line_width);
-                        playback_update_plot(timer, arg_plot_ui, is_reset_pressed);
+                        playback_update_plot(
+                            timer,
+                            arg_plot_ui,
+                            is_reset_pressed,
+                            *x_min_max
+                                .unwrap_or_else(|| PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0]))
+                                .range_x()
+                                .start(),
+                        );
                         axis_config.handle_y_axis_lock(
                             arg_plot_ui,
                             PlotType::Percentage,
                             |plot_ui| {
-                                playback_update_plot(timer, plot_ui, is_reset_pressed);
+                                playback_update_plot(
+                                    timer,
+                                    plot_ui,
+                                    is_reset_pressed,
+                                    *x_min_max
+                                        .unwrap_or_else(|| {
+                                            PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0])
+                                        })
+                                        .range_x()
+                                        .start(),
+                                );
                             },
                         );
                     });
@@ -258,7 +324,17 @@ impl LogPlot {
                             arg_plot_ui,
                             PlotType::Hundreds,
                             |plot_ui| {
-                                playback_update_plot(timer, plot_ui, is_reset_pressed);
+                                playback_update_plot(
+                                    timer,
+                                    plot_ui,
+                                    is_reset_pressed,
+                                    *x_min_max
+                                        .unwrap_or_else(|| {
+                                            PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0])
+                                        })
+                                        .range_x()
+                                        .start(),
+                                );
                             },
                         );
                     });
@@ -275,7 +351,17 @@ impl LogPlot {
                             arg_plot_ui,
                             PlotType::Thousands,
                             |plot_ui| {
-                                playback_update_plot(timer, plot_ui, is_reset_pressed);
+                                playback_update_plot(
+                                    timer,
+                                    plot_ui,
+                                    is_reset_pressed,
+                                    *x_min_max
+                                        .unwrap_or_else(|| {
+                                            PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0])
+                                        })
+                                        .range_x()
+                                        .start(),
+                                );
                             },
                         );
                     });

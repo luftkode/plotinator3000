@@ -23,15 +23,22 @@ fn now() -> f64 {
     }
 }
 
-pub fn playback_update_plot(timer: Option<f64>, plot_ui: &mut PlotUi, is_reset_pressed: bool) {
+pub fn playback_update_plot(
+    timer: Option<f64>,
+    plot_ui: &mut PlotUi,
+    is_reset_pressed: bool,
+    x_min: f64,
+) {
     if let Some(t) = timer {
         let mut bounds = plot_ui.plot_bounds();
-        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
+        bounds.translate_x(t * 1_000_000_000.0); // multiply by 1_000_000_000 to get nanoseconds
         plot_ui.set_plot_bounds(bounds);
     }
     if is_reset_pressed {
         let mut bounds = plot_ui.plot_bounds();
-        bounds.translate_x(-bounds.min()[0]);
+        let x_start_bounds = *bounds.range_x().start();
+        let delta = x_min - x_start_bounds;
+        bounds.translate_x(delta);
         plot_ui.set_plot_bounds(bounds);
     }
 }
@@ -109,7 +116,7 @@ impl PlayState {
         self.state = PlaybackState::Paused { pause_time: now() };
     }
 
-    fn total_elapsed(&self) -> f64 {
+    pub fn total_elapsed(&self) -> f64 {
         match self.state {
             PlaybackState::Playing { start_time } => self.elapsed + (now() - start_time),
             PlaybackState::Paused { .. } => self.elapsed,

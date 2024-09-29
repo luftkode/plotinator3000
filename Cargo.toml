@@ -100,18 +100,26 @@ install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = true
 
+[lints]
+workspace = true
+
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
 missing_copy_implementations = "warn"
 trivial_casts = "warn"
 trivial_numeric_casts = "warn"
-unused_results = "warn"
+unused_results = "allow"               # All ui elements return a response, we don't want to have to add 'let _ = ' to all of them when we don't need the response
 unused_import_braces = "warn"
 variant_size_differences = "warn"
 unexpected_cfgs = "warn"
 unsafe_code = "forbid"
 
 [workspace.lints.clippy]
+disallowed_macros = "warn"                  # See clippy.toml
+disallowed_methods = "warn"                 # See clippy.toml
+disallowed_names = "warn"                   # See clippy.toml
+disallowed_script_idents = "warn"           # See clippy.toml
+disallowed_types = "warn"                   # See clippy.toml
 as_ptr_cast_mut = "warn"
 await_holding_lock = "warn"
 bool_to_int_with_if = "warn"
@@ -239,7 +247,7 @@ zero_sized_map_values = "warn"
 ref_patterns = "warn"
 maybe_infinite_iter = "warn"
 large_enum_variant = "warn"
-shadow_unrelated = "warn"
+shadow_unrelated = "allow"                  # Shadowing is very useful for the nested scoped ui elements
 shadow_same = "warn"
 int_plus_one = "warn"
 range_plus_one = "warn"
