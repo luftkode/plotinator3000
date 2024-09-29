@@ -13,7 +13,7 @@ use log_if::{
 use log_if::{Log, LogEntry};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
     entries: Vec<GeneratorLogEntry>,
     pub power: Vec<f64>, // Calculated from Vout * Vin

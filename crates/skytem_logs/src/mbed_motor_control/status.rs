@@ -11,7 +11,7 @@ use log_if::{Log, Plotable, RawPlot};
 pub mod entry;
 pub mod header;
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,

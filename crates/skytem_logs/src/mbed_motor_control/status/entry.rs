@@ -23,7 +23,7 @@ pub enum MotorState {
     INVALID_STATE,
 }
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct StatusLogEntry {
     timestamp_ms_str: String,
     pub timestamp_ms: u32,

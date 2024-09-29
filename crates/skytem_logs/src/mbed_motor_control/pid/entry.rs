@@ -3,7 +3,7 @@ use std::{fmt, io};
 use crate::{util::parse_timestamp, LogEntry};
 use byteorder::{LittleEndian, ReadBytesExt};
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PidLogEntry {
     timestamp_ms_str: String,
     pub timestamp_ms: u32,
