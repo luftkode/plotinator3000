@@ -75,11 +75,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettin
     }
 }
 
-fn log_settings_window(
-    ui: &mut egui::Ui,
-    settings: &mut LogStartDateSettings,
-    log_name_date: &str,
-) {
+fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_name_date: &str) {
     // State of window bound to the 'X'-button that closes the window
     let mut open = true;
     egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
