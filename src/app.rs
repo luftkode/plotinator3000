@@ -114,7 +114,7 @@ impl eframe::App for App {
                     {}
                 }
 
-                egui::widgets::global_dark_light_mode_buttons(inner_arg_ui);
+                egui::widgets::global_theme_preference_buttons(inner_arg_ui);
                 _ = inner_arg_ui.add(Hyperlink::from_label_and_url(
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
