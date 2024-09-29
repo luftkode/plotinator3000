@@ -82,28 +82,28 @@ impl eframe::App for App {
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
         Self::configure_text_styles(ctx, self.font_size.unwrap_or_default());
-        _ = egui::TopBottomPanel::top("top_panel").show(ctx, |arg_ui| {
-            _ = egui::menu::bar(arg_ui, |inner_arg_ui| {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
                 // NOTE: no File->Quit on web pages!
 
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
-                    _ = inner_arg_ui.menu_button("File", |ui| {
+                    ui.menu_button("File", |ui| {
                         if ui.button("Quit").clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     });
-                    inner_arg_ui.add_space(16.0);
+                    ui.add_space(16.0);
                 }
-                if inner_arg_ui.button("Reset plot").clicked() {
+                if ui.button("Reset plot").clicked() {
                     self.logs = SupportedLogs::default();
                     self.plot = LogPlot::default();
                     self.dropped_files.clear();
                 }
 
-                _ = inner_arg_ui.label("Font size:");
+                ui.label("Font size:");
                 if let Some(ref mut font_size) = self.font_size {
-                    if inner_arg_ui
+                    if ui
                         .add(
                             egui::DragValue::new(font_size)
                                 .speed(0.1)
@@ -114,8 +114,8 @@ impl eframe::App for App {
                     {}
                 }
 
-                egui::widgets::global_theme_preference_buttons(inner_arg_ui);
-                _ = inner_arg_ui.add(Hyperlink::from_label_and_url(
+                egui::widgets::global_theme_preference_buttons(ui);
+                ui.add(Hyperlink::from_label_and_url(
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
                 ));
@@ -124,26 +124,26 @@ impl eframe::App for App {
                     ctx.request_repaint();
                 }
                 if is_web {
-                    _ = inner_arg_ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
+                    _ = ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
                 }
             });
-            _ = arg_ui.collapsing("Instructions", |ui| {
-                _ = ui.label("Pan by dragging, or scroll (+ shift = horizontal).");
-                _ = ui.label("Box zooming: Right click to zoom in and zoom out using a selection.");
+            ui.collapsing("Instructions", |ui| {
+                ui.label("Pan by dragging, or scroll (+ shift = horizontal).");
+                ui.label("Box zooming: Right click to zoom in and zoom out using a selection.");
                 if cfg!(target_arch = "wasm32") {
-                    _ = ui.label("Zoom with ctrl / ⌘ + pointer wheel, or with pinch gesture.");
+                    ui.label("Zoom with ctrl / ⌘ + pointer wheel, or with pinch gesture.");
                 } else if cfg!(target_os = "macos") {
-                    _ = ui.label("Zoom with ctrl / ⌘ + scroll.");
+                    ui.label("Zoom with ctrl / ⌘ + scroll.");
                 } else {
-                    _ = ui.label("Zoom with ctrl + scroll.");
+                    ui.label("Zoom with ctrl + scroll.");
                 }
-                _ = ui.label("Reset view with double-click.");
+                ui.label("Reset view with double-click.");
             });
         });
 
-        _ = egui::CentralPanel::default().show(ctx, |arg_ui| {
-            _ = self.plot.ui(
-                arg_ui,
+        egui::CentralPanel::default().show(ctx, |ui| {
+            self.plot.ui(
+                ui,
                 self.logs.mbed_pid_log(),
                 self.logs.mbed_status_log(),
                 self.logs.generator_log(),
@@ -151,12 +151,12 @@ impl eframe::App for App {
 
             if self.dropped_files.is_empty() {
                 // Display the message when no files have been dropped and no logs are loaded
-                util::draw_empty_state(arg_ui);
+                util::draw_empty_state(ui);
             } else {
-                _ = arg_ui.group(|ui| {
-                    _ = ui.label("Dropped files:");
+                ui.group(|ui| {
+                    ui.label("Dropped files:");
                     for file in &self.dropped_files {
-                        _ = ui.label(util::file_info(file));
+                        ui.label(util::file_info(file));
                     }
                 });
             }
@@ -177,9 +177,9 @@ impl eframe::App for App {
                 }
             });
 
-            self.show_error(arg_ui);
+            self.show_error(ui);
 
-            _ = arg_ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 egui::warn_if_debug_build(ui);
             });
         });
@@ -187,9 +187,9 @@ impl eframe::App for App {
 }
 
 impl App {
-    fn show_error(&mut self, gui: &egui::Ui) {
+    fn show_error(&mut self, ui: &egui::Ui) {
         if let Some(error) = self.error_message.clone() {
-            let screen_rect = gui.ctx().screen_rect();
+            let screen_rect = ui.ctx().screen_rect();
             let window_width = screen_rect.width().clamp(400.0, 600.0);
             let window_height = screen_rect.height().clamp(200.0, 300.0);
 
@@ -198,14 +198,14 @@ impl App {
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
-                .show(gui.ctx(), |arg_ui| {
-                    _ = arg_ui.vertical_centered(|ui| {
+                .show(ui.ctx(), |ui| {
+                    ui.vertical_centered(|ui| {
                         ui.add_space(10.0);
                         let error_text = RichText::new(&error)
                             .text_style(TextStyle::Body)
                             .size(18.0)
                             .color(Color32::RED);
-                        _ = ui.label(error_text);
+                        ui.label(error_text);
                         ui.add_space(20.0);
 
                         let button_text = RichText::new("OK")
