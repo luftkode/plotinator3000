@@ -76,7 +76,12 @@ impl LogPlot {
             let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
             match raw_plot.expected_range() {
                 ExpectedPlotRange::Percentage => {
-                    Self::add_plot_to_vector(percentage_plots, raw_plot, &plot_name, log_id.clone())
+                    Self::add_plot_to_vector(
+                        percentage_plots,
+                        raw_plot,
+                        &plot_name,
+                        log_id.clone(),
+                    );
                 }
                 ExpectedPlotRange::OneToOneHundred => Self::add_plot_to_vector(
                     to_hundreds_plots,
@@ -104,7 +109,7 @@ impl LogPlot {
         if !plots.iter().any(|p| p.name == *plot_name) {
             plots.push(PlotWithName::new(
                 raw_plot.points().to_vec(),
-                plot_name.to_string(),
+                plot_name.to_owned(),
                 log_id,
             ));
         }
@@ -123,8 +128,12 @@ impl LogPlot {
             if plot.raw_plot.len() < 2 {
                 continue;
             }
-            let first_x = plot.raw_plot.first().unwrap().first().unwrap();
-            let last_x = plot.raw_plot.last().unwrap().first().unwrap();
+            let Some(first_x) = plot.raw_plot.first().and_then(|f| f.first()) else {
+                continue;
+            };
+            let Some(last_x) = plot.raw_plot.last().and_then(|l| l.first()) else {
+                continue;
+            };
             if let Some(current_x_min_max) = x_min_max {
                 let xrange = current_x_min_max.range_x();
                 let current_x_min = xrange.start();
