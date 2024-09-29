@@ -43,9 +43,20 @@ test *ARGS="--workspace":
 
 # Lint
 [no-exit-message]
-lint *ARGS="--workspace --tests": && fmt
-    cargo {{clippy}} {{ARGS}}
+lint: clippy-native clippy-wasm && fmt
     typos
+
+[doc("Clippy linting targeting native"), no-exit-message]
+clippy-native: (clippy "--workspace --tests")
+
+[doc("Clippy linting targeting WASM"), no-exit-message]
+clippy-wasm:
+    CLIPPY_CONF_DIR="`pwd`/lint/wasm/clippy.toml" \
+    just clippy "--workspace --tests --target wasm32-unknown-unknown"
+
+[private, no-exit-message]
+clippy *ARGS:
+    cargo {{clippy}} {{ARGS}}
 
 [no-exit-message]
 fmt *ARGS:
