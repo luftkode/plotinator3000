@@ -16,7 +16,7 @@ eula = false
 
 
 [workspace]
-members = ["crates/log_if", "crates/plot_util", "crates/skytem_logs"]
+members = ["crates/*"]
 
 [workspace.dependencies]
 egui_plot = { version = "0.29", features = ["serde"] }
