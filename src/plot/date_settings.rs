@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use plot_util::PlotWithName;
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct LogStartDateSettings {
     pub log_id: String,
     pub original_start_date: DateTime<Utc>,
