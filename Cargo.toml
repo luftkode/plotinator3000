@@ -49,7 +49,7 @@ eframe = { version = "0.28", default-features = false, features = [
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
-rfd = "0.14.1"
+rfd = "0.15"
 egui-phosphor = "0.6.0"
 
 [dev-dependencies]
@@ -57,7 +57,7 @@ testresult.workspace = true
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.10"
+env_logger = "0.11"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
