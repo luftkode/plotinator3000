@@ -120,9 +120,9 @@ impl LogPlot {
     // Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`
     fn calc_plot_x_min_max(plots: &[PlotWithName], x_min_max: &mut Option<PlotBounds>) {
         for plot in plots {
-            // if plot.raw_plot.len() < 2 {
-            //     continue;
-            // }
+            if plot.raw_plot.len() < 2 {
+                continue;
+            }
             let first_x = plot.raw_plot.first().unwrap().first().unwrap();
             let last_x = plot.raw_plot.last().unwrap().first().unwrap();
             if let Some(current_x_min_max) = x_min_max {
