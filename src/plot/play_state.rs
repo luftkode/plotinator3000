@@ -26,7 +26,7 @@ fn now() -> f64 {
 pub fn playback_update_plot(timer: Option<f64>, plot_ui: &mut PlotUi, is_reset_pressed: bool) {
     if let Some(t) = timer {
         let mut bounds = plot_ui.plot_bounds();
-        bounds.translate_x(t * 1000.0); // multiply by 1000 to get milliseconds
+        bounds.translate_x(t * 1_000_000_000.0); // multiply by 1_000_000_000 to get nanoseconds
         plot_ui.set_plot_bounds(bounds);
     }
     if is_reset_pressed {
