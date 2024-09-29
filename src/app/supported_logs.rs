@@ -1,5 +1,7 @@
+use chrono::{DateTime, Utc};
 use egui::DroppedFile;
-use log_if::Log;
+use log_if::{Log, LogEntry, Plotable, RawPlot};
+use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
     mbed_motor_control::{
@@ -16,7 +18,7 @@ use std::{
 
 /// In the ideal future, this explicit list of supported logs is instead just a vector of log interfaces (traits)
 /// that would require the log interface to also support a common way for plotting logs
-#[derive(Default, serde::Deserialize, serde::Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct SupportedLogs {
     pid_log: Vec<PidLog>,
     status_log: Vec<StatusLog>,
@@ -24,6 +26,27 @@ pub struct SupportedLogs {
 }
 
 impl SupportedLogs {
+    pub fn logs(&mut self) -> Vec<Box<dyn Plotable>> {
+        let mut all_logs: Vec<Box<dyn Plotable>> = Vec::new();
+        all_logs.extend(
+            self.pid_log
+                .drain(..)
+                .map(|log| Box::new(log) as Box<dyn Plotable>),
+        );
+        all_logs.extend(
+            self.status_log
+                .drain(..)
+                .map(|log| Box::new(log) as Box<dyn Plotable>),
+        );
+        all_logs.extend(
+            self.generator_log
+                .drain(..)
+                .map(|log| Box::new(log) as Box<dyn Plotable>),
+        );
+
+        all_logs
+    }
+
     pub fn mbed_pid_log(&self) -> &[PidLog] {
         self.pid_log.as_ref()
     }
@@ -97,4 +120,25 @@ fn parse_path(path: &path::Path, logs: &mut SupportedLogs) -> io::Result<()> {
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const TEST_DATA_STATUS: &str =
+        "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
+
+    const TEST_DATA_PID: &str =
+        "../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin";
+
+    #[test]
+    fn test_sup() {
+        let data = fs::read(TEST_DATA_STATUS).unwrap();
+        let status_log = StatusLog::from_reader(&mut data.as_slice()).unwrap();
+
+        let data = fs::read(TEST_DATA_PID).unwrap();
+        let pidlog = PidLog::from_reader(&mut data.as_slice()).unwrap();
+
+        let v: Vec<Box<dyn Plotable>> = vec![Box::new(status_log), Box::new(pidlog)];
+    }
 }
