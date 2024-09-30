@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 
-- Migrate to workspace project structure
 - Allow Setting the date/offset of plots with the `Enter`-key and closing the settings window by pressing `Escape`
 - Upgrade `egui` to v0.29
+
+### Internals
+
+- Migrate to workspace project structure
+- Decouple Log implementation from the plotting interface

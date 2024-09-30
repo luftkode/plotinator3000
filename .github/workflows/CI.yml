@@ -1,7 +1,9 @@
-on: [
-  pull_request,
-  workflow_dispatch,
-]
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+
 
 name: CI
 

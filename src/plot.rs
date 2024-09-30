@@ -1,10 +1,6 @@
 use date_settings::LogStartDateSettings;
 use plot_util::PlotWithName;
 use serde::{Deserialize, Serialize};
-use skytem_logs::{
-    generator::GeneratorLog,
-    mbed_motor_control::{pid::PidLog, status::StatusLog},
-};
 
 use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
@@ -33,6 +29,8 @@ pub struct LogPlot {
     plot_visibility: PlotVisibilityConfig,
     log_start_date_settings: Vec<LogStartDateSettings>,
     x_min_max: Option<PlotBounds>,
+    // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
+    invalidate_plot: bool,
 }
 
 impl Default for LogPlot {
@@ -48,6 +46,7 @@ impl Default for LogPlot {
             plot_visibility: PlotVisibilityConfig::default(),
             log_start_date_settings: vec![],
             x_min_max: None,
+            invalidate_plot: false,
         }
     }
 }
@@ -58,7 +57,7 @@ impl LogPlot {
         percentage_plots: &mut Vec<PlotWithName>,
         to_hundreds_plots: &mut Vec<PlotWithName>,
         to_thousands_plots: &mut Vec<PlotWithName>,
-        log: &impl Plotable,
+        log: &dyn Plotable,
         idx: usize,
     ) {
         let log_id = format!("#{} {}", idx + 1, log.unique_name());
@@ -159,13 +158,7 @@ impl LogPlot {
 
     // TODO: Fix this lint
     #[allow(clippy::too_many_lines)]
-    pub fn ui(
-        &mut self,
-        gui: &mut egui::Ui,
-        pid_logs: &[PidLog],
-        status_logs: &[StatusLog],
-        generator_logs: &[GeneratorLog],
-    ) -> Response {
+    pub fn ui(&mut self, gui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
         let Self {
             config,
             line_width,
@@ -177,7 +170,14 @@ impl LogPlot {
             plot_visibility,
             log_start_date_settings,
             x_min_max,
+            invalidate_plot,
         } = self;
+
+        // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
+        if *invalidate_plot {
+            *x_min_max = None;
+            *invalidate_plot = false;
+        }
 
         Self::calc_plot_x_min_max(percentage_plots, x_min_max);
         Self::calc_plot_x_min_max(to_hundreds_plots, x_min_max);
@@ -203,39 +203,20 @@ impl LogPlot {
         let link_group_id = gui.id().with("linked_plots");
 
         gui.vertical(|ui| {
-            for (idx, pid_log) in pid_logs.iter().enumerate() {
+            for (idx, log) in logs.iter().enumerate() {
                 Self::add_plot_data_to_plot_collections(
                     log_start_date_settings,
                     percentage_plots,
                     to_hundreds_plots,
                     to_thousands_plots,
-                    pid_log,
-                    idx,
-                );
-            }
-            for (idx, status_log) in status_logs.iter().enumerate() {
-                Self::add_plot_data_to_plot_collections(
-                    log_start_date_settings,
-                    percentage_plots,
-                    to_hundreds_plots,
-                    to_thousands_plots,
-                    status_log,
-                    idx,
-                );
-            }
-            for (idx, gen_log) in generator_logs.iter().enumerate() {
-                Self::add_plot_data_to_plot_collections(
-                    log_start_date_settings,
-                    percentage_plots,
-                    to_hundreds_plots,
-                    to_thousands_plots,
-                    gen_log,
+                    log.as_ref(),
                     idx,
                 );
             }
 
             for settings in log_start_date_settings {
                 date_settings::update_plot_dates(
+                    invalidate_plot,
                     percentage_plots,
                     to_hundreds_plots,
                     to_thousands_plots,

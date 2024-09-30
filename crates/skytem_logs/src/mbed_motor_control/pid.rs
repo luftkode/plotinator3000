@@ -12,7 +12,7 @@ use super::MbedMotorControlLogHeader;
 pub mod entry;
 pub mod header;
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
     header: PidLogHeader,
     entries: Vec<PidLogEntry>,
