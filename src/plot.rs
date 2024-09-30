@@ -15,6 +15,7 @@ mod date_settings;
 mod play_state;
 mod plot_ui;
 mod plot_visibility_config;
+mod util;
 
 #[allow(missing_debug_implementations)] // Legend is from egui_plot and doesn't implement debug
 #[derive(PartialEq, Deserialize, Serialize)]
@@ -121,31 +122,6 @@ impl LogPlot {
         self.play_state.is_playing()
     }
 
-    // Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`
-    fn calc_plot_x_min_max(plots: &[PlotWithName], x_min_max: &mut Option<(f64, f64)>) {
-        for plot in plots {
-            if plot.raw_plot.len() < 2 {
-                continue;
-            }
-            let Some(first_x) = plot.raw_plot.first().and_then(|f| f.first()) else {
-                continue;
-            };
-            let Some(last_x) = plot.raw_plot.last().and_then(|l| l.first()) else {
-                continue;
-            };
-            if let Some((current_x_min, current_x_max)) = x_min_max {
-                if first_x < current_x_min {
-                    *current_x_min = *first_x;
-                }
-                if last_x > current_x_max {
-                    *current_x_max = *last_x;
-                }
-            } else {
-                x_min_max.replace((*first_x, *last_x));
-            }
-        }
-    }
-
     // TODO: Fix this lint
     #[allow(clippy::too_many_lines)]
     pub fn ui(&mut self, gui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
@@ -169,9 +145,12 @@ impl LogPlot {
             *invalidate_plot = false;
         }
 
-        Self::calc_plot_x_min_max(percentage_plots, x_min_max);
-        Self::calc_plot_x_min_max(to_hundreds_plots, x_min_max);
-        Self::calc_plot_x_min_max(to_thousands_plots, x_min_max);
+        util::calc_all_plot_x_min_max(
+            &percentage_plots,
+            &to_hundreds_plots,
+            &to_thousands_plots,
+            x_min_max,
+        );
 
         let mut playback_button_event = None;
 
