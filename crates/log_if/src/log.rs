@@ -20,6 +20,8 @@ pub trait LogEntry: Sized + Display + Send + Sync {
 }
 
 /// A given log header should implement this
+///
+/// If it does not, it returns [`None`] but it really should!
 pub trait GitMetadata {
     fn project_version(&self) -> Option<String>;
     fn git_short_sha(&self) -> Option<String>;
