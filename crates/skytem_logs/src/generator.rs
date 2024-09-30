@@ -31,7 +31,7 @@ impl GeneratorLog {
     }
 }
 
-impl Log for GeneratorLog {
+impl SkytemLog for GeneratorLog {
     type Entry = GeneratorLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -86,6 +86,24 @@ impl Plotable for GeneratorLog {
 
     fn unique_name(&self) -> &str {
         "Legacy Generator Log 2016"
+    }
+}
+
+impl GitMetadata for GeneratorLog {
+    fn project_version(&self) -> Option<String> {
+        None
+    }
+
+    fn git_short_sha(&self) -> Option<String> {
+        None
+    }
+
+    fn git_branch(&self) -> Option<String> {
+        None
+    }
+
+    fn git_repo_status(&self) -> Option<String> {
+        None
     }
 }
 

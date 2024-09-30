@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Internals
 
 - Better divide interfaces in the `log_if` crate and use a prelude to make it easy to import all relevant traits via glob imports.
+- Change `GitMetadata` trait to return `Option<String>` to accommodate logs that don't contain git metadata.
 
 ### Changes
 

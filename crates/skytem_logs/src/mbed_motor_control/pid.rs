@@ -19,7 +19,7 @@ pub struct PidLog {
     startup_timestamp: DateTime<Utc>,
 }
 
-impl Log for PidLog {
+impl SkytemLog for PidLog {
     type Entry = PidLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -109,6 +109,24 @@ impl Log for PidLog {
 
     fn entries(&self) -> &[Self::Entry] {
         &self.entries
+    }
+}
+
+impl GitMetadata for PidLog {
+    fn project_version(&self) -> Option<String> {
+        self.header.project_version()
+    }
+
+    fn git_short_sha(&self) -> Option<String> {
+        self.header.git_short_sha()
+    }
+
+    fn git_branch(&self) -> Option<String> {
+        self.header.git_branch()
+    }
+
+    fn git_repo_status(&self) -> Option<String> {
+        self.header.git_repo_status()
     }
 }
 

@@ -3,7 +3,7 @@ use std::{fmt::Display, io};
 use crate::plotable::Plotable;
 
 /// A given log should implement this trait
-pub trait Log: Plotable + Clone + Display + Send + Sync + Sized {
+pub trait SkytemLog: Plotable + Clone + Display + Send + Sync + Sized + GitMetadata {
     type Entry: LogEntry;
     /// Create a [Log] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
@@ -20,9 +20,11 @@ pub trait LogEntry: Sized + Display + Send + Sync {
 }
 
 /// A given log header should implement this
+///
+/// If it does not, it returns [`None`] but it really should!
 pub trait GitMetadata {
-    fn project_version(&self) -> String;
-    fn git_short_sha(&self) -> String;
-    fn git_branch(&self) -> String;
-    fn git_repo_status(&self) -> String;
+    fn project_version(&self) -> Option<String>;
+    fn git_short_sha(&self) -> Option<String>;
+    fn git_branch(&self) -> Option<String>;
+    fn git_repo_status(&self) -> Option<String>;
 }

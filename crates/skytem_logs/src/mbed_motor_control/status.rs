@@ -19,7 +19,7 @@ pub struct StatusLog {
     startup_timestamp: DateTime<Utc>,
 }
 
-impl Log for StatusLog {
+impl SkytemLog for StatusLog {
     type Entry = StatusLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
@@ -114,6 +114,24 @@ impl Log for StatusLog {
 
     fn entries(&self) -> &[Self::Entry] {
         &self.entries
+    }
+}
+
+impl GitMetadata for StatusLog {
+    fn project_version(&self) -> Option<String> {
+        self.header.project_version()
+    }
+
+    fn git_short_sha(&self) -> Option<String> {
+        self.header.git_short_sha()
+    }
+
+    fn git_branch(&self) -> Option<String> {
+        self.header.git_branch()
+    }
+
+    fn git_repo_status(&self) -> Option<String> {
+        self.header.git_repo_status()
     }
 }
 
