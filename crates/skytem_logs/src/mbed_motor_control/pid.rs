@@ -81,12 +81,12 @@ impl Log for PidLog {
             RawPlot::new(
                 "RPM Error Count".into(),
                 rpm_error_count_plot_raw,
-                ExpectedPlotRange::Thousands,
+                ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
                 "First Valid RPM Count".into(),
                 first_valid_rpm_count_plot_raw,
-                ExpectedPlotRange::Thousands,
+                ExpectedPlotRange::OneToOneHundred,
             ),
         ];
         // Iterate through the plots and make sure all the first timestamps match
