@@ -29,22 +29,6 @@ where
         .collect()
 }
 
-/// Utility function for converting a slice of [`LogEntry`] to plot points by supplying a slice of normalized timestamps
-/// and an extractor function detailing how to extract the data (Y) from [`LogEntry`]s.
-pub fn plot_points_from_normalized_timestamp<F, L: LogEntry>(
-    log: &[L],
-    normalized_timestamps_ms: &[f64],
-    y_extractor: F,
-) -> Vec<[f64; 2]>
-where
-    F: Fn(&L) -> f64,
-{
-    log.iter()
-        .zip(normalized_timestamps_ms)
-        .map(|(e, ts)| [*ts, y_extractor(e)])
-        .collect()
-}
-
 /// Where does the plot values typically fit within, e.g. RPM measurements will probably be in the thousands, while a duty cycle will be in percentage.
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
 pub enum ExpectedPlotRange {
