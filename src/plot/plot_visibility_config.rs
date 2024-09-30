@@ -40,7 +40,7 @@ impl PlotVisibilityConfig {
                 regular::EYE_SLASH
             }
         );
-        _ = ui.toggle_value(&mut self.show_percentage_plot, show_perc_plot_text);
+        ui.toggle_value(&mut self.show_percentage_plot, show_perc_plot_text);
         let show_to_hundr_plot_text = format!(
             "{} 0-100 plot",
             if self.show_to_hundreds_plot {
@@ -50,7 +50,7 @@ impl PlotVisibilityConfig {
             }
         );
 
-        _ = ui.toggle_value(&mut self.show_to_hundreds_plot, show_to_hundr_plot_text);
+        ui.toggle_value(&mut self.show_to_hundreds_plot, show_to_hundr_plot_text);
         let show_to_thousands_plot_text = format!(
             "{} 0-1000s plot",
             if self.show_to_thousands_plot {
@@ -59,7 +59,7 @@ impl PlotVisibilityConfig {
                 regular::EYE_SLASH
             }
         );
-        _ = ui.toggle_value(
+        ui.toggle_value(
             &mut self.show_to_thousands_plot,
             show_to_thousands_plot_text,
         );
