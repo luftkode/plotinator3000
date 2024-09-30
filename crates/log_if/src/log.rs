@@ -21,8 +21,8 @@ pub trait LogEntry: Sized + Display + Send + Sync {
 
 /// A given log header should implement this
 pub trait GitMetadata {
-    fn project_version(&self) -> String;
-    fn git_short_sha(&self) -> String;
-    fn git_branch(&self) -> String;
-    fn git_repo_status(&self) -> String;
+    fn project_version(&self) -> Option<String>;
+    fn git_short_sha(&self) -> Option<String>;
+    fn git_branch(&self) -> Option<String>;
+    fn git_repo_status(&self) -> Option<String>;
 }
