@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.12.0]
+
 ### Changes
 
 - Allow Setting the date/offset of plots with the `Enter`-key and closing the settings window by pressing `Escape`
