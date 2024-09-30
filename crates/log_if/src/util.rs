@@ -1,6 +1,4 @@
-use serde::{Deserialize, Serialize};
-
-use crate::LogEntry;
+use crate::prelude::*;
 use std::io;
 
 /// Take a reader and parse [`LogEntry`]s from it until it returns an error,
@@ -27,13 +25,4 @@ where
     log.iter()
         .map(|e| [x_extractor(e), y_extractor(e)])
         .collect()
-}
-
-/// Where does the plot values typically fit within, e.g. RPM measurements will probably be in the thousands, while a duty cycle will be in percentage.
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
-pub enum ExpectedPlotRange {
-    /// For plots where the value is 0.0-1.0 and corresponds to percentage 0-100%
-    Percentage,
-    OneToOneHundred,
-    Thousands,
 }
