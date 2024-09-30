@@ -3,7 +3,8 @@ use crate::util::timestamp_from_raw;
 use super::parse_unique_description;
 use byteorder::{LittleEndian, ReadBytesExt};
 use chrono::{NaiveDateTime, ParseResult};
-use log_if::GitMetadata;
+use log_if::prelude::*;
+
 use std::{
     fs,
     io::{self, Read},

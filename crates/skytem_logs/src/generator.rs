@@ -6,11 +6,7 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
-use log_if::{
-    util::{plot_points_from_log_entry, ExpectedPlotRange},
-    Plotable, RawPlot,
-};
-use log_if::{Log, LogEntry};
+use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -90,7 +86,7 @@ impl Log for GeneratorLog {
 }
 
 impl Plotable for GeneratorLog {
-    fn raw_plots(&self) -> &[log_if::RawPlot] {
+    fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
     }
 
@@ -261,7 +257,7 @@ impl GeneratorLogEntry {
     }
 }
 
-impl log_if::LogEntry for GeneratorLogEntry {
+impl LogEntry for GeneratorLogEntry {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let mut line = String::new();
         let mut bufreader = BufReader::new(reader);
@@ -359,7 +355,6 @@ mod tests {
     use std::fs;
 
     use chrono::NaiveDate;
-    use log_if::Log;
     use testresult::TestResult;
 
     const TEST_DATA: &str = "../../test_data/generator/20230124_134738_Gen.log";

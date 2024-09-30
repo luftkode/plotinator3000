@@ -1,4 +1,5 @@
 use date_settings::LogStartDateSettings;
+use log_if::plotable::{ExpectedPlotRange, Plotable, RawPlot};
 use plot_util::PlotWithName;
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +7,6 @@ use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
-use log_if::{util::ExpectedPlotRange, Plotable, RawPlot};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 

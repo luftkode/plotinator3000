@@ -4,9 +4,7 @@ use super::MbedMotorControlLogHeader;
 use chrono::{DateTime, Utc};
 use entry::{MotorState, StatusLogEntry};
 use header::StatusLogHeader;
-use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
-use log_if::{util::parse_to_vec, LogEntry};
-use log_if::{Log, Plotable, RawPlot};
+use log_if::prelude::*;
 
 pub mod entry;
 pub mod header;
@@ -181,7 +179,7 @@ fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(f64, 
 
 #[cfg(test)]
 mod tests {
-    use log_if::Log;
+    use super::*;
     use std::fs::{self, File};
     use testresult::TestResult;
 
@@ -189,8 +187,6 @@ mod tests {
         "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
 
     use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
-
-    use super::*;
 
     #[test]
     fn test_deserialize() -> TestResult {

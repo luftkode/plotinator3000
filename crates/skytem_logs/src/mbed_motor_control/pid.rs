@@ -1,9 +1,7 @@
 use chrono::{DateTime, Utc};
 use entry::PidLogEntry;
 use header::PidLogHeader;
-use log_if::util::{plot_points_from_log_entry, ExpectedPlotRange};
-use log_if::{util::parse_to_vec, LogEntry};
-use log_if::{Log, Plotable, RawPlot};
+use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
 
@@ -140,18 +138,14 @@ impl fmt::Display for PidLog {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
+    use header::PidLogHeader;
     use std::fs::{self, File};
+    use testresult::TestResult;
 
     const TEST_DATA: &str =
         "../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin";
-
-    use header::PidLogHeader;
-    use log_if::Log;
-    use testresult::TestResult;
-
-    use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
-
-    use super::*;
 
     #[test]
     fn test_deserialize() -> TestResult {
