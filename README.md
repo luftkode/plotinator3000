@@ -25,6 +25,12 @@ For inspiration/educational purposes. Anyone developing `egui`/`eframe` apps may
 
 Check the [Justfile](Justfile) for recipes to get started, or invoke `just` to list available recipes.
 
+Check if code compiles on native and wasm targets without actually compiling
+
+```shell
+just check-all # alias `ca` for speed!
+```
+
 Run as a native app
 
 ```
