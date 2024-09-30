@@ -1,16 +1,12 @@
 use date_settings::LogStartDateSettings;
 use plot_util::PlotWithName;
 use serde::{Deserialize, Serialize};
-use skytem_logs::{
-    generator::GeneratorLog,
-    mbed_motor_control::{pid::PidLog, status::StatusLog},
-};
 
 use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
-use log_if::{util::ExpectedPlotRange, Log, Plotable, RawPlot};
+use log_if::{util::ExpectedPlotRange, Plotable, RawPlot};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 
@@ -61,7 +57,7 @@ impl LogPlot {
         percentage_plots: &mut Vec<PlotWithName>,
         to_hundreds_plots: &mut Vec<PlotWithName>,
         to_thousands_plots: &mut Vec<PlotWithName>,
-        log: &Box<dyn Plotable>,
+        log: &dyn Plotable,
         idx: usize,
     ) {
         let log_id = format!("#{} {}", idx + 1, log.unique_name());
@@ -162,7 +158,7 @@ impl LogPlot {
 
     // TODO: Fix this lint
     #[allow(clippy::too_many_lines)]
-    pub fn ui(&mut self, gui: &mut egui::Ui, logs: Vec<Box<dyn Plotable>>) -> Response {
+    pub fn ui(&mut self, gui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
         let Self {
             config,
             line_width,
@@ -213,7 +209,7 @@ impl LogPlot {
                     percentage_plots,
                     to_hundreds_plots,
                     to_thousands_plots,
-                    log,
+                    log.as_ref(),
                     idx,
                 );
             }

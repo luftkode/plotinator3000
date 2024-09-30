@@ -1,6 +1,5 @@
-use chrono::{DateTime, Utc};
 use egui::DroppedFile;
-use log_if::{Log, LogEntry, Plotable, RawPlot};
+use log_if::{Log, Plotable};
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
@@ -28,33 +27,11 @@ pub struct SupportedLogs {
 impl SupportedLogs {
     pub fn logs(&mut self) -> Vec<Box<dyn Plotable>> {
         let mut all_logs: Vec<Box<dyn Plotable>> = Vec::new();
-        all_logs.extend(
-            self.pid_log
-                .drain(..)
-                .map(|log| Box::new(log) as Box<dyn Plotable>),
-        );
-        all_logs.extend(
-            self.status_log
-                .drain(..)
-                .map(|log| Box::new(log) as Box<dyn Plotable>),
-        );
-        all_logs.extend(
-            self.generator_log
-                .drain(..)
-                .map(|log| Box::new(log) as Box<dyn Plotable>),
-        );
+        all_logs.extend(self.pid_log.drain(..).map(|log| log.into()));
+        all_logs.extend(self.status_log.drain(..).map(|log| log.into()));
+        all_logs.extend(self.generator_log.drain(..).map(|log| log.into()));
 
         all_logs
-    }
-
-    pub fn mbed_pid_log(&self) -> &[PidLog] {
-        self.pid_log.as_ref()
-    }
-    pub fn mbed_status_log(&self) -> &[StatusLog] {
-        self.status_log.as_ref()
-    }
-    pub fn generator_log(&self) -> &[GeneratorLog] {
-        self.generator_log.as_ref()
     }
 
     /// Parse dropped files to supported logs. Only parses and stores log types that haven't already been parsed successfully
@@ -126,13 +103,13 @@ fn parse_path(path: &path::Path, logs: &mut SupportedLogs) -> io::Result<()> {
 mod tests {
     use super::*;
     const TEST_DATA_STATUS: &str =
-        "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
+        "test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
 
     const TEST_DATA_PID: &str =
-        "../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin";
+        "test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin";
 
     #[test]
-    fn test_sup() {
+    fn test_supported_logs_dyn_vec() {
         let data = fs::read(TEST_DATA_STATUS).unwrap();
         let status_log = StatusLog::from_reader(&mut data.as_slice()).unwrap();
 
@@ -140,5 +117,6 @@ mod tests {
         let pidlog = PidLog::from_reader(&mut data.as_slice()).unwrap();
 
         let v: Vec<Box<dyn Plotable>> = vec![Box::new(status_log), Box::new(pidlog)];
+        assert_eq!(v.len(), 2);
     }
 }
