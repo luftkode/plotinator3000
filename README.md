@@ -21,6 +21,12 @@ Inspect logs from the [Swiss Auto motor control](https://github.com/luftkode/mbe
 
 For inspiration/educational purposes. Anyone developing `egui`/`eframe` apps may or may not find any of the solutions in this repository useful for their own project(s).
 
+## Installation
+
+See the [latest release](https://github.com/luftkode/logviewer-rs/releases/latest) and choose the installation method you prefer.
+
+Installing with the shell script (unix) or powershell script (windows) will also install an updater which can be used to fetch the latest version.
+
 ## Quick start
 
 Check the [Justfile](Justfile) for recipes to get started, or invoke `just` to list available recipes.
