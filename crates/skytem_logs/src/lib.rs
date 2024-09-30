@@ -1,6 +1,6 @@
 use std::io;
 
-use log_if::LogEntry;
+use log_if::prelude::*;
 
 pub mod generator;
 pub mod mbed_motor_control;

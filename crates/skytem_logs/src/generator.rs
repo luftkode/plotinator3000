@@ -6,17 +6,13 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
-use log_if::{
-    util::{plot_points_from_log_entry, ExpectedPlotRange},
-    Plotable, RawPlot,
-};
-use log_if::{Log, LogEntry};
+use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
     entries: Vec<GeneratorLogEntry>,
-    pub power: Vec<f64>, // Calculated from Vout * Vin
+    power: Vec<f64>, // Calculated from Vout * Vin
     /// timestamps in nanoseconds since the epoch
     timestamps_ns: Vec<f64>,
     all_plots_raw: Vec<RawPlot>,
@@ -61,20 +57,6 @@ impl Log for GeneratorLog {
             timestamps_ns.push(entry.timestamp_ns());
         }
 
-        let mut normalized_timestamps_ms: Vec<f64> = Vec::with_capacity(entries.len());
-        normalized_timestamps_ms.push(0.0);
-        let first_timestamp = entries
-            .first()
-            .expect("Log entries is empty")
-            .timestamp
-            .and_utc()
-            .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range") as f64;
-        for entry in entries.iter().skip(1) {
-            let normalized_ts = entry.timestamp_ns() - first_timestamp;
-            normalized_timestamps_ms.push(normalized_ts);
-        }
-
         let all_plots_raw = build_all_plots(&entries);
         Ok(Self {
             entries,
@@ -90,7 +72,7 @@ impl Log for GeneratorLog {
 }
 
 impl Plotable for GeneratorLog {
-    fn raw_plots(&self) -> &[log_if::RawPlot] {
+    fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
     }
 
@@ -261,7 +243,7 @@ impl GeneratorLogEntry {
     }
 }
 
-impl log_if::LogEntry for GeneratorLogEntry {
+impl LogEntry for GeneratorLogEntry {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let mut line = String::new();
         let mut bufreader = BufReader::new(reader);
@@ -359,7 +341,6 @@ mod tests {
     use std::fs;
 
     use chrono::NaiveDate;
-    use log_if::Log;
     use testresult::TestResult;
 
     const TEST_DATA: &str = "../../test_data/generator/20230124_134738_Gen.log";

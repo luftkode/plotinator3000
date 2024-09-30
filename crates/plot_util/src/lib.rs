@@ -1,7 +1,7 @@
 pub mod mipmap;
 
 use egui_plot::{Line, PlotBounds, PlotPoints};
-use log_if::LogEntry;
+use log_if::prelude::*;
 use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
 

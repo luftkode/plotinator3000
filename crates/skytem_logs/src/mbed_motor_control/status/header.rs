@@ -4,10 +4,9 @@ use super::super::{
     GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
     ProjectVersionData, UniqueDescriptionData,
 };
-use std::fmt;
-
-use log_if::GitMetadata;
+use log_if::prelude::*;
 use serde_big_array::BigArray;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]
 pub struct StatusLogHeader {

@@ -1,5 +1,5 @@
 use egui::DroppedFile;
-use log_if::{Log, Plotable};
+use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
