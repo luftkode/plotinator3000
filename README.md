@@ -33,13 +33,13 @@ just check-all # alias `ca` for speed!
 
 Run as a native app
 
-```
+```shell
 just run
 ```
 
 Serve as WASM on a local web server
 
-```
+```shell
 just serve
 ```
 
