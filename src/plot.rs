@@ -170,7 +170,7 @@ impl LogPlot {
             let thousands = create_plot("to_thousands");
 
             if display_percentage_plot {
-                _ = percentage_plot.show(ui, |percentage_plot_ui| {
+                percentage_plot.show(ui, |percentage_plot_ui| {
                     Self::handle_plot(percentage_plot_ui, |arg_plot_ui| {
                         plot_util::plot_lines(arg_plot_ui, percentage_plots, *line_width);
                         playback_update_plot(
@@ -196,8 +196,8 @@ impl LogPlot {
             }
 
             if display_to_hundred_plot {
-                _ = ui.separator();
-                _ = to_hundred.show(ui, |to_hundred_plot_ui| {
+                ui.separator();
+                to_hundred.show(ui, |to_hundred_plot_ui| {
                     Self::handle_plot(to_hundred_plot_ui, |arg_plot_ui| {
                         plot_util::plot_lines(arg_plot_ui, to_hundreds_plots, *line_width);
                         axis_config.handle_y_axis_lock(
