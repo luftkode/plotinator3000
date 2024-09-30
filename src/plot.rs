@@ -1,5 +1,5 @@
 use date_settings::LogStartDateSettings;
-use log_if::plotable::{ExpectedPlotRange, Plotable, RawPlot};
+use log_if::plotable::Plotable;
 use plot_util::PlotWithName;
 use serde::{Deserialize, Serialize};
 
@@ -53,68 +53,6 @@ impl Default for LogPlot {
 }
 
 impl LogPlot {
-    fn add_plot_data_to_plot_collections(
-        log_start_date_settings: &mut Vec<LogStartDateSettings>,
-        percentage_plots: &mut Vec<PlotWithName>,
-        to_hundreds_plots: &mut Vec<PlotWithName>,
-        to_thousands_plots: &mut Vec<PlotWithName>,
-        log: &dyn Plotable,
-        idx: usize,
-    ) {
-        let log_id = format!("#{} {}", idx + 1, log.unique_name());
-        if !log_start_date_settings
-            .iter()
-            .any(|settings| *settings.log_id == log_id)
-        {
-            log_start_date_settings.push(LogStartDateSettings::new(
-                log_id.clone(),
-                log.first_timestamp(),
-            ));
-        }
-
-        for raw_plot in log.raw_plots() {
-            let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
-            match raw_plot.expected_range() {
-                ExpectedPlotRange::Percentage => {
-                    Self::add_plot_to_vector(
-                        percentage_plots,
-                        raw_plot,
-                        &plot_name,
-                        log_id.clone(),
-                    );
-                }
-                ExpectedPlotRange::OneToOneHundred => Self::add_plot_to_vector(
-                    to_hundreds_plots,
-                    raw_plot,
-                    &plot_name,
-                    log_id.clone(),
-                ),
-                ExpectedPlotRange::Thousands => Self::add_plot_to_vector(
-                    to_thousands_plots,
-                    raw_plot,
-                    &plot_name,
-                    log_id.clone(),
-                ),
-            }
-        }
-    }
-
-    /// Add plot to the list of plots if a plot with the same name isn't already in the vector
-    fn add_plot_to_vector(
-        plots: &mut Vec<PlotWithName>,
-        raw_plot: &RawPlot,
-        plot_name: &str,
-        log_id: String,
-    ) {
-        if !plots.iter().any(|p| p.name == *plot_name) {
-            plots.push(PlotWithName::new(
-                raw_plot.points().to_vec(),
-                plot_name.to_owned(),
-                log_id,
-            ));
-        }
-    }
-
     pub fn formatted_playback_time(&self) -> String {
         self.play_state.formatted_time()
     }
@@ -146,9 +84,9 @@ impl LogPlot {
         }
 
         util::calc_all_plot_x_min_max(
-            &percentage_plots,
-            &to_hundreds_plots,
-            &to_thousands_plots,
+            percentage_plots,
+            to_hundreds_plots,
+            to_thousands_plots,
             x_min_max,
         );
 
@@ -173,7 +111,7 @@ impl LogPlot {
 
         gui.vertical(|ui| {
             for (idx, log) in logs.iter().enumerate() {
-                Self::add_plot_data_to_plot_collections(
+                util::add_plot_data_to_plot_collections(
                     log_start_date_settings,
                     percentage_plots,
                     to_hundreds_plots,
