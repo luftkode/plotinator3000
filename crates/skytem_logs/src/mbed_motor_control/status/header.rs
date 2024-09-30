@@ -22,28 +22,44 @@ pub struct StatusLogHeader {
 }
 
 impl GitMetadata for StatusLogHeader {
-    fn project_version(&self) -> String {
-        String::from_utf8_lossy(self.project_version_raw())
+    fn project_version(&self) -> Option<String> {
+        Some(
+            String::from_utf8_lossy(self.project_version_raw())
+                .trim_end_matches(char::from(0))
+                .to_owned(),
+        )
+    }
+    fn git_branch(&self) -> Option<String> {
+        let git_branch_info = String::from_utf8_lossy(self.git_branch_raw())
             .trim_end_matches(char::from(0))
-            .to_owned()
+            .to_owned();
+        if git_branch_info.is_empty() {
+            None
+        } else {
+            Some(git_branch_info)
+        }
     }
 
-    fn git_short_sha(&self) -> String {
-        String::from_utf8_lossy(self.git_short_sha_raw())
+    fn git_repo_status(&self) -> Option<String> {
+        let repo_status = String::from_utf8_lossy(self.git_repo_status_raw())
             .trim_end_matches(char::from(0))
-            .to_owned()
+            .to_owned();
+        if repo_status.is_empty() {
+            None
+        } else {
+            Some(repo_status)
+        }
     }
 
-    fn git_branch(&self) -> String {
-        String::from_utf8_lossy(self.git_branch_raw())
+    fn git_short_sha(&self) -> Option<String> {
+        let short_sha = String::from_utf8_lossy(self.git_short_sha_raw())
             .trim_end_matches(char::from(0))
-            .to_owned()
-    }
-
-    fn git_repo_status(&self) -> String {
-        String::from_utf8_lossy(self.git_repo_status_raw())
-            .trim_end_matches(char::from(0))
-            .to_owned()
+            .to_owned();
+        if short_sha.is_empty() {
+            None
+        } else {
+            Some(short_sha)
+        }
     }
 }
 
@@ -102,17 +118,19 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
 impl fmt::Display for StatusLogHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
-        writeln!(f, "Project Version: {}", self.project_version())?;
-        let git_branch = self.git_branch();
-        if !git_branch.is_empty() {
-            writeln!(f, "Branch: {}", self.git_branch())?;
+        writeln!(
+            f,
+            "Project Version: {}",
+            self.project_version()
+                .unwrap_or_else(|| "<Missing>".to_owned())
+        )?;
+        if let Some(git_branch) = self.git_branch() {
+            writeln!(f, "Branch: {git_branch}")?;
         }
-        let git_short_sha = self.git_short_sha();
-        if !git_short_sha.is_empty() {
+        if let Some(git_short_sha) = self.git_short_sha() {
             writeln!(f, "SHA: {git_short_sha}")?;
         }
-        let is_dirty = self.git_repo_status();
-        if !is_dirty.is_empty() {
+        if self.git_repo_status().is_some() {
             writeln!(f, "Repo status: dirty")?;
         }
         Ok(())
@@ -138,9 +156,12 @@ mod tests {
             StatusLogHeader::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log_header.version, 1);
-        assert_eq!(status_log_header.project_version(), "1.3.0");
-        assert_eq!(status_log_header.git_branch(), "fix-23-pid-loop-in-standby");
-        assert_eq!(status_log_header.git_short_sha(), "fe6e412");
+        assert_eq!(status_log_header.project_version().unwrap(), "1.3.0");
+        assert_eq!(
+            status_log_header.git_branch().unwrap(),
+            "fix-23-pid-loop-in-standby"
+        );
+        assert_eq!(status_log_header.git_short_sha().unwrap(), "fe6e412");
         Ok(())
     }
 }
