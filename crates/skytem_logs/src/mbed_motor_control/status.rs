@@ -117,6 +117,24 @@ impl Log for StatusLog {
     }
 }
 
+impl GitMetadata for StatusLog {
+    fn project_version(&self) -> Option<String> {
+        self.header.project_version()
+    }
+
+    fn git_short_sha(&self) -> Option<String> {
+        self.header.git_short_sha()
+    }
+
+    fn git_branch(&self) -> Option<String> {
+        self.header.git_branch()
+    }
+
+    fn git_repo_status(&self) -> Option<String> {
+        self.header.git_repo_status()
+    }
+}
+
 impl Plotable for StatusLog {
     fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw

@@ -89,6 +89,24 @@ impl Plotable for GeneratorLog {
     }
 }
 
+impl GitMetadata for GeneratorLog {
+    fn project_version(&self) -> Option<String> {
+        None
+    }
+
+    fn git_short_sha(&self) -> Option<String> {
+        None
+    }
+
+    fn git_branch(&self) -> Option<String> {
+        None
+    }
+
+    fn git_repo_status(&self) -> Option<String> {
+        None
+    }
+}
+
 // Helper function to keep all the boiler plate of building each plot
 fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
     vec![
