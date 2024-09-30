@@ -90,7 +90,7 @@ impl AxisConfig {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum PlotType {
     Percentage,
     Hundreds,
