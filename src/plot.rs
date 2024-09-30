@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
 use egui::Response;
-use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use log_if::{util::ExpectedPlotRange, Plotable, RawPlot};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
@@ -28,7 +28,7 @@ pub struct LogPlot {
     to_thousands_plots: Vec<PlotWithName>,
     plot_visibility: PlotVisibilityConfig,
     log_start_date_settings: Vec<LogStartDateSettings>,
-    x_min_max: Option<PlotBounds>,
+    x_min_max: Option<(f64, f64)>,
     // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
     invalidate_plot: bool,
 }
@@ -122,7 +122,7 @@ impl LogPlot {
     }
 
     // Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`
-    fn calc_plot_x_min_max(plots: &[PlotWithName], x_min_max: &mut Option<PlotBounds>) {
+    fn calc_plot_x_min_max(plots: &[PlotWithName], x_min_max: &mut Option<(f64, f64)>) {
         for plot in plots {
             if plot.raw_plot.len() < 2 {
                 continue;
@@ -133,25 +133,15 @@ impl LogPlot {
             let Some(last_x) = plot.raw_plot.last().and_then(|l| l.first()) else {
                 continue;
             };
-            if let Some(current_x_min_max) = x_min_max {
-                let xrange = current_x_min_max.range_x();
-                let current_x_min = xrange.start();
-                let current_x_max = xrange.end();
+            if let Some((current_x_min, current_x_max)) = x_min_max {
                 if first_x < current_x_min {
-                    let tmp = PlotBounds::from_min_max([*first_x, *current_x_max], [0.0, 1.0]);
-                    current_x_min_max.set_x(&tmp);
+                    *current_x_min = *first_x;
                 }
                 if last_x > current_x_max {
-                    let x_min = if current_x_min < first_x {
-                        current_x_min
-                    } else {
-                        first_x
-                    };
-                    let tmp_max = PlotBounds::from_min_max([*x_min, *last_x], [0.0, 1.0]);
-                    current_x_min_max.set_x(&tmp_max);
+                    *current_x_max = *last_x;
                 }
             } else {
-                x_min_max.replace(PlotBounds::from_min_max([*first_x, 0.0], [*last_x, 0.0]));
+                x_min_max.replace((*first_x, *last_x));
             }
         }
     }
@@ -270,10 +260,7 @@ impl LogPlot {
                             timer,
                             arg_plot_ui,
                             is_reset_pressed,
-                            *x_min_max
-                                .unwrap_or_else(|| PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0]))
-                                .range_x()
-                                .start(),
+                            x_min_max.unwrap_or_default().0,
                         );
                         axis_config.handle_y_axis_lock(
                             arg_plot_ui,
@@ -283,12 +270,7 @@ impl LogPlot {
                                     timer,
                                     plot_ui,
                                     is_reset_pressed,
-                                    *x_min_max
-                                        .unwrap_or_else(|| {
-                                            PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0])
-                                        })
-                                        .range_x()
-                                        .start(),
+                                    x_min_max.unwrap_or_default().0,
                                 );
                             },
                         );
@@ -309,12 +291,7 @@ impl LogPlot {
                                     timer,
                                     plot_ui,
                                     is_reset_pressed,
-                                    *x_min_max
-                                        .unwrap_or_else(|| {
-                                            PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0])
-                                        })
-                                        .range_x()
-                                        .start(),
+                                    x_min_max.unwrap_or_default().0,
                                 );
                             },
                         );
@@ -336,12 +313,7 @@ impl LogPlot {
                                     timer,
                                     plot_ui,
                                     is_reset_pressed,
-                                    *x_min_max
-                                        .unwrap_or_else(|| {
-                                            PlotBounds::from_min_max([0.0, 0.0], [1.0, 1.0])
-                                        })
-                                        .range_x()
-                                        .start(),
+                                    x_min_max.unwrap_or_default().0,
                                 );
                             },
                         );
