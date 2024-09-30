@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.13.0]
+
 ### Internals
 
 - Better divide interfaces in the `log_if` crate and use a prelude to make it easy to import all relevant traits via glob imports.
