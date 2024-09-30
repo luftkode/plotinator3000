@@ -31,7 +31,7 @@ impl GeneratorLog {
     }
 }
 
-impl Log for GeneratorLog {
+impl SkytemLog for GeneratorLog {
     type Entry = GeneratorLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {

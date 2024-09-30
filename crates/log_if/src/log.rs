@@ -3,7 +3,7 @@ use std::{fmt::Display, io};
 use crate::plotable::Plotable;
 
 /// A given log should implement this trait
-pub trait Log: Plotable + Clone + Display + Send + Sync + Sized + GitMetadata {
+pub trait SkytemLog: Plotable + Clone + Display + Send + Sync + Sized + GitMetadata {
     type Entry: LogEntry;
     /// Create a [Log] instance from a reader
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;

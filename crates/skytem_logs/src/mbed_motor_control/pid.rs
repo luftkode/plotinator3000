@@ -19,7 +19,7 @@ pub struct PidLog {
     startup_timestamp: DateTime<Utc>,
 }
 
-impl Log for PidLog {
+impl SkytemLog for PidLog {
     type Entry = PidLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {

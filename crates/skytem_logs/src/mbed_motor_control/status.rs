@@ -19,7 +19,7 @@ pub struct StatusLog {
     startup_timestamp: DateTime<Utc>,
 }
 
-impl Log for StatusLog {
+impl SkytemLog for StatusLog {
     type Entry = StatusLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
