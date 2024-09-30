@@ -300,8 +300,8 @@ impl LogPlot {
             }
 
             if display_to_thousands_plot {
-                _ = ui.separator();
-                _ = thousands.show(ui, |thousands_plot_ui| {
+                ui.separator();
+                thousands.show(ui, |thousands_plot_ui| {
                     Self::handle_plot(thousands_plot_ui, |arg_plot_ui| {
                         plot_util::plot_lines(arg_plot_ui, to_thousands_plots, *line_width);
 
