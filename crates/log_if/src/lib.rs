@@ -15,6 +15,18 @@ pub trait Plotable {
     fn unique_name(&self) -> &str;
 }
 
+/// Implement conversion from a type that implements [`Plotable`] to a generic dynamic [`Plotable`] type
+///
+/// Which allows e.g. building vectors of various types that implement [`Plotable`] and performing the type conversion by simply calling `.into()` on `T`
+impl<T> From<T> for Box<dyn Plotable>
+where
+    T: Plotable + 'static,
+{
+    fn from(value: T) -> Self {
+        Box::new(value)
+    }
+}
+
 /// A given log should implement this trait
 pub trait Log: Plotable + Clone + Display + Send + Sync + Sized {
     type Entry: LogEntry;
