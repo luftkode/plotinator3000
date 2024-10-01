@@ -1,5 +1,5 @@
 use log_if::prelude::*;
-use plot_util::PlotWithName;
+use plot_util::{PlotWithName, StoredPlotLabels};
 
 use super::date_settings::LogStartDateSettings;
 
@@ -39,27 +39,26 @@ fn calc_plot_x_min_max(plots: &[PlotWithName], x_min_max: &mut Option<(f64, f64)
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn add_plot_data_to_plot_collections(
     log_start_date_settings: &mut Vec<LogStartDateSettings>,
     percentage_plots: &mut Vec<PlotWithName>,
+    percentage_plot_labels: &mut Vec<StoredPlotLabels>,
     to_hundreds_plots: &mut Vec<PlotWithName>,
+    to_hundreds_plot_labels: &mut Vec<StoredPlotLabels>,
     to_thousands_plots: &mut Vec<PlotWithName>,
+    to_thousands_plot_labels: &mut Vec<StoredPlotLabels>,
     log: &dyn Plotable,
-    idx: usize,
 ) {
-    let log_id = format!("#{} {}", idx + 1, log.unique_name());
-    if !log_start_date_settings
-        .iter()
-        .any(|settings| *settings.log_id == log_id)
-    {
-        log_start_date_settings.push(LogStartDateSettings::new(
-            log_id.clone(),
-            log.first_timestamp(),
-        ));
-    }
+    let log_idx = log_start_date_settings.len() + 1;
+    let log_id = format!("#{log_idx} {}", log.unique_name());
 
+    log_start_date_settings.push(LogStartDateSettings::new(
+        log_id.clone(),
+        log.first_timestamp(),
+    ));
     for raw_plot in log.raw_plots() {
-        let plot_name = format!("{} #{}", raw_plot.name(), idx + 1);
+        let plot_name = format!("{} #{}", raw_plot.name(), log_idx);
         match raw_plot.expected_range() {
             ExpectedPlotRange::Percentage => {
                 add_plot_to_vector(percentage_plots, raw_plot, &plot_name, log_id.clone());
@@ -69,6 +68,22 @@ pub fn add_plot_data_to_plot_collections(
             }
             ExpectedPlotRange::Thousands => {
                 add_plot_to_vector(to_thousands_plots, raw_plot, &plot_name, log_id.clone());
+            }
+        }
+    }
+
+    if let Some(plot_labels) = log.labels() {
+        for labels in plot_labels {
+            let owned_label_points = labels.label_points().to_owned();
+            match labels.expected_range() {
+                ExpectedPlotRange::Percentage => percentage_plot_labels
+                    .push(StoredPlotLabels::new(owned_label_points, log_id.clone())),
+                ExpectedPlotRange::OneToOneHundred => {
+                    to_hundreds_plot_labels
+                        .push(StoredPlotLabels::new(owned_label_points, log_id.clone()));
+                }
+                ExpectedPlotRange::Thousands => to_thousands_plot_labels
+                    .push(StoredPlotLabels::new(owned_label_points, log_id.clone())),
             }
         }
     }
