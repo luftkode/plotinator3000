@@ -163,6 +163,7 @@ impl eframe::App for App {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
                     match SupportedLogs::parse_dropped_files(&self.dropped_files, &mut self.logs) {
                         Ok(()) => {
+                            log::info!("OK parsing dropped file(s)");
                             self.error_message = None; // Clear any previous error message on success
                         }
                         Err(e) => {
