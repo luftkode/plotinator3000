@@ -9,6 +9,7 @@ pub struct AxisConfig {
     link_x: bool,
     link_cursor_x: bool,
     show_axes: bool,
+    show_grid: bool,
     y_axis_lock: YAxisLock,
 }
 
@@ -18,6 +19,7 @@ impl Default for AxisConfig {
             link_x: true,
             link_cursor_x: true,
             show_axes: true,
+            show_grid: true,
             y_axis_lock: YAxisLock::default(),
         }
     }
@@ -27,12 +29,19 @@ impl AxisConfig {
     pub fn show_axes(&self) -> bool {
         self.show_axes
     }
+
     pub fn link_x(&self) -> bool {
         self.link_x
     }
+
     pub fn link_cursor_x(&self) -> bool {
         self.link_cursor_x
     }
+
+    pub fn show_grid(&self) -> bool {
+        self.show_grid
+    }
+
     pub fn handle_y_axis_lock<F>(
         &mut self,
         plot_ui: &mut egui_plot::PlotUi,
@@ -82,6 +91,15 @@ impl AxisConfig {
                 regular::LOCK_SIMPLE_OPEN
             }
         ));
+        let show_grid_text = format!(
+            "{} Grid",
+            if self.show_axes {
+                regular::EYE
+            } else {
+                regular::EYE_SLASH
+            }
+        );
+        ui.toggle_value(&mut self.show_grid, show_grid_text);
         let lock_y_axis_text = if is_y_axis_locked {
             lock_y_axis_text.color(Color32::RED)
         } else {
