@@ -87,6 +87,10 @@ impl Plotable for GeneratorLog {
     fn unique_name(&self) -> &str {
         "Legacy Generator Log 2016"
     }
+
+    fn labels(&self) -> Option<&[PlotLabels]> {
+        None
+    }
 }
 
 impl GitMetadata for GeneratorLog {

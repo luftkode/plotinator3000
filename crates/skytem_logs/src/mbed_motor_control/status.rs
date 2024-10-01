@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use super::MbedMotorControlLogHeader;
 use chrono::{DateTime, Utc};
-use entry::{MotorState, StatusLogEntry};
+use entry::StatusLogEntry;
 use header::StatusLogHeader;
 use log_if::prelude::*;
 
@@ -14,7 +14,7 @@ pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
     timestamp_ns: Vec<f64>,
-    timestamps_with_state_changes: Vec<(f64, MotorState)>, // for memoization
+    labels: Vec<PlotLabels>,
     all_plots_raw: Vec<RawPlot>,
     startup_timestamp: DateTime<Utc>,
 }
@@ -38,7 +38,12 @@ impl SkytemLog for StatusLog {
             .map(|e| startup_timestamp_ns + e.timestamp_ns())
             .collect();
 
-        let timestamps_with_state_changes = parse_timestamps_with_state_changes(&vec_of_entries);
+        let timestamps_with_state_changes =
+            parse_timestamps_with_state_changes(&vec_of_entries, startup_timestamp_ns);
+        let labels = vec![PlotLabels::new(
+            timestamps_with_state_changes,
+            ExpectedPlotRange::OneToOneHundred,
+        )];
         let engine_temp_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
@@ -105,7 +110,7 @@ impl SkytemLog for StatusLog {
         Ok(Self {
             header,
             entries: vec_of_entries,
-            timestamps_with_state_changes,
+            labels,
             timestamp_ns,
             all_plots_raw,
             startup_timestamp,
@@ -147,27 +152,9 @@ impl Plotable for StatusLog {
     fn unique_name(&self) -> &str {
         "Mbed Status log 2024"
     }
-}
 
-impl StatusLog {
-    /// If we don't match up with other plot points it is because the date was offset so we need to apply the offset here as well
-    pub fn update_timestamp_with_state_changes(&mut self) {
-        if let Some((first_st_change_timestamp, _)) = self.timestamps_with_state_changes.first_mut()
-        {
-            if let Some(first_entry) = self.entries.first() {
-                let first_entry_timestamp = first_entry.timestamp_ns();
-                if first_entry_timestamp != *first_st_change_timestamp {
-                    let offset = first_entry_timestamp - *first_st_change_timestamp;
-                    for (timestamp, _) in &mut self.timestamps_with_state_changes {
-                        *timestamp += offset;
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn timestamps_with_state_changes(&self) -> &[(f64, MotorState)] {
-        &self.timestamps_with_state_changes
+    fn labels(&self) -> Option<&[PlotLabels]> {
+        Some(&self.labels)
     }
 }
 
@@ -181,14 +168,29 @@ impl fmt::Display for StatusLog {
     }
 }
 
-fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(f64, MotorState)> {
+fn parse_timestamps_with_state_changes(
+    entries: &[StatusLogEntry],
+    startup_timestamp_ns: f64,
+) -> Vec<([f64; 2], String)> {
     let mut result = Vec::new();
     let mut last_state = None;
 
     for entry in entries {
         // Check if the current state is different from the last recorded state
         if last_state != Some(entry.motor_state) {
-            result.push((entry.timestamp_ns(), entry.motor_state));
+            // apply negative offset if we're going to a state with a lower value
+            let offset = if last_state.is_some_and(|ls| ls as u8 > entry.motor_state as u8) {
+                -0.5
+            } else {
+                0.5
+            };
+            result.push((
+                [
+                    entry.timestamp_ns() + startup_timestamp_ns,
+                    (entry.motor_state as u8) as f64 + offset,
+                ],
+                entry.motor_state.to_string(),
+            ));
             last_state = Some(entry.motor_state);
         }
     }
@@ -198,6 +200,7 @@ fn parse_timestamps_with_state_changes(entries: &[StatusLogEntry]) -> Vec<(f64, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use entry::MotorState;
     use std::fs::{self, File};
     use testresult::TestResult;
 
