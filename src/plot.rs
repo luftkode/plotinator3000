@@ -1,12 +1,12 @@
 use date_settings::LogStartDateSettings;
 use log_if::plotable::Plotable;
-use plot_util::PlotWithName;
+use plot_util::{PlotWithName, StoredPlotLabels};
 use serde::{Deserialize, Serialize};
 
 use crate::app::PlayBackButtonEvent;
 use axis_config::{AxisConfig, PlotType};
-use egui::Response;
-use egui_plot::{AxisHints, HPlacement, Legend, Plot};
+use egui::{Response, RichText};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
 
@@ -25,8 +25,11 @@ pub struct LogPlot {
     axis_config: AxisConfig,
     play_state: PlayState,
     percentage_plots: Vec<PlotWithName>,
+    percentage_plot_labels: Vec<StoredPlotLabels>,
     to_hundreds_plots: Vec<PlotWithName>,
+    to_hundreds_plot_labels: Vec<StoredPlotLabels>,
     to_thousands_plots: Vec<PlotWithName>,
+    to_thousands_plot_labels: Vec<StoredPlotLabels>,
     plot_visibility: PlotVisibilityConfig,
     log_start_date_settings: Vec<LogStartDateSettings>,
     x_min_max: Option<(f64, f64)>,
@@ -42,8 +45,11 @@ impl Default for LogPlot {
             axis_config: Default::default(),
             play_state: PlayState::default(),
             percentage_plots: vec![],
+            percentage_plot_labels: vec![],
             to_hundreds_plots: vec![],
+            to_hundreds_plot_labels: vec![],
             to_thousands_plots: vec![],
+            to_thousands_plot_labels: vec![],
             plot_visibility: PlotVisibilityConfig::default(),
             log_start_date_settings: vec![],
             x_min_max: None,
@@ -69,8 +75,11 @@ impl LogPlot {
             axis_config,
             play_state,
             percentage_plots,
+            percentage_plot_labels,
             to_hundreds_plots,
+            to_hundreds_plot_labels,
             to_thousands_plots,
+            to_thousands_plot_labels,
             plot_visibility,
             log_start_date_settings,
             x_min_max,
@@ -110,14 +119,16 @@ impl LogPlot {
         let link_group_id = gui.id().with("linked_plots");
 
         gui.vertical(|ui| {
-            for (idx, log) in logs.iter().enumerate() {
+            for log in logs {
                 util::add_plot_data_to_plot_collections(
                     log_start_date_settings,
                     percentage_plots,
+                    percentage_plot_labels,
                     to_hundreds_plots,
+                    to_hundreds_plot_labels,
                     to_thousands_plots,
+                    to_thousands_plot_labels,
                     log.as_ref(),
-                    idx,
                 );
             }
 
@@ -125,8 +136,11 @@ impl LogPlot {
                 date_settings::update_plot_dates(
                     invalidate_plot,
                     percentage_plots,
+                    percentage_plot_labels,
                     to_hundreds_plots,
+                    to_hundreds_plot_labels,
                     to_thousands_plots,
+                    to_thousands_plot_labels,
                     settings,
                 );
             }
@@ -154,6 +168,7 @@ impl LogPlot {
                     .legend(config.clone())
                     .height(plot_height)
                     .show_axes(axis_config.show_axes())
+                    .show_grid(axis_config.show_grid())
                     .y_axis_position(HPlacement::Right)
                     .include_y(0.0)
                     .custom_x_axes(x_axes.clone())
@@ -171,26 +186,30 @@ impl LogPlot {
 
             if display_percentage_plot {
                 percentage_plot.show(ui, |percentage_plot_ui| {
-                    Self::handle_plot(percentage_plot_ui, |arg_plot_ui| {
-                        plot_util::plot_lines(arg_plot_ui, percentage_plots, *line_width);
+                    Self::handle_plot(percentage_plot_ui, |plot_ui| {
+                        plot_util::plot_lines(plot_ui, percentage_plots, *line_width);
+                        for plot_labels in percentage_plot_labels {
+                            for (label_point, label_txt) in plot_labels.label_points() {
+                                let point = PlotPoint::new(label_point[0], label_point[1]);
+                                let txt = RichText::new(label_txt.as_str()).size(10.0);
+                                let txt = egui_plot::Text::new(point, txt);
+                                plot_ui.text(txt);
+                            }
+                        }
                         playback_update_plot(
                             timer,
-                            arg_plot_ui,
+                            plot_ui,
                             is_reset_pressed,
                             x_min_max.unwrap_or_default().0,
                         );
-                        axis_config.handle_y_axis_lock(
-                            arg_plot_ui,
-                            PlotType::Percentage,
-                            |plot_ui| {
-                                playback_update_plot(
-                                    timer,
-                                    plot_ui,
-                                    is_reset_pressed,
-                                    x_min_max.unwrap_or_default().0,
-                                );
-                            },
-                        );
+                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Percentage, |plot_ui| {
+                            playback_update_plot(
+                                timer,
+                                plot_ui,
+                                is_reset_pressed,
+                                x_min_max.unwrap_or_default().0,
+                            );
+                        });
                     });
                 });
             }
@@ -198,20 +217,25 @@ impl LogPlot {
             if display_to_hundred_plot {
                 ui.separator();
                 to_hundred.show(ui, |to_hundred_plot_ui| {
-                    Self::handle_plot(to_hundred_plot_ui, |arg_plot_ui| {
-                        plot_util::plot_lines(arg_plot_ui, to_hundreds_plots, *line_width);
-                        axis_config.handle_y_axis_lock(
-                            arg_plot_ui,
-                            PlotType::Hundreds,
-                            |plot_ui| {
-                                playback_update_plot(
-                                    timer,
-                                    plot_ui,
-                                    is_reset_pressed,
-                                    x_min_max.unwrap_or_default().0,
-                                );
-                            },
-                        );
+                    Self::handle_plot(to_hundred_plot_ui, |plot_ui| {
+                        plot_util::plot_lines(plot_ui, to_hundreds_plots, *line_width);
+                        for plot_labels in to_hundreds_plot_labels {
+                            for (label_point, label_txt) in plot_labels.label_points() {
+                                let point = PlotPoint::new(label_point[0], label_point[1]);
+                                let txt = RichText::new(label_txt.as_str()).size(10.0);
+                                let txt = egui_plot::Text::new(point, txt);
+                                plot_ui.text(txt);
+                            }
+                        }
+
+                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Hundreds, |plot_ui| {
+                            playback_update_plot(
+                                timer,
+                                plot_ui,
+                                is_reset_pressed,
+                                x_min_max.unwrap_or_default().0,
+                            );
+                        });
                     });
                 });
             }
@@ -219,21 +243,24 @@ impl LogPlot {
             if display_to_thousands_plot {
                 ui.separator();
                 thousands.show(ui, |thousands_plot_ui| {
-                    Self::handle_plot(thousands_plot_ui, |arg_plot_ui| {
-                        plot_util::plot_lines(arg_plot_ui, to_thousands_plots, *line_width);
-
-                        axis_config.handle_y_axis_lock(
-                            arg_plot_ui,
-                            PlotType::Thousands,
-                            |plot_ui| {
-                                playback_update_plot(
-                                    timer,
-                                    plot_ui,
-                                    is_reset_pressed,
-                                    x_min_max.unwrap_or_default().0,
-                                );
-                            },
-                        );
+                    Self::handle_plot(thousands_plot_ui, |plot_ui| {
+                        plot_util::plot_lines(plot_ui, to_thousands_plots, *line_width);
+                        for plot_labels in to_thousands_plot_labels {
+                            for (label_point, label_txt) in plot_labels.label_points() {
+                                let point = PlotPoint::new(label_point[0], label_point[1]);
+                                let txt = RichText::new(label_txt.as_str()).size(10.0);
+                                let txt = egui_plot::Text::new(point, txt);
+                                plot_ui.text(txt);
+                            }
+                        }
+                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Thousands, |plot_ui| {
+                            playback_update_plot(
+                                timer,
+                                plot_ui,
+                                is_reset_pressed,
+                                x_min_max.unwrap_or_default().0,
+                            );
+                        });
                     });
                 });
             }

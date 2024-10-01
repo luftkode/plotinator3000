@@ -23,6 +23,29 @@ impl PlotWithName {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct StoredPlotLabels {
+    pub label_points: Vec<([f64; 2], String)>,
+    pub log_id: String,
+}
+
+impl StoredPlotLabels {
+    pub fn new(label_points: Vec<([f64; 2], String)>, id: String) -> Self {
+        Self {
+            label_points,
+            log_id: id,
+        }
+    }
+
+    pub fn label_points(&self) -> &[([f64; 2], String)] {
+        &self.label_points
+    }
+
+    pub fn log_id(&self) -> &str {
+        &self.log_id
+    }
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct MipMapWithName {
     pub mip_map: MipMap1D<f64>,
     pub name: String,

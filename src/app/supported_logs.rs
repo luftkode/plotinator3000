@@ -41,6 +41,7 @@ impl SupportedLogs {
     /// meaning you would be forced to make a copy which isn't actually needed, but required for it to compile.
     pub fn parse_dropped_files(dropped_files: &[DroppedFile], logs: &mut Self) -> io::Result<()> {
         for file in dropped_files {
+            log::debug!("Parsing dropped file: {file:?}");
             parse_file(file, logs)?;
         }
         Ok(())

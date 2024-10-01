@@ -8,6 +8,8 @@ pub trait Plotable {
     fn first_timestamp(&self) -> DateTime<Utc>;
     /// A name that uniquely identifies the type of log
     fn unique_name(&self) -> &str;
+
+    fn labels(&self) -> Option<&[PlotLabels]>;
 }
 
 /// Implement conversion from a type that implements [`Plotable`] to a generic dynamic [`Plotable`] type
@@ -53,6 +55,30 @@ impl RawPlot {
     pub fn points(&self) -> &[[f64; 2]] {
         &self.points
     }
+    pub fn expected_range(&self) -> ExpectedPlotRange {
+        self.expected_range
+    }
+}
+
+/// [`PlotLabel`] represents some text label that should be displayed in the plot
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct PlotLabels {
+    label_points: Vec<([f64; 2], String)>,
+    expected_range: ExpectedPlotRange,
+}
+
+impl PlotLabels {
+    pub fn new(label_points: Vec<([f64; 2], String)>, expected_range: ExpectedPlotRange) -> Self {
+        Self {
+            label_points,
+            expected_range,
+        }
+    }
+
+    pub fn label_points(&self) -> &[([f64; 2], String)] {
+        &self.label_points
+    }
+
     pub fn expected_range(&self) -> ExpectedPlotRange {
         self.expected_range
     }

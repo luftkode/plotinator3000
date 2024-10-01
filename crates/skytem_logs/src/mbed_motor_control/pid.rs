@@ -142,6 +142,10 @@ impl Plotable for PidLog {
     fn unique_name(&self) -> &str {
         "Mbed PID log 2024"
     }
+
+    fn labels(&self) -> Option<&[PlotLabels]> {
+        None
+    }
 }
 
 impl fmt::Display for PidLog {
