@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.14.0]
+
+### Add
+
+- Ability for logs to add labels (rough initial mvp, needs more work)
+- `show grid` button for showing/hiding grid lines on plots
+
 ## [0.13.0]
 
 ### Internals
