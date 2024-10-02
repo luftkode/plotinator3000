@@ -1,6 +1,6 @@
 use date_settings::LogStartDateSettings;
 use log_if::plotable::Plotable;
-use plot_util::PlotData;
+use plot_util::Plots;
 use serde::{Deserialize, Serialize};
 
 use crate::app::PlayBackButtonEvent;
@@ -24,9 +24,7 @@ pub struct LogPlotUi {
     line_width: f32,
     axis_config: AxisConfig,
     play_state: PlayState,
-    plot_data_percentage: PlotData,
-    plot_data_to_hundreds: PlotData,
-    plot_data_thousands: PlotData,
+    plots: Plots,
     plot_visibility: PlotVisibilityConfig,
     log_start_date_settings: Vec<LogStartDateSettings>,
     x_min_max: Option<(f64, f64)>,
@@ -41,9 +39,7 @@ impl Default for LogPlotUi {
             line_width: 1.5,
             axis_config: Default::default(),
             play_state: PlayState::default(),
-            plot_data_percentage: PlotData::default(),
-            plot_data_to_hundreds: PlotData::default(),
-            plot_data_thousands: PlotData::default(),
+            plots: Plots::default(),
             plot_visibility: PlotVisibilityConfig::default(),
             log_start_date_settings: vec![],
             x_min_max: None,
@@ -68,9 +64,7 @@ impl LogPlotUi {
             line_width,
             axis_config,
             play_state,
-            plot_data_percentage,
-            plot_data_to_hundreds,
-            plot_data_thousands,
+            plots,
             plot_visibility,
             log_start_date_settings,
             x_min_max,
@@ -83,12 +77,7 @@ impl LogPlotUi {
             *invalidate_plot = false;
         }
 
-        util::calc_all_plot_x_min_max(
-            plot_data_percentage.plots(),
-            plot_data_to_hundreds.plots(),
-            plot_data_thousands.plots(),
-            x_min_max,
-        );
+        util::calc_all_plot_x_min_max(plots, x_min_max);
 
         let mut playback_button_event = None;
 
@@ -113,33 +102,25 @@ impl LogPlotUi {
             for log in logs {
                 util::add_plot_data_to_plot_collections(
                     log_start_date_settings,
-                    plot_data_percentage,
-                    plot_data_to_hundreds,
-                    plot_data_thousands,
+                    plots,
                     log.as_ref(),
                 );
             }
 
             for settings in log_start_date_settings {
-                date_settings::update_plot_dates(
-                    invalidate_plot,
-                    plot_data_percentage,
-                    plot_data_to_hundreds,
-                    plot_data_thousands,
-                    settings,
-                );
+                date_settings::update_plot_dates(invalidate_plot, plots, settings);
             }
 
             // Calculate the number of plots to display
             let mut total_plot_count: u8 = 0;
             let display_percentage_plot =
-                plot_visibility.should_display_percentage(plot_data_percentage.plots());
+                plot_visibility.should_display_percentage(plots.percentage().plots());
             total_plot_count += display_percentage_plot as u8;
             let display_to_hundred_plot =
-                plot_visibility.should_display_to_hundreds(plot_data_to_hundreds.plots());
+                plot_visibility.should_display_to_hundreds(plots.one_to_hundred().plots());
             total_plot_count += display_to_hundred_plot as u8;
             let display_to_thousands_plot =
-                plot_visibility.should_display_to_thousands(plot_data_thousands.plots());
+                plot_visibility.should_display_to_thousands(plots.thousands().plots());
             total_plot_count += display_to_thousands_plot as u8;
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
@@ -172,8 +153,8 @@ impl LogPlotUi {
             if display_percentage_plot {
                 percentage_plot.show(ui, |percentage_plot_ui| {
                     Self::handle_plot(percentage_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, plot_data_percentage.plots(), *line_width);
-                        for plot_labels in plot_data_percentage.plot_labels() {
+                        plot_util::plot_lines(plot_ui, plots.percentage().plots(), *line_width);
+                        for plot_labels in plots.percentage().plot_labels() {
                             for (label_point, label_txt) in plot_labels.label_points() {
                                 let point = PlotPoint::new(label_point[0], label_point[1]);
                                 let txt = RichText::new(label_txt.as_str()).size(10.0);
@@ -203,8 +184,8 @@ impl LogPlotUi {
                 ui.separator();
                 to_hundred.show(ui, |to_hundred_plot_ui| {
                     Self::handle_plot(to_hundred_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, plot_data_to_hundreds.plots(), *line_width);
-                        for plot_labels in plot_data_to_hundreds.plot_labels() {
+                        plot_util::plot_lines(plot_ui, plots.one_to_hundred().plots(), *line_width);
+                        for plot_labels in plots.one_to_hundred().plot_labels() {
                             for (label_point, label_txt) in plot_labels.label_points() {
                                 let point = PlotPoint::new(label_point[0], label_point[1]);
                                 let txt = RichText::new(label_txt.as_str()).size(10.0);
@@ -229,8 +210,8 @@ impl LogPlotUi {
                 ui.separator();
                 thousands.show(ui, |thousands_plot_ui| {
                     Self::handle_plot(thousands_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, plot_data_thousands.plots(), *line_width);
-                        for plot_labels in plot_data_thousands.plot_labels() {
+                        plot_util::plot_lines(plot_ui, plots.thousands().plots(), *line_width);
+                        for plot_labels in plots.thousands().plot_labels() {
                             for (label_point, label_txt) in plot_labels.label_points() {
                                 let point = PlotPoint::new(label_point[0], label_point[1]);
                                 let txt = RichText::new(label_txt.as_str()).size(10.0);

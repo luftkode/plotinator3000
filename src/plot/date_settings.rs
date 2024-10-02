@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use plot_util::{PlotData, PlotWithName, StoredPlotLabels};
+use plot_util::{PlotWithName, Plots, StoredPlotLabels};
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
@@ -31,18 +31,16 @@ impl LogStartDateSettings {
 
 pub fn update_plot_dates(
     invalidate_plot: &mut bool,
-    percentage_plots: &mut PlotData,
-    to_hundreds_plots: &mut PlotData,
-    to_thousands_plots: &mut PlotData,
+    plots: &mut Plots,
     settings: &mut LogStartDateSettings,
 ) {
     if settings.date_changed {
-        apply_offset_to_plots(percentage_plots.plots_as_mut(), settings);
-        apply_offset_to_plot_labels(percentage_plots.plot_labels_as_mut(), settings);
-        apply_offset_to_plots(to_hundreds_plots.plots_as_mut(), settings);
-        apply_offset_to_plot_labels(to_hundreds_plots.plot_labels_as_mut(), settings);
-        apply_offset_to_plots(to_thousands_plots.plots_as_mut(), settings);
-        apply_offset_to_plot_labels(to_hundreds_plots.plot_labels_as_mut(), settings);
+        apply_offset_to_plots(plots.percentage_mut().plots_as_mut(), settings);
+        apply_offset_to_plot_labels(plots.percentage_mut().plot_labels_as_mut(), settings);
+        apply_offset_to_plots(plots.one_to_hundred_mut().plots_as_mut(), settings);
+        apply_offset_to_plot_labels(plots.one_to_hundred_mut().plot_labels_as_mut(), settings);
+        apply_offset_to_plots(plots.thousands_mut().plots_as_mut(), settings);
+        apply_offset_to_plot_labels(plots.thousands_mut().plot_labels_as_mut(), settings);
 
         settings.date_changed = false;
         *invalidate_plot = true;
