@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.15.0]
+
 ### Added
 
-- (Native only) Recursively parse drag-n-dropped directories for supported logs
-- (Native only) Recursively parse zip archives for supported logs
+- (Not available on web version) Recursively parse drag-n-dropped directories for supported logs
+- (Not available on web version) Recursively parse drag-n-dropped zip archives for supported logs
 - Show tooltip when hovering above a clickable log name
 
 ### Internals
