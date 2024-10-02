@@ -61,9 +61,12 @@ pub fn show_settings_grid(
 pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
     ui.end_row();
     let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date);
-    if ui.button(log_name_date.clone()).clicked() {
+    let button_resp = ui.button(log_name_date.clone());
+    if button_resp.clicked() {
         settings.clicked = !settings.clicked;
     }
+    button_resp.on_hover_text("Click to modify log settings");
+
     if settings.tmp_date_buf.is_empty() {
         settings.tmp_date_buf = settings
             .start_date

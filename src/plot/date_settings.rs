@@ -29,22 +29,6 @@ impl LogStartDateSettings {
     }
 }
 
-fn apply_offset<T, F>(
-    items: &mut [T],
-    log_id: &str,
-    start_date: DateTime<Utc>,
-    get_id: F,
-    offset_fn: fn(&mut T, DateTime<Utc>),
-) where
-    F: Fn(&T) -> &str,
-{
-    for item in items {
-        if get_id(item) == log_id {
-            offset_fn(item, start_date);
-        }
-    }
-}
-
 pub fn update_plot_dates(
     invalidate_plot: &mut bool,
     plots: &mut Plots,
@@ -77,28 +61,32 @@ pub fn update_plot_dates(
     }
 }
 
+fn apply_offset<T, F>(
+    items: &mut [T],
+    log_id: &str,
+    start_date: DateTime<Utc>,
+    get_id: F,
+    offset_fn: fn(&mut T, DateTime<Utc>),
+) where
+    F: Fn(&T) -> &str,
+{
+    for item in items {
+        if get_id(item) == log_id {
+            offset_fn(item, start_date);
+        }
+    }
+}
+
 fn offset_plot_labels(plot_labels: &mut StoredPlotLabels, new_start_date: DateTime<Utc>) {
     offset_data_iter(plot_labels.label_points_mut(), new_start_date);
 }
 
 fn offset_plot(plot: &mut PlotWithName, new_start_date: DateTime<Utc>) {
-    offset_data(&mut plot.raw_plot, new_start_date);
+    offset_data_iter(plot.raw_plot.iter_mut(), new_start_date);
 }
 
-fn offset_data(data: &mut [[f64; 2]], new_start_date: DateTime<Utc>) {
-    if let Some(first_point) = data.first() {
-        let new_date_ns = new_start_date
-            .timestamp_nanos_opt()
-            .expect("Nanoseconds overflow") as f64;
-        let offset = new_date_ns - first_point[0];
-        for point in data.iter_mut() {
-            point[0] += offset;
-        }
-    }
-}
-
-fn offset_data_iter<'a>(
-    mut data_iter: impl Iterator<Item = &'a mut [f64; 2]>,
+fn offset_data_iter<'i>(
+    mut data_iter: impl Iterator<Item = &'i mut [f64; 2]>,
     new_start_date: DateTime<Utc>,
 ) {
     if let Some(first_point) = data_iter.next() {

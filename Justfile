@@ -89,5 +89,6 @@ install-devtools:
 install-extra-devtools:
     cargo install cargo-nextest --locked
     cargo install cargo-limit --locked
+    cargo install bacon --locked
 
 
