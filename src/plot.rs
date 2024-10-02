@@ -77,7 +77,7 @@ impl LogPlotUi {
             *invalidate_plot = false;
         }
 
-        util::calc_all_plot_x_min_max(plots, x_min_max);
+        plots.calc_all_plot_x_min_max(x_min_max);
 
         let mut playback_button_event = None;
 
