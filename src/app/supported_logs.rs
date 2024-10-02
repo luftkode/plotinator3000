@@ -12,7 +12,7 @@ use skytem_logs::{
 use std::{
     fs,
     io::{self, BufReader},
-    path,
+    path::{self, Path},
 };
 
 /// In the ideal future, this explicit list of supported logs is instead just a vector of log interfaces (traits)
@@ -49,18 +49,43 @@ impl SupportedLogs {
 }
 
 fn parse_file(file: &DroppedFile, logs: &mut SupportedLogs) -> io::Result<()> {
-    if let Some(content) = file.bytes.as_ref().map(|b| b.as_ref()) {
+    if let Some(content) = file.bytes.as_ref() {
         // This is how content is made accessible via drag-n-drop in a browser
         parse_content(content, logs)?;
     } else if let Some(path) = &file.path {
         // This is how content is accessible via drag-n-drop when the app is running natively
-        parse_path(path, logs)?;
+        log::debug!("path: {path:?}");
+        if path.is_dir() {
+            parse_directory(path, logs)?;
+        } else if is_zip_file(path) {
+            #[cfg(not(target_arch = "wasm32"))]
+            parse_zip_file(path, logs)?;
+        } else {
+            parse_path(path, logs)?;
+        }
     } else {
         unreachable!("What is this content??")
     }
     Ok(())
 }
 
+// Parsing directory on native
+fn parse_directory(path: &Path, logs: &mut SupportedLogs) -> io::Result<()> {
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            if let Err(e) = parse_directory(&path, logs) {
+                log::warn!("{e}");
+            }
+        } else if let Err(e) = parse_path(&path, logs) {
+            log::warn!("{e}");
+        }
+    }
+    Ok(())
+}
+
+// Parsing dropped content on web
 fn parse_content(mut content: &[u8], logs: &mut SupportedLogs) -> io::Result<()> {
     if PidLogHeader::is_buf_header(content).unwrap_or(false) {
         logs.pid_log.push(PidLog::from_reader(&mut content)?);
@@ -78,6 +103,7 @@ fn parse_content(mut content: &[u8], logs: &mut SupportedLogs) -> io::Result<()>
     Ok(())
 }
 
+// Parse file on native
 fn parse_path(path: &path::Path, logs: &mut SupportedLogs) -> io::Result<()> {
     if PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
         let f = fs::File::open(path)?;
@@ -98,6 +124,34 @@ fn parse_path(path: &path::Path, logs: &mut SupportedLogs) -> io::Result<()> {
         ));
     }
     Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn parse_zip_file(path: &Path, logs: &mut SupportedLogs) -> io::Result<()> {
+    let file = fs::File::open(path)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        log::debug!("Parsing zipped: {}", file.name());
+
+        if file.is_dir() {
+            continue;
+        }
+
+        let mut contents = Vec::new();
+        io::Read::read_to_end(&mut file, &mut contents)?;
+
+        if let Err(e) = parse_content(&contents, logs) {
+            log::warn!("Failed to parse file {} in zip: {}", file.name(), e);
+        }
+    }
+    Ok(())
+}
+
+fn is_zip_file(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"))
 }
 
 #[cfg(test)]
