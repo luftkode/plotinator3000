@@ -78,7 +78,9 @@ impl LogPlotUi {
             invalidate_plot,
             link_group,
         } = self;
-        let link_group = link_group.unwrap_or_else(|| ui.id().with("linked_plots"));
+        if link_group.is_none() {
+            link_group.replace(ui.id().with("linked_plots"));
+        }
 
         // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
         if *invalidate_plot {
@@ -133,8 +135,12 @@ impl LogPlotUi {
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
-            let (percentage_plot, to_hundred, thousands) =
-                build_all_plot_uis(plot_height, config, axis_config, link_group);
+            let (percentage_plot, to_hundred, thousands) = build_all_plot_uis(
+                plot_height,
+                config,
+                axis_config,
+                link_group.expect("uninitialized link group id"),
+            );
 
             let mut plot_components_list = vec![];
             if display_percentage_plot {
