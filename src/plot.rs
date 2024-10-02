@@ -203,13 +203,6 @@ impl LogPlotUi {
         })
         .response
     }
-
-    fn handle_plot<F>(plot_ui: &mut egui_plot::PlotUi, plot_function: F)
-    where
-        F: FnOnce(&mut egui_plot::PlotUi),
-    {
-        plot_function(plot_ui);
-    }
 }
 
 fn construct_plot(
