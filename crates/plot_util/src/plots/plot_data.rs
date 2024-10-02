@@ -54,7 +54,7 @@ pub struct StoredPlotLabels {
 impl StoredPlotLabels {
     pub fn new(label_points: Vec<([f64; 2], String)>, id: String) -> Self {
         Self {
-            label_points: label_points.into_iter().map(|v| v.into()).collect(),
+            label_points: label_points.into_iter().map(PlotLabel::from).collect(),
             log_id: id,
         }
     }
@@ -63,6 +63,7 @@ impl StoredPlotLabels {
         &self.label_points
     }
 
+    // Returns mutable references to the points directly
     pub fn label_points_mut(&mut self) -> impl Iterator<Item = &mut [f64; 2]> {
         self.label_points.iter_mut().map(|label| &mut label.point)
     }
