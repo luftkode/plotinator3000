@@ -2,6 +2,8 @@ use axis_lock::YAxisLock;
 use egui::{Color32, RichText};
 use egui_phosphor::regular;
 
+use super::PlotType;
+
 mod axis_lock;
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -108,11 +110,4 @@ impl AxisConfig {
 
         ui.toggle_value(&mut self.y_axis_lock.lock_y_axis, lock_y_axis_text);
     }
-}
-
-#[derive(strum_macros::Display, Copy, Clone, PartialEq, Eq)]
-pub enum PlotType {
-    Percentage,
-    Hundreds,
-    Thousands,
 }

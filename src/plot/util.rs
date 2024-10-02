@@ -1,53 +1,11 @@
 use log_if::prelude::*;
-use plot_util::{PlotWithName, StoredPlotLabels};
+use plot_util::{PlotWithName, Plots, StoredPlotLabels};
 
 use super::date_settings::LogStartDateSettings;
 
-pub fn calc_all_plot_x_min_max(
-    percentage: &[PlotWithName],
-    to_hundreds: &[PlotWithName],
-    to_thousands: &[PlotWithName],
-    x_min_max: &mut Option<(f64, f64)>,
-) {
-    calc_plot_x_min_max(percentage, x_min_max);
-    calc_plot_x_min_max(to_hundreds, x_min_max);
-    calc_plot_x_min_max(to_thousands, x_min_max);
-}
-
-// Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`
-fn calc_plot_x_min_max(plots: &[PlotWithName], x_min_max: &mut Option<(f64, f64)>) {
-    for plot in plots {
-        if plot.raw_plot.len() < 2 {
-            continue;
-        }
-        let Some(first_x) = plot.raw_plot.first().and_then(|f| f.first()) else {
-            continue;
-        };
-        let Some(last_x) = plot.raw_plot.last().and_then(|l| l.first()) else {
-            continue;
-        };
-        if let Some((current_x_min, current_x_max)) = x_min_max {
-            if first_x < current_x_min {
-                *current_x_min = *first_x;
-            }
-            if last_x > current_x_max {
-                *current_x_max = *last_x;
-            }
-        } else {
-            x_min_max.replace((*first_x, *last_x));
-        }
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
 pub fn add_plot_data_to_plot_collections(
     log_start_date_settings: &mut Vec<LogStartDateSettings>,
-    percentage_plots: &mut Vec<PlotWithName>,
-    percentage_plot_labels: &mut Vec<StoredPlotLabels>,
-    to_hundreds_plots: &mut Vec<PlotWithName>,
-    to_hundreds_plot_labels: &mut Vec<StoredPlotLabels>,
-    to_thousands_plots: &mut Vec<PlotWithName>,
-    to_thousands_plot_labels: &mut Vec<StoredPlotLabels>,
+    plots: &mut Plots,
     log: &dyn Plotable,
 ) {
     let log_idx = log_start_date_settings.len() + 1;
@@ -61,13 +19,28 @@ pub fn add_plot_data_to_plot_collections(
         let plot_name = format!("{} #{}", raw_plot.name(), log_idx);
         match raw_plot.expected_range() {
             ExpectedPlotRange::Percentage => {
-                add_plot_to_vector(percentage_plots, raw_plot, &plot_name, log_id.clone());
+                add_plot_to_vector(
+                    plots.percentage_mut().plots_as_mut(),
+                    raw_plot,
+                    &plot_name,
+                    log_id.clone(),
+                );
             }
             ExpectedPlotRange::OneToOneHundred => {
-                add_plot_to_vector(to_hundreds_plots, raw_plot, &plot_name, log_id.clone());
+                add_plot_to_vector(
+                    plots.one_to_hundred_mut().plots_as_mut(),
+                    raw_plot,
+                    &plot_name,
+                    log_id.clone(),
+                );
             }
             ExpectedPlotRange::Thousands => {
-                add_plot_to_vector(to_thousands_plots, raw_plot, &plot_name, log_id.clone());
+                add_plot_to_vector(
+                    plots.thousands_mut().plots_as_mut(),
+                    raw_plot,
+                    &plot_name,
+                    log_id.clone(),
+                );
             }
         }
     }
@@ -76,14 +49,17 @@ pub fn add_plot_data_to_plot_collections(
         for labels in plot_labels {
             let owned_label_points = labels.label_points().to_owned();
             match labels.expected_range() {
-                ExpectedPlotRange::Percentage => percentage_plot_labels
-                    .push(StoredPlotLabels::new(owned_label_points, log_id.clone())),
+                ExpectedPlotRange::Percentage => plots
+                    .percentage_mut()
+                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id.clone())),
                 ExpectedPlotRange::OneToOneHundred => {
-                    to_hundreds_plot_labels
-                        .push(StoredPlotLabels::new(owned_label_points, log_id.clone()));
+                    plots
+                        .one_to_hundred_mut()
+                        .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id.clone()));
                 }
-                ExpectedPlotRange::Thousands => to_thousands_plot_labels
-                    .push(StoredPlotLabels::new(owned_label_points, log_id.clone())),
+                ExpectedPlotRange::Thousands => plots
+                    .thousands_mut()
+                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id.clone())),
             }
         }
     }

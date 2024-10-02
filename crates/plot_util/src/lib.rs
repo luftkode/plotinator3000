@@ -5,45 +5,12 @@ use log_if::prelude::*;
 use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct PlotWithName {
-    pub raw_plot: Vec<[f64; 2]>,
-    pub name: String,
-    pub log_id: String,
-}
+pub mod plots;
 
-impl PlotWithName {
-    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, id: String) -> Self {
-        Self {
-            raw_plot,
-            name,
-            log_id: id,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct StoredPlotLabels {
-    pub label_points: Vec<([f64; 2], String)>,
-    pub log_id: String,
-}
-
-impl StoredPlotLabels {
-    pub fn new(label_points: Vec<([f64; 2], String)>, id: String) -> Self {
-        Self {
-            label_points,
-            log_id: id,
-        }
-    }
-
-    pub fn label_points(&self) -> &[([f64; 2], String)] {
-        &self.label_points
-    }
-
-    pub fn log_id(&self) -> &str {
-        &self.log_id
-    }
-}
+pub use plots::{
+    plot_data::{PlotData, PlotWithName, StoredPlotLabels},
+    Plots,
+};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct MipMapWithName {

@@ -1,4 +1,4 @@
-use crate::plot::LogPlot;
+use crate::plot::LogPlotUi;
 use egui::{Color32, DroppedFile, Hyperlink, RichText, TextStyle};
 use supported_logs::SupportedLogs;
 
@@ -20,7 +20,7 @@ pub struct App {
     dropped_files: Vec<DroppedFile>,
     picked_path: Option<String>,
     logs: SupportedLogs,
-    plot: LogPlot,
+    plot: LogPlotUi,
     font_size: Option<f32>,
     playback_event: Option<PlayBackButtonEvent>,
     error_message: Option<String>,
@@ -32,7 +32,7 @@ impl Default for App {
             dropped_files: Vec::new(),
             picked_path: None,
             logs: SupportedLogs::default(),
-            plot: LogPlot::default(),
+            plot: LogPlotUi::default(),
             font_size: Some(Self::DEFAULT_FONT_SIZE),
             playback_event: None,
             error_message: None,
@@ -97,7 +97,7 @@ impl eframe::App for App {
                 }
                 if ui.button("Reset plot").clicked() {
                     self.logs = SupportedLogs::default();
-                    self.plot = LogPlot::default();
+                    self.plot = LogPlotUi::default();
                     self.dropped_files.clear();
                 }
 

@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use plot_util::{PlotWithName, StoredPlotLabels};
+use plot_util::{PlotData, PlotWithName, Plots, StoredPlotLabels};
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
@@ -29,77 +29,84 @@ impl LogStartDateSettings {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+fn apply_offset<T, F>(
+    items: &mut [T],
+    log_id: &str,
+    start_date: DateTime<Utc>,
+    get_id: F,
+    offset_fn: fn(&mut T, DateTime<Utc>),
+) where
+    F: Fn(&T) -> &str,
+{
+    for item in items {
+        if get_id(item) == log_id {
+            offset_fn(item, start_date);
+        }
+    }
+}
+
 pub fn update_plot_dates(
     invalidate_plot: &mut bool,
-    percentage_plots: &mut [PlotWithName],
-    percentage_plot_labels: &mut [StoredPlotLabels],
-    to_hundreds_plots: &mut [PlotWithName],
-    to_hundreds_plot_labels: &mut [StoredPlotLabels],
-    to_thousands_plots: &mut [PlotWithName],
-    to_thousands_plot_labels: &mut [StoredPlotLabels],
+    plots: &mut Plots,
     settings: &mut LogStartDateSettings,
 ) {
     if settings.date_changed {
-        apply_offset_to_plots(percentage_plots.iter_mut(), settings);
-        apply_offset_to_plot_labels(percentage_plot_labels.iter_mut(), settings);
-        apply_offset_to_plots(to_hundreds_plots.iter_mut(), settings);
-        apply_offset_to_plot_labels(to_hundreds_plot_labels.iter_mut(), settings);
-        apply_offset_to_plots(to_thousands_plots.iter_mut(), settings);
-        apply_offset_to_plot_labels(to_thousands_plot_labels.iter_mut(), settings);
+        let apply_offsets = |plot_data: &mut PlotData| {
+            apply_offset(
+                plot_data.plots_as_mut(),
+                &settings.log_id,
+                settings.start_date,
+                |p| &p.log_id,
+                offset_plot,
+            );
+            apply_offset(
+                plot_data.plot_labels_as_mut(),
+                &settings.log_id,
+                settings.start_date,
+                StoredPlotLabels::log_id,
+                offset_plot_labels,
+            );
+        };
+
+        apply_offsets(plots.percentage_mut());
+        apply_offsets(plots.one_to_hundred_mut());
+        apply_offsets(plots.thousands_mut());
 
         settings.date_changed = false;
         *invalidate_plot = true;
     }
 }
 
-fn apply_offset_to_plots<'a, I>(plots: I, settings: &LogStartDateSettings)
-where
-    I: IntoIterator<Item = &'a mut PlotWithName>,
-{
-    for plot in plots {
-        if plot.log_id == settings.log_id {
-            offset_plot(plot, settings.start_date);
-        }
-    }
-}
-
-fn apply_offset_to_plot_labels<'a, I>(stored_plot_labels: I, settings: &LogStartDateSettings)
-where
-    I: IntoIterator<Item = &'a mut StoredPlotLabels>,
-{
-    for plot_label in stored_plot_labels {
-        if plot_label.log_id() == settings.log_id {
-            offset_plot_labels(plot_label, settings.start_date);
-        }
-    }
+fn offset_plot_labels(plot_labels: &mut StoredPlotLabels, new_start_date: DateTime<Utc>) {
+    offset_data_iter(plot_labels.label_points_mut(), new_start_date);
 }
 
 fn offset_plot(plot: &mut PlotWithName, new_start_date: DateTime<Utc>) {
-    if let Some(first_point) = plot.raw_plot.first() {
-        let first_point_date = first_point[0];
+    offset_data(&mut plot.raw_plot, new_start_date);
+}
+
+fn offset_data(data: &mut [[f64; 2]], new_start_date: DateTime<Utc>) {
+    if let Some(first_point) = data.first() {
         let new_date_ns = new_start_date
             .timestamp_nanos_opt()
             .expect("Nanoseconds overflow") as f64;
-        let offset = new_date_ns - first_point_date;
-
-        log::debug!("Prev time: {first_point_date}, new: {new_date_ns}");
-        log::debug!("Offsetting by: {offset}");
-
-        for point in &mut plot.raw_plot {
+        let offset = new_date_ns - first_point[0];
+        for point in data.iter_mut() {
             point[0] += offset;
         }
     }
 }
 
-fn offset_plot_labels(plot_labels: &mut StoredPlotLabels, new_start_date: DateTime<Utc>) {
-    if let Some((first_point, _)) = plot_labels.label_points().first() {
-        let first_point_date = first_point[0];
+fn offset_data_iter<'a>(
+    mut data_iter: impl Iterator<Item = &'a mut [f64; 2]>,
+    new_start_date: DateTime<Utc>,
+) {
+    if let Some(first_point) = data_iter.next() {
         let new_date_ns = new_start_date
             .timestamp_nanos_opt()
             .expect("Nanoseconds overflow") as f64;
-        let offset = new_date_ns - first_point_date;
-        for (point, _) in &mut plot_labels.label_points {
+        let offset = new_date_ns - first_point[0];
+        for point in data_iter {
             point[0] += offset;
         }
     }
