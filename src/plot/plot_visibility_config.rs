@@ -1,5 +1,4 @@
 use egui_phosphor::regular;
-use plot_util::PlotWithName;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct PlotVisibilityConfig {
@@ -19,16 +18,16 @@ impl Default for PlotVisibilityConfig {
 }
 
 impl PlotVisibilityConfig {
-    pub fn should_display_percentage(&self, percentage_plots: &[PlotWithName]) -> bool {
-        !percentage_plots.is_empty() && self.show_percentage_plot
+    pub fn should_display_percentage(&self, percentage_plots_empty: bool) -> bool {
+        !percentage_plots_empty && self.show_percentage_plot
     }
 
-    pub fn should_display_to_hundreds(&self, to_hundreds_plots: &[PlotWithName]) -> bool {
-        !to_hundreds_plots.is_empty() && self.show_to_hundreds_plot
+    pub fn should_display_hundreds(&self, hundreds_plots_empty: bool) -> bool {
+        !hundreds_plots_empty && self.show_to_hundreds_plot
     }
 
-    pub fn should_display_to_thousands(&self, to_thousands_plots: &[PlotWithName]) -> bool {
-        !to_thousands_plots.is_empty() && self.show_to_thousands_plot
+    pub fn should_display_thousands(&self, thousands_plots_empty: bool) -> bool {
+        !thousands_plots_empty && self.show_to_thousands_plot
     }
 
     pub fn toggle_visibility_ui(&mut self, ui: &mut egui::Ui) {

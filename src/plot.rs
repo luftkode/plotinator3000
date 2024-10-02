@@ -114,14 +114,14 @@ impl LogPlotUi {
             // Calculate the number of plots to display
             let mut total_plot_count: u8 = 0;
             let display_percentage_plot =
-                plot_visibility.should_display_percentage(plots.percentage().plots());
+                plot_visibility.should_display_percentage(plots.percentage().plots().is_empty());
             total_plot_count += display_percentage_plot as u8;
             let display_to_hundred_plot =
-                plot_visibility.should_display_to_hundreds(plots.one_to_hundred().plots());
+                plot_visibility.should_display_hundreds(plots.one_to_hundred().plots().is_empty());
             total_plot_count += display_to_hundred_plot as u8;
-            let display_to_thousands_plot =
-                plot_visibility.should_display_to_thousands(plots.thousands().plots());
-            total_plot_count += display_to_thousands_plot as u8;
+            let display_thousands_plot =
+                plot_visibility.should_display_thousands(plots.thousands().plots().is_empty());
+            total_plot_count += display_thousands_plot as u8;
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
@@ -206,7 +206,7 @@ impl LogPlotUi {
                 });
             }
 
-            if display_to_thousands_plot {
+            if display_thousands_plot {
                 ui.separator();
                 thousands.show(ui, |thousands_plot_ui| {
                     Self::handle_plot(thousands_plot_ui, |plot_ui| {
