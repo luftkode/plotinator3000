@@ -56,6 +56,7 @@ testresult.workspace = true
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
+zip = "2.2.0"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
