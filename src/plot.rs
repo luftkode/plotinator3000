@@ -182,7 +182,7 @@ impl LogPlotUi {
                         timer,
                         is_reset_pressed,
                         *x_min_max,
-                    )
+                    );
                 });
             }
 
