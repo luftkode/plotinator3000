@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::PlayBackButtonEvent;
 use axis_config::AxisConfig;
-use egui::{Response, RichText};
+use egui::{Id, Response, RichText, Ui};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint};
 use play_state::{playback_update_plot, PlayState};
 use plot_visibility_config::PlotVisibilityConfig;
@@ -27,7 +27,7 @@ pub enum PlotType {
 #[allow(missing_debug_implementations)] // Legend is from egui_plot and doesn't implement debug
 #[derive(PartialEq, Deserialize, Serialize)]
 pub struct LogPlotUi {
-    config: Legend,
+    legend_cfg: Legend,
     line_width: f32,
     axis_config: AxisConfig,
     play_state: PlayState,
@@ -37,12 +37,13 @@ pub struct LogPlotUi {
     x_min_max: Option<(f64, f64)>,
     // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
     invalidate_plot: bool,
+    link_group: Option<Id>,
 }
 
 impl Default for LogPlotUi {
     fn default() -> Self {
         Self {
-            config: Default::default(),
+            legend_cfg: Default::default(),
             line_width: 1.5,
             axis_config: Default::default(),
             play_state: PlayState::default(),
@@ -51,6 +52,7 @@ impl Default for LogPlotUi {
             log_start_date_settings: vec![],
             x_min_max: None,
             invalidate_plot: false,
+            link_group: None,
         }
     }
 }
@@ -63,11 +65,9 @@ impl LogPlotUi {
         self.play_state.is_playing()
     }
 
-    // TODO: Fix this lint
-    #[allow(clippy::too_many_lines)]
-    pub fn ui(&mut self, gui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
+    pub fn ui(&mut self, ui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
         let Self {
-            config,
+            legend_cfg: config,
             line_width,
             axis_config,
             play_state,
@@ -76,7 +76,9 @@ impl LogPlotUi {
             log_start_date_settings,
             x_min_max,
             invalidate_plot,
+            link_group,
         } = self;
+        let link_group = link_group.unwrap_or_else(|| ui.id().with("linked_plots"));
 
         // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
         if *invalidate_plot {
@@ -89,7 +91,7 @@ impl LogPlotUi {
         let mut playback_button_event = None;
 
         plot_ui::show_settings_grid(
-            gui,
+            ui,
             play_state,
             &mut playback_button_event,
             line_width,
@@ -103,9 +105,8 @@ impl LogPlotUi {
         };
         let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
         let timer = play_state.time_since_update();
-        let link_group_id = gui.id().with("linked_plots");
 
-        gui.vertical(|ui| {
+        ui.vertical(|ui| {
             for log in logs {
                 util::add_plot_data_to_plot_collections(
                     log_start_date_settings,
@@ -132,80 +133,66 @@ impl LogPlotUi {
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
-            let x_axes = vec![AxisHints::new_x()
-                .label("Time")
-                .formatter(crate::util::format_time)];
+            let (percentage_plot, to_hundred, thousands) =
+                build_all_plot_uis(plot_height, config, axis_config, link_group);
 
-            let create_plot = |name: &str| {
-                Plot::new(name)
-                    .legend(config.clone())
-                    .height(plot_height)
-                    .show_axes(axis_config.show_axes())
-                    .show_grid(axis_config.show_grid())
-                    .y_axis_position(HPlacement::Right)
-                    .include_y(0.0)
-                    .custom_x_axes(x_axes.clone())
-                    .label_formatter(crate::util::format_label_ns)
-                    .link_axis(link_group_id, axis_config.link_x(), false)
-                    .link_cursor(link_group_id, axis_config.link_cursor_x(), false)
-            };
-
-            let percentage_plot = create_plot("percentage")
-                .include_y(1.0)
-                .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0));
-
-            let to_hundred = create_plot("to_hundreds");
-            let thousands = create_plot("to_thousands");
-
+            let mut plot_components_list = vec![];
             if display_percentage_plot {
-                percentage_plot.show(ui, |percentage_plot_ui| {
-                    construct_plot(
-                        percentage_plot_ui,
-                        (plots.percentage(), PlotType::Percentage),
-                        axis_config,
-                        *line_width,
-                        timer,
-                        is_reset_pressed,
-                        *x_min_max,
-                    );
-                });
+                plot_components_list.push((
+                    percentage_plot,
+                    plots.percentage(),
+                    PlotType::Percentage,
+                ));
             }
-
             if display_to_hundred_plot {
                 ui.separator();
-                to_hundred.show(ui, |to_hundred_plot_ui| {
-                    construct_plot(
-                        to_hundred_plot_ui,
-                        (plots.one_to_hundred(), PlotType::Hundreds),
-                        axis_config,
-                        *line_width,
-                        timer,
-                        is_reset_pressed,
-                        *x_min_max,
-                    );
-                });
+                plot_components_list.push((to_hundred, plots.one_to_hundred(), PlotType::Hundreds));
             }
 
             if display_thousands_plot {
                 ui.separator();
-                thousands.show(ui, |thousands_plot_ui| {
-                    construct_plot(
-                        thousands_plot_ui,
-                        (plots.thousands(), PlotType::Thousands),
-                        axis_config,
-                        *line_width,
-                        timer,
-                        is_reset_pressed,
-                        *x_min_max,
-                    );
-                });
+                plot_components_list.push((thousands, plots.thousands(), PlotType::Thousands));
             }
+
+            construct_plots(
+                ui,
+                plot_components_list,
+                axis_config,
+                *line_width,
+                timer,
+                is_reset_pressed,
+                *x_min_max,
+            );
         })
         .response
     }
 }
 
-fn construct_plot(
+fn construct_plots(
+    gui: &mut Ui,
+    plot_components: Vec<(Plot<'_>, &PlotData, PlotType)>,
+    axis_config: &mut AxisConfig,
+    line_width: f32,
+    timer: Option<f64>,
+    is_reset_pressed: bool,
+    x_min_max: Option<(f64, f64)>,
+) {
+    for (ui, plot, ptype) in plot_components {
+        ui.show(gui, |plot_ui| {
+            fill_plot(
+                plot_ui,
+                (plot, ptype),
+                axis_config,
+                line_width,
+                timer,
+                is_reset_pressed,
+                x_min_max,
+            );
+        });
+    }
+}
+
+fn fill_plot(
     plot_ui: &mut egui_plot::PlotUi,
     plot: (&PlotData, PlotType),
     axis_config: &mut AxisConfig,
@@ -238,4 +225,65 @@ fn construct_plot(
             x_min_max.unwrap_or_default().0,
         );
     });
+}
+
+fn build_all_plot_uis<'a>(
+    plot_height: f32,
+    legend_cfg: &Legend,
+    axis_config: &AxisConfig,
+    link_group: Id,
+) -> (Plot<'a>, Plot<'a>, Plot<'a>) {
+    let x_axes = vec![AxisHints::new_x()
+        .label("Time")
+        .formatter(crate::util::format_time)];
+
+    let percentage_plot = build_plot_ui(
+        "percentage",
+        plot_height,
+        legend_cfg.clone(),
+        axis_config,
+        x_axes.clone(),
+        link_group,
+    )
+    .include_y(1.0)
+    .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0));
+
+    let to_hundred = build_plot_ui(
+        "to_hundred",
+        plot_height,
+        legend_cfg.clone(),
+        axis_config,
+        x_axes.clone(),
+        link_group,
+    );
+    let thousands: Plot<'_> = build_plot_ui(
+        "thousands",
+        plot_height,
+        legend_cfg.clone(),
+        axis_config,
+        x_axes,
+        link_group,
+    );
+    (percentage_plot, to_hundred, thousands)
+}
+
+fn build_plot_ui<'a>(
+    name: &str,
+    plot_height: f32,
+    config: Legend,
+    axis_config: &AxisConfig,
+    x_axes: Vec<AxisHints<'a>>,
+    link_group: Id,
+) -> Plot<'a> {
+    Plot::new(name)
+        .legend(config)
+        .height(plot_height)
+        .show_axes(axis_config.show_axes())
+        .show_grid(axis_config.show_grid())
+        .y_axis_position(HPlacement::Right)
+        .include_y(0.0)
+        .custom_x_axes(x_axes)
+        .label_formatter(crate::util::format_label_ns)
+        .link_axis(link_group, axis_config.link_x(), false)
+        .link_cursor(link_group, axis_config.link_cursor_x(), false)
 }
