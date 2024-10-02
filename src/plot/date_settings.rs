@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use plot_util::{PlotWithName, StoredPlotLabels};
+use plot_util::{PlotData, PlotWithName, StoredPlotLabels};
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
@@ -29,24 +29,20 @@ impl LogStartDateSettings {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn update_plot_dates(
     invalidate_plot: &mut bool,
-    percentage_plots: &mut [PlotWithName],
-    percentage_plot_labels: &mut [StoredPlotLabels],
-    to_hundreds_plots: &mut [PlotWithName],
-    to_hundreds_plot_labels: &mut [StoredPlotLabels],
-    to_thousands_plots: &mut [PlotWithName],
-    to_thousands_plot_labels: &mut [StoredPlotLabels],
+    percentage_plots: &mut PlotData,
+    to_hundreds_plots: &mut PlotData,
+    to_thousands_plots: &mut PlotData,
     settings: &mut LogStartDateSettings,
 ) {
     if settings.date_changed {
-        apply_offset_to_plots(percentage_plots.iter_mut(), settings);
-        apply_offset_to_plot_labels(percentage_plot_labels.iter_mut(), settings);
-        apply_offset_to_plots(to_hundreds_plots.iter_mut(), settings);
-        apply_offset_to_plot_labels(to_hundreds_plot_labels.iter_mut(), settings);
-        apply_offset_to_plots(to_thousands_plots.iter_mut(), settings);
-        apply_offset_to_plot_labels(to_thousands_plot_labels.iter_mut(), settings);
+        apply_offset_to_plots(percentage_plots.plots_as_mut(), settings);
+        apply_offset_to_plot_labels(percentage_plots.plot_labels_as_mut(), settings);
+        apply_offset_to_plots(to_hundreds_plots.plots_as_mut(), settings);
+        apply_offset_to_plot_labels(to_hundreds_plots.plot_labels_as_mut(), settings);
+        apply_offset_to_plots(to_thousands_plots.plots_as_mut(), settings);
+        apply_offset_to_plot_labels(to_hundreds_plots.plot_labels_as_mut(), settings);
 
         settings.date_changed = false;
         *invalidate_plot = true;

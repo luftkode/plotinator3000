@@ -5,6 +5,34 @@ use log_if::prelude::*;
 use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
+pub struct PlotData {
+    plots: Vec<PlotWithName>,
+    plot_labels: Vec<StoredPlotLabels>,
+}
+
+impl PlotData {
+    pub fn plots(&self) -> &[PlotWithName] {
+        &self.plots
+    }
+
+    pub fn plots_as_mut(&mut self) -> &mut Vec<PlotWithName> {
+        &mut self.plots
+    }
+
+    pub fn plot_labels(&self) -> &[StoredPlotLabels] {
+        &self.plot_labels
+    }
+
+    pub fn plot_labels_as_mut(&mut self) -> &mut Vec<StoredPlotLabels> {
+        &mut self.plot_labels
+    }
+
+    pub fn add_plot_labels(&mut self, plot_labels: StoredPlotLabels) {
+        self.plot_labels.push(plot_labels);
+    }
+}
+
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,

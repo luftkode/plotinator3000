@@ -1,6 +1,6 @@
 use date_settings::LogStartDateSettings;
 use log_if::plotable::Plotable;
-use plot_util::{PlotWithName, StoredPlotLabels};
+use plot_util::PlotData;
 use serde::{Deserialize, Serialize};
 
 use crate::app::PlayBackButtonEvent;
@@ -24,12 +24,9 @@ pub struct LogPlot {
     line_width: f32,
     axis_config: AxisConfig,
     play_state: PlayState,
-    percentage_plots: Vec<PlotWithName>,
-    percentage_plot_labels: Vec<StoredPlotLabels>,
-    to_hundreds_plots: Vec<PlotWithName>,
-    to_hundreds_plot_labels: Vec<StoredPlotLabels>,
-    to_thousands_plots: Vec<PlotWithName>,
-    to_thousands_plot_labels: Vec<StoredPlotLabels>,
+    plot_data_percentage: PlotData,
+    plot_data_to_hundreds: PlotData,
+    plot_data_thousands: PlotData,
     plot_visibility: PlotVisibilityConfig,
     log_start_date_settings: Vec<LogStartDateSettings>,
     x_min_max: Option<(f64, f64)>,
@@ -44,12 +41,9 @@ impl Default for LogPlot {
             line_width: 1.5,
             axis_config: Default::default(),
             play_state: PlayState::default(),
-            percentage_plots: vec![],
-            percentage_plot_labels: vec![],
-            to_hundreds_plots: vec![],
-            to_hundreds_plot_labels: vec![],
-            to_thousands_plots: vec![],
-            to_thousands_plot_labels: vec![],
+            plot_data_percentage: PlotData::default(),
+            plot_data_to_hundreds: PlotData::default(),
+            plot_data_thousands: PlotData::default(),
             plot_visibility: PlotVisibilityConfig::default(),
             log_start_date_settings: vec![],
             x_min_max: None,
@@ -74,12 +68,9 @@ impl LogPlot {
             line_width,
             axis_config,
             play_state,
-            percentage_plots,
-            percentage_plot_labels,
-            to_hundreds_plots,
-            to_hundreds_plot_labels,
-            to_thousands_plots,
-            to_thousands_plot_labels,
+            plot_data_percentage,
+            plot_data_to_hundreds,
+            plot_data_thousands,
             plot_visibility,
             log_start_date_settings,
             x_min_max,
@@ -93,9 +84,9 @@ impl LogPlot {
         }
 
         util::calc_all_plot_x_min_max(
-            percentage_plots,
-            to_hundreds_plots,
-            to_thousands_plots,
+            plot_data_percentage.plots(),
+            plot_data_to_hundreds.plots(),
+            plot_data_thousands.plots(),
             x_min_max,
         );
 
@@ -122,12 +113,9 @@ impl LogPlot {
             for log in logs {
                 util::add_plot_data_to_plot_collections(
                     log_start_date_settings,
-                    percentage_plots,
-                    percentage_plot_labels,
-                    to_hundreds_plots,
-                    to_hundreds_plot_labels,
-                    to_thousands_plots,
-                    to_thousands_plot_labels,
+                    plot_data_percentage,
+                    plot_data_to_hundreds,
+                    plot_data_thousands,
                     log.as_ref(),
                 );
             }
@@ -135,12 +123,9 @@ impl LogPlot {
             for settings in log_start_date_settings {
                 date_settings::update_plot_dates(
                     invalidate_plot,
-                    percentage_plots,
-                    percentage_plot_labels,
-                    to_hundreds_plots,
-                    to_hundreds_plot_labels,
-                    to_thousands_plots,
-                    to_thousands_plot_labels,
+                    plot_data_percentage,
+                    plot_data_to_hundreds,
+                    plot_data_thousands,
                     settings,
                 );
             }
@@ -148,13 +133,13 @@ impl LogPlot {
             // Calculate the number of plots to display
             let mut total_plot_count: u8 = 0;
             let display_percentage_plot =
-                plot_visibility.should_display_percentage(percentage_plots);
+                plot_visibility.should_display_percentage(plot_data_percentage.plots());
             total_plot_count += display_percentage_plot as u8;
             let display_to_hundred_plot =
-                plot_visibility.should_display_to_hundreds(to_hundreds_plots);
+                plot_visibility.should_display_to_hundreds(plot_data_to_hundreds.plots());
             total_plot_count += display_to_hundred_plot as u8;
             let display_to_thousands_plot =
-                plot_visibility.should_display_to_thousands(to_thousands_plots);
+                plot_visibility.should_display_to_thousands(plot_data_thousands.plots());
             total_plot_count += display_to_thousands_plot as u8;
 
             let plot_height = ui.available_height() / (total_plot_count as f32);
@@ -187,8 +172,8 @@ impl LogPlot {
             if display_percentage_plot {
                 percentage_plot.show(ui, |percentage_plot_ui| {
                     Self::handle_plot(percentage_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, percentage_plots, *line_width);
-                        for plot_labels in percentage_plot_labels {
+                        plot_util::plot_lines(plot_ui, plot_data_percentage.plots(), *line_width);
+                        for plot_labels in plot_data_percentage.plot_labels() {
                             for (label_point, label_txt) in plot_labels.label_points() {
                                 let point = PlotPoint::new(label_point[0], label_point[1]);
                                 let txt = RichText::new(label_txt.as_str()).size(10.0);
@@ -218,8 +203,8 @@ impl LogPlot {
                 ui.separator();
                 to_hundred.show(ui, |to_hundred_plot_ui| {
                     Self::handle_plot(to_hundred_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, to_hundreds_plots, *line_width);
-                        for plot_labels in to_hundreds_plot_labels {
+                        plot_util::plot_lines(plot_ui, plot_data_to_hundreds.plots(), *line_width);
+                        for plot_labels in plot_data_to_hundreds.plot_labels() {
                             for (label_point, label_txt) in plot_labels.label_points() {
                                 let point = PlotPoint::new(label_point[0], label_point[1]);
                                 let txt = RichText::new(label_txt.as_str()).size(10.0);
@@ -244,8 +229,8 @@ impl LogPlot {
                 ui.separator();
                 thousands.show(ui, |thousands_plot_ui| {
                     Self::handle_plot(thousands_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, to_thousands_plots, *line_width);
-                        for plot_labels in to_thousands_plot_labels {
+                        plot_util::plot_lines(plot_ui, plot_data_thousands.plots(), *line_width);
+                        for plot_labels in plot_data_thousands.plot_labels() {
                             for (label_point, label_txt) in plot_labels.label_points() {
                                 let point = PlotPoint::new(label_point[0], label_point[1]);
                                 let txt = RichText::new(label_txt.as_str()).size(10.0);
