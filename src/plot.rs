@@ -217,9 +217,9 @@ fn construct_plot(
     let (plot_data, plot_type) = plot;
     plot_util::plot_lines(plot_ui, plot_data.plots(), line_width);
     for plot_labels in plot_data.plot_labels() {
-        for (label_point, label_txt) in plot_labels.label_points() {
-            let point = PlotPoint::new(label_point[0], label_point[1]);
-            let txt = RichText::new(label_txt.as_str()).size(10.0);
+        for label in plot_labels.labels() {
+            let point = PlotPoint::new(label.point()[0], label.point()[1]);
+            let txt = RichText::new(label.text()).size(10.0);
             let txt = egui_plot::Text::new(point, txt);
             plot_ui.text(txt);
         }
