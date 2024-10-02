@@ -58,9 +58,6 @@ impl Default for LogPlotUi {
 }
 
 impl LogPlotUi {
-    pub fn formatted_playback_time(&self) -> String {
-        self.play_state.formatted_time()
-    }
     pub fn is_playing(&self) -> bool {
         self.play_state.is_playing()
     }
@@ -142,7 +139,7 @@ impl LogPlotUi {
                 link_group.expect("uninitialized link group id"),
             );
 
-            let mut plot_components_list = vec![];
+            let mut plot_components_list = Vec::with_capacity(total_plot_count.into());
             if display_percentage_plot {
                 plot_components_list.push((
                     percentage_plot,
