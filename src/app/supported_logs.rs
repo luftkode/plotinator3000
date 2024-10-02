@@ -54,7 +54,23 @@ fn parse_file(file: &DroppedFile, logs: &mut SupportedLogs) -> io::Result<()> {
         parse_content(content, logs)?;
     } else if let Some(path) = &file.path {
         // This is how content is accessible via drag-n-drop when the app is running natively
-        parse_path(path, logs)?;
+        log::debug!("path: {path:?}");
+        if path.is_dir() {
+            if let Ok(dir_entries) = fs::read_dir(path) {
+                for dir_entry in dir_entries {
+                    if let Ok(dir_entry) = dir_entry {
+                        if let Err(e) = parse_path(&dir_entry.path(), logs) {
+                            log::warn!(
+                                "Failed to parse dir entry {dir_entry}: {e}",
+                                dir_entry = dir_entry.file_name().to_string_lossy()
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            parse_path(path, logs)?;
+        }
     } else {
         unreachable!("What is this content??")
     }
