@@ -160,7 +160,7 @@ impl LogPlotUi {
                 plot_components_list.push((thousands, plots.thousands(), PlotType::Thousands));
             }
 
-            construct_plots(
+            fill_plots(
                 ui,
                 plot_components_list,
                 axis_config,
@@ -174,7 +174,8 @@ impl LogPlotUi {
     }
 }
 
-fn construct_plots(
+/// Iterate and fill/paint all plots with plot data
+fn fill_plots(
     gui: &mut Ui,
     plot_components: Vec<(Plot<'_>, &PlotData, PlotType)>,
     axis_config: &mut AxisConfig,
@@ -198,6 +199,7 @@ fn construct_plots(
     }
 }
 
+/// Iterate and fill/paint a plot with plot data
 fn fill_plot(
     plot_ui: &mut egui_plot::PlotUi,
     plot: (&PlotData, PlotType),
@@ -233,6 +235,7 @@ fn fill_plot(
     });
 }
 
+/// Build/configure the plot UI/windows
 fn build_all_plot_uis<'a>(
     plot_height: f32,
     legend_cfg: &Legend,
