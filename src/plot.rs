@@ -19,7 +19,7 @@ mod util;
 
 #[allow(missing_debug_implementations)] // Legend is from egui_plot and doesn't implement debug
 #[derive(PartialEq, Deserialize, Serialize)]
-pub struct LogPlot {
+pub struct LogPlotUi {
     config: Legend,
     line_width: f32,
     axis_config: AxisConfig,
@@ -34,7 +34,7 @@ pub struct LogPlot {
     invalidate_plot: bool,
 }
 
-impl Default for LogPlot {
+impl Default for LogPlotUi {
     fn default() -> Self {
         Self {
             config: Default::default(),
@@ -52,7 +52,7 @@ impl Default for LogPlot {
     }
 }
 
-impl LogPlot {
+impl LogPlotUi {
     pub fn formatted_playback_time(&self) -> String {
         self.play_state.formatted_time()
     }
