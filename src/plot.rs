@@ -1,10 +1,10 @@
 use date_settings::LogStartDateSettings;
 use log_if::plotable::Plotable;
-use plot_util::Plots;
+use plot_util::{PlotData, Plots};
 use serde::{Deserialize, Serialize};
 
 use crate::app::PlayBackButtonEvent;
-use axis_config::{AxisConfig, PlotType};
+use axis_config::AxisConfig;
 use egui::{Response, RichText};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint};
 use play_state::{playback_update_plot, PlayState};
@@ -16,6 +16,13 @@ mod play_state;
 mod plot_ui;
 mod plot_visibility_config;
 mod util;
+
+#[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq)]
+pub enum PlotType {
+    Percentage,
+    Hundreds,
+    Thousands,
+}
 
 #[allow(missing_debug_implementations)] // Legend is from egui_plot and doesn't implement debug
 #[derive(PartialEq, Deserialize, Serialize)]
@@ -152,82 +159,45 @@ impl LogPlotUi {
 
             if display_percentage_plot {
                 percentage_plot.show(ui, |percentage_plot_ui| {
-                    Self::handle_plot(percentage_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, plots.percentage().plots(), *line_width);
-                        for plot_labels in plots.percentage().plot_labels() {
-                            for (label_point, label_txt) in plot_labels.label_points() {
-                                let point = PlotPoint::new(label_point[0], label_point[1]);
-                                let txt = RichText::new(label_txt.as_str()).size(10.0);
-                                let txt = egui_plot::Text::new(point, txt);
-                                plot_ui.text(txt);
-                            }
-                        }
-                        playback_update_plot(
-                            timer,
-                            plot_ui,
-                            is_reset_pressed,
-                            x_min_max.unwrap_or_default().0,
-                        );
-                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Percentage, |plot_ui| {
-                            playback_update_plot(
-                                timer,
-                                plot_ui,
-                                is_reset_pressed,
-                                x_min_max.unwrap_or_default().0,
-                            );
-                        });
-                    });
+                    construct_plot(
+                        percentage_plot_ui,
+                        (plots.percentage(), PlotType::Percentage),
+                        axis_config,
+                        *line_width,
+                        timer,
+                        is_reset_pressed,
+                        *x_min_max,
+                    );
                 });
             }
 
             if display_to_hundred_plot {
                 ui.separator();
                 to_hundred.show(ui, |to_hundred_plot_ui| {
-                    Self::handle_plot(to_hundred_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, plots.one_to_hundred().plots(), *line_width);
-                        for plot_labels in plots.one_to_hundred().plot_labels() {
-                            for (label_point, label_txt) in plot_labels.label_points() {
-                                let point = PlotPoint::new(label_point[0], label_point[1]);
-                                let txt = RichText::new(label_txt.as_str()).size(10.0);
-                                let txt = egui_plot::Text::new(point, txt);
-                                plot_ui.text(txt);
-                            }
-                        }
-
-                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Hundreds, |plot_ui| {
-                            playback_update_plot(
-                                timer,
-                                plot_ui,
-                                is_reset_pressed,
-                                x_min_max.unwrap_or_default().0,
-                            );
-                        });
-                    });
+                    construct_plot(
+                        to_hundred_plot_ui,
+                        (plots.one_to_hundred(), PlotType::Hundreds),
+                        axis_config,
+                        *line_width,
+                        timer,
+                        is_reset_pressed,
+                        *x_min_max,
+                    )
                 });
             }
 
             if display_thousands_plot {
                 ui.separator();
                 thousands.show(ui, |thousands_plot_ui| {
-                    Self::handle_plot(thousands_plot_ui, |plot_ui| {
-                        plot_util::plot_lines(plot_ui, plots.thousands().plots(), *line_width);
-                        for plot_labels in plots.thousands().plot_labels() {
-                            for (label_point, label_txt) in plot_labels.label_points() {
-                                let point = PlotPoint::new(label_point[0], label_point[1]);
-                                let txt = RichText::new(label_txt.as_str()).size(10.0);
-                                let txt = egui_plot::Text::new(point, txt);
-                                plot_ui.text(txt);
-                            }
-                        }
-                        axis_config.handle_y_axis_lock(plot_ui, PlotType::Thousands, |plot_ui| {
-                            playback_update_plot(
-                                timer,
-                                plot_ui,
-                                is_reset_pressed,
-                                x_min_max.unwrap_or_default().0,
-                            );
-                        });
-                    });
+                    construct_plot(
+                        thousands_plot_ui,
+                        (plots.thousands(), PlotType::Thousands),
+                        axis_config,
+                        *line_width,
+                        timer,
+                        is_reset_pressed,
+                        *x_min_max,
+                    );
                 });
             }
         })
@@ -240,4 +210,39 @@ impl LogPlotUi {
     {
         plot_function(plot_ui);
     }
+}
+
+fn construct_plot(
+    plot_ui: &mut egui_plot::PlotUi,
+    plot: (&PlotData, PlotType),
+    axis_config: &mut AxisConfig,
+    line_width: f32,
+    timer: Option<f64>,
+    is_reset_pressed: bool,
+    x_min_max: Option<(f64, f64)>,
+) {
+    let (plot_data, plot_type) = plot;
+    plot_util::plot_lines(plot_ui, plot_data.plots(), line_width);
+    for plot_labels in plot_data.plot_labels() {
+        for (label_point, label_txt) in plot_labels.label_points() {
+            let point = PlotPoint::new(label_point[0], label_point[1]);
+            let txt = RichText::new(label_txt.as_str()).size(10.0);
+            let txt = egui_plot::Text::new(point, txt);
+            plot_ui.text(txt);
+        }
+    }
+    playback_update_plot(
+        timer,
+        plot_ui,
+        is_reset_pressed,
+        x_min_max.unwrap_or_default().0,
+    );
+    axis_config.handle_y_axis_lock(plot_ui, plot_type, |plot_ui| {
+        playback_update_plot(
+            timer,
+            plot_ui,
+            is_reset_pressed,
+            x_min_max.unwrap_or_default().0,
+        );
+    });
 }
