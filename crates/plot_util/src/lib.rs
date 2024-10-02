@@ -5,9 +5,12 @@ use log_if::prelude::*;
 use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
 
-pub mod plot_data;
+pub mod plots;
 
-pub use plot_data::{PlotData, PlotWithName, StoredPlotLabels};
+pub use plots::{
+    plot_data::{PlotData, PlotWithName, StoredPlotLabels},
+    Plots,
+};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct MipMapWithName {
