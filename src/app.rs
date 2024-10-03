@@ -161,7 +161,7 @@ impl eframe::App for App {
             ctx.input(|i| {
                 if !i.raw.dropped_files.is_empty() {
                     self.dropped_files.clone_from(&i.raw.dropped_files);
-                    match SupportedLogs::parse_dropped_files(&self.dropped_files, &mut self.logs) {
+                    match self.logs.parse_dropped_files(&self.dropped_files) {
                         Ok(()) => {
                             log::info!("OK parsing dropped file(s)");
                             self.error_message = None; // Clear any previous error message on success
