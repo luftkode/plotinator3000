@@ -38,6 +38,7 @@ pub struct LogPlotUi {
     // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
     invalidate_plot: bool,
     link_group: Option<Id>,
+    show_loaded_logs: bool,
 }
 
 impl Default for LogPlotUi {
@@ -53,6 +54,7 @@ impl Default for LogPlotUi {
             x_min_max: None,
             invalidate_plot: false,
             link_group: None,
+            show_loaded_logs: false,
         }
     }
 }
@@ -64,7 +66,7 @@ impl LogPlotUi {
 
     pub fn ui(&mut self, ui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
         let Self {
-            legend_cfg: config,
+            legend_cfg,
             line_width,
             axis_config,
             play_state,
@@ -74,6 +76,7 @@ impl LogPlotUi {
             x_min_max,
             invalidate_plot,
             link_group,
+            show_loaded_logs,
         } = self;
         if link_group.is_none() {
             link_group.replace(ui.id().with("linked_plots"));
@@ -97,6 +100,7 @@ impl LogPlotUi {
             axis_config,
             plot_visibility,
             log_start_date_settings,
+            show_loaded_logs,
         );
 
         if let Some(e) = playback_button_event {
@@ -134,7 +138,7 @@ impl LogPlotUi {
 
             let (percentage_plot, to_hundred, thousands) = build_all_plot_uis(
                 plot_height,
-                config,
+                legend_cfg,
                 axis_config,
                 link_group.expect("uninitialized link group id"),
             );
@@ -276,13 +280,13 @@ fn build_all_plot_uis<'a>(
 fn build_plot_ui<'a>(
     name: &str,
     plot_height: f32,
-    config: Legend,
+    legend_cfg: Legend,
     axis_config: &AxisConfig,
     x_axes: Vec<AxisHints<'a>>,
     link_group: Id,
 ) -> Plot<'a> {
     Plot::new(name)
-        .legend(config)
+        .legend(legend_cfg)
         .height(plot_height)
         .show_axes(axis_config.show_axes())
         .show_grid(axis_config.show_grid())

@@ -17,6 +17,7 @@ pub fn show_settings_grid(
     axis_cfg: &mut AxisConfig,
     plot_visibility_cfg: &mut PlotVisibilityConfig,
     log_start_date_settings: &mut [LogStartDateSettings],
+    show_loaded_logs: &mut bool,
 ) {
     egui::Grid::new("settings").show(ui, |ui| {
         ui.label("Line width");
@@ -50,17 +51,35 @@ pub fn show_settings_grid(
             ui.label(RichText::new(play_state.formatted_time()));
             ui.label(" |");
         });
-        for settings in log_start_date_settings {
-            log_date_settings_ui(ui, settings);
-        }
 
         ui.end_row();
     });
+    if !log_start_date_settings.is_empty() {
+        let show_loaded_logs_text = format!(
+            "{} Loaded logs",
+            if *show_loaded_logs {
+                regular::EYE
+            } else {
+                regular::EYE_SLASH
+            }
+        );
+        ui.toggle_value(show_loaded_logs, show_loaded_logs_text);
+
+        if *show_loaded_logs {
+            egui::Grid::new("loaded_logs").show(ui, |ui| {
+                for (i, settings) in log_start_date_settings.iter_mut().enumerate() {
+                    if (i + 1) % 6 == 0 {
+                        ui.end_row();
+                    }
+                    log_date_settings_ui(ui, settings);
+                }
+            });
+        }
+    }
 }
 
 pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
-    ui.end_row();
-    let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date);
+    let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date.date_naive());
     let button_resp = ui.button(log_name_date.clone());
     if button_resp.clicked() {
         settings.clicked = !settings.clicked;
