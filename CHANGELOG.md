@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - (Native only) Recursively parsing drag-n-dropped directories also parses zip archives
+- Hovering on a plot now also shows the plot name.
 
 ## [0.15.0]
 
