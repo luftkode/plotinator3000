@@ -78,6 +78,9 @@ fn parse_directory(path: &Path, logs: &mut SupportedLogs) -> io::Result<()> {
             if let Err(e) = parse_directory(&path, logs) {
                 log::warn!("{e}");
             }
+        } else if is_zip_file(&path) {
+            #[cfg(not(target_arch = "wasm32"))]
+            parse_zip_file(&path, logs)?;
         } else if let Err(e) = parse_path(&path, logs) {
             log::warn!("{e}");
         }
