@@ -65,7 +65,9 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettin
     if button_resp.clicked() {
         settings.clicked = !settings.clicked;
     }
-    button_resp.on_hover_text("Click to modify log settings");
+    if button_resp.hovered() {
+        button_resp.on_hover_text("Click to modify log settings");
+    }
 
     if settings.tmp_date_buf.is_empty() {
         settings.tmp_date_buf = settings
