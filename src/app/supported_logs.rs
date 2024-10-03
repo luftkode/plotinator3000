@@ -39,117 +39,117 @@ impl SupportedLogs {
     /// ### Note to developers who are not seasoned Rust devs :)
     /// This cannot take `&mut self` as that breaks ownership rules when looping over dropped files
     /// meaning you would be forced to make a copy which isn't actually needed, but required for it to compile.
-    pub fn parse_dropped_files(dropped_files: &[DroppedFile], logs: &mut Self) -> io::Result<()> {
+    pub fn parse_dropped_files(&mut self, dropped_files: &[DroppedFile]) -> io::Result<()> {
         for file in dropped_files {
             log::debug!("Parsing dropped file: {file:?}");
-            parse_file(file, logs)?;
+            self.parse_file(file)?;
         }
         Ok(())
     }
-}
 
-fn parse_file(file: &DroppedFile, logs: &mut SupportedLogs) -> io::Result<()> {
-    if let Some(content) = file.bytes.as_ref() {
-        // This is how content is made accessible via drag-n-drop in a browser
-        parse_content(content, logs)?;
-    } else if let Some(path) = &file.path {
-        // This is how content is accessible via drag-n-drop when the app is running natively
-        log::debug!("path: {path:?}");
-        if path.is_dir() {
-            parse_directory(path, logs)?;
-        } else if is_zip_file(path) {
-            #[cfg(not(target_arch = "wasm32"))]
-            parse_zip_file(path, logs)?;
+    fn parse_file(&mut self, file: &DroppedFile) -> io::Result<()> {
+        if let Some(content) = file.bytes.as_ref() {
+            // This is how content is made accessible via drag-n-drop in a browser
+            self.parse_content(content)?;
+        } else if let Some(path) = &file.path {
+            // This is how content is accessible via drag-n-drop when the app is running natively
+            log::debug!("path: {path:?}");
+            if path.is_dir() {
+                self.parse_directory(path)?;
+            } else if is_zip_file(path) {
+                #[cfg(not(target_arch = "wasm32"))]
+                self.parse_zip_file(path)?;
+            } else {
+                self.parse_path(path)?;
+            }
         } else {
-            parse_path(path, logs)?;
+            unreachable!("What is this content??")
         }
-    } else {
-        unreachable!("What is this content??")
+        Ok(())
     }
-    Ok(())
-}
 
-// Parsing directory on native
-fn parse_directory(path: &Path, logs: &mut SupportedLogs) -> io::Result<()> {
-    for entry in fs::read_dir(path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            if let Err(e) = parse_directory(&path, logs) {
+    // Parsing directory on native
+    fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                if let Err(e) = self.parse_directory(&path) {
+                    log::warn!("{e}");
+                }
+            } else if is_zip_file(&path) {
+                #[cfg(not(target_arch = "wasm32"))]
+                self.parse_zip_file(&path)?;
+            } else if let Err(e) = self.parse_path(&path) {
                 log::warn!("{e}");
             }
-        } else if is_zip_file(&path) {
-            #[cfg(not(target_arch = "wasm32"))]
-            parse_zip_file(&path, logs)?;
-        } else if let Err(e) = parse_path(&path, logs) {
-            log::warn!("{e}");
         }
+        Ok(())
     }
-    Ok(())
-}
 
-// Parsing dropped content on web
-fn parse_content(mut content: &[u8], logs: &mut SupportedLogs) -> io::Result<()> {
-    if PidLogHeader::is_buf_header(content).unwrap_or(false) {
-        logs.pid_log.push(PidLog::from_reader(&mut content)?);
-    } else if StatusLogHeader::is_buf_header(content).unwrap_or(false) {
-        logs.status_log.push(StatusLog::from_reader(&mut content)?);
-    } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
-        logs.generator_log
-            .push(GeneratorLog::from_reader(&mut content)?);
-    } else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "Unrecognized file",
-        ));
-    }
-    Ok(())
-}
-
-// Parse file on native
-fn parse_path(path: &path::Path, logs: &mut SupportedLogs) -> io::Result<()> {
-    if PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
-        let f = fs::File::open(path)?;
-        logs.pid_log
-            .push(PidLog::from_reader(&mut BufReader::new(f))?);
-    } else if StatusLogHeader::file_starts_with_header(path).unwrap_or(false) {
-        let f = fs::File::open(path)?;
-        logs.status_log
-            .push(StatusLog::from_reader(&mut BufReader::new(f))?);
-    } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
-        let f = fs::File::open(path)?;
-        logs.generator_log
-            .push(GeneratorLog::from_reader(&mut BufReader::new(f))?);
-    } else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("Unrecognized file: {}", path.to_string_lossy()),
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn parse_zip_file(path: &Path, logs: &mut SupportedLogs) -> io::Result<()> {
-    let file = fs::File::open(path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        log::debug!("Parsing zipped: {}", file.name());
-
-        if file.is_dir() {
-            continue;
+    // Parsing dropped content on web
+    fn parse_content(&mut self, mut content: &[u8]) -> io::Result<()> {
+        if PidLogHeader::is_buf_header(content).unwrap_or(false) {
+            self.pid_log.push(PidLog::from_reader(&mut content)?);
+        } else if StatusLogHeader::is_buf_header(content).unwrap_or(false) {
+            self.status_log.push(StatusLog::from_reader(&mut content)?);
+        } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
+            self.generator_log
+                .push(GeneratorLog::from_reader(&mut content)?);
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Unrecognized file",
+            ));
         }
-
-        let mut contents = Vec::new();
-        io::Read::read_to_end(&mut file, &mut contents)?;
-
-        if let Err(e) = parse_content(&contents, logs) {
-            log::warn!("Failed to parse file {} in zip: {}", file.name(), e);
-        }
+        Ok(())
     }
-    Ok(())
+
+    // Parse file on native
+    fn parse_path(&mut self, path: &path::Path) -> io::Result<()> {
+        if PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
+            let f = fs::File::open(path)?;
+            self.pid_log
+                .push(PidLog::from_reader(&mut BufReader::new(f))?);
+        } else if StatusLogHeader::file_starts_with_header(path).unwrap_or(false) {
+            let f = fs::File::open(path)?;
+            self.status_log
+                .push(StatusLog::from_reader(&mut BufReader::new(f))?);
+        } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
+            let f = fs::File::open(path)?;
+            self.generator_log
+                .push(GeneratorLog::from_reader(&mut BufReader::new(f))?);
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Unrecognized file: {}", path.to_string_lossy()),
+            ));
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
+        let file = fs::File::open(path)?;
+        let mut archive = zip::ZipArchive::new(file)?;
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            log::debug!("Parsing zipped: {}", file.name());
+
+            if file.is_dir() {
+                continue;
+            }
+
+            let mut contents = Vec::new();
+            io::Read::read_to_end(&mut file, &mut contents)?;
+
+            if let Err(e) = self.parse_content(&contents) {
+                log::warn!("Failed to parse file {} in zip: {}", file.name(), e);
+            }
+        }
+        Ok(())
+    }
 }
 
 fn is_zip_file(path: &Path) -> bool {
