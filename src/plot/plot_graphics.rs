@@ -167,9 +167,7 @@ fn build_all_plot_uis<'p>(
     axis_config: &AxisConfig,
     link_group: egui::Id,
 ) -> [(Plot<'p>, PlotType); 3] {
-    let x_axes = vec![AxisHints::new_x()
-        .label("Time")
-        .formatter(crate::util::format_time)];
+    let x_axes = vec![AxisHints::new_x().formatter(crate::util::format_time)];
 
     let percentage_plot = build_plot_ui(
         "percentage",
