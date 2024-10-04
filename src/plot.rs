@@ -1,19 +1,20 @@
 use date_settings::LogStartDateSettings;
 use log_if::plotable::Plotable;
 use plot_ui::loaded_logs::LoadedLogsUi;
-use plot_util::{PlotData, Plots};
+use plot_util::Plots;
 use serde::{Deserialize, Serialize};
 
 use crate::app::PlayBackButtonEvent;
 use axis_config::AxisConfig;
-use egui::{Id, Response, RichText, Ui};
-use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint};
-use play_state::{playback_update_plot, PlayState};
+use egui::{Id, Response};
+use egui_plot::Legend;
+use play_state::PlayState;
 use plot_visibility_config::PlotVisibilityConfig;
 
 mod axis_config;
 mod date_settings;
 mod play_state;
+mod plot_graphics;
 mod plot_ui;
 mod plot_visibility_config;
 mod util;
@@ -128,38 +129,19 @@ impl LogPlotUi {
             plot_visibility.should_display_thousands(plots.thousands().plots().is_empty());
         total_plot_count += display_thousands_plot as u8;
 
-        ui.vertical(|ui| {
-            let plot_height = ui.available_height() / (total_plot_count as f32);
+        let plot_wrapper = plot_graphics::PlotWrapperHelper::new(plots)
+            .should_display_percentage_plot(display_percentage_plot)
+            .should_display_to_hundred_plot(display_to_hundred_plot)
+            .should_display_thousands_plot(display_thousands_plot);
 
-            let (percentage_plot, to_hundred, thousands) = build_all_plot_uis(
-                plot_height,
+        ui.vertical(|ui| {
+            plot_graphics::paint_plots(
+                ui,
+                total_plot_count,
                 legend_cfg,
                 axis_config,
-                link_group.expect("uninitialized link group id"),
-            );
-
-            let mut plot_components_list = Vec::with_capacity(total_plot_count.into());
-            if display_percentage_plot {
-                plot_components_list.push((
-                    percentage_plot,
-                    plots.percentage(),
-                    PlotType::Percentage,
-                ));
-            }
-            if display_to_hundred_plot {
-                ui.separator();
-                plot_components_list.push((to_hundred, plots.one_to_hundred(), PlotType::Hundreds));
-            }
-
-            if display_thousands_plot {
-                ui.separator();
-                plot_components_list.push((thousands, plots.thousands(), PlotType::Thousands));
-            }
-
-            fill_plots(
-                ui,
-                plot_components_list,
-                axis_config,
+                *link_group,
+                plot_wrapper,
                 *line_width,
                 timer,
                 is_reset_pressed,
@@ -168,127 +150,4 @@ impl LogPlotUi {
         })
         .response
     }
-}
-
-/// Iterate and fill/paint all plots with plot data
-fn fill_plots(
-    gui: &mut Ui,
-    plot_components: Vec<(Plot<'_>, &PlotData, PlotType)>,
-    axis_config: &mut AxisConfig,
-    line_width: f32,
-    timer: Option<f64>,
-    is_reset_pressed: bool,
-    x_min_max: Option<(f64, f64)>,
-) {
-    for (ui, plot, ptype) in plot_components {
-        ui.show(gui, |plot_ui| {
-            fill_plot(
-                plot_ui,
-                (plot, ptype),
-                axis_config,
-                line_width,
-                timer,
-                is_reset_pressed,
-                x_min_max,
-            );
-        });
-    }
-}
-
-/// Iterate and fill/paint a plot with plot data
-fn fill_plot(
-    plot_ui: &mut egui_plot::PlotUi,
-    plot: (&PlotData, PlotType),
-    axis_config: &mut AxisConfig,
-    line_width: f32,
-    timer: Option<f64>,
-    is_reset_pressed: bool,
-    x_min_max: Option<(f64, f64)>,
-) {
-    let (plot_data, plot_type) = plot;
-    plot_util::plot_lines(plot_ui, plot_data.plots(), line_width);
-    for plot_labels in plot_data.plot_labels() {
-        for label in plot_labels.labels() {
-            let point = PlotPoint::new(label.point()[0], label.point()[1]);
-            let txt = RichText::new(label.text()).size(10.0);
-            let txt = egui_plot::Text::new(point, txt);
-            plot_ui.text(txt);
-        }
-    }
-    playback_update_plot(
-        timer,
-        plot_ui,
-        is_reset_pressed,
-        x_min_max.unwrap_or_default().0,
-    );
-    axis_config.handle_y_axis_lock(plot_ui, plot_type, |plot_ui| {
-        playback_update_plot(
-            timer,
-            plot_ui,
-            is_reset_pressed,
-            x_min_max.unwrap_or_default().0,
-        );
-    });
-}
-
-/// Build/configure the plot UI/windows
-fn build_all_plot_uis<'a>(
-    plot_height: f32,
-    legend_cfg: &Legend,
-    axis_config: &AxisConfig,
-    link_group: Id,
-) -> (Plot<'a>, Plot<'a>, Plot<'a>) {
-    let x_axes = vec![AxisHints::new_x()
-        .label("Time")
-        .formatter(crate::util::format_time)];
-
-    let percentage_plot = build_plot_ui(
-        "percentage",
-        plot_height,
-        legend_cfg.clone(),
-        axis_config,
-        x_axes.clone(),
-        link_group,
-    )
-    .include_y(1.0)
-    .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0));
-
-    let to_hundred = build_plot_ui(
-        "to_hundred",
-        plot_height,
-        legend_cfg.clone(),
-        axis_config,
-        x_axes.clone(),
-        link_group,
-    );
-    let thousands: Plot<'_> = build_plot_ui(
-        "thousands",
-        plot_height,
-        legend_cfg.clone(),
-        axis_config,
-        x_axes,
-        link_group,
-    );
-    (percentage_plot, to_hundred, thousands)
-}
-
-fn build_plot_ui<'a>(
-    name: &str,
-    plot_height: f32,
-    legend_cfg: Legend,
-    axis_config: &AxisConfig,
-    x_axes: Vec<AxisHints<'a>>,
-    link_group: Id,
-) -> Plot<'a> {
-    Plot::new(name)
-        .legend(legend_cfg)
-        .height(plot_height)
-        .show_axes(axis_config.show_axes())
-        .show_grid(axis_config.show_grid())
-        .y_axis_position(HPlacement::Right)
-        .include_y(0.0)
-        .custom_x_axes(x_axes)
-        .label_formatter(crate::util::format_label_ns)
-        .link_axis(link_group, axis_config.link_x(), false)
-        .link_cursor(link_group, axis_config.link_cursor_x(), false)
 }
