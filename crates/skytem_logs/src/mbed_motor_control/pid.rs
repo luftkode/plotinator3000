@@ -139,8 +139,8 @@ impl Plotable for PidLog {
         self.startup_timestamp
     }
 
-    fn unique_name(&self) -> &str {
-        "Mbed PID log 2024"
+    fn descriptive_name(&self) -> &str {
+        "Mbed PID"
     }
 
     fn labels(&self) -> Option<&[PlotLabels]> {

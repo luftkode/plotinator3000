@@ -149,8 +149,8 @@ impl Plotable for StatusLog {
         self.startup_timestamp
     }
 
-    fn unique_name(&self) -> &str {
-        "Mbed Status log 2024"
+    fn descriptive_name(&self) -> &str {
+        "Mbed Status"
     }
 
     fn labels(&self) -> Option<&[PlotLabels]> {

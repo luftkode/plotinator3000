@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hovering on a plot now also shows the plot name.
 - Reduce UI by allowing toggling the list of logs.
 - Reduce UI cluttering by removing the "Time" label on the X-axis.
+- Reduce verbosity of the name of logs
 
 ### Internals
 
