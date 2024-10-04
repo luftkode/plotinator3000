@@ -16,13 +16,11 @@ pub fn add_plot_data_to_plot_collections(
         log.first_timestamp(),
     ));
     for raw_plot in log.raw_plots() {
-        let plot_name = format!("{} #{}", raw_plot.name(), log_idx);
         match raw_plot.expected_range() {
             ExpectedPlotRange::Percentage => {
                 add_plot_to_vector(
                     plots.percentage_mut().plots_as_mut(),
                     raw_plot,
-                    &plot_name,
                     log_id.clone(),
                 );
             }
@@ -30,7 +28,6 @@ pub fn add_plot_data_to_plot_collections(
                 add_plot_to_vector(
                     plots.one_to_hundred_mut().plots_as_mut(),
                     raw_plot,
-                    &plot_name,
                     log_id.clone(),
                 );
             }
@@ -38,7 +35,6 @@ pub fn add_plot_data_to_plot_collections(
                 add_plot_to_vector(
                     plots.thousands_mut().plots_as_mut(),
                     raw_plot,
-                    &plot_name,
                     log_id.clone(),
                 );
             }
@@ -66,16 +62,12 @@ pub fn add_plot_data_to_plot_collections(
 }
 
 /// Add plot to the list of plots if a plot with the same name isn't already in the vector
-fn add_plot_to_vector(
-    plots: &mut Vec<PlotWithName>,
-    raw_plot: &RawPlot,
-    plot_name: &str,
-    log_id: String,
-) {
-    if !plots.iter().any(|p| p.name == *plot_name) {
+fn add_plot_to_vector(plots: &mut Vec<PlotWithName>, raw_plot: &RawPlot, log_id: String) {
+    let plot_label = format!("{id}# {name}", id = log_id, name = raw_plot.name());
+    if !plots.iter().any(|p| plot_label == p.label()) {
         plots.push(PlotWithName::new(
             raw_plot.points().to_vec(),
-            plot_name.to_owned(),
+            raw_plot.name().to_owned(),
             log_id,
         ));
     }

@@ -31,17 +31,26 @@ impl PlotData {
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,
-    pub name: String,
+
+    name: String,
     pub log_id: String,
+    // Label = "<log_id># <name>"
+    label: String,
 }
 
 impl PlotWithName {
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, id: String) -> Self {
+        let label = format!("{id}# {name}");
         Self {
             raw_plot,
             name,
             log_id: id,
+            label,
         }
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
     }
 }
 
