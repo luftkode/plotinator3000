@@ -1,5 +1,6 @@
 use date_settings::LogStartDateSettings;
 use log_if::plotable::Plotable;
+use plot_ui::loaded_logs::LoadedLogsUi;
 use plot_util::{PlotData, Plots};
 use serde::{Deserialize, Serialize};
 
@@ -99,8 +100,7 @@ impl LogPlotUi {
             line_width,
             axis_config,
             plot_visibility,
-            log_start_date_settings,
-            show_loaded_logs,
+            LoadedLogsUi::state(log_start_date_settings, show_loaded_logs),
         );
 
         if let Some(e) = playback_button_event {
@@ -109,31 +109,26 @@ impl LogPlotUi {
         let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
         let timer = play_state.time_since_update();
 
+        for log in logs {
+            util::add_plot_data_to_plot_collections(log_start_date_settings, plots, log.as_ref());
+        }
+        for settings in log_start_date_settings {
+            date_settings::update_plot_dates(invalidate_plot, plots, settings);
+        }
+
+        // Calculate the number of plots to display
+        let mut total_plot_count: u8 = 0;
+        let display_percentage_plot =
+            plot_visibility.should_display_percentage(plots.percentage().plots().is_empty());
+        total_plot_count += display_percentage_plot as u8;
+        let display_to_hundred_plot =
+            plot_visibility.should_display_hundreds(plots.one_to_hundred().plots().is_empty());
+        total_plot_count += display_to_hundred_plot as u8;
+        let display_thousands_plot =
+            plot_visibility.should_display_thousands(plots.thousands().plots().is_empty());
+        total_plot_count += display_thousands_plot as u8;
+
         ui.vertical(|ui| {
-            for log in logs {
-                util::add_plot_data_to_plot_collections(
-                    log_start_date_settings,
-                    plots,
-                    log.as_ref(),
-                );
-            }
-
-            for settings in log_start_date_settings {
-                date_settings::update_plot_dates(invalidate_plot, plots, settings);
-            }
-
-            // Calculate the number of plots to display
-            let mut total_plot_count: u8 = 0;
-            let display_percentage_plot =
-                plot_visibility.should_display_percentage(plots.percentage().plots().is_empty());
-            total_plot_count += display_percentage_plot as u8;
-            let display_to_hundred_plot =
-                plot_visibility.should_display_hundreds(plots.one_to_hundred().plots().is_empty());
-            total_plot_count += display_to_hundred_plot as u8;
-            let display_thousands_plot =
-                plot_visibility.should_display_thousands(plots.thousands().plots().is_empty());
-            total_plot_count += display_thousands_plot as u8;
-
             let plot_height = ui.available_height() / (total_plot_count as f32);
 
             let (percentage_plot, to_hundred, thousands) = build_all_plot_uis(
