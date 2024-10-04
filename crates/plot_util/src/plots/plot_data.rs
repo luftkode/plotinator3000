@@ -2,16 +2,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct PlotData {
-    plots: Vec<PlotWithName>,
+    plots: Vec<PlotValues>,
     plot_labels: Vec<StoredPlotLabels>,
 }
 
 impl PlotData {
-    pub fn plots(&self) -> &[PlotWithName] {
+    pub fn plots(&self) -> &[PlotValues] {
         &self.plots
     }
 
-    pub fn plots_as_mut(&mut self) -> &mut Vec<PlotWithName> {
+    pub fn plots_as_mut(&mut self) -> &mut Vec<PlotValues> {
         &mut self.plots
     }
 
@@ -29,7 +29,7 @@ impl PlotData {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct PlotWithName {
+pub struct PlotValues {
     pub raw_plot: Vec<[f64; 2]>,
     name: String,
     log_id: usize,
@@ -37,7 +37,7 @@ pub struct PlotWithName {
     label: String,
 }
 
-impl PlotWithName {
+impl PlotValues {
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: usize) -> Self {
         let label = format!("{name} #{log_id}");
         Self {

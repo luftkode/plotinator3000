@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use plot_util::{PlotData, PlotWithName, Plots, StoredPlotLabels};
+use plot_util::{PlotData, PlotValues, Plots, StoredPlotLabels};
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
@@ -100,7 +100,7 @@ fn offset_plot_labels(plot_labels: &mut StoredPlotLabels, new_start_date: DateTi
     offset_data_iter(plot_labels.label_points_mut(), new_start_date);
 }
 
-fn offset_plot(plot: &mut PlotWithName, new_start_date: DateTime<Utc>) {
+fn offset_plot(plot: &mut PlotValues, new_start_date: DateTime<Utc>) {
     offset_data_iter(plot.raw_plot.iter_mut(), new_start_date);
 }
 

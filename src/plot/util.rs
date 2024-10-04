@@ -1,5 +1,5 @@
 use log_if::prelude::*;
-use plot_util::{PlotWithName, Plots, StoredPlotLabels};
+use plot_util::{PlotValues, Plots, StoredPlotLabels};
 
 use super::date_settings::LogStartDateSettings;
 
@@ -51,10 +51,10 @@ pub fn add_plot_data_to_plot_collections(
 }
 
 /// Add plot to the list of plots if a plot with the same name isn't already in the vector
-fn add_plot_to_vector(plots: &mut Vec<PlotWithName>, raw_plot: &RawPlot, log_id: usize) {
+fn add_plot_to_vector(plots: &mut Vec<PlotValues>, raw_plot: &RawPlot, log_id: usize) {
     let plot_label = format!("#{id} {name}", id = log_id, name = raw_plot.name());
     if !plots.iter().any(|p| plot_label == p.label()) {
-        plots.push(PlotWithName::new(
+        plots.push(PlotValues::new(
             raw_plot.points().to_vec(),
             raw_plot.name().to_owned(),
             log_id,

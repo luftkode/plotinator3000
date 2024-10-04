@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 pub mod plots;
 
 pub use plots::{
-    plot_data::{PlotData, PlotWithName, StoredPlotLabels},
+    plot_data::{PlotData, PlotValues, StoredPlotLabels},
     Plots,
 };
 
@@ -37,7 +37,7 @@ where
     Line::new(points)
 }
 
-pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotWithName], line_width: f32) {
+pub fn plot_lines(plot_ui: &mut egui_plot::PlotUi, plots: &[PlotValues], line_width: f32) {
     for plot_with_name in plots {
         let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
         let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
