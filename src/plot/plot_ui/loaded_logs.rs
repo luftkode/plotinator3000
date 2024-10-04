@@ -33,11 +33,8 @@ impl<'a> LoadedLogsUi<'a> {
             ui.toggle_value(self.show_loaded_logs, show_loaded_logs_text);
 
             if *self.show_loaded_logs {
-                egui::Grid::new("loaded_logs").show(ui, |ui| {
-                    for (i, settings) in self.log_start_date_settings.iter_mut().enumerate() {
-                        if (i + 1) % 6 == 0 {
-                            ui.end_row();
-                        }
+                ui.horizontal_wrapped(|ui| {
+                    for settings in &mut *self.log_start_date_settings {
                         log_date_settings_ui(ui, settings);
                     }
                 });
