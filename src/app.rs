@@ -140,18 +140,7 @@ impl eframe::App for App {
                     _ = ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
                 }
             });
-            ui.collapsing("Instructions", |ui| {
-                ui.label("Pan by dragging, or scroll (+ shift = horizontal).");
-                ui.label("Box zooming: Right click to zoom in and zoom out using a selection.");
-                if cfg!(target_arch = "wasm32") {
-                    ui.label("Zoom with ctrl / ⌘ + pointer wheel, or with pinch gesture.");
-                } else if cfg!(target_os = "macos") {
-                    ui.label("Zoom with ctrl / ⌘ + scroll.");
-                } else {
-                    ui.label("Zoom with ctrl + scroll.");
-                }
-                ui.label("Reset view with double-click.");
-            });
+            collapsible_instructions(ui);
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -238,4 +227,19 @@ impl App {
                 });
         }
     }
+}
+
+fn collapsible_instructions(ui: &mut egui::Ui) {
+    ui.collapsing("Instructions", |ui| {
+        ui.label("Pan by dragging, or scroll (+ shift = horizontal).");
+        ui.label("Box zooming: Right click to zoom in and zoom out using a selection.");
+        if cfg!(target_arch = "wasm32") {
+            ui.label("Zoom with ctrl / ⌘ + pointer wheel, or with pinch gesture.");
+        } else if cfg!(target_os = "macos") {
+            ui.label("Zoom with ctrl / ⌘ + scroll.");
+        } else {
+            ui.label("Zoom with ctrl + scroll.");
+        }
+        ui.label("Reset view with double-click.");
+    });
 }

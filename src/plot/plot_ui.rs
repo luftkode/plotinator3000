@@ -10,6 +10,8 @@ use super::{
 
 pub mod loaded_logs;
 
+// filter settings should be refactored out to be a standalone thing, maybe together with loaded_logs_ui
+#[allow(clippy::too_many_arguments)]
 pub fn show_settings_grid(
     ui: &mut egui::Ui,
     play_state: &PlayState,

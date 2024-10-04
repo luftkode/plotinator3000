@@ -101,6 +101,7 @@ impl<'p> PlotWrapperHelper<'p> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Iterate and fill/paint all plots with plot data
 fn fill_plots(
     gui: &mut egui::Ui,
@@ -128,6 +129,7 @@ fn fill_plots(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Iterate and fill/paint a plot with plot data
 fn fill_plot(
     plot_ui: &mut egui_plot::PlotUi,

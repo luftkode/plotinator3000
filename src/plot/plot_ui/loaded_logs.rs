@@ -39,7 +39,7 @@ impl<'a> LoadedLogsUi<'a> {
                     *self.show_loaded_logs = false;
                 }
                 egui::Window::new(show_loaded_logs_text)
-                    .open(&mut self.show_loaded_logs)
+                    .open(self.show_loaded_logs)
                     .show(ui.ctx(), |ui| {
                         egui::Grid::new("log_settings_grid").show(ui, |ui| {
                             for settings in &mut *self.log_start_date_settings {

@@ -80,6 +80,7 @@ impl LogPlotUi {
         self.play_state.is_playing()
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
