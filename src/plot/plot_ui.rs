@@ -1,4 +1,4 @@
-use egui::{Color32, RichText};
+use egui::{Color32, Key, RichText};
 use egui_phosphor::regular;
 use loaded_logs::LoadedLogsUi;
 
@@ -57,17 +57,48 @@ pub fn show_settings_grid(
         ui.end_row();
     });
     ui.horizontal_wrapped(|ui| {
-        ui.toggle_value(
-            show_filter_settings,
-            RichText::new(format!(
-                "{} Filter {}",
-                regular::FUNNEL,
-                regular::CHART_LINE
-            )),
-        );
+        let filter_settings_text = RichText::new(format!(
+            "{} Filter {}",
+            regular::FUNNEL,
+            regular::CHART_LINE
+        ));
+        ui.toggle_value(show_filter_settings, filter_settings_text.text());
         if *show_filter_settings {
-            for (pname, show) in plot_names_show {
-                ui.toggle_value(show, pname.as_str());
+            egui::Window::new(filter_settings_text)
+                .open(show_filter_settings)
+                .show(ui.ctx(), |ui| {
+                    let mut enable_all = false;
+                    let mut disable_all = false;
+                    egui::Grid::new("global_filter_settings").show(ui, |ui| {
+                        if ui
+                            .button(RichText::new("Show all").strong().heading())
+                            .clicked()
+                        {
+                            enable_all = true;
+                        }
+                        if ui
+                            .button(RichText::new("Hide all").strong().heading())
+                            .clicked()
+                        {
+                            disable_all = true;
+                        }
+                    });
+                    if enable_all {
+                        for (_, show) in &mut *plot_names_show {
+                            *show = true;
+                        }
+                    } else if disable_all {
+                        for (_, show) in &mut *plot_names_show {
+                            *show = false;
+                        }
+                    }
+
+                    for (pname, show) in plot_names_show {
+                        ui.toggle_value(show, pname.as_str());
+                    }
+                });
+            if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
+                *show_filter_settings = false;
             }
         }
         loaded_logs_ui.show(ui);
