@@ -47,7 +47,7 @@ impl<'a> LoadedLogsUi<'a> {
 }
 
 fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
-    let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date.date_naive());
+    let log_name_date = settings.log_label();
     let button_resp = ui.button(log_name_date.clone());
     if button_resp.clicked() {
         settings.clicked = !settings.clicked;
@@ -58,7 +58,7 @@ fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) 
 
     if settings.tmp_date_buf.is_empty() {
         settings.tmp_date_buf = settings
-            .start_date
+            .start_date()
             .format("%Y-%m-%d %H:%M:%S%.f")
             .to_string();
     }
@@ -99,9 +99,9 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_n
                 if settings.err_msg.is_empty() {
                     if let Some(new_date) = settings.new_date_candidate {
                         if ui.button("Apply").clicked() || ui.input(|i| i.key_pressed(Key::Enter)) {
-                            settings.start_date = new_date.and_utc();
+                            settings.new_start_date(new_date.and_utc());
                             settings.date_changed = true;
-                            log::info!("New date: {}", settings.start_date);
+                            log::info!("New date: {}", settings.start_date());
                         }
                     }
                 } else {

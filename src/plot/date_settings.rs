@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct LogStartDateSettings {
-    pub log_id: String,
+    log_id: usize,
+    log_descriptive_name: String,
     pub original_start_date: DateTime<Utc>,
-    pub start_date: DateTime<Utc>,
+    start_date: DateTime<Utc>,
     pub clicked: bool,
     pub tmp_date_buf: String,
     pub err_msg: String,
@@ -15,9 +16,10 @@ pub struct LogStartDateSettings {
 }
 
 impl LogStartDateSettings {
-    pub fn new(log_id: String, start_date: DateTime<Utc>) -> Self {
+    pub fn new(log_id: usize, descriptive_name: String, start_date: DateTime<Utc>) -> Self {
         Self {
             log_id,
+            log_descriptive_name: descriptive_name,
             original_start_date: start_date,
             start_date,
             clicked: false,
@@ -26,6 +28,23 @@ impl LogStartDateSettings {
             new_date_candidate: None,
             date_changed: false,
         }
+    }
+
+    pub fn start_date(&self) -> DateTime<Utc> {
+        self.start_date
+    }
+
+    pub fn new_start_date(&mut self, new_start_date: DateTime<Utc>) {
+        self.start_date = new_start_date;
+    }
+
+    pub fn log_label(&self) -> String {
+        format!(
+            "#{log_id} {descriptive_name} [{start_date}]",
+            log_id = self.log_id,
+            descriptive_name = self.log_descriptive_name,
+            start_date = self.start_date.date_naive()
+        )
     }
 }
 
@@ -38,14 +57,14 @@ pub fn update_plot_dates(
         let apply_offsets = |plot_data: &mut PlotData| {
             apply_offset(
                 plot_data.plots_as_mut(),
-                &settings.log_id,
+                settings.log_id,
                 settings.start_date,
-                |p| &p.log_id,
+                |p| p.log_id(),
                 offset_plot,
             );
             apply_offset(
                 plot_data.plot_labels_as_mut(),
-                &settings.log_id,
+                settings.log_id,
                 settings.start_date,
                 StoredPlotLabels::log_id,
                 offset_plot_labels,
@@ -63,12 +82,12 @@ pub fn update_plot_dates(
 
 fn apply_offset<T, F>(
     items: &mut [T],
-    log_id: &str,
+    log_id: usize,
     start_date: DateTime<Utc>,
     get_id: F,
     offset_fn: fn(&mut T, DateTime<Utc>),
 ) where
-    F: Fn(&T) -> &str,
+    F: Fn(&T) -> usize,
 {
     for item in items {
         if get_id(item) == log_id {

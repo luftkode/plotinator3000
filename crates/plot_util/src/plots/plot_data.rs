@@ -31,20 +31,19 @@ impl PlotData {
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotWithName {
     pub raw_plot: Vec<[f64; 2]>,
-
     name: String,
-    pub log_id: String,
-    // Label = "<log_id># <name>"
+    log_id: usize,
+    // Label = "<name> #<log_id>"
     label: String,
 }
 
 impl PlotWithName {
-    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, id: String) -> Self {
-        let label = format!("{id}# {name}");
+    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: usize) -> Self {
+        let label = format!("{name} #{log_id}");
         Self {
             raw_plot,
             name,
-            log_id: id,
+            log_id,
             label,
         }
     }
@@ -52,19 +51,24 @@ impl PlotWithName {
     pub fn label(&self) -> &str {
         &self.label
     }
+
+    /// The ID of the log that the plot belongs to
+    pub fn log_id(&self) -> usize {
+        self.log_id
+    }
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct StoredPlotLabels {
     pub label_points: Vec<PlotLabel>,
-    pub log_id: String,
+    pub log_id: usize,
 }
 
 impl StoredPlotLabels {
-    pub fn new(label_points: Vec<([f64; 2], String)>, id: String) -> Self {
+    pub fn new(label_points: Vec<([f64; 2], String)>, log_id: usize) -> Self {
         Self {
             label_points: label_points.into_iter().map(PlotLabel::from).collect(),
-            log_id: id,
+            log_id,
         }
     }
 
@@ -77,8 +81,8 @@ impl StoredPlotLabels {
         self.label_points.iter_mut().map(|label| &mut label.point)
     }
 
-    pub fn log_id(&self) -> &str {
-        &self.log_id
+    pub fn log_id(&self) -> usize {
+        self.log_id
     }
 }
 
