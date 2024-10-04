@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use date_settings::LogStartDateSettings;
 use egui_notify::Toasts;
 use log_if::plotable::Plotable;
@@ -133,11 +135,19 @@ impl LogPlotUi {
         let timer = play_state.time_since_update();
 
         if !logs.is_empty() {
-            toasts.info(format!(
-                "{} log{} added",
-                logs.len(),
-                if logs.len() == 1 { "" } else { "s" }
-            ));
+            let mut log_names_str = String::new();
+            for l in logs {
+                log_names_str.push('\n');
+                log_names_str.push('\t');
+                log_names_str.push_str(l.descriptive_name());
+            }
+            toasts
+                .info(format!(
+                    "{} log{} added{log_names_str}",
+                    logs.len(),
+                    if logs.len() == 1 { "" } else { "s" }
+                ))
+                .duration(Some(Duration::from_secs(2)));
         }
         for log in logs {
             util::add_plot_data_to_plot_collections(
@@ -147,6 +157,7 @@ impl LogPlotUi {
                 plot_names_shown,
             );
         }
+
         for settings in log_start_date_settings {
             date_settings::update_plot_dates(invalidate_plot, plots, settings);
         }
