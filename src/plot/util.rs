@@ -7,6 +7,7 @@ pub fn add_plot_data_to_plot_collections(
     log_start_date_settings: &mut Vec<LogStartDateSettings>,
     plots: &mut Plots,
     log: &dyn Plotable,
+    plot_names_show: &mut Vec<(String, bool)>,
 ) {
     // This is how all logs get their log_id, and how each plot for each log gets their log_id
     let log_id = log_start_date_settings.len() + 1;
@@ -28,6 +29,12 @@ pub fn add_plot_data_to_plot_collections(
                 add_plot_to_vector(plots.thousands_mut().plots_as_mut(), raw_plot, log_id);
             }
         }
+        if !plot_names_show
+            .iter()
+            .any(|(name, _)| name == raw_plot.name())
+        {
+            plot_names_show.push((raw_plot.name().to_owned(), true));
+        }
     }
 
     if let Some(plot_labels) = log.labels() {
@@ -36,15 +43,15 @@ pub fn add_plot_data_to_plot_collections(
             match labels.expected_range() {
                 ExpectedPlotRange::Percentage => plots
                     .percentage_mut()
-                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id.clone())),
+                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id)),
                 ExpectedPlotRange::OneToOneHundred => {
                     plots
                         .one_to_hundred_mut()
-                        .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id.clone()));
+                        .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id));
                 }
                 ExpectedPlotRange::Thousands => plots
                     .thousands_mut()
-                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id.clone())),
+                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id)),
             }
         }
     }

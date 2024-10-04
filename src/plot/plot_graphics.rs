@@ -16,6 +16,7 @@ pub fn paint_plots(
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
+    plot_name_filter: &[&str],
 ) {
     let plot_height = ui.available_height() / (total_plot_count as f32);
 
@@ -36,6 +37,7 @@ pub fn paint_plots(
         timer,
         is_reset_pressed,
         x_min_max,
+        plot_name_filter,
     );
 }
 
@@ -108,6 +110,7 @@ fn fill_plots(
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
+    plot_name_filter: &[&str],
 ) {
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
@@ -119,6 +122,7 @@ fn fill_plots(
                 timer,
                 is_reset_pressed,
                 x_min_max,
+                plot_name_filter,
             );
         });
     }
@@ -133,9 +137,10 @@ fn fill_plot(
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
+    name_filter: &[&str],
 ) {
     let (plot_data, plot_type) = plot;
-    plot_util::plot_lines(plot_ui, plot_data.plots(), line_width);
+    plot_util::plot_lines(plot_ui, plot_data.plots(), name_filter, line_width);
     for plot_labels in plot_data.plot_labels() {
         for label in plot_labels.labels() {
             let point = PlotPoint::new(label.point()[0], label.point()[1]);

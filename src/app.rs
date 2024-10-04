@@ -1,5 +1,6 @@
 use crate::plot::LogPlotUi;
 use egui::{Color32, DroppedFile, Hyperlink, RichText, TextStyle};
+use egui_notify::Toasts;
 use supported_logs::SupportedLogs;
 
 mod preview_dropped;
@@ -17,6 +18,8 @@ pub enum PlayBackButtonEvent {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
+    #[serde(skip)]
+    toasts: Toasts,
     dropped_files: Vec<DroppedFile>,
     picked_path: Option<String>,
     logs: SupportedLogs,
@@ -29,6 +32,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
+            toasts: Toasts::default(),
             dropped_files: Vec::new(),
             picked_path: None,
             logs: SupportedLogs::default(),
@@ -96,6 +100,15 @@ impl eframe::App for App {
                     ui.add_space(16.0);
                 }
                 if ui.button("Reset plot").clicked() {
+                    if self.plot.plot_count() == 0 {
+                        self.toasts
+                            .warning("No loaded plots...")
+                            .duration(Some(std::time::Duration::from_secs(3)));
+                    } else {
+                        self.toasts
+                            .info("All loaded logs removed...")
+                            .duration(Some(std::time::Duration::from_secs(3)));
+                    }
                     self.logs = SupportedLogs::default();
                     self.plot = LogPlotUi::default();
                     self.dropped_files.clear();
@@ -164,6 +177,8 @@ impl eframe::App for App {
                     match self.logs.parse_dropped_files(&self.dropped_files) {
                         Ok(()) => {
                             log::info!("OK parsing dropped file(s)");
+                            self.toasts.success("Parsing complete");
+
                             self.error_message = None; // Clear any previous error message on success
                         }
                         Err(e) => {
@@ -179,6 +194,7 @@ impl eframe::App for App {
                 egui::warn_if_debug_build(ui);
             });
         });
+        self.toasts.show(ctx);
     }
 }
 

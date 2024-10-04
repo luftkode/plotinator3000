@@ -1,5 +1,4 @@
 use egui::{Color32, RichText};
-use egui_notify::{Toast, Toasts};
 use egui_phosphor::regular;
 use loaded_logs::LoadedLogsUi;
 
@@ -20,6 +19,7 @@ pub fn show_settings_grid(
     plot_visibility_cfg: &mut PlotVisibilityConfig,
     mut loaded_logs_ui: LoadedLogsUi<'_>,
     show_filter_settings: &mut bool,
+    plot_names_show: &mut Vec<(String, bool)>,
 ) {
     egui::Grid::new("settings").show(ui, |ui| {
         ui.label("Line width");
@@ -56,15 +56,20 @@ pub fn show_settings_grid(
 
         ui.end_row();
     });
-    loaded_logs_ui.show(ui);
-    ui.toggle_value(
-        show_filter_settings,
-        RichText::new(format!("{} Filter", regular::FUNNEL)),
-    );
-    if *show_filter_settings {
-
-        // for pn in plot_names {
-
-        // }
-    }
+    ui.horizontal_wrapped(|ui| {
+        ui.toggle_value(
+            show_filter_settings,
+            RichText::new(format!(
+                "{} Filter {}",
+                regular::FUNNEL,
+                regular::CHART_LINE
+            )),
+        );
+        if *show_filter_settings {
+            for (pname, show) in plot_names_show {
+                ui.toggle_value(show, pname.as_str());
+            }
+        }
+        loaded_logs_ui.show(ui);
+    });
 }

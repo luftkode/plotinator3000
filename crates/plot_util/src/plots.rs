@@ -40,6 +40,28 @@ impl Plots {
         calc_plot_x_min_max(self.one_to_hundred().plots(), x_min_max);
         calc_plot_x_min_max(self.thousands().plots(), x_min_max);
     }
+
+    pub fn plot_names(&self) -> Vec<&str> {
+        let mut perc_names: Vec<&str> = Vec::new();
+        let mut hundreds_names: Vec<&str> = Vec::new();
+        let mut thousands_names: Vec<&str> = Vec::new();
+        for p in self.percentage().plots() {
+            perc_names.push(p.name());
+        }
+        perc_names.dedup();
+        for p in self.one_to_hundred().plots() {
+            hundreds_names.push(p.name());
+        }
+        hundreds_names.dedup();
+        for p in self.thousands().plots() {
+            thousands_names.push(p.name());
+        }
+        thousands_names.dedup();
+
+        perc_names.append(&mut hundreds_names);
+        perc_names.append(&mut thousands_names);
+        perc_names
+    }
 }
 
 // Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`

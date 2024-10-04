@@ -48,6 +48,11 @@ impl PlotValues {
         }
     }
 
+    /// Name of Plot, e.g. `RPM` or `Pid err`
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     pub fn label(&self) -> &str {
         &self.label
     }
