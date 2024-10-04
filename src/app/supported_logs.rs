@@ -34,7 +34,7 @@ impl SupportedLogs {
         all_logs
     }
 
-    /// Parse dropped files to supported logs. Only parses and stores log types that haven't already been parsed successfully
+    /// Parse dropped files to supported logs.
     ///
     /// ### Note to developers who are not seasoned Rust devs :)
     /// This cannot take `&mut self` as that breaks ownership rules when looping over dropped files
