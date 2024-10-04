@@ -84,8 +84,8 @@ impl Plotable for GeneratorLog {
             .and_utc()
     }
 
-    fn unique_name(&self) -> &str {
-        "Legacy Generator Log 2016"
+    fn descriptive_name(&self) -> &str {
+        "Legacy Generator"
     }
 
     fn labels(&self) -> Option<&[PlotLabels]> {

@@ -2,16 +2,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct PlotData {
-    plots: Vec<PlotWithName>,
+    plots: Vec<PlotValues>,
     plot_labels: Vec<StoredPlotLabels>,
 }
 
 impl PlotData {
-    pub fn plots(&self) -> &[PlotWithName] {
+    pub fn plots(&self) -> &[PlotValues] {
         &self.plots
     }
 
-    pub fn plots_as_mut(&mut self) -> &mut Vec<PlotWithName> {
+    pub fn plots_as_mut(&mut self) -> &mut Vec<PlotValues> {
         &mut self.plots
     }
 
@@ -29,33 +29,51 @@ impl PlotData {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct PlotWithName {
+pub struct PlotValues {
     pub raw_plot: Vec<[f64; 2]>,
-    pub name: String,
-    pub log_id: String,
+    name: String,
+    log_id: usize,
+    // Label = "<name> #<log_id>"
+    label: String,
 }
 
-impl PlotWithName {
-    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, id: String) -> Self {
+impl PlotValues {
+    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: usize) -> Self {
+        let label = format!("{name} #{log_id}");
         Self {
             raw_plot,
             name,
-            log_id: id,
+            log_id,
+            label,
         }
+    }
+
+    /// Name of Plot, e.g. `RPM` or `Pid err`
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    /// The ID of the log that the plot belongs to
+    pub fn log_id(&self) -> usize {
+        self.log_id
     }
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct StoredPlotLabels {
     pub label_points: Vec<PlotLabel>,
-    pub log_id: String,
+    pub log_id: usize,
 }
 
 impl StoredPlotLabels {
-    pub fn new(label_points: Vec<([f64; 2], String)>, id: String) -> Self {
+    pub fn new(label_points: Vec<([f64; 2], String)>, log_id: usize) -> Self {
         Self {
             label_points: label_points.into_iter().map(PlotLabel::from).collect(),
-            log_id: id,
+            log_id,
         }
     }
 
@@ -68,8 +86,8 @@ impl StoredPlotLabels {
         self.label_points.iter_mut().map(|label| &mut label.point)
     }
 
-    pub fn log_id(&self) -> &str {
-        &self.log_id
+    pub fn log_id(&self) -> usize {
+        self.log_id
     }
 }
 

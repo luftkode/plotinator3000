@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use date_settings::LogStartDateSettings;
+use egui_notify::Toasts;
 use log_if::plotable::Plotable;
 use plot_ui::loaded_logs::LoadedLogsUi;
 use plot_util::Plots;
@@ -41,6 +44,9 @@ pub struct LogPlotUi {
     invalidate_plot: bool,
     link_group: Option<Id>,
     show_loaded_logs: bool,
+    show_filter_settings: bool,
+    // Plot names and whether or not they should be shown (painted)
+    plot_names_shown: Vec<(String, bool)>,
 }
 
 impl Default for LogPlotUi {
@@ -57,16 +63,30 @@ impl Default for LogPlotUi {
             invalidate_plot: false,
             link_group: None,
             show_loaded_logs: false,
+            show_filter_settings: false,
+            plot_names_shown: vec![],
         }
     }
 }
 
 impl LogPlotUi {
+    pub fn plot_count(&self) -> usize {
+        self.plots.percentage().plots().len()
+            + self.plots.one_to_hundred().plots().len()
+            + self.plots.thousands().plots().len()
+    }
+
     pub fn is_playing(&self) -> bool {
         self.play_state.is_playing()
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
+    #[allow(clippy::too_many_lines)]
+    pub fn ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        logs: &[Box<dyn Plotable>],
+        toasts: &mut Toasts,
+    ) -> Response {
         let Self {
             legend_cfg,
             line_width,
@@ -79,6 +99,8 @@ impl LogPlotUi {
             invalidate_plot,
             link_group,
             show_loaded_logs,
+            show_filter_settings,
+            plot_names_shown,
         } = self;
         if link_group.is_none() {
             link_group.replace(ui.id().with("linked_plots"));
@@ -102,17 +124,41 @@ impl LogPlotUi {
             axis_config,
             plot_visibility,
             LoadedLogsUi::state(log_start_date_settings, show_loaded_logs),
+            show_filter_settings,
+            plot_names_shown,
         );
 
         if let Some(e) = playback_button_event {
             play_state.handle_playback_button_press(e);
         };
         let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
+
         let timer = play_state.time_since_update();
 
-        for log in logs {
-            util::add_plot_data_to_plot_collections(log_start_date_settings, plots, log.as_ref());
+        if !logs.is_empty() {
+            let mut log_names_str = String::new();
+            for l in logs {
+                log_names_str.push('\n');
+                log_names_str.push('\t');
+                log_names_str.push_str(l.descriptive_name());
+            }
+            toasts
+                .info(format!(
+                    "{} log{} added{log_names_str}",
+                    logs.len(),
+                    if logs.len() == 1 { "" } else { "s" }
+                ))
+                .duration(Some(Duration::from_secs(2)));
         }
+        for log in logs {
+            util::add_plot_data_to_plot_collections(
+                log_start_date_settings,
+                plots,
+                log.as_ref(),
+                plot_names_shown,
+            );
+        }
+
         for settings in log_start_date_settings {
             date_settings::update_plot_dates(invalidate_plot, plots, settings);
         }
@@ -133,7 +179,10 @@ impl LogPlotUi {
             .should_display_percentage_plot(display_percentage_plot)
             .should_display_to_hundred_plot(display_to_hundred_plot)
             .should_display_thousands_plot(display_thousands_plot);
-
+        let plot_name_filter: Vec<&str> = plot_names_shown
+            .iter()
+            .filter_map(|(name, show)| if *show { None } else { Some((*name).as_str()) })
+            .collect();
         ui.vertical(|ui| {
             plot_graphics::paint_plots(
                 ui,
@@ -146,6 +195,7 @@ impl LogPlotUi {
                 timer,
                 is_reset_pressed,
                 *x_min_max,
+                &plot_name_filter,
             );
         })
         .response

@@ -6,8 +6,8 @@ pub trait Plotable {
     fn raw_plots(&self) -> &[RawPlot];
     /// Return the first timestamp, meaning the timestamp of the first entry
     fn first_timestamp(&self) -> DateTime<Utc>;
-    /// A name that uniquely identifies the type of log
-    fn unique_name(&self) -> &str;
+    /// A name that describes the type of log to the user
+    fn descriptive_name(&self) -> &str;
 
     fn labels(&self) -> Option<&[PlotLabels]>;
 }

@@ -1,4 +1,4 @@
-use egui::{Color32, RichText};
+use egui::{Color32, Key, RichText};
 use egui_phosphor::regular;
 use loaded_logs::LoadedLogsUi;
 
@@ -10,6 +10,8 @@ use super::{
 
 pub mod loaded_logs;
 
+// filter settings should be refactored out to be a standalone thing, maybe together with loaded_logs_ui
+#[allow(clippy::too_many_arguments)]
 pub fn show_settings_grid(
     ui: &mut egui::Ui,
     play_state: &PlayState,
@@ -18,6 +20,8 @@ pub fn show_settings_grid(
     axis_cfg: &mut AxisConfig,
     plot_visibility_cfg: &mut PlotVisibilityConfig,
     mut loaded_logs_ui: LoadedLogsUi<'_>,
+    show_filter_settings: &mut bool,
+    plot_names_show: &mut Vec<(String, bool)>,
 ) {
     egui::Grid::new("settings").show(ui, |ui| {
         ui.label("Line width");
@@ -54,5 +58,51 @@ pub fn show_settings_grid(
 
         ui.end_row();
     });
-    loaded_logs_ui.show(ui);
+    ui.horizontal_wrapped(|ui| {
+        let filter_settings_text = RichText::new(format!(
+            "{} Filter {}",
+            regular::FUNNEL,
+            regular::CHART_LINE
+        ));
+        ui.toggle_value(show_filter_settings, filter_settings_text.text());
+        if *show_filter_settings {
+            egui::Window::new(filter_settings_text)
+                .open(show_filter_settings)
+                .show(ui.ctx(), |ui| {
+                    let mut enable_all = false;
+                    let mut disable_all = false;
+                    egui::Grid::new("global_filter_settings").show(ui, |ui| {
+                        if ui
+                            .button(RichText::new("Show all").strong().heading())
+                            .clicked()
+                        {
+                            enable_all = true;
+                        }
+                        if ui
+                            .button(RichText::new("Hide all").strong().heading())
+                            .clicked()
+                        {
+                            disable_all = true;
+                        }
+                    });
+                    if enable_all {
+                        for (_, show) in &mut *plot_names_show {
+                            *show = true;
+                        }
+                    } else if disable_all {
+                        for (_, show) in &mut *plot_names_show {
+                            *show = false;
+                        }
+                    }
+
+                    for (pname, show) in plot_names_show {
+                        ui.toggle_value(show, pname.as_str());
+                    }
+                });
+            if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
+                *show_filter_settings = false;
+            }
+        }
+        loaded_logs_ui.show(ui);
+    });
 }

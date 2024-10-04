@@ -16,6 +16,7 @@ pub fn paint_plots(
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
+    plot_name_filter: &[&str],
 ) {
     let plot_height = ui.available_height() / (total_plot_count as f32);
 
@@ -36,6 +37,7 @@ pub fn paint_plots(
         timer,
         is_reset_pressed,
         x_min_max,
+        plot_name_filter,
     );
 }
 
@@ -99,6 +101,7 @@ impl<'p> PlotWrapperHelper<'p> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Iterate and fill/paint all plots with plot data
 fn fill_plots(
     gui: &mut egui::Ui,
@@ -108,6 +111,7 @@ fn fill_plots(
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
+    plot_name_filter: &[&str],
 ) {
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
@@ -119,11 +123,13 @@ fn fill_plots(
                 timer,
                 is_reset_pressed,
                 x_min_max,
+                plot_name_filter,
             );
         });
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Iterate and fill/paint a plot with plot data
 fn fill_plot(
     plot_ui: &mut egui_plot::PlotUi,
@@ -133,9 +139,10 @@ fn fill_plot(
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
+    name_filter: &[&str],
 ) {
     let (plot_data, plot_type) = plot;
-    plot_util::plot_lines(plot_ui, plot_data.plots(), line_width);
+    plot_util::plot_lines(plot_ui, plot_data.plots(), name_filter, line_width);
     for plot_labels in plot_data.plot_labels() {
         for label in plot_labels.labels() {
             let point = PlotPoint::new(label.point()[0], label.point()[1]);

@@ -22,32 +22,39 @@ impl<'a> LoadedLogsUi<'a> {
 
     pub fn show(&mut self, ui: &mut egui::Ui) {
         if !self.log_start_date_settings.is_empty() {
-            let show_loaded_logs_text = format!(
+            let show_loaded_logs_text = RichText::new(format!(
                 "{} Loaded logs",
                 if *self.show_loaded_logs {
                     regular::EYE
                 } else {
                     regular::EYE_SLASH
                 }
-            );
-            ui.toggle_value(self.show_loaded_logs, show_loaded_logs_text);
-
+            ));
+            ui.toggle_value(self.show_loaded_logs, show_loaded_logs_text.text());
             if *self.show_loaded_logs {
-                egui::Grid::new("loaded_logs").show(ui, |ui| {
-                    for (i, settings) in self.log_start_date_settings.iter_mut().enumerate() {
-                        if (i + 1) % 6 == 0 {
-                            ui.end_row();
-                        }
-                        log_date_settings_ui(ui, settings);
-                    }
-                });
+                // Only react on Escape input if no settings are currently open
+                if ui.ctx().input(|i| i.key_pressed(Key::Escape))
+                    && !self.log_start_date_settings.iter().any(|s| s.clicked)
+                {
+                    *self.show_loaded_logs = false;
+                }
+                egui::Window::new(show_loaded_logs_text)
+                    .open(self.show_loaded_logs)
+                    .show(ui.ctx(), |ui| {
+                        egui::Grid::new("log_settings_grid").show(ui, |ui| {
+                            for settings in &mut *self.log_start_date_settings {
+                                log_date_settings_ui(ui, settings);
+                                ui.end_row();
+                            }
+                        });
+                    });
             }
         }
     }
 }
 
 fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
-    let log_name_date = format!("{} [{}]", settings.log_id, settings.start_date.date_naive());
+    let log_name_date = settings.log_label();
     let button_resp = ui.button(log_name_date.clone());
     if button_resp.clicked() {
         settings.clicked = !settings.clicked;
@@ -58,7 +65,7 @@ fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) 
 
     if settings.tmp_date_buf.is_empty() {
         settings.tmp_date_buf = settings
-            .start_date
+            .start_date()
             .format("%Y-%m-%d %H:%M:%S%.f")
             .to_string();
     }
@@ -80,9 +87,9 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_n
                 ui.label("Modify the start date to offset the plots of this log");
                 ui.label(format!("original date: {}", settings.original_start_date));
                 ui.label(RichText::new("YYYY-mm-dd HH:MM:SS.ms").strong());
-                let response = ui.add(TextEdit::singleline(&mut settings.tmp_date_buf));
-                if response.changed() {
-                    log::debug!("Changed to {}", settings.tmp_date_buf);
+                let date_txt_input_resp = ui.add(TextEdit::singleline(&mut settings.tmp_date_buf));
+                date_txt_input_resp.request_focus();
+                if date_txt_input_resp.changed() {
                     match NaiveDateTime::parse_from_str(
                         &settings.tmp_date_buf,
                         "%Y-%m-%d %H:%M:%S%.f",
@@ -99,9 +106,9 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_n
                 if settings.err_msg.is_empty() {
                     if let Some(new_date) = settings.new_date_candidate {
                         if ui.button("Apply").clicked() || ui.input(|i| i.key_pressed(Key::Enter)) {
-                            settings.start_date = new_date.and_utc();
+                            settings.new_start_date(new_date.and_utc());
                             settings.date_changed = true;
-                            log::info!("New date: {}", settings.start_date);
+                            log::info!("New date: {}", settings.start_date());
                         }
                     }
                 } else {
