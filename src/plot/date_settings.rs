@@ -43,7 +43,7 @@ impl LogStartDateSettings {
             "#{log_id} {descriptive_name} [{start_date}]",
             log_id = self.log_id,
             descriptive_name = self.log_descriptive_name,
-            start_date = self.start_date.date_naive()
+            start_date = self.start_date.naive_utc()
         )
     }
 }
@@ -55,20 +55,17 @@ pub fn update_plot_dates(
 ) {
     if settings.date_changed {
         let apply_offsets = |plot_data: &mut PlotData| {
-            apply_offset(
-                plot_data.plots_as_mut(),
-                settings.log_id,
-                settings.start_date,
-                |p| p.log_id(),
-                offset_plot,
-            );
-            apply_offset(
-                plot_data.plot_labels_as_mut(),
-                settings.log_id,
-                settings.start_date,
-                StoredPlotLabels::log_id,
-                offset_plot_labels,
-            );
+            for pd in plot_data.plots_as_mut() {
+                if settings.log_id == pd.log_id() {
+                    offset_plot(pd, settings.start_date());
+                }
+            }
+
+            for pl in plot_data.plot_labels_as_mut() {
+                if settings.log_id == pl.log_id() {
+                    offset_plot_labels(pl, settings.start_date());
+                }
+            }
         };
 
         apply_offsets(plots.percentage_mut());
@@ -77,22 +74,6 @@ pub fn update_plot_dates(
 
         settings.date_changed = false;
         *invalidate_plot = true;
-    }
-}
-
-fn apply_offset<T, F>(
-    items: &mut [T],
-    log_id: usize,
-    start_date: DateTime<Utc>,
-    get_id: F,
-    offset_fn: fn(&mut T, DateTime<Utc>),
-) where
-    F: Fn(&T) -> usize,
-{
-    for item in items {
-        if get_id(item) == log_id {
-            offset_fn(item, start_date);
-        }
     }
 }
 
@@ -113,6 +94,8 @@ fn offset_data_iter<'i>(
             .timestamp_nanos_opt()
             .expect("Nanoseconds overflow") as f64;
         let offset = new_date_ns - first_point[0];
+        // Remember to also offset the first point that has been removed from the iterator!
+        first_point[0] += offset;
         for point in data_iter {
             point[0] += offset;
         }
