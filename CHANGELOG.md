@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.16.0]
+
 ### Added
 
 - Hovering on a plot now also shows the plot name.
