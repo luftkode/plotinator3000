@@ -1,4 +1,5 @@
 use date_settings::LogStartDateSettings;
+use egui_notify::Toasts;
 use log_if::plotable::Plotable;
 use plot_ui::loaded_logs::LoadedLogsUi;
 use plot_util::Plots;
@@ -77,7 +78,12 @@ impl LogPlotUi {
         self.play_state.is_playing()
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, logs: &[Box<dyn Plotable>]) -> Response {
+    pub fn ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        logs: &[Box<dyn Plotable>],
+        toasts: &mut Toasts,
+    ) -> Response {
         let Self {
             legend_cfg,
             line_width,
@@ -126,6 +132,13 @@ impl LogPlotUi {
 
         let timer = play_state.time_since_update();
 
+        if !logs.is_empty() {
+            toasts.info(format!(
+                "{} log{} added",
+                logs.len(),
+                if logs.len() == 1 { "" } else { "s" }
+            ));
+        }
         for log in logs {
             util::add_plot_data_to_plot_collections(
                 log_start_date_settings,
@@ -133,7 +146,6 @@ impl LogPlotUi {
                 log.as_ref(),
                 plot_names_shown,
             );
-            log::info!("{plot_names_shown:?}");
         }
         for settings in log_start_date_settings {
             date_settings::update_plot_dates(invalidate_plot, plots, settings);

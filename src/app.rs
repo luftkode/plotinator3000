@@ -155,7 +155,7 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.plot.ui(ui, &self.logs.logs());
+            self.plot.ui(ui, &self.logs.logs(), &mut self.toasts);
 
             if self.dropped_files.is_empty() {
                 // Display the message when no files have been dropped and no logs are loaded
