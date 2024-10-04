@@ -1,4 +1,5 @@
 use egui::{Color32, RichText};
+use egui_notify::{Toast, Toasts};
 use egui_phosphor::regular;
 use loaded_logs::LoadedLogsUi;
 
@@ -18,6 +19,7 @@ pub fn show_settings_grid(
     axis_cfg: &mut AxisConfig,
     plot_visibility_cfg: &mut PlotVisibilityConfig,
     mut loaded_logs_ui: LoadedLogsUi<'_>,
+    show_filter_settings: &mut bool,
 ) {
     egui::Grid::new("settings").show(ui, |ui| {
         ui.label("Line width");
@@ -55,4 +57,14 @@ pub fn show_settings_grid(
         ui.end_row();
     });
     loaded_logs_ui.show(ui);
+    ui.toggle_value(
+        show_filter_settings,
+        RichText::new(format!("{} Filter", regular::FUNNEL)),
+    );
+    if *show_filter_settings {
+
+        // for pn in plot_names {
+
+        // }
+    }
 }
