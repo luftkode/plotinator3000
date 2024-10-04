@@ -33,10 +33,10 @@ impl<'a> LoadedLogsUi<'a> {
             ui.toggle_value(self.show_loaded_logs, show_loaded_logs_text.text());
             if *self.show_loaded_logs {
                 // Only react on Escape input if no settings are currently open
-                if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
-                    if !self.log_start_date_settings.iter().any(|s| s.clicked) {
-                        *self.show_loaded_logs = false;
-                    }
+                if ui.ctx().input(|i| i.key_pressed(Key::Escape))
+                    && !self.log_start_date_settings.iter().any(|s| s.clicked)
+                {
+                    *self.show_loaded_logs = false;
                 }
                 egui::Window::new(show_loaded_logs_text)
                     .open(&mut self.show_loaded_logs)
