@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.17.0]
+
+### Added
+
+- Allow toggling whether or not plots from each loaded log are shown.
+
 ## [0.16.0]
 
 ### Added
