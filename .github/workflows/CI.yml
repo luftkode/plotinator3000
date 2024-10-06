@@ -70,7 +70,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Lint native
-        run: cargo clippy --workspace --all-features --  -D warnings -W clippy::all
+        run: cargo clippy --workspace --all-features -- -D warnings -W clippy::all
       - name: Lint WASM
         run: |
           export CLIPPY_CONF_DIR="$(pwd)/lint/wasm/clippy.toml"
