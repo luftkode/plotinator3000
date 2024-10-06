@@ -13,6 +13,7 @@ pub struct LogStartDateSettings {
     pub err_msg: String,
     pub new_date_candidate: Option<NaiveDateTime>,
     pub date_changed: bool,
+    show: bool,
 }
 
 impl LogStartDateSettings {
@@ -27,6 +28,7 @@ impl LogStartDateSettings {
             err_msg: String::new(),
             new_date_candidate: None,
             date_changed: false,
+            show: true,
         }
     }
 
@@ -45,6 +47,18 @@ impl LogStartDateSettings {
             descriptive_name = self.log_descriptive_name,
             start_date = self.start_date.naive_utc()
         )
+    }
+
+    pub fn log_id(&self) -> usize {
+        self.log_id
+    }
+
+    pub fn show_log(&self) -> bool {
+        self.show
+    }
+
+    pub fn show_log_mut(&mut self) -> &mut bool {
+        &mut self.show
     }
 }
 
