@@ -81,7 +81,7 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_n
         .collapsible(false)
         .movable(false)
         .open(&mut open)
-        .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+        .anchor(egui::Align2::LEFT_TOP, egui::Vec2::ZERO)
         .show(ui.ctx(), |ui| {
             ui.vertical_centered(|ui| {
                 ui.label("Modify the start date to offset the plots of this log");
