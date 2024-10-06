@@ -159,8 +159,13 @@ impl LogPlotUi {
             );
         }
 
+        // The id filter specifies which plots belonging to which logs should not be painted on the plot ui.
+        let mut log_id_filter: Vec<usize> = vec![];
         for settings in log_start_date_settings {
             date_settings::update_plot_dates(invalidate_plot, plots, settings);
+            if !settings.show_log() {
+                log_id_filter.push(settings.log_id());
+            }
         }
 
         // Calculate the number of plots to display
@@ -196,6 +201,7 @@ impl LogPlotUi {
                 is_reset_pressed,
                 *x_min_max,
                 &plot_name_filter,
+                &log_id_filter,
             );
         })
         .response
