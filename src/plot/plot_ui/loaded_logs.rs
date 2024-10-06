@@ -55,7 +55,19 @@ impl<'a> LoadedLogsUi<'a> {
 
 fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
     let log_name_date = settings.log_label();
-    let button_resp = ui.button(log_name_date.clone());
+    let check_box_text = RichText::new(if settings.show_log() {
+        regular::EYE
+    } else {
+        regular::EYE_SLASH
+    });
+    ui.checkbox(settings.show_log_mut(), check_box_text);
+    let log_button_text = RichText::new(log_name_date.clone());
+    let log_button_text = if settings.show_log() {
+        log_button_text.strong()
+    } else {
+        log_button_text
+    };
+    let button_resp = ui.button(log_button_text);
     if button_resp.clicked() {
         settings.clicked = !settings.clicked;
     }
