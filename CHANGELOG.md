@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Allow toggling whether or not plots from each loaded log are shown.
 
+### Internals
+
+- Update dependencies
+
 ## [0.16.0]
 
 ### Added
