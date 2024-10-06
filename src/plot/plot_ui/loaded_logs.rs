@@ -55,7 +55,19 @@ impl<'a> LoadedLogsUi<'a> {
 
 fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
     let log_name_date = settings.log_label();
-    let button_resp = ui.button(log_name_date.clone());
+    let check_box_text = RichText::new(if settings.show_log() {
+        regular::EYE
+    } else {
+        regular::EYE_SLASH
+    });
+    ui.checkbox(settings.show_log_mut(), check_box_text);
+    let log_button_text = RichText::new(log_name_date.clone());
+    let log_button_text = if settings.show_log() {
+        log_button_text.strong()
+    } else {
+        log_button_text
+    };
+    let button_resp = ui.button(log_button_text);
     if button_resp.clicked() {
         settings.clicked = !settings.clicked;
     }
@@ -81,7 +93,7 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_n
         .collapsible(false)
         .movable(false)
         .open(&mut open)
-        .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+        .anchor(egui::Align2::LEFT_TOP, egui::Vec2::ZERO)
         .show(ui.ctx(), |ui| {
             ui.vertical_centered(|ui| {
                 ui.label("Modify the start date to offset the plots of this log");

@@ -41,11 +41,12 @@ pub fn plot_lines(
     plot_ui: &mut egui_plot::PlotUi,
     plots: &[PlotValues],
     name_filter: &[&str],
+    id_filter: &[usize],
     line_width: f32,
 ) {
     for plot_with_name in plots
         .iter()
-        .filter(|pwn| !name_filter.contains(&pwn.name()))
+        .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
     {
         let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
         let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
