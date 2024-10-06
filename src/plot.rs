@@ -3,6 +3,7 @@ use std::time::Duration;
 use date_settings::LogStartDateSettings;
 use egui_notify::Toasts;
 use log_if::plotable::Plotable;
+use plot_settings::PlotSettings;
 use plot_ui::loaded_logs::LoadedLogsUi;
 use plot_util::Plots;
 use serde::{Deserialize, Serialize};
@@ -12,14 +13,13 @@ use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
 use play_state::PlayState;
-use plot_visibility_config::PlotVisibilityConfig;
 
 mod axis_config;
 mod date_settings;
 mod play_state;
 mod plot_graphics;
+mod plot_settings;
 mod plot_ui;
-mod plot_visibility_config;
 mod util;
 
 #[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq)]
@@ -37,7 +37,7 @@ pub struct LogPlotUi {
     axis_config: AxisConfig,
     play_state: PlayState,
     plots: Plots,
-    plot_visibility: PlotVisibilityConfig,
+    plot_settings: PlotSettings,
     log_start_date_settings: Vec<LogStartDateSettings>,
     x_min_max: Option<(f64, f64)>,
     // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
@@ -57,7 +57,7 @@ impl Default for LogPlotUi {
             axis_config: Default::default(),
             play_state: PlayState::default(),
             plots: Plots::default(),
-            plot_visibility: PlotVisibilityConfig::default(),
+            plot_settings: PlotSettings::default(),
             log_start_date_settings: vec![],
             x_min_max: None,
             invalidate_plot: false,
@@ -93,7 +93,7 @@ impl LogPlotUi {
             axis_config,
             play_state,
             plots,
-            plot_visibility,
+            plot_settings,
             log_start_date_settings,
             x_min_max,
             invalidate_plot,
@@ -122,7 +122,7 @@ impl LogPlotUi {
             &mut playback_button_event,
             line_width,
             axis_config,
-            plot_visibility,
+            plot_settings,
             LoadedLogsUi::state(log_start_date_settings, show_loaded_logs),
             show_filter_settings,
             plot_names_shown,
@@ -171,19 +171,19 @@ impl LogPlotUi {
         // Calculate the number of plots to display
         let mut total_plot_count: u8 = 0;
         let display_percentage_plot =
-            plot_visibility.should_display_percentage(plots.percentage().plots().is_empty());
+            plot_settings.display_percentage(plots.percentage().plots().is_empty());
         total_plot_count += display_percentage_plot as u8;
         let display_to_hundred_plot =
-            plot_visibility.should_display_hundreds(plots.one_to_hundred().plots().is_empty());
+            plot_settings.display_hundreds(plots.one_to_hundred().plots().is_empty());
         total_plot_count += display_to_hundred_plot as u8;
         let display_thousands_plot =
-            plot_visibility.should_display_thousands(plots.thousands().plots().is_empty());
+            plot_settings.display_thousands(plots.thousands().plots().is_empty());
         total_plot_count += display_thousands_plot as u8;
 
         let plot_wrapper = plot_graphics::PlotWrapperHelper::new(plots)
-            .should_display_percentage_plot(display_percentage_plot)
-            .should_display_to_hundred_plot(display_to_hundred_plot)
-            .should_display_thousands_plot(display_thousands_plot);
+            .display_percentage_plot(display_percentage_plot)
+            .display_to_hundred_plot(display_to_hundred_plot)
+            .display_thousands_plot(display_thousands_plot);
         let plot_name_filter: Vec<&str> = plot_names_shown
             .iter()
             .filter_map(|(name, show)| if *show { None } else { Some((*name).as_str()) })

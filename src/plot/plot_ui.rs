@@ -4,9 +4,7 @@ use loaded_logs::LoadedLogsUi;
 
 use crate::app::PlayBackButtonEvent;
 
-use super::{
-    axis_config::AxisConfig, play_state::PlayState, plot_visibility_config::PlotVisibilityConfig,
-};
+use super::{axis_config::AxisConfig, play_state::PlayState, plot_settings::PlotSettings};
 
 pub mod loaded_logs;
 
@@ -18,7 +16,7 @@ pub fn show_settings_grid(
     playback_button_event: &mut Option<PlayBackButtonEvent>,
     line_width: &mut f32,
     axis_cfg: &mut AxisConfig,
-    plot_visibility_cfg: &mut PlotVisibilityConfig,
+    plot_settings: &mut PlotSettings,
     mut loaded_logs_ui: LoadedLogsUi<'_>,
     show_filter_settings: &mut bool,
     plot_names_show: &mut Vec<(String, bool)>,
@@ -33,7 +31,7 @@ pub fn show_settings_grid(
         ui.horizontal_top(|ui| {
             axis_cfg.toggle_axis_cfg_ui(ui);
             ui.label("|");
-            plot_visibility_cfg.toggle_visibility_ui(ui);
+            plot_settings.show(ui);
         });
 
         ui.horizontal_centered(|ui| {

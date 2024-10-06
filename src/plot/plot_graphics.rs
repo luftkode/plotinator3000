@@ -61,15 +61,15 @@ impl<'p> PlotWrapperHelper<'p> {
         }
     }
 
-    pub fn should_display_percentage_plot(mut self, display_percentage_plot: bool) -> Self {
+    pub fn display_percentage_plot(mut self, display_percentage_plot: bool) -> Self {
         self.display_percentage_plot = display_percentage_plot;
         self
     }
-    pub fn should_display_to_hundred_plot(mut self, display_to_hundred_plot: bool) -> Self {
+    pub fn display_to_hundred_plot(mut self, display_to_hundred_plot: bool) -> Self {
         self.display_to_hundred_plot = display_to_hundred_plot;
         self
     }
-    pub fn should_display_thousands_plot(mut self, display_thousands_plot: bool) -> Self {
+    pub fn display_thousands_plot(mut self, display_thousands_plot: bool) -> Self {
         self.display_thousands_plot = display_thousands_plot;
         self
     }
