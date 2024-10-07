@@ -96,7 +96,7 @@ fn offset_plot_labels(plot_labels: &mut StoredPlotLabels, new_start_date: DateTi
 }
 
 fn offset_plot(plot: &mut PlotValues, new_start_date: DateTime<Utc>) {
-    offset_data_iter(plot.raw_plot.iter_mut(), new_start_date);
+    offset_data_iter(plot.raw_plot_mut().iter_mut(), new_start_date);
 }
 
 fn offset_data_iter<'i>(

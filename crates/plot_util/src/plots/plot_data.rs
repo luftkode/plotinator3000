@@ -30,7 +30,7 @@ impl PlotData {
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotValues {
-    pub raw_plot: Vec<[f64; 2]>,
+    raw_plot: Vec<[f64; 2]>,
     name: String,
     log_id: usize,
     // Label = "<name> #<log_id>"
@@ -46,6 +46,16 @@ impl PlotValues {
             log_id,
             label,
         }
+    }
+
+    /// Returns a mutable slice of all plot points
+    pub fn raw_plot_mut(&mut self) -> &mut [[f64; 2]] {
+        &mut self.raw_plot
+    }
+
+    /// Returns a borrowed list of all plot points
+    pub fn raw_plot(&self) -> &[[f64; 2]] {
+        &self.raw_plot
     }
 
     /// Name of Plot, e.g. `RPM` or `Pid err`

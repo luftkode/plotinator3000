@@ -44,14 +44,14 @@ pub fn plot_lines(
     id_filter: &[usize],
     line_width: f32,
 ) {
-    for plot_with_name in plots
+    for plot_vals in plots
         .iter()
         .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
     {
         let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
-        let filtered_points = filter_plot_points(&plot_with_name.raw_plot, x_min_max_ext);
+        let filtered_points = filter_plot_points(plot_vals.raw_plot(), x_min_max_ext);
 
-        let line = Line::new(filtered_points).name(plot_with_name.label());
+        let line = Line::new(filtered_points).name(plot_vals.label());
         plot_ui.line(line.width(line_width));
     }
 }
