@@ -3,11 +3,7 @@ use egui_phosphor::regular;
 
 use crate::app::PlayBackButtonEvent;
 
-use super::{
-    axis_config::AxisConfig,
-    play_state::PlayState,
-    plot_settings::{date_settings::LogStartDateSettings, PlotSettings},
-};
+use super::{axis_config::AxisConfig, play_state::PlayState, plot_settings::PlotSettings};
 
 // filter settings should be refactored out to be a standalone thing, maybe together with loaded_logs_ui
 #[allow(clippy::too_many_arguments)]
@@ -18,7 +14,6 @@ pub fn show_settings_grid(
     line_width: &mut f32,
     axis_cfg: &mut AxisConfig,
     plot_settings: &mut PlotSettings,
-    log_start_date_settings: &mut [LogStartDateSettings],
 ) {
     egui::Grid::new("settings").show(ui, |ui| {
         ui.label("Line width");
@@ -51,7 +46,7 @@ pub fn show_settings_grid(
         ui.horizontal_top(|ui| {
             axis_cfg.toggle_axis_cfg_ui(ui);
             ui.label("|");
-            plot_settings.show(ui, log_start_date_settings);
+            plot_settings.show(ui);
         });
     });
 }

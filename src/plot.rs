@@ -2,10 +2,7 @@ use std::time::Duration;
 
 use egui_notify::Toasts;
 use log_if::plotable::Plotable;
-use plot_settings::{
-    date_settings::{update_plot_dates, LogStartDateSettings},
-    PlotSettings,
-};
+use plot_settings::PlotSettings;
 use plot_util::Plots;
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +35,6 @@ pub struct LogPlotUi {
     play_state: PlayState,
     plots: Plots,
     plot_settings: PlotSettings,
-    log_start_date_settings: Vec<LogStartDateSettings>,
     x_min_max: Option<(f64, f64)>,
     // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
     invalidate_plot: bool,
@@ -54,7 +50,6 @@ impl Default for LogPlotUi {
             play_state: PlayState::default(),
             plots: Plots::default(),
             plot_settings: PlotSettings::default(),
-            log_start_date_settings: vec![],
             x_min_max: None,
             invalidate_plot: false,
             link_group: None,
@@ -87,7 +82,6 @@ impl LogPlotUi {
             play_state,
             plots,
             plot_settings,
-            log_start_date_settings,
             x_min_max,
             invalidate_plot,
             link_group,
@@ -97,9 +91,8 @@ impl LogPlotUi {
         }
 
         // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
-        if *invalidate_plot {
+        if plot_settings.cached_plots_invalidated() {
             *x_min_max = None;
-            *invalidate_plot = false;
         }
 
         plots.calc_all_plot_x_min_max(x_min_max);
@@ -113,14 +106,12 @@ impl LogPlotUi {
             line_width,
             axis_config,
             plot_settings,
-            log_start_date_settings,
         );
 
         if let Some(e) = playback_button_event {
             play_state.handle_playback_button_press(e);
         };
         let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
-
         let timer = play_state.time_since_update();
 
         if !logs.is_empty() {
@@ -139,25 +130,10 @@ impl LogPlotUi {
                 .duration(Some(Duration::from_secs(2)));
         }
         for log in logs {
-            util::add_plot_data_to_plot_collections(
-                log_start_date_settings,
-                plots,
-                log.as_ref(),
-                plot_settings.plot_name_show_mut(),
-            );
+            util::add_plot_data_to_plot_collections(plots, log.as_ref(), plot_settings);
         }
 
-        // The id filter specifies which plots belonging to which logs should not be painted on the plot ui.
-        let mut log_id_filter: Vec<usize> = vec![];
-        for settings in log_start_date_settings {
-            update_plot_dates(invalidate_plot, plots, settings);
-            if !settings.show_log() {
-                log_id_filter.push(settings.log_id());
-            }
-        }
-
-        // Calculate the number of plots to display among other settings
-        plot_settings.calc_plot_display_settings(plots);
+        plot_settings.refresh(plots, invalidate_plot);
 
         ui.vertical(|ui| {
             plot_graphics::paint_plots(
@@ -171,7 +147,7 @@ impl LogPlotUi {
                 timer,
                 is_reset_pressed,
                 *x_min_max,
-                &log_id_filter,
+                &plot_settings.log_id_filter(),
             );
         })
         .response

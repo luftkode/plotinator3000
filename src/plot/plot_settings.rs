@@ -39,6 +39,8 @@ impl PlotSettingsUi {
 
 #[derive(Default, PartialEq, Deserialize, Serialize)]
 pub struct PlotSettings {
+    /// Used for invalidating any cached values that determines plot layout etc.
+    invalidate_plot: bool,
     visibility: PlotVisibilityConfig,
     display_percentage_plot: bool,
     display_hundreds_plot: bool,
@@ -51,13 +53,9 @@ pub struct PlotSettings {
 }
 
 impl PlotSettings {
-    pub fn show(
-        &mut self,
-        ui: &mut egui::Ui,
-        log_start_date_settings: &mut [LogStartDateSettings],
-    ) {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
         self.visibility.toggle_visibility_ui(ui);
-        if !log_start_date_settings.is_empty() {
+        if !self.log_start_date_settings.is_empty() {
             self.ps_ui.ui_toggle_show_filter(ui);
             if self.ps_ui.show_filter_settings {
                 egui::Window::new(self.ps_ui.filter_settings_text())
@@ -113,7 +111,7 @@ impl PlotSettings {
             if self.ps_ui.show_loaded_logs {
                 // Only react on Escape input if no settings are currently open
                 if ui.ctx().input(|i| i.key_pressed(Key::Escape))
-                    && !log_start_date_settings.iter().any(|s| s.clicked)
+                    && !self.log_start_date_settings.iter().any(|s| s.clicked)
                 {
                     self.ps_ui.show_loaded_logs = false;
                 }
@@ -121,13 +119,24 @@ impl PlotSettings {
                     .open(&mut self.ps_ui.show_loaded_logs)
                     .show(ui.ctx(), |ui| {
                         egui::Grid::new("log_settings_grid").show(ui, |ui| {
-                            for settings in log_start_date_settings {
+                            for settings in &mut self.log_start_date_settings {
                                 loaded_logs::log_date_settings_ui(ui, settings);
                                 ui.end_row();
                             }
                         });
                     });
             }
+        }
+    }
+
+    /// Needs to be called once (and only once!) per frame before querying for plot ui settings, such as
+    /// how many plots to paint and more.
+    pub fn refresh(&mut self, plots: &mut Plots, invalidate_plot: &mut bool) {
+        self.update_plot_dates(plots, invalidate_plot);
+        self.calc_plot_display_settings(plots);
+        // If true then we set it to false such that it is only true for one frame
+        if self.cached_plots_invalidated() {
+            self.invalidate_plot = false;
         }
     }
 
@@ -169,8 +178,18 @@ impl PlotSettings {
         self.display_plot_count = total_plot_count;
     }
 
-    pub fn plot_name_show_mut(&mut self) -> &mut Vec<(String, bool)> {
-        &mut self.plot_names_show
+    /// Adds a new plot name/label to the collection if it isn't already in the collection
+    ///
+    /// # Arguments
+    /// - `plot_name` The name of the plot, i.e. the name that appears on the plot legend
+    pub fn add_plot_name_if_not_exists(&mut self, plot_name: &str) {
+        if !self
+            .plot_names_show
+            .iter()
+            .any(|(name, _)| name == plot_name)
+        {
+            self.plot_names_show.push((plot_name.to_owned(), true));
+        }
     }
 
     pub fn plot_name_filter(&self) -> Vec<&str> {
@@ -178,5 +197,41 @@ impl PlotSettings {
             .iter()
             .filter_map(|(name, show)| if *show { None } else { Some((*name).as_str()) })
             .collect()
+    }
+
+    /// Get the next ID for a log, used for when a new log is loaded and added to the collection of logs and log settings
+    pub fn next_log_id(&self) -> usize {
+        (self.total_logs() + 1).into()
+    }
+
+    pub fn total_logs(&self) -> u16 {
+        self.log_start_date_settings.len() as u16
+    }
+
+    pub fn add_log_setting(&mut self, log_settings: LogStartDateSettings) {
+        self.log_start_date_settings.push(log_settings);
+    }
+
+    // The id filter specifies which plots belonging to which logs should not be painted on the plot ui.
+    pub fn log_id_filter(&self) -> Vec<usize> {
+        let mut log_id_filter: Vec<usize> = vec![];
+        for settings in &self.log_start_date_settings {
+            if !settings.show_log() {
+                log_id_filter.push(settings.log_id());
+            }
+        }
+        log_id_filter
+    }
+
+    fn update_plot_dates(&mut self, plots: &mut Plots, invalidate_plot: &mut bool) {
+        for settings in &mut self.log_start_date_settings {
+            date_settings::update_plot_dates(invalidate_plot, plots, settings);
+        }
+    }
+
+    /// Returns true if changes in plot settings occured such that various cached values
+    /// related to plot layout needs to be recalculated.
+    pub fn cached_plots_invalidated(&self) -> bool {
+        self.invalidate_plot
     }
 }
