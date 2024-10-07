@@ -53,13 +53,14 @@ impl PlotValues {
         &self.name
     }
 
-    pub fn label(&self) -> &str {
-        &self.label
-    }
-
     /// The ID of the log that the plot belongs to
     pub fn log_id(&self) -> usize {
         self.log_id
+    }
+
+    /// Label of the plot which includes the log id ie. `"<name> #<log_id"`
+    pub fn label(&self) -> &str {
+        &self.label
     }
 }
 
