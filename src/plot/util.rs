@@ -12,7 +12,7 @@ pub fn add_plot_data_to_plot_collections(
     let log_id = plot_settings.next_log_id();
 
     plot_settings.add_log_setting(LogStartDateSettings::new(
-        log_id.into(),
+        log_id,
         log.descriptive_name().to_owned(),
         log.first_timestamp(),
     ));

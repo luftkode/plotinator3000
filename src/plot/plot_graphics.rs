@@ -19,7 +19,6 @@ pub fn paint_plots(
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
-    plot_id_filter: &[usize],
 ) {
     let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
@@ -58,7 +57,7 @@ pub fn paint_plots(
         is_reset_pressed,
         x_min_max,
         &plot_settings.plot_name_filter(),
-        plot_id_filter,
+        &plot_settings.log_id_filter(),
     );
 }
 

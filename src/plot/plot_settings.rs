@@ -131,8 +131,8 @@ impl PlotSettings {
 
     /// Needs to be called once (and only once!) per frame before querying for plot ui settings, such as
     /// how many plots to paint and more.
-    pub fn refresh(&mut self, plots: &mut Plots, invalidate_plot: &mut bool) {
-        self.update_plot_dates(plots, invalidate_plot);
+    pub fn refresh(&mut self, plots: &mut Plots) {
+        self.update_plot_dates(plots);
         self.calc_plot_display_settings(plots);
         // If true then we set it to false such that it is only true for one frame
         if self.cached_plots_invalidated() {
@@ -223,13 +223,13 @@ impl PlotSettings {
         log_id_filter
     }
 
-    fn update_plot_dates(&mut self, plots: &mut Plots, invalidate_plot: &mut bool) {
+    fn update_plot_dates(&mut self, plots: &mut Plots) {
         for settings in &mut self.log_start_date_settings {
-            date_settings::update_plot_dates(invalidate_plot, plots, settings);
+            date_settings::update_plot_dates(&mut self.invalidate_plot, plots, settings);
         }
     }
 
-    /// Returns true if changes in plot settings occured such that various cached values
+    /// Returns true if changes in plot settings occurred such that various cached values
     /// related to plot layout needs to be recalculated.
     pub fn cached_plots_invalidated(&self) -> bool {
         self.invalidate_plot

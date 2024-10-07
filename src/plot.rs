@@ -36,8 +36,6 @@ pub struct LogPlotUi {
     plots: Plots,
     plot_settings: PlotSettings,
     x_min_max: Option<(f64, f64)>,
-    // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
-    invalidate_plot: bool,
     link_group: Option<Id>,
 }
 
@@ -51,7 +49,6 @@ impl Default for LogPlotUi {
             plots: Plots::default(),
             plot_settings: PlotSettings::default(),
             x_min_max: None,
-            invalidate_plot: false,
             link_group: None,
         }
     }
@@ -83,7 +80,6 @@ impl LogPlotUi {
             plots,
             plot_settings,
             x_min_max,
-            invalidate_plot,
             link_group,
         } = self;
         if link_group.is_none() {
@@ -133,7 +129,7 @@ impl LogPlotUi {
             util::add_plot_data_to_plot_collections(plots, log.as_ref(), plot_settings);
         }
 
-        plot_settings.refresh(plots, invalidate_plot);
+        plot_settings.refresh(plots);
 
         ui.vertical(|ui| {
             plot_graphics::paint_plots(
@@ -147,7 +143,6 @@ impl LogPlotUi {
                 timer,
                 is_reset_pressed,
                 *x_min_max,
-                &plot_settings.log_id_filter(),
             );
         })
         .response
