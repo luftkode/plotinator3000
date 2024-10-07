@@ -1,18 +1,17 @@
 use log_if::prelude::*;
 use plot_util::{PlotValues, Plots, StoredPlotLabels};
 
-use super::date_settings::LogStartDateSettings;
+use super::plot_settings::{date_settings::LogStartDateSettings, PlotSettings};
 
 pub fn add_plot_data_to_plot_collections(
-    log_start_date_settings: &mut Vec<LogStartDateSettings>,
     plots: &mut Plots,
     log: &dyn Plotable,
-    plot_names_show: &mut Vec<(String, bool)>,
+    plot_settings: &mut PlotSettings,
 ) {
     // This is how all logs get their log_id, and how each plot for each log gets their log_id
-    let log_id = log_start_date_settings.len() + 1;
+    let log_id = plot_settings.next_log_id();
 
-    log_start_date_settings.push(LogStartDateSettings::new(
+    plot_settings.add_log_setting(LogStartDateSettings::new(
         log_id,
         log.descriptive_name().to_owned(),
         log.first_timestamp(),
@@ -29,12 +28,7 @@ pub fn add_plot_data_to_plot_collections(
                 add_plot_to_vector(plots.thousands_mut().plots_as_mut(), raw_plot, log_id);
             }
         }
-        if !plot_names_show
-            .iter()
-            .any(|(name, _)| name == raw_plot.name())
-        {
-            plot_names_show.push((raw_plot.name().to_owned(), true));
-        }
+        plot_settings.add_plot_name_if_not_exists(raw_plot.name());
     }
 
     if let Some(plot_labels) = log.labels() {

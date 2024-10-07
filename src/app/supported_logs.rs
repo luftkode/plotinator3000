@@ -25,7 +25,23 @@ pub struct SupportedLogs {
 }
 
 impl SupportedLogs {
-    pub fn logs(&mut self) -> Vec<Box<dyn Plotable>> {
+    /// Return a vector of immutable references to all logs
+    pub fn logs(&self) -> Vec<&dyn Plotable> {
+        let mut all_logs: Vec<&dyn Plotable> = Vec::new();
+        for pl in &self.pid_log {
+            all_logs.push(pl);
+        }
+        for sl in &self.status_log {
+            all_logs.push(sl);
+        }
+        for gl in &self.generator_log {
+            all_logs.push(gl);
+        }
+        all_logs
+    }
+
+    /// Take all the logs currently store in [`SupportedLogs`] and return them as a list
+    pub fn take_logs(&mut self) -> Vec<Box<dyn Plotable>> {
         let mut all_logs: Vec<Box<dyn Plotable>> = Vec::new();
         all_logs.extend(self.pid_log.drain(..).map(|log| log.into()));
         all_logs.extend(self.status_log.drain(..).map(|log| log.into()));

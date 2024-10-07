@@ -2,58 +2,9 @@ use chrono::NaiveDateTime;
 use egui::{Key, RichText, TextEdit};
 use egui_phosphor::regular;
 
-use crate::plot::date_settings::LogStartDateSettings;
+use super::date_settings::LogStartDateSettings;
 
-pub struct LoadedLogsUi<'a> {
-    log_start_date_settings: &'a mut [LogStartDateSettings],
-    show_loaded_logs: &'a mut bool,
-}
-
-impl<'a> LoadedLogsUi<'a> {
-    pub fn state(
-        log_start_date_settings: &'a mut [LogStartDateSettings],
-        show_loaded_logs: &'a mut bool,
-    ) -> Self {
-        Self {
-            log_start_date_settings,
-            show_loaded_logs,
-        }
-    }
-
-    pub fn show(&mut self, ui: &mut egui::Ui) {
-        if !self.log_start_date_settings.is_empty() {
-            let show_loaded_logs_text = RichText::new(format!(
-                "{} Loaded logs",
-                if *self.show_loaded_logs {
-                    regular::EYE
-                } else {
-                    regular::EYE_SLASH
-                }
-            ));
-            ui.toggle_value(self.show_loaded_logs, show_loaded_logs_text.text());
-            if *self.show_loaded_logs {
-                // Only react on Escape input if no settings are currently open
-                if ui.ctx().input(|i| i.key_pressed(Key::Escape))
-                    && !self.log_start_date_settings.iter().any(|s| s.clicked)
-                {
-                    *self.show_loaded_logs = false;
-                }
-                egui::Window::new(show_loaded_logs_text)
-                    .open(self.show_loaded_logs)
-                    .show(ui.ctx(), |ui| {
-                        egui::Grid::new("log_settings_grid").show(ui, |ui| {
-                            for settings in &mut *self.log_start_date_settings {
-                                log_date_settings_ui(ui, settings);
-                                ui.end_row();
-                            }
-                        });
-                    });
-            }
-        }
-    }
-}
-
-fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
+pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
     let log_name_date = settings.log_label();
     let check_box_text = RichText::new(if settings.show_log() {
         regular::EYE

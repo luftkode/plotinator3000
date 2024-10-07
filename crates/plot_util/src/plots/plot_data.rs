@@ -63,10 +63,11 @@ impl PlotValues {
     }
 }
 
+/// Represents all the plotlabels from a given log
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct StoredPlotLabels {
-    pub label_points: Vec<PlotLabel>,
     pub log_id: usize,
+    pub label_points: Vec<PlotLabel>,
 }
 
 impl StoredPlotLabels {

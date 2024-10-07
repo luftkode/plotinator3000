@@ -1,6 +1,9 @@
+use std::time::Duration;
+
 use crate::plot::LogPlotUi;
 use egui::{Color32, DroppedFile, Hyperlink, RichText, TextStyle};
 use egui_notify::Toasts;
+use log_if::prelude::Plotable;
 use supported_logs::SupportedLogs;
 
 mod preview_dropped;
@@ -144,7 +147,8 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.plot.ui(ui, &self.logs.logs(), &mut self.toasts);
+            notify_if_logs_added(&mut self.toasts, &self.logs.logs());
+            self.plot.ui(ui, &self.logs.take_logs(), &mut self.toasts);
 
             if self.dropped_files.is_empty() {
                 // Display the message when no files have been dropped and no logs are loaded
@@ -242,4 +246,23 @@ fn collapsible_instructions(ui: &mut egui::Ui) {
         }
         ui.label("Reset view with double-click.");
     });
+}
+
+/// Displays a toasts notification if logs are added with the names of all added logs
+fn notify_if_logs_added(toasts: &mut Toasts, logs: &[&dyn Plotable]) {
+    if !logs.is_empty() {
+        let mut log_names_str = String::new();
+        for l in logs {
+            log_names_str.push('\n');
+            log_names_str.push('\t');
+            log_names_str.push_str(l.descriptive_name());
+        }
+        toasts
+            .info(format!(
+                "{} log{} added{log_names_str}",
+                logs.len(),
+                if logs.len() == 1 { "" } else { "s" }
+            ))
+            .duration(Some(Duration::from_secs(2)));
+    }
 }

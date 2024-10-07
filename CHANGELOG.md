@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Internals
+
+- Major clearing of tech debts related to plot settings and the ui for plot settings.
+
 ## [0.17.0]
 
 ### Added
