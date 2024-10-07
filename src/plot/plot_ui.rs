@@ -6,7 +6,6 @@ use crate::app::PlayBackButtonEvent;
 use super::{axis_config::AxisConfig, play_state::PlayState, plot_settings::PlotSettings};
 
 // filter settings should be refactored out to be a standalone thing, maybe together with loaded_logs_ui
-#[allow(clippy::too_many_arguments)]
 pub fn show_settings_grid(
     ui: &mut egui::Ui,
     play_state: &PlayState,
