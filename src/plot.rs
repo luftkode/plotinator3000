@@ -1,10 +1,11 @@
 use std::time::Duration;
 
-use date_settings::LogStartDateSettings;
 use egui_notify::Toasts;
 use log_if::plotable::Plotable;
-use plot_settings::PlotSettings;
-use plot_ui::loaded_logs::LoadedLogsUi;
+use plot_settings::{
+    date_settings::{update_plot_dates, LogStartDateSettings},
+    PlotSettings,
+};
 use plot_util::Plots;
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +16,6 @@ use egui_plot::Legend;
 use play_state::PlayState;
 
 mod axis_config;
-mod date_settings;
 mod play_state;
 mod plot_graphics;
 mod plot_settings;
@@ -43,10 +43,6 @@ pub struct LogPlotUi {
     // Various info about the plot is invalidated if this is true (so it needs to be recalculated)
     invalidate_plot: bool,
     link_group: Option<Id>,
-    show_loaded_logs: bool,
-    show_filter_settings: bool,
-    // Plot names and whether or not they should be shown (painted)
-    plot_names_shown: Vec<(String, bool)>,
 }
 
 impl Default for LogPlotUi {
@@ -62,9 +58,6 @@ impl Default for LogPlotUi {
             x_min_max: None,
             invalidate_plot: false,
             link_group: None,
-            show_loaded_logs: false,
-            show_filter_settings: false,
-            plot_names_shown: vec![],
         }
     }
 }
@@ -98,9 +91,6 @@ impl LogPlotUi {
             x_min_max,
             invalidate_plot,
             link_group,
-            show_loaded_logs,
-            show_filter_settings,
-            plot_names_shown,
         } = self;
         if link_group.is_none() {
             link_group.replace(ui.id().with("linked_plots"));
@@ -123,9 +113,7 @@ impl LogPlotUi {
             line_width,
             axis_config,
             plot_settings,
-            LoadedLogsUi::state(log_start_date_settings, show_loaded_logs),
-            show_filter_settings,
-            plot_names_shown,
+            log_start_date_settings,
         );
 
         if let Some(e) = playback_button_event {
@@ -155,52 +143,34 @@ impl LogPlotUi {
                 log_start_date_settings,
                 plots,
                 log.as_ref(),
-                plot_names_shown,
+                plot_settings.plot_name_show_mut(),
             );
         }
 
         // The id filter specifies which plots belonging to which logs should not be painted on the plot ui.
         let mut log_id_filter: Vec<usize> = vec![];
         for settings in log_start_date_settings {
-            date_settings::update_plot_dates(invalidate_plot, plots, settings);
+            update_plot_dates(invalidate_plot, plots, settings);
             if !settings.show_log() {
                 log_id_filter.push(settings.log_id());
             }
         }
 
-        // Calculate the number of plots to display
-        let mut total_plot_count: u8 = 0;
-        let display_percentage_plot =
-            plot_settings.display_percentage(plots.percentage().plots().is_empty());
-        total_plot_count += display_percentage_plot as u8;
-        let display_to_hundred_plot =
-            plot_settings.display_hundreds(plots.one_to_hundred().plots().is_empty());
-        total_plot_count += display_to_hundred_plot as u8;
-        let display_thousands_plot =
-            plot_settings.display_thousands(plots.thousands().plots().is_empty());
-        total_plot_count += display_thousands_plot as u8;
+        // Calculate the number of plots to display among other settings
+        plot_settings.calc_plot_display_settings(plots);
 
-        let plot_wrapper = plot_graphics::PlotWrapperHelper::new(plots)
-            .display_percentage_plot(display_percentage_plot)
-            .display_to_hundred_plot(display_to_hundred_plot)
-            .display_thousands_plot(display_thousands_plot);
-        let plot_name_filter: Vec<&str> = plot_names_shown
-            .iter()
-            .filter_map(|(name, show)| if *show { None } else { Some((*name).as_str()) })
-            .collect();
         ui.vertical(|ui| {
             plot_graphics::paint_plots(
                 ui,
-                total_plot_count,
+                plots,
+                plot_settings,
                 legend_cfg,
                 axis_config,
                 *link_group,
-                plot_wrapper,
                 *line_width,
                 timer,
                 is_reset_pressed,
                 *x_min_max,
-                &plot_name_filter,
                 &log_id_filter,
             );
         })

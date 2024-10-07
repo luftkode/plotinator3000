@@ -1,7 +1,7 @@
 use log_if::prelude::*;
 use plot_util::{PlotValues, Plots, StoredPlotLabels};
 
-use super::date_settings::LogStartDateSettings;
+use super::plot_settings::date_settings::LogStartDateSettings;
 
 pub fn add_plot_data_to_plot_collections(
     log_start_date_settings: &mut Vec<LogStartDateSettings>,

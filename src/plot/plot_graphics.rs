@@ -2,24 +2,26 @@ use egui::RichText;
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint};
 use plot_util::{PlotData, Plots};
 
-use super::{axis_config::AxisConfig, play_state::playback_update_plot, PlotType};
+use super::{
+    axis_config::AxisConfig, play_state::playback_update_plot, plot_settings::PlotSettings,
+    PlotType,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn paint_plots(
     ui: &mut egui::Ui,
-    total_plot_count: u8,
+    plots: &Plots,
+    plot_settings: &PlotSettings,
     legend_cfg: &Legend,
     axis_cfg: &mut AxisConfig,
     link_group: Option<egui::Id>,
-    plot_wrapper: PlotWrapperHelper<'_>,
     line_width: f32,
     timer: Option<f64>,
     is_reset_pressed: bool,
     x_min_max: Option<(f64, f64)>,
-    plot_name_filter: &[&str],
     plot_id_filter: &[usize],
 ) {
-    let plot_height = ui.available_height() / (total_plot_count as f32);
+    let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
     let plot_graphics = build_all_plot_uis(
         plot_height,
@@ -27,80 +29,37 @@ pub fn paint_plots(
         axis_cfg,
         link_group.expect("uninitialized link group id"),
     );
-
-    let plot_components = plot_wrapper.build_plot_components(total_plot_count, plot_graphics);
-
+    let mut plot_components_list = Vec::with_capacity(plot_settings.total_plot_count().into());
+    for (p_graphic, p_type) in plot_graphics {
+        match p_type {
+            PlotType::Percentage => {
+                if plot_settings.display_percentage() {
+                    plot_components_list.push((p_graphic, plots.percentage(), p_type));
+                }
+            }
+            PlotType::Hundreds => {
+                if plot_settings.display_hundreds() {
+                    plot_components_list.push((p_graphic, plots.one_to_hundred(), p_type));
+                }
+            }
+            PlotType::Thousands => {
+                if plot_settings.display_thousands() {
+                    plot_components_list.push((p_graphic, plots.thousands(), p_type));
+                }
+            }
+        }
+    }
     fill_plots(
         ui,
-        plot_components,
+        plot_components_list,
         axis_cfg,
         line_width,
         timer,
         is_reset_pressed,
         x_min_max,
-        plot_name_filter,
+        &plot_settings.plot_name_filter(),
         plot_id_filter,
     );
-}
-
-// Simply wraps some variables to make it harder to mess up a bunch of boolean arguments etc.
-pub struct PlotWrapperHelper<'p> {
-    plots: &'p mut Plots,
-    display_percentage_plot: bool,
-    display_to_hundred_plot: bool,
-    display_thousands_plot: bool,
-}
-
-impl<'p> PlotWrapperHelper<'p> {
-    pub fn new(plots: &'p mut Plots) -> Self {
-        Self {
-            plots,
-            display_percentage_plot: false,
-            display_to_hundred_plot: false,
-            display_thousands_plot: false,
-        }
-    }
-
-    pub fn display_percentage_plot(mut self, display_percentage_plot: bool) -> Self {
-        self.display_percentage_plot = display_percentage_plot;
-        self
-    }
-    pub fn display_to_hundred_plot(mut self, display_to_hundred_plot: bool) -> Self {
-        self.display_to_hundred_plot = display_to_hundred_plot;
-        self
-    }
-    pub fn display_thousands_plot(mut self, display_thousands_plot: bool) -> Self {
-        self.display_thousands_plot = display_thousands_plot;
-        self
-    }
-
-    pub fn build_plot_components(
-        self,
-        total_plot_count: u8,
-        plot_graphics: [(Plot<'p>, PlotType); 3],
-    ) -> Vec<(Plot<'_>, &PlotData, PlotType)> {
-        let mut plot_components_list = Vec::with_capacity(total_plot_count.into());
-        for (p_graphic, p_type) in plot_graphics {
-            match p_type {
-                PlotType::Percentage => {
-                    if self.display_percentage_plot {
-                        plot_components_list.push((p_graphic, self.plots.percentage(), p_type));
-                    }
-                }
-                PlotType::Hundreds => {
-                    if self.display_to_hundred_plot {
-                        plot_components_list.push((p_graphic, self.plots.one_to_hundred(), p_type));
-                    }
-                }
-                PlotType::Thousands => {
-                    if self.display_thousands_plot {
-                        plot_components_list.push((p_graphic, self.plots.thousands(), p_type));
-                    }
-                }
-            }
-        }
-        plot_components_list
-    }
 }
 
 #[allow(clippy::too_many_arguments)]
