@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use egui_notify::Toasts;
 use log_if::plotable::Plotable;
 use plot_settings::PlotSettings;
@@ -69,7 +67,7 @@ impl LogPlotUi {
         &mut self,
         ui: &mut egui::Ui,
         logs: &[Box<dyn Plotable>],
-        toasts: &mut Toasts,
+        _toasts: &mut Toasts,
     ) -> Response {
         let Self {
             legend_cfg,
@@ -109,21 +107,6 @@ impl LogPlotUi {
         let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
         let timer = play_state.time_since_update();
 
-        if !logs.is_empty() {
-            let mut log_names_str = String::new();
-            for l in logs {
-                log_names_str.push('\n');
-                log_names_str.push('\t');
-                log_names_str.push_str(l.descriptive_name());
-            }
-            toasts
-                .info(format!(
-                    "{} log{} added{log_names_str}",
-                    logs.len(),
-                    if logs.len() == 1 { "" } else { "s" }
-                ))
-                .duration(Some(Duration::from_secs(2)));
-        }
         for log in logs {
             util::add_plot_data_to_plot_collections(plots, log.as_ref(), plot_settings);
         }
