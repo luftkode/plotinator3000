@@ -119,18 +119,8 @@ fn fill_plot(
         mipmap_cfg,
         plot_ui.ctx().used_size().x as usize,
     );
-    for plot_labels in plot_data
-        .plot_labels()
-        .iter()
-        .filter(|pl| !id_filter.contains(&pl.log_id))
-    {
-        for label in plot_labels.labels() {
-            let point = PlotPoint::new(label.point()[0], label.point()[1]);
-            let txt = RichText::new(label.text()).size(10.0);
-            let txt = egui_plot::Text::new(point, txt);
-            plot_ui.text(txt);
-        }
-    }
+
+    plot_util::plot_labels(plot_ui, plot_data, id_filter);
 
     playback_update_plot(
         timer,
