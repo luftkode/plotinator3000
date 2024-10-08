@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::mipmap::{MipMap2D, MipMapStrategy};
+
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct PlotData {
     plots: Vec<PlotValues>,
@@ -31,6 +33,8 @@ impl PlotData {
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotValues {
     raw_plot: Vec<[f64; 2]>,
+    mipmap_max: MipMap2D<f64>,
+    mipmap_min: MipMap2D<f64>,
     name: String,
     log_id: usize,
     // Label = "<name> #<log_id>"
@@ -41,11 +45,27 @@ impl PlotValues {
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: usize) -> Self {
         let label = format!("{name} #{log_id}");
         Self {
+            mipmap_max: MipMap2D::new(raw_plot.clone(), MipMapStrategy::Max),
+            mipmap_min: MipMap2D::new(raw_plot.clone(), MipMapStrategy::Min),
             raw_plot,
             name,
             log_id,
             label,
         }
+    }
+
+    pub fn get_level(&self, level: usize) -> Option<(&Vec<[f64; 2]>, &Vec<[f64; 2]>)> {
+        let mipmap_min = self.mipmap_min.get_level(level)?;
+        let mipmap_max = self.mipmap_max.get_level(level)?;
+        Some((mipmap_min, mipmap_max))
+    }
+
+    pub fn mipmap_levels(&self) -> usize {
+        self.mipmap_min.num_levels()
+    }
+
+    pub fn get_scaled_mipmap_levels(&self, pixel_width: usize, x_bounds: (usize, usize)) -> usize {
+        self.mipmap_min.get_level_match(pixel_width, x_bounds)
     }
 
     /// Returns a mutable slice of all plot points
