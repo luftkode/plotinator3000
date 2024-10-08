@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use plot_util::{PlotData, PlotValues, Plots, StoredPlotLabels};
+use plot_util::{PlotData, Plots};
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
@@ -71,13 +71,13 @@ pub fn update_plot_dates(
         let apply_offsets = |plot_data: &mut PlotData| {
             for pd in plot_data.plots_as_mut() {
                 if settings.log_id == pd.log_id() {
-                    offset_plot(pd, settings.start_date());
+                    pd.offset_plot(settings.start_date());
                 }
             }
 
             for pl in plot_data.plot_labels_as_mut() {
                 if settings.log_id == pl.log_id() {
-                    offset_plot_labels(pl, settings.start_date());
+                    pl.offset_labels(settings.start_date());
                 }
             }
         };
@@ -88,30 +88,5 @@ pub fn update_plot_dates(
 
         settings.date_changed = false;
         *invalidate_plot = true;
-    }
-}
-
-fn offset_plot_labels(plot_labels: &mut StoredPlotLabels, new_start_date: DateTime<Utc>) {
-    offset_data_iter(plot_labels.label_points_mut(), new_start_date);
-}
-
-fn offset_plot(plot: &mut PlotValues, new_start_date: DateTime<Utc>) {
-    offset_data_iter(plot.raw_plot.iter_mut(), new_start_date);
-}
-
-fn offset_data_iter<'i>(
-    mut data_iter: impl Iterator<Item = &'i mut [f64; 2]>,
-    new_start_date: DateTime<Utc>,
-) {
-    if let Some(first_point) = data_iter.next() {
-        let new_date_ns = new_start_date
-            .timestamp_nanos_opt()
-            .expect("Nanoseconds overflow") as f64;
-        let offset = new_date_ns - first_point[0];
-        // Remember to also offset the first point that has been removed from the iterator!
-        first_point[0] += offset;
-        for point in data_iter {
-            point[0] += offset;
-        }
     }
 }

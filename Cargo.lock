@@ -1568,7 +1568,7 @@ dependencies = [
 
 [[package]]
 name = "logviewer-rs"
-version = "0.17.0"
+version = "0.18.0"
 dependencies = [
  "chrono",
  "eframe",
@@ -2055,6 +2055,7 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 name = "plot_util"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "egui_plot",
  "log_if",
  "num-traits",

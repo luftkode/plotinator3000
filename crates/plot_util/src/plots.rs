@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod plot_data;
+mod util;
 
 use plot_data::{PlotData, PlotValues};
 
@@ -67,13 +68,13 @@ impl Plots {
 // Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`
 fn calc_plot_x_min_max(plots: &[PlotValues], x_min_max: &mut Option<(f64, f64)>) {
     for plot in plots {
-        if plot.raw_plot.len() < 2 {
+        if plot.raw_plot().len() < 2 {
             continue;
         }
-        let Some(first_x) = plot.raw_plot.first().and_then(|f| f.first()) else {
+        let Some(first_x) = plot.raw_plot().first().and_then(|f| f.first()) else {
             continue;
         };
-        let Some(last_x) = plot.raw_plot.last().and_then(|l| l.first()) else {
+        let Some(last_x) = plot.raw_plot().last().and_then(|l| l.first()) else {
             continue;
         };
         if let Some((current_x_min, current_x_max)) = x_min_max {

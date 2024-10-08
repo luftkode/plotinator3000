@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.18.0]
+
+### Added
+
+- Min/Max MipMap downsampling which makes plotting much larger datasets feasible, and facilitates outlier detection.
+
 ### Internals
 
 - Major clearing of tech debts related to plot settings and the ui for plot settings.

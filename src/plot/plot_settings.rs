@@ -1,12 +1,14 @@
 use date_settings::LogStartDateSettings;
 use egui::{Key, Response, RichText};
 use egui_phosphor::regular;
-use plot_util::Plots;
+use mipmap_settings::MipMapSettings;
+use plot_util::{MipMapConfiguration, Plots};
 use plot_visibility_config::PlotVisibilityConfig;
 use serde::{Deserialize, Serialize};
 
 pub mod date_settings;
 mod loaded_logs;
+pub mod mipmap_settings;
 mod plot_visibility_config;
 
 #[derive(PartialEq, Deserialize, Serialize)]
@@ -50,6 +52,7 @@ pub struct PlotSettings {
     plot_names_show: Vec<(String, bool)>,
     ps_ui: PlotSettingsUi,
     log_start_date_settings: Vec<LogStartDateSettings>,
+    mipmap_settings: MipMapSettings,
 }
 
 impl PlotSettings {
@@ -126,6 +129,7 @@ impl PlotSettings {
                         });
                     });
             }
+            self.mipmap_settings.show(ui);
         }
     }
 
@@ -174,7 +178,7 @@ impl PlotSettings {
         let mut total_plot_count: u8 = 0;
         total_plot_count += self.display_percentage_plot as u8;
         total_plot_count += self.display_hundreds_plot as u8;
-        total_plot_count += self.display_hundreds_plot as u8;
+        total_plot_count += self.display_thousands_plot as u8;
         self.display_plot_count = total_plot_count;
     }
 
@@ -233,5 +237,10 @@ impl PlotSettings {
     /// related to plot layout needs to be recalculated.
     pub fn cached_plots_invalidated(&self) -> bool {
         self.invalidate_plot
+    }
+
+    /// Returns the current `MipMap` settings as a [`MipMapConfiguration`]
+    pub fn mipmap_cfg(&self) -> MipMapConfiguration {
+        self.mipmap_settings.configuration()
     }
 }

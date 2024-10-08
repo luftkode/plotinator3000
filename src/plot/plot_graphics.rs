@@ -1,6 +1,6 @@
 use egui::RichText;
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint};
-use plot_util::{PlotData, Plots};
+use plot_util::{MipMapConfiguration, PlotData, Plots};
 
 use super::{
     axis_config::AxisConfig, play_state::playback_update_plot, plot_settings::PlotSettings,
@@ -58,6 +58,7 @@ pub fn paint_plots(
         x_min_max,
         &plot_settings.plot_name_filter(),
         &plot_settings.log_id_filter(),
+        plot_settings.mipmap_cfg(),
     );
 }
 
@@ -73,6 +74,7 @@ fn fill_plots(
     x_min_max: Option<(f64, f64)>,
     plot_name_filter: &[&str],
     plot_id_filter: &[usize],
+    mipmap_cfg: MipMapConfiguration,
 ) {
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
@@ -86,6 +88,7 @@ fn fill_plots(
                 x_min_max,
                 plot_name_filter,
                 plot_id_filter,
+                mipmap_cfg,
             );
         });
     }
@@ -103,14 +106,18 @@ fn fill_plot(
     x_min_max: Option<(f64, f64)>,
     name_filter: &[&str],
     id_filter: &[usize],
+    mipmap_cfg: MipMapConfiguration,
 ) {
     let (plot_data, plot_type) = plot;
+
     plot_util::plot_lines(
         plot_ui,
         plot_data.plots(),
         name_filter,
         id_filter,
         line_width,
+        mipmap_cfg,
+        plot_ui.ctx().used_size().x as usize,
     );
     for plot_labels in plot_data
         .plot_labels()
