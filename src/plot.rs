@@ -120,7 +120,7 @@ impl LogPlotUi {
                 plot_settings,
                 legend_cfg,
                 axis_config,
-                *link_group,
+                link_group.expect("uninitialized link group id"),
                 *line_width,
                 timer,
                 is_reset_pressed,
