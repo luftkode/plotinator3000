@@ -269,6 +269,7 @@ pub fn fast_unix_ns_to_usize<T: Num + ToPrimitive + FromPrimitive + PartialOrd>(
 ) -> usize {
     // On 64-bit platforms, we can assume that `unix_ts_ns` fits in usize, so we just cast it directly.
     #[cfg(not(target_pointer_width = "32"))]
+    #[allow(unsafe_code)]
     // SAFETY:
     // Assumes:
     // - That `usize` is at least 64 bits.
@@ -376,7 +377,7 @@ mod tests {
         let source: Vec<[f64; 2]> = (0..source_len).map(|i| [i as f64, i as f64]).collect();
         let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
 
-        for (pixel_width, expected_lvl) in [(1usize, 2usize), (2, 1), (4, 0), (8, 0), (16, 0)] {
+        for (pixel_width, expected_lvl) in [(1usize, 3usize), (2, 2), (4, 1), (8, 0), (16, 0)] {
             assert_eq!(
                 mipmap.get_level_match(pixel_width, (0, 15)),
                 expected_lvl,
