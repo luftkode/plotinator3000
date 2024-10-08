@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod plot_data;
+mod util;
 
 use plot_data::{PlotData, PlotValues};
 

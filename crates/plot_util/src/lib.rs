@@ -1,6 +1,6 @@
 pub mod mipmap;
 
-use egui_plot::{Line, PlotBounds, PlotItem, PlotPoints};
+use egui_plot::{Line, PlotBounds, PlotPoints};
 use log_if::prelude::*;
 use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
@@ -37,43 +37,73 @@ where
     Line::new(points)
 }
 
+/// An instance of a `MipMap` configuration for a given frame
+#[derive(Debug, Clone, Copy)]
+pub enum MipMapConfiguration {
+    Enabled(Option<usize>),
+    Disabled,
+}
+
 pub fn plot_lines(
     plot_ui: &mut egui_plot::PlotUi,
     plots: &[PlotValues],
     name_filter: &[&str],
     id_filter: &[usize],
     line_width: f32,
-    mipmap_lvl: usize,
+    mipmap_cfg: MipMapConfiguration,
     plots_width_pixels: usize,
 ) {
+    let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
     for plot_vals in plots
         .iter()
         .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
     {
         let (x_min, x_max) = x_plot_bound(plot_ui.plot_bounds());
         let x_bounds = (x_min as usize, x_max as usize);
-        let scaled_lvl = plot_vals.get_scaled_mipmap_levels(plots_width_pixels, x_bounds);
-        let (plot_points_min, plot_points_max) =
-            plot_vals.get_level(scaled_lvl).unwrap_or_else(|| {
-                plot_vals
-                    .get_level(plot_vals.mipmap_levels() - 1)
-                    .expect("Logic error")
-            });
-        let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
-        let filtered_points_min = filter_plot_points(plot_points_min, x_min_max_ext);
-        let filtered_points_max = filter_plot_points(plot_points_max, x_min_max_ext);
+        match mipmap_cfg {
+            MipMapConfiguration::Enabled(lvl) => {
+                let processed_lvl = match lvl {
+                    // manually set level
+                    Some(lvl) => lvl,
+                    // auto mode
+                    None => plot_vals.get_scaled_mipmap_levels(plots_width_pixels, x_bounds),
+                };
 
-        // Manual string construction for efficiency since this is a hot path.
-        let mut label_min = plot_vals.label().to_owned();
-        label_min.push_str(" [min]");
-        let mut label_max = plot_vals.label().to_owned();
-        label_max.push_str(" [max]");
-        // TODO: Make some kind of rotating color scheme such that min/max plots look kind of similar but that a lot of different colors are still used
-        let line_min = Line::new(filtered_points_min).name(label_min);
-        let line_max = Line::new(filtered_points_max).name(label_max);
-        plot_ui.line(line_min.width(line_width));
-        plot_ui.line(line_max.width(line_width));
+                if processed_lvl == 0 {
+                    // If we are the highest resolution, plot simply the raw value instead of plotting the same thing twice
+                    plot_raw(plot_ui, plot_vals, x_min_max_ext);
+                } else {
+                    let (plot_points_min, plot_points_max) =
+                        plot_vals.get_level_or_max(processed_lvl);
+
+                    let filtered_points_min = filter_plot_points(plot_points_min, x_min_max_ext);
+                    let filtered_points_max = filter_plot_points(plot_points_max, x_min_max_ext);
+
+                    // Manual string construction for efficiency since this is a hot path.
+                    let mut label_min = plot_vals.label().to_owned();
+                    label_min.push_str(" (min)");
+                    let mut label_max = plot_vals.label().to_owned();
+                    label_max.push_str(" (max)");
+                    // TODO: Make some kind of rotating color scheme such that min/max plots look kind of similar but that a lot of different colors are still used
+                    let line_min = Line::new(filtered_points_min).name(label_min);
+                    let line_max = Line::new(filtered_points_max).name(label_max);
+                    plot_ui.line(line_min.width(line_width));
+                    plot_ui.line(line_max.width(line_width));
+                }
+            }
+
+            MipMapConfiguration::Disabled => {
+                plot_raw(plot_ui, plot_vals, x_min_max_ext);
+            }
+        }
     }
+}
+
+fn plot_raw(plot_ui: &mut egui_plot::PlotUi, plot_vals: &PlotValues, x_min_max_ext: (f64, f64)) {
+    let plot_points = plot_vals.get_raw();
+    let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
+    let line = Line::new(filtered_points).name(plot_vals.name());
+    plot_ui.line(line);
 }
 
 fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {

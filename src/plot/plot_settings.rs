@@ -1,12 +1,14 @@
 use date_settings::LogStartDateSettings;
 use egui::{Key, Response, RichText};
 use egui_phosphor::regular;
-use plot_util::Plots;
+use mipmap_settings::MipMapSettings;
+use plot_util::{MipMapConfiguration, Plots};
 use plot_visibility_config::PlotVisibilityConfig;
 use serde::{Deserialize, Serialize};
 
 pub mod date_settings;
 mod loaded_logs;
+pub mod mipmap_settings;
 mod plot_visibility_config;
 
 #[derive(PartialEq, Deserialize, Serialize)]
@@ -50,7 +52,7 @@ pub struct PlotSettings {
     plot_names_show: Vec<(String, bool)>,
     ps_ui: PlotSettingsUi,
     log_start_date_settings: Vec<LogStartDateSettings>,
-    mipmap_lvl: usize,
+    mipmap_settings: MipMapSettings,
 }
 
 impl PlotSettings {
@@ -127,17 +129,7 @@ impl PlotSettings {
                         });
                     });
             }
-            if ui
-                .add(
-                    egui::DragValue::new(&mut self.mipmap_lvl)
-                        .speed(1)
-                        .range(0..=32)
-                        .suffix(" MipMap lvl"),
-                )
-                .changed()
-            {
-                log::info!("Mip map level changed to: {}", self.mipmap_lvl);
-            }
+            self.mipmap_settings.show(ui);
         }
     }
 
@@ -247,7 +239,8 @@ impl PlotSettings {
         self.invalidate_plot
     }
 
-    pub fn mipmap_lvl(&self) -> usize {
-        self.mipmap_lvl
+    /// Returns the current `MipMap` settings as a [`MipMapConfiguration`]
+    pub fn mipmap_cfg(&self) -> MipMapConfiguration {
+        self.mipmap_settings.configuration()
     }
 }

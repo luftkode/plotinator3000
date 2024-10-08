@@ -94,12 +94,26 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     /// Returns the data on given level.
     /// Level `0` returns the source data; the higher the level, the higher the compression (i.e. smaller vectors are returned).
     /// If the level is out of bounds, returns None
-    pub fn get_level(&self, level: usize) -> Option<&Vec<[T; 2]>> {
+    pub fn get_level(&self, level: usize) -> Option<&[[T; 2]]> {
         if level >= self.num_levels() {
             return None;
         }
 
-        Some(&self.data[level])
+        Some(self.data[level].as_slice())
+    }
+
+    /// Convenience function to get a level or return the highest if the requested level is higher or equal to the max
+    pub fn get_level_or_max(&self, level: usize) -> &[[T; 2]] {
+        if level >= self.num_levels() {
+            return self.get_max_level();
+        }
+
+        &self.data[level]
+    }
+
+    /// Get the highest level of downsampling
+    pub fn get_max_level(&self) -> &[[T; 2]] {
+        &self.data[self.num_levels() - 1]
     }
 
     pub fn get_level_match(&self, pixel_width: usize, x_bounds: (usize, usize)) -> usize {

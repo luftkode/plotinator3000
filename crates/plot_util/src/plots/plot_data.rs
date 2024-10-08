@@ -1,6 +1,9 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::mipmap::{MipMap2D, MipMapStrategy};
+
+use super::util;
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct PlotData {
@@ -41,6 +44,8 @@ pub struct PlotValues {
     label: String,
 }
 
+type PointList<'pl> = &'pl [[f64; 2]];
+
 impl PlotValues {
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: usize) -> Self {
         let label = format!("{name} #{log_id}");
@@ -54,10 +59,28 @@ impl PlotValues {
         }
     }
 
-    pub fn get_level(&self, level: usize) -> Option<(&Vec<[f64; 2]>, &Vec<[f64; 2]>)> {
+    pub fn get_raw(&self) -> PointList {
+        &self.raw_plot
+    }
+
+    pub fn get_level(&self, level: usize) -> Option<(PointList, PointList)> {
         let mipmap_min = self.mipmap_min.get_level(level)?;
         let mipmap_max = self.mipmap_max.get_level(level)?;
         Some((mipmap_min, mipmap_max))
+    }
+
+    pub fn get_level_or_max(&self, level: usize) -> (PointList, PointList) {
+        (
+            self.mipmap_min.get_level_or_max(level),
+            self.mipmap_max.get_level_or_max(level),
+        )
+    }
+
+    pub fn get_max_level(&self) -> (PointList, PointList) {
+        (
+            self.mipmap_min.get_max_level(),
+            self.mipmap_max.get_max_level(),
+        )
     }
 
     pub fn mipmap_levels(&self) -> usize {
@@ -68,13 +91,19 @@ impl PlotValues {
         self.mipmap_min.get_level_match(pixel_width, x_bounds)
     }
 
-    /// Returns a mutable slice of all plot points
-    pub fn raw_plot_mut(&mut self) -> &mut [[f64; 2]] {
-        &mut self.raw_plot
+    /// Apply an offset to the plot based on the difference to the supplied [`DateTime<Utc>`]
+    pub fn offset_plot(&mut self, new_start_date: DateTime<Utc>) {
+        util::offset_data_iter(self.raw_plot.iter_mut(), new_start_date);
+        self.recalc_mipmaps();
+    }
+
+    fn recalc_mipmaps(&mut self) {
+        self.mipmap_min = MipMap2D::new(self.raw_plot.clone(), MipMapStrategy::Min);
+        self.mipmap_max = MipMap2D::new(self.raw_plot.clone(), MipMapStrategy::Max);
     }
 
     /// Returns a borrowed list of all plot points
-    pub fn raw_plot(&self) -> &[[f64; 2]] {
+    pub fn raw_plot(&self) -> PointList {
         &self.raw_plot
     }
 
@@ -113,8 +142,13 @@ impl StoredPlotLabels {
         &self.label_points
     }
 
+    /// Apply an offset to the plot labels based on the difference to the supplied [`DateTime<Utc>`]
+    pub fn offset_labels(&mut self, new_start_date: DateTime<Utc>) {
+        util::offset_data_iter(self.label_points_mut(), new_start_date);
+    }
+
     // Returns mutable references to the points directly
-    pub fn label_points_mut(&mut self) -> impl Iterator<Item = &mut [f64; 2]> {
+    fn label_points_mut(&mut self) -> impl Iterator<Item = &mut [f64; 2]> {
         self.label_points.iter_mut().map(|label| &mut label.point)
     }
 
