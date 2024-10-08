@@ -1,9 +1,7 @@
 pub mod mipmap;
 
-use egui_plot::{Line, PlotBounds, PlotPoints};
+use egui_plot::{Line, PlotBounds, PlotPoint, PlotPoints};
 use log_if::prelude::*;
-use mipmap::MipMap1D;
-use serde::{Deserialize, Serialize};
 
 pub mod plots;
 
@@ -11,19 +9,6 @@ pub use plots::{
     plot_data::{PlotData, PlotValues, StoredPlotLabels},
     Plots,
 };
-
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct MipMapWithName {
-    pub mip_map: MipMap1D<f64>,
-    pub name: String,
-}
-
-impl MipMapWithName {
-    pub fn new(raw_y: Vec<f64>, name: String) -> Self {
-        let mip_map = MipMap1D::new(raw_y);
-        Self { mip_map, name }
-    }
-}
 
 pub fn line_from_log_entry<XF, YF, L: LogEntry>(log: &[L], x_extractor: XF, y_extractor: YF) -> Line
 where
@@ -46,7 +31,7 @@ pub enum MipMapConfiguration {
 
 pub fn plot_lines(
     plot_ui: &mut egui_plot::PlotUi,
-    plots: &[PlotValues],
+    plots: &mut [PlotValues],
     name_filter: &[&str],
     id_filter: &[usize],
     line_width: f32,
@@ -55,7 +40,7 @@ pub fn plot_lines(
 ) {
     let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
     for plot_vals in plots
-        .iter()
+        .iter_mut()
         .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
     {
         let (x_min, x_max) = x_plot_bound(plot_ui.plot_bounds());
@@ -95,6 +80,21 @@ pub fn plot_lines(
             MipMapConfiguration::Disabled => {
                 plot_raw(plot_ui, plot_vals, x_min_max_ext);
             }
+        }
+    }
+}
+
+pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[usize]) {
+    for plot_labels in plot_data
+        .plot_labels()
+        .iter()
+        .filter(|pl| !id_filter.contains(&pl.log_id))
+    {
+        for label in plot_labels.labels() {
+            let point = PlotPoint::new(label.point()[0], label.point()[1]);
+            let txt = egui::RichText::new(label.text()).size(10.0);
+            let txt = egui_plot::Text::new(point, txt);
+            plot_ui.text(txt);
         }
     }
 }

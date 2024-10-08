@@ -9,9 +9,11 @@ workspace = true
 [dependencies]
 log_if = { version = "*", path = "../log_if" }
 egui_plot.workspace = true
+egui.workspace = true
 serde.workspace = true
 chrono.workspace = true
 num-traits = "0.2.19"
 
 [dev-dependencies]
 testresult.workspace = true
+pretty_assertions.workspace = true
