@@ -10,6 +10,7 @@ workspace = true
 log_if = { version = "*", path = "../log_if" }
 egui_plot.workspace = true
 serde.workspace = true
+chrono.workspace = true
 num-traits = "0.2.19"
 
 [dev-dependencies]
