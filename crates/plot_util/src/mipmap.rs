@@ -257,11 +257,6 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
 /// Converts a unix timestamp in nanoseconds to `usize`.
 ///
 /// This function is highly optimized for performance.
-///
-/// # Example
-/// ```
-/// let value = unsafe { fast_u64_to_usize(500_u64) };
-/// ```
 #[inline(always)]
 #[allow(clippy::needless_pass_by_value)]
 pub fn fast_unix_ns_to_usize<T: Num + ToPrimitive + FromPrimitive + PartialOrd>(
