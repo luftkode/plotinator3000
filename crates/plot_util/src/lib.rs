@@ -1,6 +1,6 @@
 pub mod mipmap;
 
-use egui_plot::{Line, PlotBounds, PlotPoints};
+use egui_plot::{Line, PlotBounds, PlotItem, PlotPoints};
 use log_if::prelude::*;
 use mipmap::MipMap1D;
 use serde::{Deserialize, Serialize};
@@ -43,16 +43,36 @@ pub fn plot_lines(
     name_filter: &[&str],
     id_filter: &[usize],
     line_width: f32,
+    mipmap_lvl: usize,
+    plots_width_pixels: usize,
 ) {
     for plot_vals in plots
         .iter()
         .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
     {
+        let (x_min, x_max) = x_plot_bound(plot_ui.plot_bounds());
+        let x_bounds = (x_min as usize, x_max as usize);
+        let scaled_lvl = plot_vals.get_scaled_mipmap_levels(plots_width_pixels, x_bounds);
+        let (plot_points_min, plot_points_max) =
+            plot_vals.get_level(scaled_lvl).unwrap_or_else(|| {
+                plot_vals
+                    .get_level(plot_vals.mipmap_levels() - 1)
+                    .expect("Logic error")
+            });
         let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
-        let filtered_points = filter_plot_points(plot_vals.raw_plot(), x_min_max_ext);
+        let filtered_points_min = filter_plot_points(plot_points_min, x_min_max_ext);
+        let filtered_points_max = filter_plot_points(plot_points_max, x_min_max_ext);
 
-        let line = Line::new(filtered_points).name(plot_vals.label());
-        plot_ui.line(line.width(line_width));
+        // Manual string construction for efficiency since this is a hot path.
+        let mut label_min = plot_vals.label().to_owned();
+        label_min.push_str(" [min]");
+        let mut label_max = plot_vals.label().to_owned();
+        label_max.push_str(" [max]");
+        // TODO: Make some kind of rotating color scheme such that min/max plots look kind of similar but that a lot of different colors are still used
+        let line_min = Line::new(filtered_points_min).name(label_min);
+        let line_max = Line::new(filtered_points_max).name(label_max);
+        plot_ui.line(line_min.width(line_width));
+        plot_ui.line(line_max.width(line_width));
     }
 }
 
@@ -86,6 +106,8 @@ fn point_within(point: f64, bounds: (f64, f64)) -> bool {
 pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
     if points.is_empty() {
         return Vec::new();
+    } else if points.len() < 3 {
+        return points.to_owned();
     }
 
     let mut filtered = Vec::with_capacity(points.len());

@@ -50,6 +50,7 @@ pub struct PlotSettings {
     plot_names_show: Vec<(String, bool)>,
     ps_ui: PlotSettingsUi,
     log_start_date_settings: Vec<LogStartDateSettings>,
+    mipmap_lvl: usize,
 }
 
 impl PlotSettings {
@@ -126,6 +127,17 @@ impl PlotSettings {
                         });
                     });
             }
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.mipmap_lvl)
+                        .speed(1)
+                        .range(0..=32)
+                        .suffix(" MipMap lvl"),
+                )
+                .changed()
+            {
+                log::info!("Mip map level changed to: {}", self.mipmap_lvl);
+            }
         }
     }
 
@@ -174,7 +186,7 @@ impl PlotSettings {
         let mut total_plot_count: u8 = 0;
         total_plot_count += self.display_percentage_plot as u8;
         total_plot_count += self.display_hundreds_plot as u8;
-        total_plot_count += self.display_hundreds_plot as u8;
+        total_plot_count += self.display_thousands_plot as u8;
         self.display_plot_count = total_plot_count;
     }
 
@@ -233,5 +245,9 @@ impl PlotSettings {
     /// related to plot layout needs to be recalculated.
     pub fn cached_plots_invalidated(&self) -> bool {
         self.invalidate_plot
+    }
+
+    pub fn mipmap_lvl(&self) -> usize {
+        self.mipmap_lvl
     }
 }
