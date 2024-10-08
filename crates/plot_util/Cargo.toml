@@ -16,3 +16,4 @@ num-traits = "0.2.19"
 
 [dev-dependencies]
 testresult.workspace = true
+pretty_assertions.workspace = true

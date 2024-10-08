@@ -65,10 +65,25 @@ pub enum MipMapStrategy {
     Max,
 }
 
+#[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+struct LevelLookupCached {
+    pixel_width: usize,
+    x_bounds: (usize, usize),
+    result_idx: usize,
+}
+
+impl LevelLookupCached {
+    pub fn is_equal(&self, pixel_width: usize, x_bounds: (usize, usize)) -> bool {
+        // Compare bounds first because pixel_width is much more stable
+        self.x_bounds == x_bounds && self.pixel_width == pixel_width
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MipMap2D<T: Num + ToPrimitive + FromPrimitive + PartialOrd> {
     strategy: MipMapStrategy,
     data: Vec<Vec<[T; 2]>>,
+    most_recent_lookup: LevelLookupCached,
 }
 
 impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
@@ -82,7 +97,11 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
             data.push(mipmap);
         }
 
-        Self { data, strategy }
+        Self {
+            data,
+            strategy,
+            most_recent_lookup: LevelLookupCached::default(),
+        }
     }
 
     /// Returns the total number of downsampled levels.
@@ -114,28 +133,6 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     /// Get the highest level of downsampling
     pub fn get_max_level(&self) -> &[[T; 2]] {
         &self.data[self.num_levels() - 1]
-    }
-
-    pub fn get_level_match(&self, pixel_width: usize, x_bounds: (usize, usize)) -> usize {
-        let (x_min, x_max) = x_bounds;
-        for (reversed_idx, lvl) in self.data.iter().rev().enumerate() {
-            let real_idx = self.num_levels() - reversed_idx;
-
-            // Find the index where the points fit within the minimum bounds and where it fits within the maximum
-            // basically performs a binary search
-            let start_idx =
-                lvl.partition_point(|&x| x[0].to_usize().expect("Doesn't fit in usize") < x_min);
-            let end_idx =
-                lvl.partition_point(|&x| x[0].to_usize().expect("Doesn't fit in usize") < x_max);
-            // Calculate the count of points within bounds
-            let count_within_bounds = end_idx.saturating_sub(start_idx);
-
-            if count_within_bounds > pixel_width * 2 {
-                return real_idx;
-            }
-        }
-        // If we didn't find an appropriate scaled level, we return the max resolution
-        0
     }
 
     /// Downsamples a vector to `ceil(len / 2)` elements.
@@ -174,11 +171,119 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
         let res = T::from_f64((a + b).to_f64()? / 2.0)?;
         Some(res)
     }
+
+    /// Retrieves the index of the level that matches the specified pixel width
+    /// and bounds within the dataset, using cached results if available.
+    ///
+    /// This function checks if the result for the given `pixel_width` and `x_bounds`
+    /// is already cached in `most_recent_lookup`. If a match is found in the cache,
+    /// it returns the cached index immediately. If not, it computes the appropriate
+    /// level index based on the provided bounds.
+    ///
+    /// The bounds (`x_bounds`) are specified as a tuple `(x_min, x_max)`, which
+    /// defines the range within which the data points must fall. The pixel width
+    /// indicates how many data points should be considered in the calculation.
+    ///
+    /// # Parameters
+    ///
+    /// - `pixel_width`: The width in pixels that influences the number of points
+    ///   considered for each level. This effectively determines the resolution of
+    ///   the search.
+    /// - `x_bounds`: A tuple containing two `usize` values `(x_min, x_max)` that
+    ///   define the lower and upper bounds of the data points to be considered
+    ///   for matching. These bounds are used to filter the relevant points in
+    ///   each level.
+    pub fn get_level_match(&mut self, pixel_width: usize, x_bounds: (usize, usize)) -> usize {
+        if self.most_recent_lookup.is_equal(pixel_width, x_bounds) {
+            return self.most_recent_lookup.result_idx;
+        }
+        let target_point_count = pixel_width;
+        let (x_min, x_max) = x_bounds;
+
+        // Avoid repeated calls to num_levels()
+        let num_levels = self.num_levels();
+
+        let x_max_adjusted = x_max.max(1); // Precompute x_max.max(1) to avoid repeated calls
+
+        // If not found in cache, compute it
+        for lvl_idx in (0..num_levels).rev() {
+            let lvl = &self.data[lvl_idx];
+
+            // Skip if the level doesn't have enough points even without accounting for plot bounds
+            if lvl.len() <= target_point_count {
+                continue;
+            }
+
+            // Binary search optimization: find approximate positions first
+            let approx_start = (lvl.len() * x_min) / x_max_adjusted;
+            let approx_end = (lvl.len() * x_max) / x_max_adjusted;
+
+            let approx_start_min = approx_start.min(lvl.len());
+            let approx_end_min = approx_end.min(lvl.len());
+
+            // Narrow search ranges using approximations
+            let start_idx = if approx_start > 0 {
+                let start_search = &lvl[..approx_start_min];
+                start_search.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min)
+                    + approx_start_min
+            } else {
+                lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min)
+            };
+
+            let end_idx = if approx_end < lvl.len() {
+                let end_search = &lvl[approx_end_min..];
+                end_search.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max) + approx_end_min
+            } else {
+                lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max)
+            };
+
+            // Use saturating_sub for safety and to avoid potential panic
+            let count_within_bounds = end_idx.saturating_sub(start_idx);
+
+            if count_within_bounds > target_point_count {
+                self.most_recent_lookup = LevelLookupCached {
+                    pixel_width,
+                    x_bounds,
+                    result_idx: lvl_idx,
+                };
+
+                return lvl_idx;
+            }
+        }
+        0
+    }
+}
+
+/// Converts a unix timestamp in nanoseconds to `usize`.
+///
+/// This function is highly optimized for performance.
+///
+/// # Example
+/// ```
+/// let value = unsafe { fast_u64_to_usize(500_u64) };
+/// ```
+#[inline(always)]
+#[allow(clippy::needless_pass_by_value)]
+pub fn fast_unix_ns_to_usize<T: Num + ToPrimitive + FromPrimitive + PartialOrd>(
+    unix_ts_ns: T,
+) -> usize {
+    // On 64-bit platforms, we can assume that `unix_ts_ns` fits in usize, so we just cast it directly.
+    #[cfg(not(target_pointer_width = "32"))]
+    // SAFETY:
+    // Assumes:
+    // - That `usize` is at least 64 bits.
+    // - That the argument is a unix timestamp that is less than the year ~2554
+    unsafe {
+        unix_ts_ns.to_usize().unwrap_unchecked()
+    }
+    #[cfg(target_pointer_width = "32")]
+    unix_ts_ns.to_usize().expect("Doesn't fit in usize")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_mipmap_strategy_max() {
@@ -261,14 +366,23 @@ mod tests {
 
     #[test]
     fn test_level_match() {
-        let source: Vec<[f64; 2]> = (0..16).map(|i| [i as f64, i as f64]).collect();
-        let mipmap = MipMap2D::new(source, MipMapStrategy::Min);
+        // Length of 16 will yield 5 levels of length:
+        // - [0]: 16
+        // - [1]: 8
+        // - [2]: 4
+        // - [3]: 2
+        // - [4]: 1
+        let source_len = 16;
+        let source: Vec<[f64; 2]> = (0..source_len).map(|i| [i as f64, i as f64]).collect();
+        let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
 
-        assert_eq!(mipmap.get_level_match(1, (0, 15)), 3);
-        assert_eq!(mipmap.get_level_match(2, (0, 15)), 2);
-        assert_eq!(mipmap.get_level_match(4, (0, 15)), 1);
-        assert_eq!(mipmap.get_level_match(8, (0, 15)), 0);
-        assert_eq!(mipmap.get_level_match(16, (0, 15)), 0);
+        for (pixel_width, expected_lvl) in [(1usize, 2usize), (2, 1), (4, 0), (8, 0), (16, 0)] {
+            assert_eq!(
+                mipmap.get_level_match(pixel_width, (0, 15)),
+                expected_lvl,
+                "Expected lvl {expected_lvl} for width: {pixel_width}"
+            );
+        }
     }
 
     #[test]

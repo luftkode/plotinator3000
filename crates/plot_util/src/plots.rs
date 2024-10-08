@@ -7,9 +7,9 @@ use plot_data::{PlotData, PlotValues};
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Plots {
-    percentage: PlotData,
-    one_to_hundred: PlotData,
-    thousands: PlotData,
+    pub percentage: PlotData,
+    pub one_to_hundred: PlotData,
+    pub thousands: PlotData,
 }
 
 impl Plots {

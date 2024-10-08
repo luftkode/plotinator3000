@@ -31,7 +31,7 @@ pub enum MipMapConfiguration {
 
 pub fn plot_lines(
     plot_ui: &mut egui_plot::PlotUi,
-    plots: &[PlotValues],
+    plots: &mut [PlotValues],
     name_filter: &[&str],
     id_filter: &[usize],
     line_width: f32,
@@ -40,7 +40,7 @@ pub fn plot_lines(
 ) {
     let x_min_max_ext = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
     for plot_vals in plots
-        .iter()
+        .iter_mut()
         .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
     {
         let (x_min, x_max) = x_plot_bound(plot_ui.plot_bounds());
