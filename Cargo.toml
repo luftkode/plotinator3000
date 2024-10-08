@@ -31,6 +31,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 
 # Dev dependencies
 testresult = "0.4.1"
+pretty_assertions = "1.4.1"
 
 [dependencies]
 skytem_logs = { version = "*", path = "crates/skytem_logs" }
@@ -113,7 +114,7 @@ unused_results = "allow"               # All ui elements return a response, we d
 unused_import_braces = "warn"
 variant_size_differences = "warn"
 unexpected_cfgs = "warn"
-unsafe_code = "forbid"
+unsafe_code = "warn"
 
 [workspace.lints.clippy]
 disallowed_macros = "warn"                  # See clippy.toml
