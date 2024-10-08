@@ -124,9 +124,9 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
             // Find the index where the points fit within the minimum bounds and where it fits within the maximum
             // basically performs a binary search
             let start_idx =
-                lvl.partition_point(|&x| x[0].to_usize().expect("Doesn't fit in usize") <= x_min);
+                lvl.partition_point(|&x| x[0].to_usize().expect("Doesn't fit in usize") < x_min);
             let end_idx =
-                lvl.partition_point(|&x| x[0].to_usize().expect("Doesn't fit in usize") <= x_max);
+                lvl.partition_point(|&x| x[0].to_usize().expect("Doesn't fit in usize") < x_max);
             // Calculate the count of points within bounds
             let count_within_bounds = end_idx.saturating_sub(start_idx);
 
@@ -151,12 +151,12 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
             },
             MipMapStrategy::Min => |pairs: &[[T; 2]]| {
                 // Branchless way of selecting the point with the smallest X-value
-                let index_bool: usize = (pairs[0][1] < pairs[1][1]) as usize;
+                let index_bool: usize = (pairs[0][1] > pairs[1][1]) as usize;
                 pairs[index_bool]
             },
             MipMapStrategy::Max => |pairs: &[[T; 2]]| {
                 // Branchless way of selecting the point with the greatest X-value
-                let index_bool: usize = (pairs[0][1] > pairs[1][1]) as usize;
+                let index_bool: usize = (pairs[0][1] < pairs[1][1]) as usize;
                 pairs[index_bool]
             },
         };
@@ -173,5 +173,118 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     fn linear_interpolate(a: T, b: T) -> Option<T> {
         let res = T::from_f64((a + b).to_f64()? / 2.0)?;
         Some(res)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mipmap_strategy_max() {
+        let source: Vec<[f64; 2]> = vec![[1.1, 2.2], [3.3, 4.4], [5.5, 1.1], [7.7, 3.3]];
+        let mipmap = MipMap2D::new(source, MipMapStrategy::Max);
+
+        // Level 1 should keep the points with higher y-values from each pair
+        let expected_level_1: Vec<[f64; 2]> = vec![[3.3, 4.4], [7.7, 3.3]];
+        assert_eq!(mipmap.get_level(1), Some(expected_level_1.as_slice()));
+
+        // Level 2 should keep the point with the higher y-value from level 1
+        let expected_level_2: Vec<[f64; 2]> = vec![[3.3, 4.4]];
+        assert_eq!(mipmap.get_level(2), Some(expected_level_2.as_slice()));
+    }
+
+    #[test]
+    fn test_mipmap_strategy_min() {
+        let source: Vec<[f64; 2]> = vec![[1.1, 2.2], [3.3, 4.4], [5.5, 1.1], [7.7, 3.3]];
+        let mipmap = MipMap2D::new(source, MipMapStrategy::Min);
+
+        // Level 1 should keep the points with lower y-values from each pair
+        let expected_level_1: Vec<[f64; 2]> = vec![[1.1, 2.2], [5.5, 1.1]];
+        assert_eq!(mipmap.get_level(1), Some(expected_level_1.as_slice()));
+
+        // Level 2 should keep the point with the lower y-value from level 1
+        let expected_level_2: Vec<[f64; 2]> = vec![[5.5, 1.1]];
+        assert_eq!(mipmap.get_level(2), Some(expected_level_2.as_slice()));
+    }
+
+    #[test]
+    fn test_mipmap_strategy_linear() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]];
+        let mipmap = MipMap2D::new(source.clone(), MipMapStrategy::Linear);
+
+        assert_eq!(mipmap.num_levels(), 3);
+        assert_eq!(mipmap.get_level(0), Some(source.as_slice()));
+
+        let expected_level_1: Vec<[f64; 2]> = vec![[2.0, 3.0], [6.0, 7.0]];
+        assert_eq!(mipmap.get_level(1), Some(expected_level_1.as_slice()));
+
+        let expected_level_2: Vec<[f64; 2]> = vec![[4.0, 5.0]];
+        assert_eq!(mipmap.get_level(2), Some(expected_level_2.as_slice()));
+    }
+
+    #[test]
+    fn test_different_strategies() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 8.0], [5.0, 4.0], [7.0, 10.0]];
+
+        let linear_mipmap = MipMap2D::new(source.clone(), MipMapStrategy::Linear);
+        let min_mipmap = MipMap2D::new(source.clone(), MipMapStrategy::Min);
+        let max_mipmap = MipMap2D::new(source.clone(), MipMapStrategy::Max);
+
+        // Test level 1 for each strategy
+        let expected_linear: Vec<[f64; 2]> = vec![[2.0, 5.0], [6.0, 7.0]];
+        let expected_min: Vec<[f64; 2]> = vec![[1.0, 2.0], [5.0, 4.0]];
+        let expected_max: Vec<[f64; 2]> = vec![[3.0, 8.0], [7.0, 10.0]];
+
+        assert_eq!(linear_mipmap.get_level(1), Some(expected_linear.as_slice()));
+        assert_eq!(min_mipmap.get_level(1), Some(expected_min.as_slice()));
+        assert_eq!(max_mipmap.get_level(1), Some(expected_max.as_slice()));
+    }
+
+    #[test]
+    fn test_get_level_or_max() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 4.0]];
+        let mipmap = MipMap2D::new(source.clone(), MipMapStrategy::Linear);
+
+        assert_eq!(mipmap.get_level_or_max(0), &[[1.0, 2.0], [3.0, 4.0]]);
+        assert_eq!(mipmap.get_level_or_max(1), &[[2.0, 3.0]]);
+        assert_eq!(mipmap.get_level_or_max(2), &[[2.0, 3.0]]); // Returns max level
+    }
+
+    #[test]
+    fn test_get_max_level() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]];
+        let mipmap = MipMap2D::new(source, MipMapStrategy::Linear);
+
+        assert_eq!(mipmap.get_max_level(), &[[4.0, 5.0]]);
+    }
+
+    #[test]
+    fn test_level_match() {
+        let source: Vec<[f64; 2]> = (0..16).map(|i| [i as f64, i as f64]).collect();
+        let mipmap = MipMap2D::new(source, MipMapStrategy::Min);
+
+        assert_eq!(mipmap.get_level_match(1, (0, 15)), 3);
+        assert_eq!(mipmap.get_level_match(2, (0, 15)), 2);
+        assert_eq!(mipmap.get_level_match(4, (0, 15)), 1);
+        assert_eq!(mipmap.get_level_match(8, (0, 15)), 0);
+        assert_eq!(mipmap.get_level_match(16, (0, 15)), 0);
+    }
+
+    #[test]
+    fn test_out_of_bounds_level() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 4.0]];
+        let mipmap = MipMap2D::new(source, MipMapStrategy::Min);
+
+        assert_eq!(mipmap.get_level(2), None);
+    }
+
+    #[test]
+    fn test_single_element_source() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0]];
+        let mipmap = MipMap2D::new(source.clone(), MipMapStrategy::Max);
+
+        assert_eq!(mipmap.num_levels(), 1);
+        assert_eq!(mipmap.get_level(0), Some(source.as_slice()));
     }
 }

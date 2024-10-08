@@ -2,8 +2,6 @@ pub mod mipmap;
 
 use egui_plot::{Line, PlotBounds, PlotPoint, PlotPoints};
 use log_if::prelude::*;
-use mipmap::MipMap1D;
-use serde::{Deserialize, Serialize};
 
 pub mod plots;
 
