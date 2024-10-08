@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.18.2]
+
 ### Changed
 
 - Much faster implementation for finding the appropriate MipMap level for the current zoom level.
