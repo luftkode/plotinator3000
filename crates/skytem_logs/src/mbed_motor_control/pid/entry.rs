@@ -8,7 +8,7 @@ pub struct PidLogEntry {
     timestamp_ms_str: String,
     pub timestamp_ms: u32,
     pub rpm: f32,
-    pub pid_err: f32,
+    pub pid_output: f32,
     pub servo_duty_cycle: f32,
     pub rpm_error_count: u32,
     pub first_valid_rpm_count: u32,
@@ -19,7 +19,7 @@ impl LogEntry for PidLogEntry {
         let timestamp_ms = reader.read_u32::<LittleEndian>()?;
         let timestamp_ms_str = parse_timestamp(timestamp_ms);
         let rpm = reader.read_f32::<LittleEndian>()?;
-        let pid_err = reader.read_f32::<LittleEndian>()?;
+        let pid_output = reader.read_f32::<LittleEndian>()?;
         let servo_duty_cycle = reader.read_f32::<LittleEndian>()?;
         let rpm_error_count = reader.read_u32::<LittleEndian>()?;
         let first_valid_rpm_count = reader.read_u32::<LittleEndian>()?;
@@ -28,7 +28,7 @@ impl LogEntry for PidLogEntry {
             timestamp_ms_str,
             timestamp_ms,
             rpm,
-            pid_err,
+            pid_output,
             servo_duty_cycle,
             rpm_error_count,
             first_valid_rpm_count,
@@ -47,7 +47,7 @@ impl fmt::Display for PidLogEntry {
             "{}: {} {} {} {} {}",
             self.timestamp_ms,
             self.rpm,
-            self.pid_err,
+            self.pid_output,
             self.servo_duty_cycle,
             self.rpm_error_count,
             self.first_valid_rpm_count

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.18.1]
+
+### Fix
+
+- Bad naming in a PID controller implementation caused misunderstanding, what we thought was the PID error was actually the PID output.
+
 ## [0.18.0]
 
 ### Added
