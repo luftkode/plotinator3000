@@ -1,5 +1,4 @@
-use egui::RichText;
-use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotPoint};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use plot_util::{MipMapConfiguration, PlotData, Plots};
 
 use super::{
