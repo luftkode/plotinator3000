@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fix
+
+- Min/Max MipMap algorithm flipped min and max.
+
 ## [0.18.1]
 
 ### Fix
