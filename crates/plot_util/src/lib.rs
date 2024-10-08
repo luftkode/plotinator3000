@@ -102,7 +102,7 @@ pub fn plot_lines(
 fn plot_raw(plot_ui: &mut egui_plot::PlotUi, plot_vals: &PlotValues, x_min_max_ext: (f64, f64)) {
     let plot_points = plot_vals.get_raw();
     let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
-    let line = Line::new(filtered_points).name(plot_vals.name());
+    let line = Line::new(filtered_points).name(plot_vals.label());
     plot_ui.line(line);
 }
 

@@ -46,7 +46,7 @@ impl SkytemLog for PidLog {
         let pid_err_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| e.pid_err as f64,
+            |e| e.pid_output as f64,
         );
         let servo_duty_cycle_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
@@ -67,7 +67,7 @@ impl SkytemLog for PidLog {
         let all_plots_raw = vec![
             RawPlot::new("RPM".into(), rpm_plot_raw, ExpectedPlotRange::Thousands),
             RawPlot::new(
-                "Pid Error".into(),
+                "PID Output".into(),
                 pid_err_plot_raw,
                 ExpectedPlotRange::Percentage,
             ),
@@ -176,14 +176,14 @@ mod tests {
 
         let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
-        assert_eq!(first_entry.pid_err, 0.17777778);
+        assert_eq!(first_entry.pid_output, 0.17777778);
         assert_eq!(first_entry.servo_duty_cycle, 0.04185);
         assert_eq!(first_entry.rpm_error_count, 0);
         assert_eq!(first_entry.first_valid_rpm_count, 0);
 
         let second_entry = &pidlog.entries[1];
         assert_eq!(second_entry.rpm, 0.0);
-        assert_eq!(second_entry.pid_err, 0.17777778);
+        assert_eq!(second_entry.pid_output, 0.17777778);
         assert_eq!(second_entry.servo_duty_cycle, 0.04185);
         assert_eq!(second_entry.rpm_error_count, 0);
         assert_eq!(second_entry.first_valid_rpm_count, 0);
