@@ -1,7 +1,8 @@
 on:
   workflow_dispatch:
   pull_request:
-
+  push:
+    branches: [ "master" ]
 
 name: CI
 
@@ -170,6 +171,8 @@ jobs:
     needs: [check, audit, test, format, lint, trunk, build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && success()
+    permissions:
+      contents: write  # This is required to create and push tags
 
     steps:
       - uses: actions/checkout@v4
