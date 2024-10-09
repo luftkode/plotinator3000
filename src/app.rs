@@ -10,12 +10,6 @@ mod preview_dropped;
 mod supported_logs;
 mod util;
 
-#[derive(serde::Deserialize, serde::Serialize, strum_macros::Display, Clone, Copy)]
-pub enum PlayBackButtonEvent {
-    PlayPause,
-    Reset,
-}
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[allow(missing_debug_implementations)] // Some of the nested types are from egui or egui_plot and we cannot implement Debug for them
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -28,7 +22,6 @@ pub struct App {
     logs: SupportedLogs,
     plot: LogPlotUi,
     font_size: Option<f32>,
-    playback_event: Option<PlayBackButtonEvent>,
     error_message: Option<String>,
 }
 
@@ -41,7 +34,6 @@ impl Default for App {
             logs: SupportedLogs::default(),
             plot: LogPlotUi::default(),
             font_size: Some(Self::DEFAULT_FONT_SIZE),
-            playback_event: None,
             error_message: None,
         }
     }
@@ -136,9 +128,6 @@ impl eframe::App for App {
                     "https://github.com/luftkode/logviewer-rs",
                 ));
 
-                if self.plot.is_playing() {
-                    ctx.request_repaint();
-                }
                 if is_web {
                     _ = ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
                 }
