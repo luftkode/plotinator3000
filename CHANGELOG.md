@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.18.3]
+
+### Fix
+
+- Integer overflow when searching for the appropriate downsampled MipMap level.
+
 ## [0.18.2]
 
 ### Changed

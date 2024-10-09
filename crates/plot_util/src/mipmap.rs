@@ -203,8 +203,6 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
         // Avoid repeated calls to num_levels()
         let num_levels = self.num_levels();
 
-        let x_max_adjusted = x_max.max(1); // Precompute x_max.max(1) to avoid repeated calls
-
         // If not found in cache, compute it
         for lvl_idx in (0..num_levels).rev() {
             let lvl = &self.data[lvl_idx];
@@ -214,28 +212,9 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
                 continue;
             }
 
-            // Binary search optimization: find approximate positions first
-            let approx_start = (lvl.len() * x_min) / x_max_adjusted;
-            let approx_end = (lvl.len() * x_max) / x_max_adjusted;
-
-            let approx_start_min = approx_start.min(lvl.len());
-            let approx_end_min = approx_end.min(lvl.len());
-
             // Narrow search ranges using approximations
-            let start_idx = if approx_start > 0 {
-                let start_search = &lvl[..approx_start_min];
-                start_search.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min)
-                    + approx_start_min
-            } else {
-                lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min)
-            };
-
-            let end_idx = if approx_end < lvl.len() {
-                let end_search = &lvl[approx_end_min..];
-                end_search.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max) + approx_end_min
-            } else {
-                lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max)
-            };
+            let start_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min);
+            let end_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max);
 
             // Use saturating_sub for safety and to avoid potential panic
             let count_within_bounds = end_idx.saturating_sub(start_idx);
@@ -280,6 +259,11 @@ pub fn fast_unix_ns_to_usize<T: Num + ToPrimitive + FromPrimitive + PartialOrd>(
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+
+    #[cfg(not(target_pointer_width = "32"))]
+    const UNIX_TS_NS: usize = 1_728_470_564_000_000_000;
+    #[cfg(target_pointer_width = "32")]
+    const UNIX_TS_NS: usize = 1_728_470_564;
 
     #[test]
     fn test_mipmap_strategy_max() {
@@ -375,6 +359,28 @@ mod tests {
         for (pixel_width, expected_lvl) in [(1usize, 3usize), (2, 2), (4, 1), (8, 0), (16, 0)] {
             assert_eq!(
                 mipmap.get_level_match(pixel_width, (0, 15)),
+                expected_lvl,
+                "Expected lvl {expected_lvl} for width: {pixel_width}"
+            );
+        }
+    }
+
+    /// Test for: `<https://github.com/luftkode/logviewer-rs/issues/62>`
+    #[test]
+    fn test_level_match_large_timestamps() {
+        let source_len = 1600;
+        let source: Vec<[f64; 2]> = (0..source_len)
+            .map(|i| [(i + UNIX_TS_NS) as f64, (i + UNIX_TS_NS) as f64])
+            .collect();
+        let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
+
+        let x_bounds = (UNIX_TS_NS + 300, UNIX_TS_NS + 5000);
+
+        for (pixel_width, expected_lvl) in
+            [(100usize, 3usize), (200, 2), (400, 1), (800, 0), (1600, 0)]
+        {
+            assert_eq!(
+                mipmap.get_level_match(pixel_width, x_bounds),
                 expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
             );

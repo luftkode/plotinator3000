@@ -373,6 +373,18 @@ mod tests {
         let log = GeneratorLog::from_reader(&mut data.as_slice())?;
 
         let first_entry = log.entries().first().expect("Empty entries");
+
+        let first_ts_ns = first_entry.timestamp_ns();
+        assert_eq!(
+            first_ts_ns,
+            NaiveDate::from_ymd_opt(2023, 1, 24)
+                .expect("Invalid arguments")
+                .and_hms_opt(13, 47, 45)
+                .expect("Invalid arguments")
+                .and_utc()
+                .timestamp_nanos_opt()
+                .expect("timestamp as nanoseconds out of range") as f64
+        );
         assert_eq!(
             first_entry.timestamp,
             NaiveDate::from_ymd_opt(2023, 1, 24)
