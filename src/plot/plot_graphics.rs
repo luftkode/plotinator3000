@@ -1,10 +1,7 @@
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use plot_util::{MipMapConfiguration, PlotData, Plots};
 
-use super::{
-    axis_config::AxisConfig, play_state::playback_update_plot, plot_settings::PlotSettings,
-    PlotType,
-};
+use super::{axis_config::AxisConfig, plot_settings::PlotSettings, PlotType};
 
 #[allow(clippy::too_many_arguments)]
 pub fn paint_plots(
@@ -15,9 +12,6 @@ pub fn paint_plots(
     axis_cfg: &mut AxisConfig,
     link_group: egui::Id,
     line_width: f32,
-    timer: Option<f64>,
-    is_reset_pressed: bool,
-    x_min_max: Option<(f64, f64)>,
 ) {
     let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
@@ -75,9 +69,6 @@ pub fn paint_plots(
         plot_components_list,
         axis_cfg,
         line_width,
-        timer,
-        is_reset_pressed,
-        x_min_max,
         &plot_settings.plot_name_filter(),
         &plot_settings.log_id_filter(),
         plot_settings.mipmap_cfg(),
@@ -91,9 +82,6 @@ fn fill_plots(
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
     axis_config: &mut AxisConfig,
     line_width: f32,
-    timer: Option<f64>,
-    is_reset_pressed: bool,
-    x_min_max: Option<(f64, f64)>,
     plot_name_filter: &[&str],
     plot_id_filter: &[usize],
     mipmap_cfg: MipMapConfiguration,
@@ -105,9 +93,6 @@ fn fill_plots(
                 (plot, ptype),
                 axis_config,
                 line_width,
-                timer,
-                is_reset_pressed,
-                x_min_max,
                 plot_name_filter,
                 plot_id_filter,
                 mipmap_cfg,
@@ -123,9 +108,6 @@ fn fill_plot(
     plot: (&mut PlotData, PlotType),
     axis_config: &mut AxisConfig,
     line_width: f32,
-    timer: Option<f64>,
-    is_reset_pressed: bool,
-    x_min_max: Option<(f64, f64)>,
     name_filter: &[&str],
     id_filter: &[usize],
     mipmap_cfg: MipMapConfiguration,
@@ -144,20 +126,7 @@ fn fill_plot(
 
     plot_util::plot_labels(plot_ui, plot_data, id_filter);
 
-    playback_update_plot(
-        timer,
-        plot_ui,
-        is_reset_pressed,
-        x_min_max.unwrap_or_default().0,
-    );
-    axis_config.handle_y_axis_lock(plot_ui, plot_type, |plot_ui| {
-        playback_update_plot(
-            timer,
-            plot_ui,
-            is_reset_pressed,
-            x_min_max.unwrap_or_default().0,
-        );
-    });
+    axis_config.handle_y_axis_lock(plot_ui, plot_type, |_| {});
 }
 
 fn build_plot_ui<'a>(

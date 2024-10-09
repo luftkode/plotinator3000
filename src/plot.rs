@@ -4,14 +4,10 @@ use plot_settings::PlotSettings;
 use plot_util::Plots;
 use serde::{Deserialize, Serialize};
 
-use crate::app::PlayBackButtonEvent;
 use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
-use play_state::PlayState;
-
 mod axis_config;
-mod play_state;
 mod plot_graphics;
 mod plot_settings;
 mod plot_ui;
@@ -30,7 +26,6 @@ pub struct LogPlotUi {
     legend_cfg: Legend,
     line_width: f32,
     axis_config: AxisConfig,
-    play_state: PlayState,
     plots: Plots,
     plot_settings: PlotSettings,
     x_min_max: Option<(f64, f64)>,
@@ -43,7 +38,6 @@ impl Default for LogPlotUi {
             legend_cfg: Default::default(),
             line_width: 1.5,
             axis_config: Default::default(),
-            play_state: PlayState::default(),
             plots: Plots::default(),
             plot_settings: PlotSettings::default(),
             x_min_max: None,
@@ -59,10 +53,6 @@ impl LogPlotUi {
             + self.plots.thousands().plots().len()
     }
 
-    pub fn is_playing(&self) -> bool {
-        self.play_state.is_playing()
-    }
-
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
@@ -73,7 +63,6 @@ impl LogPlotUi {
             legend_cfg,
             line_width,
             axis_config,
-            play_state,
             plots,
             plot_settings,
             x_min_max,
@@ -90,22 +79,7 @@ impl LogPlotUi {
 
         plots.calc_all_plot_x_min_max(x_min_max);
 
-        let mut playback_button_event = None;
-
-        plot_ui::show_settings_grid(
-            ui,
-            play_state,
-            &mut playback_button_event,
-            line_width,
-            axis_config,
-            plot_settings,
-        );
-
-        if let Some(e) = playback_button_event {
-            play_state.handle_playback_button_press(e);
-        };
-        let is_reset_pressed = matches!(playback_button_event, Some(PlayBackButtonEvent::Reset));
-        let timer = play_state.time_since_update();
+        plot_ui::show_settings_grid(ui, line_width, axis_config, plot_settings);
 
         for log in logs {
             util::add_plot_data_to_plot_collections(plots, log.as_ref(), plot_settings);
@@ -122,9 +96,6 @@ impl LogPlotUi {
                 axis_config,
                 link_group.expect("uninitialized link group id"),
                 *line_width,
-                timer,
-                is_reset_pressed,
-                *x_min_max,
             );
         })
         .response
