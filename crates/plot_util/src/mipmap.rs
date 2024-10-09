@@ -260,7 +260,10 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    const UNIX_TS_NS: usize = 1728470564 * 1_000_000_000;
+    #[cfg(not(target_pointer_width = "32"))]
+    const UNIX_TS_NS: usize = 1_728_470_564_000_000_000;
+    #[cfg(target_pointer_width = "32")]
+    const UNIX_TS_NS: usize = 1_728_470_564;
 
     #[test]
     fn test_mipmap_strategy_max() {
@@ -362,7 +365,7 @@ mod tests {
         }
     }
 
-    /// Test for: https://github.com/luftkode/logviewer-rs/issues/62
+    /// Test for: `<https://github.com/luftkode/logviewer-rs/issues/62>`
     #[test]
     fn test_level_match_large_timestamps() {
         let source_len = 1600;
