@@ -146,12 +146,12 @@ impl Plotable for PidLogV2 {
     fn metadata(&self) -> Option<Vec<(String, String)>> {
         let mut metadata = vec![
             (
-                "Project Version".to_string(),
-                self.project_version().unwrap_or_else(|| "N/A".to_string()),
+                "Project Version".to_owned(),
+                self.project_version().unwrap_or_else(|| "N/A".to_owned()),
             ),
             (
                 "Git Branch".to_owned(),
-                self.git_branch().unwrap_or_else(|| "N/A".to_string()),
+                self.git_branch().unwrap_or_else(|| "N/A".to_owned()),
             ),
             (
                 "Git Repo Status".to_owned(),
@@ -165,7 +165,7 @@ impl Plotable for PidLogV2 {
                 "Startup Timestamp".to_owned(),
                 self.startup_timestamp.naive_utc().to_string(),
             ),
-            ("Config values".to_owned(), "".to_owned()),
+            ("Config values".to_owned(), String::new()),
         ];
 
         metadata.extend_from_slice(&self.header.mbed_config().field_value_pairs());
