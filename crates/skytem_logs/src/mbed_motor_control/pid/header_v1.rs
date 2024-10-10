@@ -1,12 +1,14 @@
-use std::fmt;
+use std::{fmt, io};
 
 use log_if::log::GitMetadata;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
-use crate::mbed_motor_control::mbed_header_v1::{
-    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeaderV1,
-    ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
+use crate::mbed_motor_control::mbed_header::{
+    BuildMbedLogHeaderV1, GitBranchData, GitRepoStatusData, GitShortShaData,
+    MbedMotorControlLogHeader, PidLogHeader, ProjectVersionData, StartupTimestamp,
+    UniqueDescriptionData, SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA,
+    SIZEOF_PROJECT_VERSION, SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
 };
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
@@ -20,6 +22,30 @@ pub struct PidLogHeaderV1 {
     git_branch: GitBranchData,
     git_repo_status: GitRepoStatusData,
     startup_timestamp: StartupTimestamp,
+}
+
+impl PidLogHeader for PidLogHeaderV1 {}
+
+impl BuildMbedLogHeaderV1 for PidLogHeaderV1 {
+    fn new(
+        unique_description: UniqueDescriptionData,
+        version: u16,
+        project_version: ProjectVersionData,
+        git_short_sha: GitShortShaData,
+        git_branch: GitBranchData,
+        git_repo_status: GitRepoStatusData,
+        startup_timestamp: StartupTimestamp,
+    ) -> Self {
+        Self {
+            unique_description,
+            version,
+            project_version,
+            git_short_sha,
+            git_branch,
+            git_repo_status,
+            startup_timestamp,
+        }
+    }
 }
 
 impl GitMetadata for PidLogHeaderV1 {
@@ -64,8 +90,15 @@ impl GitMetadata for PidLogHeaderV1 {
     }
 }
 
-impl MbedMotorControlLogHeaderV1 for PidLogHeaderV1 {
+impl MbedMotorControlLogHeader for PidLogHeaderV1 {
+    const VERSION: u16 = 1;
     const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
+    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
+        + SIZEOF_PROJECT_VERSION
+        + SIZEOF_GIT_SHORT_SHA
+        + SIZEOF_GIT_BRANCH
+        + SIZEOF_GIT_REPO_STATUS
+        + SIZEOF_STARTUP_TIMESTAMP;
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description
@@ -73,26 +106,6 @@ impl MbedMotorControlLogHeaderV1 for PidLogHeaderV1 {
 
     fn version(&self) -> u16 {
         self.version
-    }
-
-    fn new(
-        unique_description: UniqueDescriptionData,
-        version: u16,
-        project_version: ProjectVersionData,
-        git_short_sha: GitShortShaData,
-        git_branch: GitBranchData,
-        git_repo_status: GitRepoStatusData,
-        startup_timestamp: StartupTimestamp,
-    ) -> Self {
-        Self {
-            unique_description,
-            version,
-            project_version,
-            git_short_sha,
-            git_branch,
-            git_repo_status,
-            startup_timestamp,
-        }
     }
 
     fn project_version_raw(&self) -> &ProjectVersionData {
@@ -113,6 +126,15 @@ impl MbedMotorControlLogHeaderV1 for PidLogHeaderV1 {
 
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
+    }
+    /// Deserialize a header from a byte slice
+    fn from_slice(slice: &[u8]) -> io::Result<Self> {
+        Self::build_from_slice(slice)
+    }
+
+    /// Deserialize a header for a `reader` that implements [Read]
+    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        Self::build_from_reader(reader)
     }
 }
 
@@ -143,7 +165,7 @@ mod tests {
     use std::fs;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin";
+        "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
 
     use testresult::TestResult;
 

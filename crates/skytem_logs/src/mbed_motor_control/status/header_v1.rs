@@ -1,11 +1,17 @@
-use crate::mbed_motor_control::mbed_header_v1::{
-    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeaderV1,
-    ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
+use crate::mbed_motor_control::mbed_header::BuildMbedLogHeaderV1;
+use crate::mbed_motor_control::mbed_header::{
+    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
+    ProjectVersionData, StartupTimestamp, UniqueDescriptionData, SIZEOF_GIT_BRANCH,
+    SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION, SIZEOF_STARTUP_TIMESTAMP,
+    SIZEOF_UNIQ_DESC,
 };
 
 use log_if::prelude::*;
 use serde_big_array::BigArray;
-use std::fmt;
+use std::{
+    fmt,
+    io::{self, Read},
+};
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]
 pub struct StatusLogHeaderV1 {
@@ -62,17 +68,7 @@ impl GitMetadata for StatusLogHeaderV1 {
     }
 }
 
-impl MbedMotorControlLogHeaderV1 for StatusLogHeaderV1 {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
-
-    fn unique_description_bytes(&self) -> &[u8; 128] {
-        &self.unique_description
-    }
-
-    fn version(&self) -> u16 {
-        self.version
-    }
-
+impl BuildMbedLogHeaderV1 for StatusLogHeaderV1 {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -91,6 +87,25 @@ impl MbedMotorControlLogHeaderV1 for StatusLogHeaderV1 {
             git_repo_status,
             startup_timestamp,
         }
+    }
+}
+
+impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
+    const VERSION: u16 = 1;
+    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
+    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
+        + SIZEOF_PROJECT_VERSION
+        + SIZEOF_GIT_SHORT_SHA
+        + SIZEOF_GIT_BRANCH
+        + SIZEOF_GIT_REPO_STATUS
+        + SIZEOF_STARTUP_TIMESTAMP;
+
+    fn unique_description_bytes(&self) -> &[u8; 128] {
+        &self.unique_description
+    }
+
+    fn version(&self) -> u16 {
+        self.version
     }
 
     fn project_version_raw(&self) -> &ProjectVersionData {
@@ -111,6 +126,16 @@ impl MbedMotorControlLogHeaderV1 for StatusLogHeaderV1 {
 
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
+    }
+
+    /// Deserialize a header from a byte slice
+    fn from_slice(slice: &[u8]) -> io::Result<Self> {
+        Self::build_from_slice(slice)
+    }
+
+    /// Deserialize a header for a `reader` that implements [Read]
+    fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
+        Self::build_from_reader(reader)
     }
 }
 
@@ -143,7 +168,7 @@ mod tests {
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
+        "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {

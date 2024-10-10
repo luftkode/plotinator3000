@@ -1,12 +1,13 @@
-use std::fmt;
+use std::{fmt, io};
 
 use crate::mbed_motor_control::{
     mbed_config::MbedConfig,
-    mbed_header_v1::{
-        GitBranchData, GitRepoStatusData, GitShortShaData, ProjectVersionData, StartupTimestamp,
-        UniqueDescriptionData,
+    mbed_header::{
+        BuildMbedLogHeaderV2, GitBranchData, GitRepoStatusData, GitShortShaData,
+        MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
+        SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION,
+        SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
     },
-    mbed_header_v2::MbedMotorControlLogHeaderV2,
 };
 
 use log_if::log::GitMetadata;
@@ -25,6 +26,37 @@ pub struct PidLogHeaderV2 {
     git_repo_status: GitRepoStatusData,
     startup_timestamp: StartupTimestamp,
     mbed_config: MbedConfig,
+}
+
+impl PidLogHeaderV2 {
+    #[allow(dead_code)] // Will be used when the metadata view feature is implemented in a bit
+    fn mbed_config(&self) -> &MbedConfig {
+        &self.mbed_config
+    }
+}
+
+impl BuildMbedLogHeaderV2 for PidLogHeaderV2 {
+    fn new(
+        unique_description: UniqueDescriptionData,
+        version: u16,
+        project_version: ProjectVersionData,
+        git_short_sha: GitShortShaData,
+        git_branch: GitBranchData,
+        git_repo_status: GitRepoStatusData,
+        startup_timestamp: StartupTimestamp,
+        mbed_config: MbedConfig,
+    ) -> Self {
+        Self {
+            unique_description,
+            version,
+            project_version,
+            git_short_sha,
+            git_branch,
+            git_repo_status,
+            startup_timestamp,
+            mbed_config,
+        }
+    }
 }
 
 impl GitMetadata for PidLogHeaderV2 {
@@ -69,8 +101,17 @@ impl GitMetadata for PidLogHeaderV2 {
     }
 }
 
-impl MbedMotorControlLogHeaderV2 for PidLogHeaderV2 {
+impl MbedMotorControlLogHeader for PidLogHeaderV2 {
+    const VERSION: u16 = 2;
     const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
+    /// Size of the header type in bytes if represented in raw binary
+    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
+        + SIZEOF_PROJECT_VERSION
+        + SIZEOF_GIT_SHORT_SHA
+        + SIZEOF_GIT_BRANCH
+        + SIZEOF_GIT_REPO_STATUS
+        + SIZEOF_STARTUP_TIMESTAMP
+        + MbedConfig::size();
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description
@@ -78,28 +119,6 @@ impl MbedMotorControlLogHeaderV2 for PidLogHeaderV2 {
 
     fn version(&self) -> u16 {
         self.version
-    }
-
-    fn new(
-        unique_description: UniqueDescriptionData,
-        version: u16,
-        project_version: ProjectVersionData,
-        git_short_sha: GitShortShaData,
-        git_branch: GitBranchData,
-        git_repo_status: GitRepoStatusData,
-        startup_timestamp: StartupTimestamp,
-        mbed_config: MbedConfig,
-    ) -> Self {
-        Self {
-            unique_description,
-            version,
-            project_version,
-            git_short_sha,
-            git_branch,
-            git_repo_status,
-            startup_timestamp,
-            mbed_config,
-        }
     }
 
     fn project_version_raw(&self) -> &ProjectVersionData {
@@ -121,9 +140,14 @@ impl MbedMotorControlLogHeaderV2 for PidLogHeaderV2 {
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
     }
+    /// Deserialize a header from a byte slice
+    fn from_slice(slice: &[u8]) -> io::Result<Self> {
+        Self::build_from_slice(slice)
+    }
 
-    fn mbed_config(&self) -> &MbedConfig {
-        &self.mbed_config
+    /// Deserialize a header for a `reader` that implements [Read]
+    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        Self::build_from_reader(reader)
     }
 }
 
