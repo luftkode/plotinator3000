@@ -1,4 +1,4 @@
-use date_settings::LogStartDateSettings;
+use date_settings::LoadedLogSettings;
 use egui::{Key, Response, RichText};
 use egui_phosphor::regular;
 use mipmap_settings::MipMapSettings;
@@ -51,7 +51,7 @@ pub struct PlotSettings {
     // Plot names and whether or not they should be shown (painted)
     plot_names_show: Vec<(String, bool)>,
     ps_ui: PlotSettingsUi,
-    log_start_date_settings: Vec<LogStartDateSettings>,
+    log_start_date_settings: Vec<LoadedLogSettings>,
     mipmap_settings: MipMapSettings,
 }
 
@@ -212,7 +212,7 @@ impl PlotSettings {
         self.log_start_date_settings.len() as u16
     }
 
-    pub fn add_log_setting(&mut self, log_settings: LogStartDateSettings) {
+    pub fn add_log_setting(&mut self, log_settings: LoadedLogSettings) {
         self.log_start_date_settings.push(log_settings);
     }
 

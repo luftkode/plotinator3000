@@ -2,9 +2,9 @@ use chrono::NaiveDateTime;
 use egui::{Key, RichText, TextEdit};
 use egui_phosphor::regular;
 
-use super::date_settings::LogStartDateSettings;
+use super::date_settings::LoadedLogSettings;
 
-pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettings) {
+pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LoadedLogSettings) {
     let log_name_date = settings.log_label();
     let check_box_text = RichText::new(if settings.show_log() {
         regular::EYE
@@ -37,7 +37,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LogStartDateSettin
     }
 }
 
-fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_name_date: &str) {
+fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name_date: &str) {
     // State of window bound to the 'X'-button that closes the window
     let mut open = true;
     egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
@@ -46,6 +46,16 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LogStartDateSettings, log_n
         .open(&mut open)
         .anchor(egui::Align2::LEFT_TOP, egui::Vec2::ZERO)
         .show(ui.ctx(), |ui| {
+            if let Some(log_metadata) = settings.log_metadata() {
+                egui::Grid::new("metadata").show(ui, |ui| {
+                    for (k, v) in log_metadata {
+                        ui.label(RichText::new(k).strong());
+                        ui.label(v);
+                        ui.end_row();
+                    }
+                });
+            }
+
             ui.vertical_centered(|ui| {
                 ui.label("Modify the start date to offset the plots of this log");
                 ui.label(format!("original date: {}", settings.original_start_date));

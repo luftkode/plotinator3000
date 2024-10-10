@@ -1,7 +1,7 @@
 use log_if::prelude::*;
 use plot_util::{PlotValues, Plots, StoredPlotLabels};
 
-use super::plot_settings::{date_settings::LogStartDateSettings, PlotSettings};
+use super::plot_settings::{date_settings::LoadedLogSettings, PlotSettings};
 
 pub fn add_plot_data_to_plot_collections(
     plots: &mut Plots,
@@ -11,10 +11,11 @@ pub fn add_plot_data_to_plot_collections(
     // This is how all logs get their log_id, and how each plot for each log gets their log_id
     let log_id = plot_settings.next_log_id();
 
-    plot_settings.add_log_setting(LogStartDateSettings::new(
+    plot_settings.add_log_setting(LoadedLogSettings::new(
         log_id,
         log.descriptive_name().to_owned(),
         log.first_timestamp(),
+        log.metadata(),
     ));
     for raw_plot in log.raw_plots() {
         match raw_plot.expected_range() {
