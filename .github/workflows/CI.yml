@@ -178,6 +178,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAT_WITH_REPO_SCOPE }}
 
       - name: Get version from Cargo.toml
         id: get_version
@@ -199,9 +200,7 @@ jobs:
       - name: Create and push tag
         if: env.TAG_EXISTS == 'false'
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
           git tag -a "v${{ env.VERSION }}" -m "Release v${{ env.VERSION }}"
           git push origin "v${{ env.VERSION }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_SCOPE }}
