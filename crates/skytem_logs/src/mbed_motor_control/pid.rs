@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use entry::PidLogEntry;
-use header::PidLogHeader;
+use header::PidLogHeaderV1;
 use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
@@ -12,7 +12,7 @@ pub mod header;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
-    header: PidLogHeader,
+    header: PidLogHeaderV1,
     entries: Vec<PidLogEntry>,
     timestamps_ns: Vec<f64>,
     all_plots_raw: Vec<RawPlot>,
@@ -23,7 +23,7 @@ impl SkytemLog for PidLog {
     type Entry = PidLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        let header = PidLogHeader::from_reader(reader)?;
+        let header = PidLogHeaderV1::from_reader(reader)?;
         let startup_timestamp = header
             .startup_timestamp()
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
@@ -162,7 +162,7 @@ impl fmt::Display for PidLog {
 mod tests {
     use super::*;
     use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
-    use header::PidLogHeader;
+    use header::PidLogHeaderV1;
     use std::fs::{self, File};
     use testresult::TestResult;
 
@@ -195,7 +195,7 @@ mod tests {
     fn test_parse_and_display() -> TestResult {
         let file = File::open(TEST_DATA)?;
         let mut reader = io::BufReader::new(file);
-        let header = PidLogHeader::from_reader(&mut reader)?;
+        let header = PidLogHeaderV1::from_reader(&mut reader)?;
         println!("{header}");
         parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
         Ok(())

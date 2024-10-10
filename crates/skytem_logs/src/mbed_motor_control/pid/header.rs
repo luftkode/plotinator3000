@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
-pub struct PidLogHeader {
+pub struct PidLogHeaderV1 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -22,7 +22,7 @@ pub struct PidLogHeader {
     startup_timestamp: StartupTimestamp,
 }
 
-impl GitMetadata for PidLogHeader {
+impl GitMetadata for PidLogHeaderV1 {
     fn project_version(&self) -> Option<String> {
         Some(
             String::from_utf8_lossy(self.project_version_raw())
@@ -64,8 +64,9 @@ impl GitMetadata for PidLogHeader {
     }
 }
 
-impl MbedMotorControlLogHeader for PidLogHeader {
+impl MbedMotorControlLogHeader for PidLogHeaderV1 {
     const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
+    const VERSION: u16 = 1;
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description
@@ -116,7 +117,7 @@ impl MbedMotorControlLogHeader for PidLogHeader {
     }
 }
 
-impl fmt::Display for PidLogHeader {
+impl fmt::Display for PidLogHeaderV1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(
@@ -152,11 +153,11 @@ mod tests {
     #[test]
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
-        let pid_log_header = PidLogHeader::from_reader(&mut data.as_slice())?;
+        let pid_log_header = PidLogHeaderV1::from_reader(&mut data.as_slice())?;
         eprintln!("{pid_log_header}");
         assert_eq!(
             pid_log_header.unique_description(),
-            PidLogHeader::UNIQUE_DESCRIPTION
+            PidLogHeaderV1::UNIQUE_DESCRIPTION
         );
         assert_eq!(pid_log_header.version, 1);
         assert_eq!(pid_log_header.project_version().unwrap(), "1.3.0");

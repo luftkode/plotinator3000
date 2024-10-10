@@ -9,7 +9,7 @@ use serde_big_array::BigArray;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]
-pub struct StatusLogHeader {
+pub struct StatusLogHeaderV1 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -21,7 +21,7 @@ pub struct StatusLogHeader {
     startup_timestamp: StartupTimestamp,
 }
 
-impl GitMetadata for StatusLogHeader {
+impl GitMetadata for StatusLogHeaderV1 {
     fn project_version(&self) -> Option<String> {
         Some(
             String::from_utf8_lossy(self.project_version_raw())
@@ -63,8 +63,9 @@ impl GitMetadata for StatusLogHeader {
     }
 }
 
-impl MbedMotorControlLogHeader for StatusLogHeader {
+impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
     const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
+    const VERSION: u16 = 1;
 
     fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description
@@ -115,7 +116,7 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
     }
 }
 
-impl fmt::Display for StatusLogHeader {
+impl fmt::Display for StatusLogHeaderV1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(
@@ -149,11 +150,11 @@ mod tests {
     #[test]
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
-        let status_log_header = StatusLogHeader::from_reader(&mut data.as_slice())?;
+        let status_log_header = StatusLogHeaderV1::from_reader(&mut data.as_slice())?;
         eprintln!("{status_log_header}");
         assert_eq!(
             status_log_header.unique_description(),
-            StatusLogHeader::UNIQUE_DESCRIPTION
+            StatusLogHeaderV1::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log_header.version, 1);
         assert_eq!(status_log_header.project_version().unwrap(), "1.3.0");

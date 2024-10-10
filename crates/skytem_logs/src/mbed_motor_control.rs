@@ -39,6 +39,8 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
 
     /// Unique description is a field in the header that identifies the kind of log
     const UNIQUE_DESCRIPTION: &'static str;
+    /// The version is the version of the header
+    const VERSION: u16;
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData;
     fn version(&self) -> u16;
@@ -60,7 +62,7 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized {
     /// After deserializing arbitrary bytes this method can be used to check
     /// whether or not the result matches a header of the deserialized type
     fn is_valid_header(&self) -> bool {
-        self.unique_description() == Self::UNIQUE_DESCRIPTION
+        self.unique_description() == Self::UNIQUE_DESCRIPTION && self.version() == Self::VERSION
     }
 
     /// Deserialize a header for a `reader` that implements [Read]

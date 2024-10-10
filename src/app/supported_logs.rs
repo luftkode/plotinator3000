@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
     mbed_motor_control::{
-        pid::{header::PidLogHeader, PidLog},
-        status::{header::StatusLogHeader, StatusLog},
+        pid::{header::PidLogHeaderV1, PidLog},
+        status::{header::StatusLogHeaderV1, StatusLog},
         MbedMotorControlLogHeader,
     },
 };
@@ -105,9 +105,9 @@ impl SupportedLogs {
 
     // Parsing dropped content on web
     fn parse_content(&mut self, mut content: &[u8]) -> io::Result<()> {
-        if PidLogHeader::is_buf_header(content).unwrap_or(false) {
+        if PidLogHeaderV1::is_buf_header(content).unwrap_or(false) {
             self.pid_log.push(PidLog::from_reader(&mut content)?);
-        } else if StatusLogHeader::is_buf_header(content).unwrap_or(false) {
+        } else if StatusLogHeaderV1::is_buf_header(content).unwrap_or(false) {
             self.status_log.push(StatusLog::from_reader(&mut content)?);
         } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
             self.generator_log
@@ -123,11 +123,11 @@ impl SupportedLogs {
 
     // Parse file on native
     fn parse_path(&mut self, path: &path::Path) -> io::Result<()> {
-        if PidLogHeader::file_starts_with_header(path).unwrap_or(false) {
+        if PidLogHeaderV1::file_starts_with_header(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
             self.pid_log
                 .push(PidLog::from_reader(&mut BufReader::new(f))?);
-        } else if StatusLogHeader::file_starts_with_header(path).unwrap_or(false) {
+        } else if StatusLogHeaderV1::file_starts_with_header(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
             self.status_log
                 .push(StatusLog::from_reader(&mut BufReader::new(f))?);

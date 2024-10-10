@@ -3,7 +3,7 @@ use std::{fmt, io};
 use super::MbedMotorControlLogHeader;
 use chrono::{DateTime, Utc};
 use entry::StatusLogEntry;
-use header::StatusLogHeader;
+use header::StatusLogHeaderV1;
 use log_if::prelude::*;
 
 pub mod entry;
@@ -11,7 +11,7 @@ pub mod header;
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct StatusLog {
-    header: StatusLogHeader,
+    header: StatusLogHeaderV1,
     entries: Vec<StatusLogEntry>,
     timestamp_ns: Vec<f64>,
     labels: Vec<PlotLabels>,
@@ -23,7 +23,7 @@ impl SkytemLog for StatusLog {
     type Entry = StatusLogEntry;
 
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        let header = StatusLogHeader::from_reader(reader)?;
+        let header = StatusLogHeaderV1::from_reader(reader)?;
         let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
         let startup_timestamp = header
             .startup_timestamp()
@@ -243,7 +243,7 @@ mod tests {
     fn test_parse_and_display() -> TestResult {
         let file = File::open(TEST_DATA)?;
         let mut reader = io::BufReader::new(file);
-        let header = StatusLogHeader::from_reader(&mut reader)?;
+        let header = StatusLogHeaderV1::from_reader(&mut reader)?;
         println!("{header}");
         parse_and_display_log_entries::<StatusLogEntry, _>(&mut reader, Some(10));
         Ok(())
