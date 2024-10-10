@@ -29,8 +29,7 @@ pub struct PidLogHeaderV2 {
 }
 
 impl PidLogHeaderV2 {
-    #[allow(dead_code)] // Will be used when the metadata view feature is implemented in a bit
-    fn mbed_config(&self) -> &MbedConfig {
+    pub fn mbed_config(&self) -> &MbedConfig {
         &self.mbed_config
     }
 }

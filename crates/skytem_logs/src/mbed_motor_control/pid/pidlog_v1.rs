@@ -143,6 +143,33 @@ impl Plotable for PidLogV1 {
     fn labels(&self) -> Option<&[PlotLabels]> {
         None
     }
+
+    fn metadata(&self) -> Option<Vec<(String, String)>> {
+        let metadata = vec![
+            (
+                "Project Version".to_string(),
+                self.project_version().unwrap_or_else(|| "N/A".to_string()),
+            ),
+            (
+                "Git Branch".to_owned(),
+                self.git_branch().unwrap_or_else(|| "N/A".to_string()),
+            ),
+            (
+                "Git Repo Status".to_owned(),
+                self.git_repo_status().unwrap_or_else(|| "Clean".to_owned()),
+            ),
+            (
+                "Git Short SHA".to_owned(),
+                self.git_short_sha().unwrap_or_else(|| "N/A".to_owned()),
+            ),
+            (
+                "Startup Timestamp".to_owned(),
+                self.startup_timestamp.naive_utc().to_string(),
+            ),
+        ];
+
+        Some(metadata)
+    }
 }
 
 impl fmt::Display for PidLogV1 {

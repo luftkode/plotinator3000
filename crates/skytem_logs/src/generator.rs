@@ -91,6 +91,10 @@ impl Plotable for GeneratorLog {
     fn labels(&self) -> Option<&[PlotLabels]> {
         None
     }
+
+    fn metadata(&self) -> Option<Vec<(String, String)>> {
+        None
+    }
 }
 
 impl GitMetadata for GeneratorLog {
