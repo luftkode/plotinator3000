@@ -169,9 +169,9 @@ impl SupportedLogs {
             self.pid_log_v2.push(log);
         } else if StatusLogHeaderV2::file_starts_with_header(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
-            let log = StatusLogV1::from_reader(&mut BufReader::new(f))?;
+            let log = StatusLogV2::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v1.push(log);
+            self.status_log_v2.push(log);
         } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
             let log = GeneratorLog::from_reader(&mut BufReader::new(f))?;

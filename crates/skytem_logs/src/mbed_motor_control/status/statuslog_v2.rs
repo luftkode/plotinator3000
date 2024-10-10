@@ -154,6 +154,36 @@ impl Plotable for StatusLogV2 {
     fn labels(&self) -> Option<&[PlotLabels]> {
         Some(&self.labels)
     }
+
+    fn metadata(&self) -> Option<Vec<(String, String)>> {
+        let mut metadata = vec![
+            (
+                "Project Version".to_owned(),
+                self.project_version().unwrap_or_else(|| "N/A".to_owned()),
+            ),
+            (
+                "Git Branch".to_owned(),
+                self.git_branch().unwrap_or_else(|| "N/A".to_owned()),
+            ),
+            (
+                "Git Repo Status".to_owned(),
+                self.git_repo_status().unwrap_or_else(|| "Clean".to_owned()),
+            ),
+            (
+                "Git Short SHA".to_owned(),
+                self.git_short_sha().unwrap_or_else(|| "N/A".to_owned()),
+            ),
+            (
+                "Startup Timestamp".to_owned(),
+                self.startup_timestamp.naive_utc().to_string(),
+            ),
+            ("Config values".to_owned(), String::new()),
+        ];
+
+        metadata.extend_from_slice(&self.header.mbed_config().field_value_pairs());
+
+        Some(metadata)
+    }
 }
 
 impl fmt::Display for StatusLogV2 {

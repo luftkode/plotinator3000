@@ -3,7 +3,7 @@ use plot_util::{PlotData, Plots};
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
-pub struct LogStartDateSettings {
+pub struct LoadedLogSettings {
     log_id: usize,
     log_descriptive_name: String,
     pub original_start_date: DateTime<Utc>,
@@ -14,10 +14,16 @@ pub struct LogStartDateSettings {
     pub new_date_candidate: Option<NaiveDateTime>,
     pub date_changed: bool,
     show: bool,
+    log_metadata: Option<Vec<(String, String)>>,
 }
 
-impl LogStartDateSettings {
-    pub fn new(log_id: usize, descriptive_name: String, start_date: DateTime<Utc>) -> Self {
+impl LoadedLogSettings {
+    pub fn new(
+        log_id: usize,
+        descriptive_name: String,
+        start_date: DateTime<Utc>,
+        log_metadata: Option<Vec<(String, String)>>,
+    ) -> Self {
         Self {
             log_id,
             log_descriptive_name: descriptive_name,
@@ -29,6 +35,7 @@ impl LogStartDateSettings {
             new_date_candidate: None,
             date_changed: false,
             show: true,
+            log_metadata,
         }
     }
 
@@ -60,12 +67,16 @@ impl LogStartDateSettings {
     pub fn show_log_mut(&mut self) -> &mut bool {
         &mut self.show
     }
+
+    pub fn log_metadata(&self) -> Option<&[(String, String)]> {
+        self.log_metadata.as_deref()
+    }
 }
 
 pub fn update_plot_dates(
     invalidate_plot: &mut bool,
     plots: &mut Plots,
-    settings: &mut LogStartDateSettings,
+    settings: &mut LoadedLogSettings,
 ) {
     if settings.date_changed {
         let apply_offsets = |plot_data: &mut PlotData| {
