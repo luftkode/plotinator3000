@@ -5,10 +5,11 @@ use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
 
-use super::MbedMotorControlLogHeader;
+use super::mbed_header_v1::MbedMotorControlLogHeaderV1;
 
 pub mod entry;
 pub mod header_v1;
+pub mod header_v2;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
@@ -161,7 +162,7 @@ impl fmt::Display for PidLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
+    use crate::parse_and_display_log_entries;
     use header_v1::PidLogHeaderV1;
     use std::fs::{self, File};
     use testresult::TestResult;

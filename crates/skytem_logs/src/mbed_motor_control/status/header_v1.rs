@@ -1,9 +1,8 @@
-use crate::mbed_motor_control::StartupTimestamp;
-
-use super::super::{
-    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
-    ProjectVersionData, UniqueDescriptionData,
+use crate::mbed_motor_control::mbed_header_v1::{
+    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeaderV1,
+    ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
 };
+
 use log_if::prelude::*;
 use serde_big_array::BigArray;
 use std::fmt;
@@ -63,9 +62,8 @@ impl GitMetadata for StatusLogHeaderV1 {
     }
 }
 
-impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
+impl MbedMotorControlLogHeaderV1 for StatusLogHeaderV1 {
     const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
-    const VERSION: u16 = 1;
 
     fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description

@@ -1,16 +1,20 @@
 use std::fmt;
 
+use crate::mbed_motor_control::{
+    mbed_config::MbedConfig,
+    mbed_header_v1::{
+        GitBranchData, GitRepoStatusData, GitShortShaData, ProjectVersionData, StartupTimestamp,
+        UniqueDescriptionData,
+    },
+    mbed_header_v2::MbedMotorControlLogHeaderV2,
+};
+
 use log_if::log::GitMetadata;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
-use crate::mbed_motor_control::mbed_header_v1::{
-    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeaderV1,
-    ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
-};
-
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
-pub struct PidLogHeaderV1 {
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
+pub struct PidLogHeaderV2 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -20,9 +24,10 @@ pub struct PidLogHeaderV1 {
     git_branch: GitBranchData,
     git_repo_status: GitRepoStatusData,
     startup_timestamp: StartupTimestamp,
+    mbed_config: MbedConfig,
 }
 
-impl GitMetadata for PidLogHeaderV1 {
+impl GitMetadata for PidLogHeaderV2 {
     fn project_version(&self) -> Option<String> {
         Some(
             String::from_utf8_lossy(self.project_version_raw())
@@ -64,7 +69,7 @@ impl GitMetadata for PidLogHeaderV1 {
     }
 }
 
-impl MbedMotorControlLogHeaderV1 for PidLogHeaderV1 {
+impl MbedMotorControlLogHeaderV2 for PidLogHeaderV2 {
     const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
@@ -83,6 +88,7 @@ impl MbedMotorControlLogHeaderV1 for PidLogHeaderV1 {
         git_branch: GitBranchData,
         git_repo_status: GitRepoStatusData,
         startup_timestamp: StartupTimestamp,
+        mbed_config: MbedConfig,
     ) -> Self {
         Self {
             unique_description,
@@ -92,6 +98,7 @@ impl MbedMotorControlLogHeaderV1 for PidLogHeaderV1 {
             git_branch,
             git_repo_status,
             startup_timestamp,
+            mbed_config,
         }
     }
 
@@ -114,9 +121,13 @@ impl MbedMotorControlLogHeaderV1 for PidLogHeaderV1 {
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
     }
+
+    fn mbed_config(&self) -> &MbedConfig {
+        &self.mbed_config
+    }
 }
 
-impl fmt::Display for PidLogHeaderV1 {
+impl fmt::Display for PidLogHeaderV2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(
@@ -143,7 +154,7 @@ mod tests {
     use std::fs;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin";
+        "../../test_data/mbed_motor_control/v2/20240822_085220/pid_20240822_085220_00.bin";
 
     use testresult::TestResult;
 
@@ -152,19 +163,31 @@ mod tests {
     #[test]
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
-        let pid_log_header = PidLogHeaderV1::from_reader(&mut data.as_slice())?;
+        let pid_log_header = PidLogHeaderV2::from_reader(&mut data.as_slice())?;
         eprintln!("{pid_log_header}");
         assert_eq!(
             pid_log_header.unique_description(),
-            PidLogHeaderV1::UNIQUE_DESCRIPTION
+            PidLogHeaderV2::UNIQUE_DESCRIPTION
         );
-        assert_eq!(pid_log_header.version, 1);
-        assert_eq!(pid_log_header.project_version().unwrap(), "1.3.0");
-        assert_eq!(
-            pid_log_header.git_branch().unwrap(),
-            "fix-23-pid-loop-in-standby"
-        );
-        assert_eq!(pid_log_header.git_short_sha().unwrap(), "fe6e412");
+        assert_eq!(pid_log_header.version, 2);
+        assert_eq!(pid_log_header.project_version().unwrap(), "2.0.2");
+        assert_eq!(pid_log_header.git_branch().unwrap(), "config-in-log-header");
+        assert_eq!(pid_log_header.git_short_sha().unwrap(), "e5ebf4f");
+        assert_eq!(pid_log_header.mbed_config().kp(), 3.0);
+        assert_eq!(pid_log_header.mbed_config().ki(), 1.0);
+        assert_eq!(pid_log_header.mbed_config().kd(), 0.0);
+        assert_eq!(pid_log_header.mbed_config().t_standby(), 50);
+        assert_eq!(pid_log_header.mbed_config().t_shutdown(), 102);
+        assert_eq!(pid_log_header.mbed_config().t_run(), 65);
+        assert_eq!(pid_log_header.mbed_config().t_fan_on(), 81);
+        assert_eq!(pid_log_header.mbed_config().t_fan_off(), 80);
+        assert_eq!(pid_log_header.mbed_config().rpm_standby(), 3600);
+        assert_eq!(pid_log_header.mbed_config().rpm_running(), 6000);
+        assert_eq!(pid_log_header.mbed_config().time_shutdown(), 60);
+        assert_eq!(pid_log_header.mbed_config().time_wait_for_cap(), 300);
+        assert_eq!(pid_log_header.mbed_config().vbat_ready(), 12.8);
+        assert_eq!(pid_log_header.mbed_config().servo_max(), 1500);
+        assert_eq!(pid_log_header.mbed_config().servo_min(), 900);
         Ok(())
     }
 }

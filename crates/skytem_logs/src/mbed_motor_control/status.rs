@@ -1,13 +1,15 @@
 use std::{fmt, io};
 
-use super::MbedMotorControlLogHeader;
 use chrono::{DateTime, Utc};
 use entry::StatusLogEntry;
 use header_v1::StatusLogHeaderV1;
 use log_if::prelude::*;
 
+use super::mbed_header_v1::MbedMotorControlLogHeaderV1;
+
 pub mod entry;
 pub mod header_v1;
+pub mod header_v2;
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct StatusLog {
@@ -207,7 +209,7 @@ mod tests {
     const TEST_DATA: &str =
         "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
 
-    use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
+    use crate::parse_and_display_log_entries;
 
     #[test]
     fn test_deserialize() -> TestResult {
