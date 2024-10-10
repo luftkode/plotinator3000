@@ -1,15 +1,20 @@
-use crate::mbed_motor_control::StartupTimestamp;
-
-use super::super::{
+use crate::mbed_motor_control::mbed_header::BuildMbedLogHeaderV1;
+use crate::mbed_motor_control::mbed_header::{
     GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
-    ProjectVersionData, UniqueDescriptionData,
+    ProjectVersionData, StartupTimestamp, UniqueDescriptionData, SIZEOF_GIT_BRANCH,
+    SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION, SIZEOF_STARTUP_TIMESTAMP,
+    SIZEOF_UNIQ_DESC,
 };
+
 use log_if::prelude::*;
 use serde_big_array::BigArray;
-use std::fmt;
+use std::{
+    fmt,
+    io::{self, Read},
+};
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]
-pub struct StatusLogHeader {
+pub struct StatusLogHeaderV1 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -21,7 +26,7 @@ pub struct StatusLogHeader {
     startup_timestamp: StartupTimestamp,
 }
 
-impl GitMetadata for StatusLogHeader {
+impl GitMetadata for StatusLogHeaderV1 {
     fn project_version(&self) -> Option<String> {
         Some(
             String::from_utf8_lossy(self.project_version_raw())
@@ -63,17 +68,7 @@ impl GitMetadata for StatusLogHeader {
     }
 }
 
-impl MbedMotorControlLogHeader for StatusLogHeader {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
-
-    fn unique_description_bytes(&self) -> &[u8; 128] {
-        &self.unique_description
-    }
-
-    fn version(&self) -> u16 {
-        self.version
-    }
-
+impl BuildMbedLogHeaderV1 for StatusLogHeaderV1 {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -92,6 +87,25 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
             git_repo_status,
             startup_timestamp,
         }
+    }
+}
+
+impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
+    const VERSION: u16 = 1;
+    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
+    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
+        + SIZEOF_PROJECT_VERSION
+        + SIZEOF_GIT_SHORT_SHA
+        + SIZEOF_GIT_BRANCH
+        + SIZEOF_GIT_REPO_STATUS
+        + SIZEOF_STARTUP_TIMESTAMP;
+
+    fn unique_description_bytes(&self) -> &[u8; 128] {
+        &self.unique_description
+    }
+
+    fn version(&self) -> u16 {
+        self.version
     }
 
     fn project_version_raw(&self) -> &ProjectVersionData {
@@ -113,9 +127,19 @@ impl MbedMotorControlLogHeader for StatusLogHeader {
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
     }
+
+    /// Deserialize a header from a byte slice
+    fn from_slice(slice: &[u8]) -> io::Result<Self> {
+        Self::build_from_slice(slice)
+    }
+
+    /// Deserialize a header for a `reader` that implements [Read]
+    fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
+        Self::build_from_reader(reader)
+    }
 }
 
-impl fmt::Display for StatusLogHeader {
+impl fmt::Display for StatusLogHeaderV1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(
@@ -144,16 +168,16 @@ mod tests {
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/20240926_121708/status_20240926_121708_00.bin";
+        "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
-        let status_log_header = StatusLogHeader::from_reader(&mut data.as_slice())?;
+        let status_log_header = StatusLogHeaderV1::from_reader(&mut data.as_slice())?;
         eprintln!("{status_log_header}");
         assert_eq!(
             status_log_header.unique_description(),
-            StatusLogHeader::UNIQUE_DESCRIPTION
+            StatusLogHeaderV1::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log_header.version, 1);
         assert_eq!(status_log_header.project_version().unwrap(), "1.3.0");

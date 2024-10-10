@@ -30,16 +30,16 @@ pub fn parse_unique_description(raw_uniq_desc: [u8; 128]) -> String {
 /// ```
 /// use std::fs::File;
 /// use std::io::{self, BufReader, ErrorKind};
-/// use skytem_logs::{mbed_motor_control::pid::{header::PidLogHeader, entry::PidLogEntry}, parse_and_display_log_entries};
-/// use skytem_logs::mbed_motor_control::MbedMotorControlLogHeader;
+/// use skytem_logs::{mbed_motor_control::pid::{header_v1::PidLogHeaderV1, entry::PidLogEntry}, parse_and_display_log_entries};
+/// use crate::skytem_logs::mbed_motor_control::mbed_header::MbedMotorControlLogHeader;
 ///
 /// fn main() -> std::io::Result<()> {
 ///     // Open the log file
-///     let file = File::open("../../test_data/mbed_motor_control/20240926_121708/pid_20240926_121708_00.bin")?;
+///     let file = File::open("../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin")?;
 ///     let mut reader = BufReader::new(file);
 ///
 ///     // First, read the header
-///     let header = PidLogHeader::from_reader(&mut reader)?;
+///     let header = PidLogHeaderV1::from_reader(&mut reader)?;
 ///     println!("Log Header: {:?}", header);
 ///
 ///     if !header.is_valid_header() {

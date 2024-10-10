@@ -16,6 +16,8 @@ strum.workspace = true
 strum_macros.workspace = true
 byteorder.workspace = true
 chrono.workspace = true
+getset.workspace = true
+derive_more.workspace = true
 
 
 [dev-dependencies]
