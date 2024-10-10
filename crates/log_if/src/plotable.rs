@@ -8,8 +8,10 @@ pub trait Plotable {
     fn first_timestamp(&self) -> DateTime<Utc>;
     /// A name that describes the type of log to the user
     fn descriptive_name(&self) -> &str;
-
+    /// Return all labels (if any) that should be shown on the plot(s)
     fn labels(&self) -> Option<&[PlotLabels]>;
+    /// Returns metadata if any, as a list of key/values
+    fn metadata(&self) -> Option<Vec<(String, String)>>;
 }
 
 /// Implement conversion from a type that implements [`Plotable`] to a generic dynamic [`Plotable`] type
