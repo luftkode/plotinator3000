@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
     mbed_motor_control::{
-        pid::{header::PidLogHeaderV1, PidLog},
-        status::{header::StatusLogHeaderV1, StatusLog},
+        pid::{header_v1::PidLogHeaderV1, PidLog},
+        status::{header_v1::StatusLogHeaderV1, StatusLog},
         MbedMotorControlLogHeader,
     },
 };

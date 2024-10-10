@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use entry::PidLogEntry;
-use header::PidLogHeaderV1;
+use header_v1::PidLogHeaderV1;
 use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
@@ -8,7 +8,7 @@ use std::{fmt, io};
 use super::MbedMotorControlLogHeader;
 
 pub mod entry;
-pub mod header;
+pub mod header_v1;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
@@ -162,7 +162,7 @@ impl fmt::Display for PidLog {
 mod tests {
     use super::*;
     use crate::{mbed_motor_control::MbedMotorControlLogHeader, parse_and_display_log_entries};
-    use header::PidLogHeaderV1;
+    use header_v1::PidLogHeaderV1;
     use std::fs::{self, File};
     use testresult::TestResult;
 

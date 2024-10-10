@@ -3,11 +3,11 @@ use std::{fmt, io};
 use super::MbedMotorControlLogHeader;
 use chrono::{DateTime, Utc};
 use entry::StatusLogEntry;
-use header::StatusLogHeaderV1;
+use header_v1::StatusLogHeaderV1;
 use log_if::prelude::*;
 
 pub mod entry;
-pub mod header;
+pub mod header_v1;
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct StatusLog {
