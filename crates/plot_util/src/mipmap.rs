@@ -221,7 +221,6 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
                 continue;
             }
 
-            // Narrow search ranges using approximations
             let start_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min);
             let end_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max);
 
