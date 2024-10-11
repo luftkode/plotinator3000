@@ -206,7 +206,7 @@ pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64;
     // but this way we are sure to only allocate once
     let mut filtered = Vec::with_capacity(points_within + 2);
 
-    // add the first points if it is not withing the points that are within the bounds
+    // add the first points if it is not within the points that are within the bounds
     if start_idx != 0 {
         filtered.push(points[0]);
     }
