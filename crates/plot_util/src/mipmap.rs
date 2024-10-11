@@ -69,6 +69,7 @@ pub enum MipMapStrategy {
 struct LevelLookupCached {
     pixel_width: usize,
     x_bounds: (usize, usize),
+    result_span: (usize, usize),
     result_idx: usize,
 }
 
@@ -175,11 +176,6 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     /// Retrieves the index of the level that matches the specified pixel width
     /// and bounds within the dataset, using cached results if available.
     ///
-    /// This function checks if the result for the given `pixel_width` and `x_bounds`
-    /// is already cached in `most_recent_lookup`. If a match is found in the cache,
-    /// it returns the cached index immediately. If not, it computes the appropriate
-    /// level index based on the provided bounds.
-    ///
     /// The bounds (`x_bounds`) are specified as a tuple `(x_min, x_max)`, which
     /// defines the range within which the data points must fall. The pixel width
     /// indicates how many data points should be considered in the calculation.
@@ -193,9 +189,22 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     ///   define the lower and upper bounds of the data points to be considered
     ///   for matching. These bounds are used to filter the relevant points in
     ///   each level.
-    pub fn get_level_match(&mut self, pixel_width: usize, x_bounds: (usize, usize)) -> usize {
+    ///
+    /// # Returns
+    ///
+    /// The level that matches the requirement (or the highest resolution), and if
+    /// the match was found in a level below the max resolution, also returns a tuple
+    /// of the start and end index of the level that matches the requirement.
+    pub fn get_level_match(
+        &mut self,
+        pixel_width: usize,
+        x_bounds: (usize, usize),
+    ) -> (usize, Option<(usize, usize)>) {
         if self.most_recent_lookup.is_equal(pixel_width, x_bounds) {
-            return self.most_recent_lookup.result_idx;
+            return (
+                self.most_recent_lookup.result_idx,
+                Some(self.most_recent_lookup.result_span),
+            );
         }
         let target_point_count = pixel_width;
         let (x_min, x_max) = x_bounds;
@@ -223,13 +232,14 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
                 self.most_recent_lookup = LevelLookupCached {
                     pixel_width,
                     x_bounds,
+                    result_span: (start_idx, end_idx),
                     result_idx: lvl_idx,
                 };
 
-                return lvl_idx;
+                return (lvl_idx, Some((start_idx, end_idx)));
             }
         }
-        0
+        (0, None)
     }
 }
 
@@ -357,9 +367,9 @@ mod tests {
         let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
 
         for (pixel_width, expected_lvl) in [(1usize, 3usize), (2, 2), (4, 1), (8, 0), (16, 0)] {
+            let (lvl, range_res) = mipmap.get_level_match(pixel_width, (0, 15));
             assert_eq!(
-                mipmap.get_level_match(pixel_width, (0, 15)),
-                expected_lvl,
+                lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
             );
         }
@@ -379,9 +389,9 @@ mod tests {
         for (pixel_width, expected_lvl) in
             [(100usize, 3usize), (200, 2), (400, 1), (800, 0), (1600, 0)]
         {
+            let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds);
             assert_eq!(
-                mipmap.get_level_match(pixel_width, x_bounds),
-                expected_lvl,
+                lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
             );
         }
