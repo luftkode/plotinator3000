@@ -43,45 +43,84 @@ pub fn plot_lines(
         .iter_mut()
         .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
     {
-        let (x_min, x_max) = x_plot_bound(plot_ui.plot_bounds());
-        let x_bounds = (x_min as usize, x_max as usize);
+        // TODO: Make some kind of rotating color scheme such that min/max plots look kind of similar but that a lot of different colors are still used
         match mipmap_cfg {
-            MipMapConfiguration::Enabled(lvl) => {
-                let processed_lvl = match lvl {
-                    // manually set level
-                    Some(lvl) => lvl,
-                    // auto mode
-                    None => plot_vals.get_scaled_mipmap_levels(plots_width_pixels, x_bounds),
+            MipMapConfiguration::Disabled => plot_raw(plot_ui, plot_vals, x_min_max_ext),
+            MipMapConfiguration::Enabled(level_option) => {
+                let (level, idx_range) = match level_option {
+                    Some(lvl) => (lvl, None),
+                    None => plot_vals.get_scaled_mipmap_levels(
+                        plots_width_pixels,
+                        (x_min_max_ext.0 as usize, x_min_max_ext.1 as usize),
+                    ),
                 };
 
-                if processed_lvl == 0 {
-                    // If we are the highest resolution, plot simply the raw value instead of plotting the same thing twice
+                if level == 0 {
                     plot_raw(plot_ui, plot_vals, x_min_max_ext);
-                } else {
-                    let (plot_points_min, plot_points_max) =
-                        plot_vals.get_level_or_max(processed_lvl);
-
-                    let filtered_points_min = filter_plot_points(plot_points_min, x_min_max_ext);
-                    let filtered_points_max = filter_plot_points(plot_points_max, x_min_max_ext);
-
-                    // Manual string construction for efficiency since this is a hot path.
-                    let mut label_min = plot_vals.label().to_owned();
-                    label_min.push_str(" (min)");
-                    let mut label_max = plot_vals.label().to_owned();
-                    label_max.push_str(" (max)");
-                    // TODO: Make some kind of rotating color scheme such that min/max plots look kind of similar but that a lot of different colors are still used
-                    let line_min = Line::new(filtered_points_min).name(label_min);
-                    let line_max = Line::new(filtered_points_max).name(label_max);
-                    plot_ui.line(line_min.width(line_width));
-                    plot_ui.line(line_max.width(line_width));
+                    continue;
                 }
-            }
 
-            MipMapConfiguration::Disabled => {
-                plot_raw(plot_ui, plot_vals, x_min_max_ext);
+                let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(level);
+                if plot_points_min.is_empty() {
+                    continue;
+                }
+
+                let points = match idx_range {
+                    Some((start, end)) => {
+                        extract_range_points(plot_points_min, plot_points_max, start, end)
+                    }
+                    None => (
+                        filter_plot_points(plot_points_min, x_min_max_ext),
+                        filter_plot_points(plot_points_max, x_min_max_ext),
+                    ),
+                };
+
+                plot_min_max_lines(plot_ui, plot_vals.label(), points, line_width);
             }
         }
     }
+}
+
+#[inline(always)]
+fn extract_range_points(
+    points_min: &[[f64; 2]],
+    points_max: &[[f64; 2]],
+    start: usize,
+    end: usize,
+) -> (Vec<[f64; 2]>, Vec<[f64; 2]>) {
+    let element_count = end - start + 2;
+    let mut min_points = Vec::with_capacity(element_count);
+    let mut max_points = Vec::with_capacity(element_count);
+
+    min_points.push(points_min[0]);
+    max_points.push(points_max[0]);
+
+    min_points.extend_from_slice(&points_min[start..end]);
+    max_points.extend_from_slice(&points_max[start..end]);
+
+    min_points.push(*points_min.last().unwrap());
+    max_points.push(*points_max.last().unwrap());
+
+    (min_points, max_points)
+}
+
+#[inline]
+fn plot_min_max_lines(
+    plot_ui: &mut egui_plot::PlotUi,
+    base_label: &str,
+    (points_min, points_max): (Vec<[f64; 2]>, Vec<[f64; 2]>),
+    line_width: f32,
+) {
+    let mut label_min = base_label.to_owned();
+    label_min.push_str(" (min)");
+    let mut label_max = base_label.to_owned();
+    label_max.push_str(" (max)");
+
+    let line_min = Line::new(points_min).name(label_min);
+    let line_max = Line::new(points_max).name(label_max);
+
+    plot_ui.line(line_min.width(line_width));
+    plot_ui.line(line_max.width(line_width));
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[usize]) {
@@ -134,10 +173,8 @@ fn point_within(point: f64, bounds: (f64, f64)) -> bool {
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point
 /// such that resetting zooms works well even when the plot bounds are outside the data range.
 pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
-    if points.is_empty() {
-        return Vec::new();
-    } else if points.len() < 3 {
-        return points.to_owned();
+    if points.len() < 3 {
+        return points.to_vec();
     }
 
     let mut filtered = Vec::with_capacity(points.len());
@@ -145,21 +182,21 @@ pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64;
     // Always include the first point
     filtered.push(points[0]);
 
-    // Filter points within the extended range
-    filtered.extend(
-        points
-            .iter()
-            .skip(1)
-            .take(points.len() - 2)
-            .filter(|point| point_within(point[0], x_range))
-            .copied(),
-    );
+    // Find start index
+    let start_idx = points
+        .partition_point(|point| point[0] < x_range.0)
+        .saturating_sub(1);
 
-    // Always include the last point if it's different from the first point
-    if let Some(last_point) = points.last() {
-        if *last_point != filtered[0] {
-            filtered.push(*last_point);
-        }
+    // Find end index
+    let end_idx = points.partition_point(|point| point[0] <= x_range.1);
+
+    // Add points within range
+    filtered.extend_from_slice(&points[start_idx..end_idx]);
+
+    // Add last point if different from first
+    let last_point = points[points.len() - 1];
+    if last_point != filtered[0] {
+        filtered.push(last_point);
     }
 
     filtered
