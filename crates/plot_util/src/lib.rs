@@ -164,12 +164,6 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
     (extended_x_bound_min, extended_x_bound_max)
 }
 
-#[inline(always)]
-fn point_within(point: f64, bounds: (f64, f64)) -> bool {
-    let (min, max) = bounds;
-    min < point && point < max
-}
-
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point
 /// such that resetting zooms works well even when the plot bounds are outside the data range.
 pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
