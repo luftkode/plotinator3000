@@ -365,11 +365,21 @@ mod tests {
         let source: Vec<[f64; 2]> = (0..source_len).map(|i| [i as f64, i as f64]).collect();
         let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
 
-        for (pixel_width, expected_lvl) in [(1usize, 3usize), (2, 2), (4, 1), (8, 0), (16, 0)] {
+        for (pixel_width, expected_lvl, expected_range) in [
+            (1usize, 3usize, Some((0, 2))),
+            (2, 2, Some((0, 4))),
+            (4, 1, Some((0, 8))),
+            (8, 0, Some((0, 15))),
+            (16, 0, None),
+        ] {
             let (lvl, range_res) = mipmap.get_level_match(pixel_width, (0, 15));
             assert_eq!(
                 lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
+            );
+            assert_eq!(
+                range_res, expected_range,
+                "Expected range {expected_range:?} for width: {pixel_width}"
             );
         }
     }
