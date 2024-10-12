@@ -27,9 +27,9 @@ impl SupportedLog {
         let log = if PidLog::is_buf_valid(content) {
             Self::MbedPid(PidLog::from_reader(&mut content)?)
         } else if StatusLog::is_buf_valid(content) {
-            SupportedLog::MbedStatus(StatusLog::from_reader(&mut content)?)
+            Self::MbedStatus(StatusLog::from_reader(&mut content)?)
         } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
-            SupportedLog::Generator(GeneratorLog::from_reader(&mut content)?)
+            Self::Generator(GeneratorLog::from_reader(&mut content)?)
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -46,11 +46,11 @@ impl SupportedLog {
         let mut reader = BufReader::new(file);
 
         let log = if PidLog::file_is_valid(path) {
-            SupportedLog::MbedPid(PidLog::from_reader(&mut reader)?)
+            Self::MbedPid(PidLog::from_reader(&mut reader)?)
         } else if StatusLog::file_is_valid(path) {
-            SupportedLog::MbedStatus(StatusLog::from_reader(&mut reader)?)
+            Self::MbedStatus(StatusLog::from_reader(&mut reader)?)
         } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
-            SupportedLog::Generator(GeneratorLog::from_reader(&mut reader)?)
+            Self::Generator(GeneratorLog::from_reader(&mut reader)?)
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
