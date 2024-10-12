@@ -8,7 +8,7 @@ use skytem_logs::{
 use std::{
     fs,
     io::{self, BufReader},
-    path::{self, Path},
+    path::Path,
 };
 
 /// Represents a supported log, which can be any of the supported log types.
@@ -19,6 +19,47 @@ pub enum SupportedLog {
     MbedPid(PidLog),
     MbedStatus(StatusLog),
     Generator(GeneratorLog),
+}
+
+impl SupportedLog {
+    /// Attempts to parse a log from raw content.
+    fn parse_from_content(mut content: &[u8]) -> io::Result<Self> {
+        let log = if PidLog::is_buf_valid(content) {
+            Self::MbedPid(PidLog::from_reader(&mut content)?)
+        } else if StatusLog::is_buf_valid(content) {
+            SupportedLog::MbedStatus(StatusLog::from_reader(&mut content)?)
+        } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
+            SupportedLog::Generator(GeneratorLog::from_reader(&mut content)?)
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Unrecognized log type",
+            ));
+        };
+        log::debug!("Got: {}", log.descriptive_name());
+        Ok(log)
+    }
+
+    /// Attempts to parse a log from a file path.
+    fn parse_from_path(path: &Path) -> io::Result<Self> {
+        let file = fs::File::open(path)?;
+        let mut reader = BufReader::new(file);
+
+        let log = if PidLog::file_is_valid(path) {
+            SupportedLog::MbedPid(PidLog::from_reader(&mut reader)?)
+        } else if StatusLog::file_is_valid(path) {
+            SupportedLog::MbedStatus(StatusLog::from_reader(&mut reader)?)
+        } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
+            SupportedLog::Generator(GeneratorLog::from_reader(&mut reader)?)
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Unrecognized log type",
+            ));
+        };
+        log::debug!("Got: {}", log.descriptive_name());
+        Ok(log)
+    }
 }
 
 impl Plotable for SupportedLog {
@@ -102,19 +143,16 @@ impl SupportedLogs {
 
     fn parse_file(&mut self, file: &DroppedFile) -> io::Result<()> {
         if let Some(content) = file.bytes.as_ref() {
-            self.parse_content(content)?;
+            self.logs.push(SupportedLog::parse_from_content(content)?);
         } else if let Some(path) = &file.path {
-            log::debug!("path: {path:?}");
             if path.is_dir() {
                 self.parse_directory(path)?;
             } else if is_zip_file(path) {
                 #[cfg(not(target_arch = "wasm32"))]
                 self.parse_zip_file(path)?;
             } else {
-                self.parse_path(path)?;
+                self.logs.push(SupportedLog::parse_from_path(path)?);
             }
-        } else {
-            unreachable!("What is this content??")
         }
         Ok(())
     }
@@ -130,56 +168,12 @@ impl SupportedLogs {
             } else if is_zip_file(&path) {
                 #[cfg(not(target_arch = "wasm32"))]
                 self.parse_zip_file(&path)?;
-            } else if let Err(e) = self.parse_path(&path) {
-                log::warn!("{e}");
+            } else {
+                match SupportedLog::parse_from_path(&path) {
+                    Ok(l) => self.logs.push(l),
+                    Err(e) => log::warn!("{e}"),
+                }
             }
-        }
-        Ok(())
-    }
-
-    fn parse_content(&mut self, mut content: &[u8]) -> io::Result<()> {
-        if PidLog::is_buf_valid(content) {
-            let log = PidLog::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.logs.push(SupportedLog::MbedPid(log));
-        } else if StatusLog::is_buf_valid(content) {
-            let log = StatusLog::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.logs.push(SupportedLog::MbedStatus(log));
-        } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
-            let log = GeneratorLog::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.logs.push(SupportedLog::Generator(log));
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Unrecognized file",
-            ));
-        }
-        Ok(())
-    }
-
-    fn parse_path(&mut self, path: &path::Path) -> io::Result<()> {
-        if PidLog::file_is_valid(path) {
-            let f = fs::File::open(path)?;
-            let log = PidLog::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.logs.push(SupportedLog::MbedPid(log));
-        } else if StatusLog::file_is_valid(path) {
-            let f = fs::File::open(path)?;
-            let log = StatusLog::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.logs.push(SupportedLog::MbedStatus(log));
-        } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = GeneratorLog::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.logs.push(SupportedLog::Generator(log));
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Unrecognized file: {}", path.to_string_lossy()),
-            ));
         }
         Ok(())
     }
@@ -191,17 +185,12 @@ impl SupportedLogs {
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
-            log::debug!("Parsing zipped: {}", file.name());
-
-            if file.is_dir() {
-                continue;
-            }
-
-            let mut contents = Vec::new();
-            io::Read::read_to_end(&mut file, &mut contents)?;
-
-            if let Err(e) = self.parse_content(&contents) {
-                log::warn!("Failed to parse file {} in zip: {}", file.name(), e);
+            if file.is_file() {
+                let mut contents = Vec::new();
+                io::Read::read_to_end(&mut file, &mut contents)?;
+                if let Ok(log) = SupportedLog::parse_from_content(&contents) {
+                    self.logs.push(log);
+                }
             }
         }
         Ok(())
