@@ -46,7 +46,7 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync
     }
 
     /// Deserialize a header for a `reader` that implements [Read]
-    fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self>;
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self>;
 
     /// Deserialize a header with a reader starting just after the version field.
     fn from_reader_with_uniq_descr_version(
@@ -59,7 +59,7 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync
 /// Helper trait such that Pid and Status log v1 can reuse all this code
 pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
     /// Deserialize a header for a `reader` that implements [Read]
-    fn build_from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
+    fn build_from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
         reader.read_exact(&mut unique_description)?;
         let version = reader.read_u16::<LittleEndian>()?;
@@ -106,7 +106,7 @@ pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
 /// Helper trait such that Pid and Status log v2 can reuse all this code
 pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
     /// Deserialize a header for a `reader` that implements [Read]
-    fn build_from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
+    fn build_from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
         reader.read_exact(&mut unique_description)?;
         let version = reader.read_u16::<LittleEndian>()?;

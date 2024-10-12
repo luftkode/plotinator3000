@@ -51,7 +51,7 @@ impl PidLog {
 impl SkytemLog for PidLog {
     type Entry = PidLogEntry;
 
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let header = PidLogHeader::from_reader(reader)?;
         let startup_timestamp = match &header {
             PidLogHeader::V1(h) => h.startup_timestamp(),
@@ -281,7 +281,7 @@ mod tests {
         let mut reader = io::BufReader::new(file);
         let header = PidLogHeader::from_reader(&mut reader)?;
         println!("{header}");
-        parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
+        parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
         Ok(())
     }
 
@@ -313,7 +313,7 @@ mod tests {
         let mut reader = io::BufReader::new(file);
         let header = PidLogHeader::from_reader(&mut reader)?;
         println!("{header}");
-        parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
+        parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
         Ok(())
     }
 }

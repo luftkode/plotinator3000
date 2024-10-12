@@ -140,7 +140,7 @@ impl MbedMotorControlLogHeader for PidLogHeaderV2 {
     }
 
     /// Deserialize a header for a `reader` that implements [Read]
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         Self::build_from_reader(reader)
     }
 

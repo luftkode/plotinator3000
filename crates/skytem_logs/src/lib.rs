@@ -27,10 +27,10 @@ pub fn parse_unique_description(raw_uniq_desc: &[u8]) -> String {
 /// This is a good way to verify by hand that your data is parsed as expected
 ///
 /// Example
-/// ```
+/// ```ignore
 /// use std::fs::File;
 /// use std::io::{self, BufReader, ErrorKind};
-/// use skytem_logs::{mbed_motor_control::pid::{header_v1::PidLogHeaderV1, entry::PidLogEntry}, parse_and_display_log_entries};
+/// use skytem_logs::{mbed_motor_control::pid::{header::PidLogHeader, entry::PidLogEntry}, parse_and_display_log_entries};
 /// use crate::skytem_logs::mbed_motor_control::mbed_header::MbedMotorControlLogHeader;
 ///
 /// fn main() -> std::io::Result<()> {
@@ -39,22 +39,18 @@ pub fn parse_unique_description(raw_uniq_desc: &[u8]) -> String {
 ///     let mut reader = BufReader::new(file);
 ///
 ///     // First, read the header
-///     let header = PidLogHeaderV1::from_reader(&mut reader)?;
-///     println!("Log Header: {:?}", header);
-///
-///     if !header.is_valid_header() {
-///         return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid Header"));
-///     }
+///     let header = PidLogHeader::from_reader(&mut reader)?;
+///     println!("Log Header: {header:?}");
 ///
 ///     // Now parse and display the log entries
 ///     println!("Log Entries:");
-///     parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
+///     parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
 ///
 ///     Ok(())
 /// }
 /// ```
-pub fn parse_and_display_log_entries<T: LogEntry, R: io::Read>(
-    reader: &mut R,
+pub fn parse_and_display_log_entries<T: LogEntry>(
+    reader: &mut impl io::Read,
     limit: Option<usize>,
 ) {
     let mut entry_count = 0;

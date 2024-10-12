@@ -108,7 +108,7 @@ impl StatusLog {
 impl SkytemLog for StatusLog {
     type Entry = StatusLogEntry;
 
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let header = StatusLogHeader::from_reader(reader)?;
         let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
         let startup_timestamp = match header {
@@ -335,7 +335,7 @@ mod tests {
         let mut reader = io::BufReader::new(file);
         let header = StatusLogHeader::from_reader(&mut reader)?;
         println!("{header}");
-        parse_and_display_log_entries::<StatusLogEntry, _>(&mut reader, Some(10));
+        parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
         Ok(())
     }
 
@@ -375,7 +375,7 @@ mod tests {
         let mut reader = io::BufReader::new(file);
         let header = StatusLogHeader::from_reader(&mut reader)?;
         println!("{header}");
-        parse_and_display_log_entries::<StatusLogEntry, _>(&mut reader, Some(10));
+        parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
         Ok(())
     }
 }

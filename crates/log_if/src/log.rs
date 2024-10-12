@@ -6,7 +6,7 @@ use crate::plotable::Plotable;
 pub trait SkytemLog: Plotable + Clone + Display + Send + Sync + Sized + GitMetadata {
     type Entry: LogEntry;
     /// Create a [Log] instance from a reader
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self>;
     /// Return a borrowed slice (list) of log entries
     fn entries(&self) -> &[Self::Entry];
 }
@@ -14,7 +14,7 @@ pub trait SkytemLog: Plotable + Clone + Display + Send + Sync + Sized + GitMetad
 /// A given log entry should implement this trait
 pub trait LogEntry: Sized + Display + Send + Sync {
     /// Create a [`LogEntry`] instance from a reader
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self>;
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self>;
     /// Timestamp in nanoseconds
     fn timestamp_ns(&self) -> f64;
 }

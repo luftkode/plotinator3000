@@ -34,7 +34,7 @@ impl GeneratorLog {
 impl SkytemLog for GeneratorLog {
     type Entry = GeneratorLogEntry;
 
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let buf_reader = io::BufReader::new(reader);
         let mut entries = Vec::new();
 
@@ -270,7 +270,7 @@ impl GeneratorLogEntry {
 }
 
 impl LogEntry for GeneratorLogEntry {
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let mut line = String::new();
         let mut bufreader = BufReader::new(reader);
         _ = bufreader.read_line(&mut line)?;

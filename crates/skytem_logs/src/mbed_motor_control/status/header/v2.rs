@@ -137,7 +137,7 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV2 {
         &self.startup_timestamp
     }
 
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         Self::build_from_reader(reader)
     }
     fn from_reader_with_uniq_descr_version(
