@@ -2,7 +2,7 @@
 name = "logviewer-rs"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "0.20.0"
+version = "0.21.0"
 edition = "2021"
 repository = "https://github.com/luftkode/logviewer-rs"
 homepage = "https://github.com/luftkode/logviewer-rs"
@@ -19,7 +19,7 @@ eula = false
 members = ["crates/*"]
 
 [workspace.dependencies]
-egui = { version = "0.29" }
+egui = { version = "0.29", features = ["rayon"] }
 egui_plot = { version = "0.29", features = ["serde"] }
 log = "0.4"
 serde = { version = "1", features = ["derive"] }

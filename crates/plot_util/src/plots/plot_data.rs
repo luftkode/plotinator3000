@@ -91,7 +91,7 @@ impl PlotValues {
         &mut self,
         pixel_width: usize,
         x_bounds: (usize, usize),
-    ) -> usize {
+    ) -> (usize, Option<(usize, usize)>) {
         self.mipmap_min.get_level_match(pixel_width, x_bounds)
     }
 
