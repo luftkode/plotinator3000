@@ -3,14 +3,7 @@ use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
-    mbed_motor_control::{
-        mbed_header::MbedMotorControlLogHeader,
-        pid::pidlog::PidLog,
-        status::{
-            header_v1::StatusLogHeaderV1, header_v2::StatusLogHeaderV2, statuslog_v1::StatusLogV1,
-            statuslog_v2::StatusLogV2,
-        },
-    },
+    mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
 };
 use std::{
     fs,
@@ -23,8 +16,7 @@ use std::{
 #[derive(Default, Deserialize, Serialize)]
 pub struct SupportedLogs {
     pid_log: Vec<PidLog>,
-    status_log_v1: Vec<StatusLogV1>,
-    status_log_v2: Vec<StatusLogV2>,
+    status_log: Vec<StatusLog>,
     generator_log: Vec<GeneratorLog>,
 }
 
@@ -35,10 +27,7 @@ impl SupportedLogs {
         for pl in &self.pid_log {
             all_logs.push(pl);
         }
-        for sl in &self.status_log_v1 {
-            all_logs.push(sl);
-        }
-        for sl in &self.status_log_v2 {
+        for sl in &self.status_log {
             all_logs.push(sl);
         }
         for gl in &self.generator_log {
@@ -51,8 +40,7 @@ impl SupportedLogs {
     pub fn take_logs(&mut self) -> Vec<Box<dyn Plotable>> {
         let mut all_logs: Vec<Box<dyn Plotable>> = Vec::new();
         all_logs.extend(self.pid_log.drain(..).map(|log| log.into()));
-        all_logs.extend(self.status_log_v1.drain(..).map(|log| log.into()));
-        all_logs.extend(self.status_log_v2.drain(..).map(|log| log.into()));
+        all_logs.extend(self.status_log.drain(..).map(|log| log.into()));
         all_logs.extend(self.generator_log.drain(..).map(|log| log.into()));
 
         all_logs
@@ -117,14 +105,10 @@ impl SupportedLogs {
             let log = PidLog::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
             self.pid_log.push(log);
-        } else if StatusLogHeaderV1::is_buf_header(content).unwrap_or(false) {
-            let log = StatusLogV1::from_reader(&mut content)?;
+        } else if StatusLog::is_buf_valid(content) {
+            let log = StatusLog::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v1.push(log);
-        } else if StatusLogHeaderV2::is_buf_header(content).unwrap_or(false) {
-            let log = StatusLogV2::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v2.push(log);
+            self.status_log.push(log);
         } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
             let log = GeneratorLog::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
@@ -145,16 +129,11 @@ impl SupportedLogs {
             let log = PidLog::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
             self.pid_log.push(log);
-        } else if StatusLogHeaderV1::file_starts_with_header(path).unwrap_or(false) {
+        } else if StatusLog::file_is_valid(path) {
             let f = fs::File::open(path)?;
-            let log = StatusLogV1::from_reader(&mut BufReader::new(f))?;
+            let log = StatusLog::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v1.push(log);
-        } else if StatusLogHeaderV2::file_starts_with_header(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = StatusLogV2::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v2.push(log);
+            self.status_log.push(log);
         } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
             let log = GeneratorLog::from_reader(&mut BufReader::new(f))?;
@@ -210,7 +189,7 @@ mod tests {
     #[test]
     fn test_supported_logs_dyn_vec() {
         let data = fs::read(TEST_DATA_STATUS).unwrap();
-        let status_log = StatusLogV1::from_reader(&mut data.as_slice()).unwrap();
+        let status_log = StatusLog::from_reader(&mut data.as_slice()).unwrap();
 
         let data = fs::read(TEST_DATA_PID).unwrap();
         let pidlog = PidLog::from_reader(&mut data.as_slice()).unwrap();

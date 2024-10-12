@@ -271,8 +271,8 @@ impl fmt::Display for PidLog {
             f,
             "Header: {}",
             match self.header {
-                PidLogHeader::V1(pid_log_header_v1) => pid_log_header_v1.to_string(),
-                PidLogHeader::V2(pid_log_header_v2) => pid_log_header_v2.to_string(),
+                PidLogHeader::V1(h) => h.to_string(),
+                PidLogHeader::V2(h) => h.to_string(),
             }
         )?;
         for e in &self.entries {
