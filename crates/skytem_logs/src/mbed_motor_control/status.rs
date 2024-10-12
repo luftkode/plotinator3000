@@ -1,5 +1,5 @@
-pub mod entry;
-pub mod header_v1;
-pub mod header_v2;
-pub mod statuslog_v1;
-pub mod statuslog_v2;
+mod entry;
+mod header;
+pub mod statuslog;
+
+pub(crate) const UNIQUE_DESCRIPTION: &str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";

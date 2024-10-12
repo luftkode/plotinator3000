@@ -1,30 +1,64 @@
 use chrono::{DateTime, Utc};
 use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{fmt, io};
+use std::{
+    fmt, fs,
+    io::{self, Read},
+    path::Path,
+};
 
-use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader;
+use crate::{
+    mbed_motor_control::mbed_header::{MbedMotorControlLogHeader, SIZEOF_UNIQ_DESC},
+    parse_unique_description,
+};
 
-use super::{entry::PidLogEntry, header_v1::PidLogHeaderV1};
+use super::{entry::PidLogEntry, header::PidLogHeader};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct PidLogV1 {
-    header: PidLogHeaderV1,
+pub struct PidLog {
+    header: PidLogHeader,
     entries: Vec<PidLogEntry>,
     timestamps_ns: Vec<f64>,
     all_plots_raw: Vec<RawPlot>,
     startup_timestamp: DateTime<Utc>,
 }
 
-impl SkytemLog for PidLogV1 {
+impl PidLog {
+    /// Probes the buffer and check if it starts with [`super::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
+    pub fn is_buf_valid(content: &[u8]) -> bool {
+        if content.len() < SIZEOF_UNIQ_DESC + 2 {
+            return false;
+        }
+
+        let unique_description = &content[..SIZEOF_UNIQ_DESC];
+        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
+    }
+
+    /// Checks if the file at the given path is a valid [`PidLog`] file
+    pub fn file_is_valid(path: &Path) -> bool {
+        let Ok(mut file) = fs::File::open(path) else {
+            return false;
+        };
+
+        let mut buffer = vec![0u8; SIZEOF_UNIQ_DESC + 2];
+        match file.read_exact(&mut buffer) {
+            Ok(_) => Self::is_buf_valid(&buffer),
+            Err(_) => false, // Return false if we can't read enough bytes
+        }
+    }
+}
+
+impl SkytemLog for PidLog {
     type Entry = PidLogEntry;
 
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        let header = PidLogHeaderV1::from_reader(reader)?;
-        let startup_timestamp = header
-            .startup_timestamp()
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
-            .and_utc();
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+        let header = PidLogHeader::from_reader(reader)?;
+        let startup_timestamp = match &header {
+            PidLogHeader::V1(h) => h.startup_timestamp(),
+            PidLogHeader::V2(h) => h.startup_timestamp(),
+        }
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+        .and_utc();
         let startup_timestamp_ns = startup_timestamp
             .timestamp_nanos_opt()
             .expect("timestamp as nanoseconds out of range")
@@ -109,25 +143,37 @@ impl SkytemLog for PidLogV1 {
     }
 }
 
-impl GitMetadata for PidLogV1 {
+impl GitMetadata for PidLog {
     fn project_version(&self) -> Option<String> {
-        self.header.project_version()
+        match &self.header {
+            PidLogHeader::V1(h) => h.project_version(),
+            PidLogHeader::V2(h) => h.project_version(),
+        }
     }
 
     fn git_short_sha(&self) -> Option<String> {
-        self.header.git_short_sha()
+        match &self.header {
+            PidLogHeader::V1(h) => h.git_short_sha(),
+            PidLogHeader::V2(h) => h.git_short_sha(),
+        }
     }
 
     fn git_branch(&self) -> Option<String> {
-        self.header.git_branch()
+        match &self.header {
+            PidLogHeader::V1(h) => h.git_branch(),
+            PidLogHeader::V2(h) => h.git_branch(),
+        }
     }
 
     fn git_repo_status(&self) -> Option<String> {
-        self.header.git_repo_status()
+        match &self.header {
+            PidLogHeader::V1(h) => h.git_repo_status(),
+            PidLogHeader::V2(h) => h.git_repo_status(),
+        }
     }
 }
 
-impl Plotable for PidLogV1 {
+impl Plotable for PidLog {
     fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
     }
@@ -137,7 +183,10 @@ impl Plotable for PidLogV1 {
     }
 
     fn descriptive_name(&self) -> &str {
-        "Mbed PID v1"
+        match self.header {
+            PidLogHeader::V1(_) => "Mbed PID v1",
+            PidLogHeader::V2(_) => "Mbed PID v2",
+        }
     }
 
     fn labels(&self) -> Option<&[PlotLabels]> {
@@ -145,7 +194,7 @@ impl Plotable for PidLogV1 {
     }
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
-        let metadata = vec![
+        let mut metadata = vec![
             (
                 "Project Version".to_owned(),
                 self.project_version().unwrap_or_else(|| "N/A".to_owned()),
@@ -168,11 +217,21 @@ impl Plotable for PidLogV1 {
             ),
         ];
 
+        match self.header {
+            // V1 has no more than that
+            PidLogHeader::V1(_) => (),
+            // V2 also has config values
+            PidLogHeader::V2(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
+        }
+
         Some(metadata)
     }
 }
 
-impl fmt::Display for PidLogV1 {
+impl fmt::Display for PidLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Header: {}", self.header)?;
         for e in &self.entries {
@@ -189,13 +248,15 @@ mod tests {
     use std::fs::{self, File};
     use testresult::TestResult;
 
-    const TEST_DATA: &str =
+    const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
+    const TEST_DATA_V2: &str =
+        "../../test_data/mbed_motor_control/v2/20240822_085220/pid_20240822_085220_00.bin";
 
     #[test]
-    fn test_deserialize() -> TestResult {
-        let data = fs::read(TEST_DATA)?;
-        let pidlog = PidLogV1::from_reader(&mut data.as_slice())?;
+    fn test_deserialize_v1() -> TestResult {
+        let data = fs::read(TEST_DATA_V1)?;
+        let pidlog = PidLog::from_reader(&mut data.as_slice())?;
 
         let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
@@ -215,12 +276,44 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_and_display() -> TestResult {
-        let file = File::open(TEST_DATA)?;
+    fn test_parse_and_display_v1() -> TestResult {
+        let file = File::open(TEST_DATA_V1)?;
         let mut reader = io::BufReader::new(file);
-        let header = PidLogHeaderV1::from_reader(&mut reader)?;
+        let header = PidLogHeader::from_reader(&mut reader)?;
         println!("{header}");
-        parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
+        parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_v2() -> TestResult {
+        let data = fs::read(TEST_DATA_V2)?;
+        let pidlog = PidLog::from_reader(&mut data.as_slice())?;
+
+        let first_entry = pidlog.entries.first().expect("Empty entries");
+        assert_eq!(first_entry.rpm, 0.0);
+        assert_eq!(first_entry.pid_output, 0.0);
+        assert_eq!(first_entry.servo_duty_cycle, 0.045);
+        assert_eq!(first_entry.rpm_error_count, 0);
+        assert_eq!(first_entry.first_valid_rpm_count, 0);
+
+        let second_entry = &pidlog.entries[1];
+        assert_eq!(second_entry.rpm, 0.0);
+        assert_eq!(second_entry.pid_output, 0.0);
+        assert_eq!(second_entry.servo_duty_cycle, 0.045);
+        assert_eq!(second_entry.rpm_error_count, 0);
+        assert_eq!(second_entry.first_valid_rpm_count, 0);
+        //eprintln!("{pidlog}");
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_and_display_v2() -> TestResult {
+        let file = File::open(TEST_DATA_V2)?;
+        let mut reader = io::BufReader::new(file);
+        let header = PidLogHeader::from_reader(&mut reader)?;
+        println!("{header}");
+        parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
         Ok(())
     }
 }

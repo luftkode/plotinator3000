@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
-pub struct PidLogHeaderV2 {
+pub(crate) struct PidLogHeaderV2 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -102,7 +102,6 @@ impl GitMetadata for PidLogHeaderV2 {
 
 impl MbedMotorControlLogHeader for PidLogHeaderV2 {
     const VERSION: u16 = 2;
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
     /// Size of the header type in bytes if represented in raw binary
     const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
         + SIZEOF_PROJECT_VERSION
@@ -139,14 +138,18 @@ impl MbedMotorControlLogHeader for PidLogHeaderV2 {
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
     }
-    /// Deserialize a header from a byte slice
-    fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        Self::build_from_slice(slice)
-    }
 
     /// Deserialize a header for a `reader` that implements [Read]
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         Self::build_from_reader(reader)
+    }
+
+    fn from_reader_with_uniq_descr_version(
+        reader: &mut impl io::Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self> {
+        Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
     }
 }
 
@@ -190,7 +193,7 @@ mod tests {
         eprintln!("{pid_log_header}");
         assert_eq!(
             pid_log_header.unique_description(),
-            PidLogHeaderV2::UNIQUE_DESCRIPTION
+            crate::mbed_motor_control::pid::UNIQUE_DESCRIPTION
         );
         assert_eq!(pid_log_header.version, 2);
         assert_eq!(pid_log_header.project_version().unwrap(), "2.0.2");

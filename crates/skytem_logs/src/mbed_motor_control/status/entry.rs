@@ -4,7 +4,7 @@ use crate::{util::parse_timestamp, LogEntry};
 use byteorder::{LittleEndian, ReadBytesExt};
 use strum_macros::{Display, FromRepr};
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize, FromRepr, Display,
 )]
@@ -50,7 +50,7 @@ impl fmt::Display for StatusLogEntry {
 }
 
 impl LogEntry for StatusLogEntry {
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let timestamp_ms = reader.read_u32::<LittleEndian>()?;
         let timestamp_ms_str = parse_timestamp(timestamp_ms);
         let engine_temp = reader.read_f32::<LittleEndian>()?;

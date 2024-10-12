@@ -1,5 +1,5 @@
 pub mod entry;
-pub mod header_v1;
-pub mod header_v2;
-pub mod pidlog_v1;
-pub mod pidlog_v2;
+pub mod header;
+pub mod pidlog;
+
+pub(crate) const UNIQUE_DESCRIPTION: &str = "MBED-MOTOR-CONTROL-PID-LOG-2024";

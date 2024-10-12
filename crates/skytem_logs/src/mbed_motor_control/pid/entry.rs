@@ -15,7 +15,7 @@ pub struct PidLogEntry {
 }
 
 impl LogEntry for PidLogEntry {
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let timestamp_ms = reader.read_u32::<LittleEndian>()?;
         let timestamp_ms_str = parse_timestamp(timestamp_ms);
         let rpm = reader.read_f32::<LittleEndian>()?;

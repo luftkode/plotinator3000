@@ -1,4 +1,4 @@
-use std::io::{self, Read};
+use std::io::{self};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use getset::CopyGetters;
@@ -58,7 +58,7 @@ impl MbedConfig {
         Self::from_reader(&mut cursor)
     }
 
-    pub fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
+    pub fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
         let kp = reader.read_f32::<LittleEndian>()?;
         let ki = reader.read_f32::<LittleEndian>()?;
         let kd = reader.read_f32::<LittleEndian>()?;

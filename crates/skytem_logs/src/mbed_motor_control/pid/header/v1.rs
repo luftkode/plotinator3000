@@ -1,20 +1,18 @@
-use crate::mbed_motor_control::mbed_header::BuildMbedLogHeaderV1;
-use crate::mbed_motor_control::mbed_header::{
-    GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
-    ProjectVersionData, StartupTimestamp, UniqueDescriptionData, SIZEOF_GIT_BRANCH,
-    SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION, SIZEOF_STARTUP_TIMESTAMP,
-    SIZEOF_UNIQ_DESC,
-};
+use std::{fmt, io};
 
-use log_if::prelude::*;
+use log_if::log::GitMetadata;
+use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
-use std::{
-    fmt,
-    io::{self, Read},
+
+use crate::mbed_motor_control::mbed_header::{
+    BuildMbedLogHeaderV1, GitBranchData, GitRepoStatusData, GitShortShaData,
+    MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
+    SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION,
+    SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
 };
 
-#[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize, Clone, Copy)]
-pub struct StatusLogHeaderV1 {
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
+pub(crate) struct PidLogHeaderV1 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -26,7 +24,29 @@ pub struct StatusLogHeaderV1 {
     startup_timestamp: StartupTimestamp,
 }
 
-impl GitMetadata for StatusLogHeaderV1 {
+impl BuildMbedLogHeaderV1 for PidLogHeaderV1 {
+    fn new(
+        unique_description: UniqueDescriptionData,
+        version: u16,
+        project_version: ProjectVersionData,
+        git_short_sha: GitShortShaData,
+        git_branch: GitBranchData,
+        git_repo_status: GitRepoStatusData,
+        startup_timestamp: StartupTimestamp,
+    ) -> Self {
+        Self {
+            unique_description,
+            version,
+            project_version,
+            git_short_sha,
+            git_branch,
+            git_repo_status,
+            startup_timestamp,
+        }
+    }
+}
+
+impl GitMetadata for PidLogHeaderV1 {
     fn project_version(&self) -> Option<String> {
         Some(
             String::from_utf8_lossy(self.project_version_raw())
@@ -68,31 +88,8 @@ impl GitMetadata for StatusLogHeaderV1 {
     }
 }
 
-impl BuildMbedLogHeaderV1 for StatusLogHeaderV1 {
-    fn new(
-        unique_description: UniqueDescriptionData,
-        version: u16,
-        project_version: ProjectVersionData,
-        git_short_sha: GitShortShaData,
-        git_branch: GitBranchData,
-        git_repo_status: GitRepoStatusData,
-        startup_timestamp: StartupTimestamp,
-    ) -> Self {
-        Self {
-            unique_description,
-            version,
-            project_version,
-            git_short_sha,
-            git_branch,
-            git_repo_status,
-            startup_timestamp,
-        }
-    }
-}
-
-impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
+impl MbedMotorControlLogHeader for PidLogHeaderV1 {
     const VERSION: u16 = 1;
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
     const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
         + SIZEOF_PROJECT_VERSION
         + SIZEOF_GIT_SHORT_SHA
@@ -100,7 +97,7 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
         + SIZEOF_GIT_REPO_STATUS
         + SIZEOF_STARTUP_TIMESTAMP;
 
-    fn unique_description_bytes(&self) -> &[u8; 128] {
+    fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description
     }
 
@@ -128,18 +125,21 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
         &self.startup_timestamp
     }
 
-    /// Deserialize a header from a byte slice
-    fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        Self::build_from_slice(slice)
+    /// Deserialize a header for a `reader` that implements [Read]
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+        Self::build_from_reader(reader)
     }
 
-    /// Deserialize a header for a `reader` that implements [Read]
-    fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
-        Self::build_from_reader(reader)
+    fn from_reader_with_uniq_descr_version(
+        reader: &mut impl io::Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self> {
+        Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
     }
 }
 
-impl fmt::Display for StatusLogHeaderV1 {
+impl fmt::Display for PidLogHeaderV1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(
@@ -163,29 +163,31 @@ impl fmt::Display for StatusLogHeaderV1 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs::{self};
-    use testresult::TestResult;
+    use std::fs;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
+        "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
+
+    use testresult::TestResult;
+
+    use super::*;
 
     #[test]
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
-        let status_log_header = StatusLogHeaderV1::from_reader(&mut data.as_slice())?;
-        eprintln!("{status_log_header}");
+        let pid_log_header = PidLogHeaderV1::from_reader(&mut data.as_slice())?;
+        eprintln!("{pid_log_header}");
         assert_eq!(
-            status_log_header.unique_description(),
-            StatusLogHeaderV1::UNIQUE_DESCRIPTION
+            pid_log_header.unique_description(),
+            crate::mbed_motor_control::pid::UNIQUE_DESCRIPTION
         );
-        assert_eq!(status_log_header.version, 1);
-        assert_eq!(status_log_header.project_version().unwrap(), "1.3.0");
+        assert_eq!(pid_log_header.version, 1);
+        assert_eq!(pid_log_header.project_version().unwrap(), "1.3.0");
         assert_eq!(
-            status_log_header.git_branch().unwrap(),
+            pid_log_header.git_branch().unwrap(),
             "fix-23-pid-loop-in-standby"
         );
-        assert_eq!(status_log_header.git_short_sha().unwrap(), "fe6e412");
+        assert_eq!(pid_log_header.git_short_sha().unwrap(), "fe6e412");
         Ok(())
     }
 }

@@ -1,15 +1,22 @@
-use std::{fmt, io};
-
 use chrono::{DateTime, Utc};
 use log_if::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::{
+    fmt, fs,
+    io::{self, Read},
+    path::Path,
+};
 
-use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader;
+use crate::{
+    mbed_motor_control::mbed_header::{MbedMotorControlLogHeader, SIZEOF_UNIQ_DESC},
+    parse_unique_description,
+};
 
-use super::{entry::StatusLogEntry, header_v1::StatusLogHeaderV1};
+use super::{entry::StatusLogEntry, header::StatusLogHeader};
 
-#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct StatusLogV1 {
-    header: StatusLogHeaderV1,
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct StatusLog {
+    header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
     timestamp_ns: Vec<f64>,
     labels: Vec<PlotLabels>,
@@ -17,57 +24,58 @@ pub struct StatusLogV1 {
     startup_timestamp: DateTime<Utc>,
 }
 
-impl SkytemLog for StatusLogV1 {
-    type Entry = StatusLogEntry;
+impl StatusLog {
+    /// Probes the buffer and check if it starts with [`Self::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
+    pub fn is_buf_valid(content: &[u8]) -> bool {
+        if content.len() < SIZEOF_UNIQ_DESC + 2 {
+            return false;
+        }
 
-    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        let header = StatusLogHeaderV1::from_reader(reader)?;
-        let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
-        let startup_timestamp = header
-            .startup_timestamp()
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
-            .and_utc();
-        let startup_timestamp_ns = startup_timestamp
-            .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range")
-            as f64;
-        let timestamp_ns: Vec<f64> = vec_of_entries
-            .iter()
-            .map(|e| startup_timestamp_ns + e.timestamp_ns())
-            .collect();
+        let unique_description = &content[..SIZEOF_UNIQ_DESC];
+        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
+    }
 
-        let timestamps_with_state_changes =
-            parse_timestamps_with_state_changes(&vec_of_entries, startup_timestamp_ns);
-        let labels = vec![PlotLabels::new(
-            timestamps_with_state_changes,
-            ExpectedPlotRange::OneToOneHundred,
-        )];
+    /// Checks if the file at the given path is a valid [`PidLog`] file
+    pub fn file_is_valid(path: &Path) -> bool {
+        let Ok(mut file) = fs::File::open(path) else {
+            return false;
+        };
+
+        let mut buffer = vec![0u8; SIZEOF_UNIQ_DESC + 2];
+        match file.read_exact(&mut buffer) {
+            Ok(_) => Self::is_buf_valid(&buffer),
+            Err(_) => false, // Return false if we can't read enough bytes
+        }
+    }
+
+    // helper function build all the plots that can be made from a statuslog
+    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
         let engine_temp_plot_raw = plot_points_from_log_entry(
-            &vec_of_entries,
+            entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| e.engine_temp as f64,
         );
         let fan_on_plot_raw = plot_points_from_log_entry(
-            &vec_of_entries,
+            entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| (e.fan_on as u8) as f64,
         );
         let vbat_plot_raw = plot_points_from_log_entry(
-            &vec_of_entries,
+            entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| e.vbat as f64,
         );
         let setpoint_plot_raw = plot_points_from_log_entry(
-            &vec_of_entries,
+            entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| e.setpoint as f64,
         );
         let motor_state_plot_raw = plot_points_from_log_entry(
-            &vec_of_entries,
+            entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
             |e| (e.motor_state as u8) as f64,
         );
-        let all_plots_raw = vec![
+        vec![
             RawPlot::new(
                 "Engine Temp °C".into(),
                 engine_temp_plot_raw,
@@ -93,7 +101,39 @@ impl SkytemLog for StatusLogV1 {
                 motor_state_plot_raw,
                 ExpectedPlotRange::OneToOneHundred,
             ),
-        ];
+        ]
+    }
+}
+
+impl SkytemLog for StatusLog {
+    type Entry = StatusLogEntry;
+
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+        let header = StatusLogHeader::from_reader(reader)?;
+        let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
+        let startup_timestamp = match header {
+            StatusLogHeader::V1(h) => h.startup_timestamp(),
+            StatusLogHeader::V2(h) => h.startup_timestamp(),
+        }
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+        .and_utc();
+        let startup_timestamp_ns = startup_timestamp
+            .timestamp_nanos_opt()
+            .expect("timestamp as nanoseconds out of range")
+            as f64;
+        let timestamp_ns: Vec<f64> = vec_of_entries
+            .iter()
+            .map(|e| startup_timestamp_ns + e.timestamp_ns())
+            .collect();
+
+        let timestamps_with_state_changes =
+            parse_timestamps_with_state_changes(&vec_of_entries, startup_timestamp_ns);
+        let labels = vec![PlotLabels::new(
+            timestamps_with_state_changes,
+            ExpectedPlotRange::OneToOneHundred,
+        )];
+
+        let all_plots_raw = Self::build_raw_plots(startup_timestamp_ns, &vec_of_entries);
         // Iterate through the plots and make sure all the first timestamps match
         if let Some(first_plot) = all_plots_raw.first() {
             if let Some([first_timestamp, ..]) = first_plot.points().first() {
@@ -120,25 +160,36 @@ impl SkytemLog for StatusLogV1 {
     }
 }
 
-impl GitMetadata for StatusLogV1 {
+impl GitMetadata for StatusLog {
     fn project_version(&self) -> Option<String> {
-        self.header.project_version()
+        match &self.header {
+            StatusLogHeader::V1(h) => h.project_version(),
+            StatusLogHeader::V2(h) => h.project_version(),
+        }
     }
-
     fn git_short_sha(&self) -> Option<String> {
-        self.header.git_short_sha()
+        match &self.header {
+            StatusLogHeader::V1(h) => h.git_short_sha(),
+            StatusLogHeader::V2(h) => h.git_short_sha(),
+        }
     }
 
     fn git_branch(&self) -> Option<String> {
-        self.header.git_branch()
+        match &self.header {
+            StatusLogHeader::V1(h) => h.git_branch(),
+            StatusLogHeader::V2(h) => h.git_branch(),
+        }
     }
 
     fn git_repo_status(&self) -> Option<String> {
-        self.header.git_repo_status()
+        match &self.header {
+            StatusLogHeader::V1(h) => h.git_repo_status(),
+            StatusLogHeader::V2(h) => h.git_repo_status(),
+        }
     }
 }
 
-impl Plotable for StatusLogV1 {
+impl Plotable for StatusLog {
     fn raw_plots(&self) -> &[RawPlot] {
         &self.all_plots_raw
     }
@@ -148,7 +199,10 @@ impl Plotable for StatusLogV1 {
     }
 
     fn descriptive_name(&self) -> &str {
-        "Mbed Status v1"
+        match self.header {
+            StatusLogHeader::V1(_) => "Mbed Status v1",
+            StatusLogHeader::V2(_) => "Mbed Status v2",
+        }
     }
 
     fn labels(&self) -> Option<&[PlotLabels]> {
@@ -156,7 +210,7 @@ impl Plotable for StatusLogV1 {
     }
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
-        let metadata = vec![
+        let mut metadata = vec![
             (
                 "Project Version".to_owned(),
                 self.project_version().unwrap_or_else(|| "N/A".to_owned()),
@@ -179,11 +233,21 @@ impl Plotable for StatusLogV1 {
             ),
         ];
 
+        match self.header {
+            // V1 has no more than that
+            StatusLogHeader::V1(_) => (),
+            // V2 also has config values
+            StatusLogHeader::V2(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
+        }
+
         Some(metadata)
     }
 }
 
-impl fmt::Display for StatusLogV1 {
+impl fmt::Display for StatusLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Header: {}", self.header)?;
         for e in &self.entries {
@@ -228,15 +292,17 @@ mod tests {
     use std::fs::{self, File};
     use testresult::TestResult;
 
-    const TEST_DATA: &str =
+    const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
+    const TEST_DATA_V2: &str =
+        "../../test_data/mbed_motor_control/v2/20240822_085220/status_20240822_085220_00.bin";
 
     use crate::{mbed_motor_control::status::entry::MotorState, parse_and_display_log_entries};
 
     #[test]
-    fn test_deserialize() -> TestResult {
-        let data = fs::read(TEST_DATA)?;
-        let status_log = StatusLogV1::from_reader(&mut data.as_slice())?;
+    fn test_deserialize_v1() -> TestResult {
+        let data = fs::read(TEST_DATA_V1)?;
+        let status_log = StatusLog::from_reader(&mut data.as_slice())?;
         eprintln!("{}", status_log.header);
 
         let first_entry = status_log.entries().first().expect("Empty entries vec");
@@ -264,12 +330,52 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_and_display() -> TestResult {
-        let file = File::open(TEST_DATA)?;
+    fn test_parse_and_display_v1() -> TestResult {
+        let file = File::open(TEST_DATA_V1)?;
         let mut reader = io::BufReader::new(file);
-        let header = StatusLogHeaderV1::from_reader(&mut reader)?;
+        let header = StatusLogHeader::from_reader(&mut reader)?;
         println!("{header}");
-        parse_and_display_log_entries::<StatusLogEntry, _>(&mut reader, Some(10));
+        parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_v2() -> TestResult {
+        let data = fs::read(TEST_DATA_V2)?;
+        let status_log = StatusLog::from_reader(&mut data.as_slice())?;
+        eprintln!("{}", status_log.header);
+
+        let first_entry = status_log.entries().first().expect("Empty entries vec");
+        assert_eq!(first_entry.engine_temp, 4.770642);
+        assert!(!first_entry.fan_on);
+        assert_eq!(first_entry.vbat, 4.730086);
+        assert_eq!(first_entry.setpoint, 2500.0);
+        assert_eq!(first_entry.motor_state, MotorState::POWER_HOLD);
+        let second_entry = &status_log.entries[1];
+        assert_eq!(second_entry.engine_temp, 4.770642);
+        assert!(!second_entry.fan_on);
+        assert_eq!(second_entry.vbat, 4.75265);
+        assert_eq!(second_entry.setpoint, 2500.0);
+        assert_eq!(second_entry.motor_state, MotorState::POWER_HOLD);
+
+        let last_entry = status_log.entries().last().expect("Empty entries vec");
+        assert_eq!(last_entry.timestamp_ns(), 14846000000.0);
+        assert_eq!(last_entry.engine_temp, 4.770642);
+        assert!(!last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 4.7075214);
+        assert_eq!(last_entry.setpoint, 2500.0);
+        assert_eq!(last_entry.motor_state, MotorState::POWER_HOLD);
+        //eprintln!("{status_log}");
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_and_display_v2() -> TestResult {
+        let file = File::open(TEST_DATA_V2)?;
+        let mut reader = io::BufReader::new(file);
+        let header = StatusLogHeader::from_reader(&mut reader)?;
+        println!("{header}");
+        parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
         Ok(())
     }
 }

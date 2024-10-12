@@ -3,67 +3,129 @@ use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
-    mbed_motor_control::{
-        mbed_header::MbedMotorControlLogHeader,
-        pid::{
-            header_v1::PidLogHeaderV1, header_v2::PidLogHeaderV2, pidlog_v1::PidLogV1,
-            pidlog_v2::PidLogV2,
-        },
-        status::{
-            header_v1::StatusLogHeaderV1, header_v2::StatusLogHeaderV2, statuslog_v1::StatusLogV1,
-            statuslog_v2::StatusLogV2,
-        },
-    },
+    mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
 };
 use std::{
     fs,
     io::{self, BufReader},
-    path::{self, Path},
+    path::Path,
 };
 
-/// In the ideal future, this explicit list of supported logs is instead just a vector of log interfaces (traits)
-/// that would require the log interface to also support a common way for plotting logs
+/// Represents a supported log, which can be any of the supported log types.
+///
+/// This simply serves to encapsulate all the supported logs in a single type
+#[derive(Deserialize, Serialize)]
+pub enum SupportedLog {
+    MbedPid(PidLog),
+    MbedStatus(StatusLog),
+    Generator(GeneratorLog),
+}
+
+impl SupportedLog {
+    /// Attempts to parse a log from raw content.
+    fn parse_from_content(mut content: &[u8]) -> io::Result<Self> {
+        let log = if PidLog::is_buf_valid(content) {
+            Self::MbedPid(PidLog::from_reader(&mut content)?)
+        } else if StatusLog::is_buf_valid(content) {
+            Self::MbedStatus(StatusLog::from_reader(&mut content)?)
+        } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
+            Self::Generator(GeneratorLog::from_reader(&mut content)?)
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Unrecognized log type",
+            ));
+        };
+        log::debug!("Got: {}", log.descriptive_name());
+        Ok(log)
+    }
+
+    /// Attempts to parse a log from a file path.
+    fn parse_from_path(path: &Path) -> io::Result<Self> {
+        let file = fs::File::open(path)?;
+        let mut reader = BufReader::new(file);
+
+        let log = if PidLog::file_is_valid(path) {
+            Self::MbedPid(PidLog::from_reader(&mut reader)?)
+        } else if StatusLog::file_is_valid(path) {
+            Self::MbedStatus(StatusLog::from_reader(&mut reader)?)
+        } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
+            Self::Generator(GeneratorLog::from_reader(&mut reader)?)
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Unrecognized log type",
+            ));
+        };
+        log::debug!("Got: {}", log.descriptive_name());
+        Ok(log)
+    }
+}
+
+impl Plotable for SupportedLog {
+    fn raw_plots(&self) -> &[RawPlot] {
+        match self {
+            Self::MbedPid(l) => l.raw_plots(),
+            Self::MbedStatus(l) => l.raw_plots(),
+            Self::Generator(l) => l.raw_plots(),
+        }
+    }
+
+    fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        match self {
+            Self::MbedPid(l) => l.first_timestamp(),
+            Self::MbedStatus(l) => l.first_timestamp(),
+            Self::Generator(l) => l.first_timestamp(),
+        }
+    }
+
+    fn descriptive_name(&self) -> &str {
+        match self {
+            Self::MbedPid(l) => l.descriptive_name(),
+            Self::MbedStatus(l) => l.descriptive_name(),
+            Self::Generator(l) => l.descriptive_name(),
+        }
+    }
+
+    fn labels(&self) -> Option<&[PlotLabels]> {
+        match self {
+            Self::MbedPid(l) => l.labels(),
+            Self::MbedStatus(l) => l.labels(),
+            Self::Generator(l) => l.labels(),
+        }
+    }
+
+    fn metadata(&self) -> Option<Vec<(String, String)>> {
+        match self {
+            Self::MbedPid(l) => l.metadata(),
+            Self::MbedStatus(l) => l.metadata(),
+            Self::Generator(l) => l.metadata(),
+        }
+    }
+    // Implement any methods required by the Plotable trait for SupportedLog
+}
+
+/// Contains all supported logs in a single vector.
 #[derive(Default, Deserialize, Serialize)]
 pub struct SupportedLogs {
-    pid_log_v1: Vec<PidLogV1>,
-    pid_log_v2: Vec<PidLogV2>,
-    status_log_v1: Vec<StatusLogV1>,
-    status_log_v2: Vec<StatusLogV2>,
-    generator_log: Vec<GeneratorLog>,
+    logs: Vec<SupportedLog>,
 }
 
 impl SupportedLogs {
     /// Return a vector of immutable references to all logs
     pub fn logs(&self) -> Vec<&dyn Plotable> {
-        let mut all_logs: Vec<&dyn Plotable> = Vec::new();
-        for pl in &self.pid_log_v1 {
-            all_logs.push(pl);
-        }
-        for pl in &self.pid_log_v2 {
-            all_logs.push(pl);
-        }
-        for sl in &self.status_log_v1 {
-            all_logs.push(sl);
-        }
-        for sl in &self.status_log_v2 {
-            all_logs.push(sl);
-        }
-        for gl in &self.generator_log {
-            all_logs.push(gl);
-        }
-        all_logs
+        self.logs
+            .iter()
+            .map(|log| {
+                let plotable: &dyn Plotable = log;
+                plotable
+            })
+            .collect()
     }
 
-    /// Take all the logs currently store in [`SupportedLogs`] and return them as a list
+    /// Take all the logs currently stored in [`SupportedLogs`] and return them as a list
     pub fn take_logs(&mut self) -> Vec<Box<dyn Plotable>> {
-        let mut all_logs: Vec<Box<dyn Plotable>> = Vec::new();
-        all_logs.extend(self.pid_log_v1.drain(..).map(|log| log.into()));
-        all_logs.extend(self.pid_log_v2.drain(..).map(|log| log.into()));
-        all_logs.extend(self.status_log_v1.drain(..).map(|log| log.into()));
-        all_logs.extend(self.status_log_v2.drain(..).map(|log| log.into()));
-        all_logs.extend(self.generator_log.drain(..).map(|log| log.into()));
-
-        all_logs
+        self.logs.drain(..).map(|log| log.into()).collect()
     }
 
     /// Parse dropped files to supported logs.
@@ -81,26 +143,20 @@ impl SupportedLogs {
 
     fn parse_file(&mut self, file: &DroppedFile) -> io::Result<()> {
         if let Some(content) = file.bytes.as_ref() {
-            // This is how content is made accessible via drag-n-drop in a browser
-            self.parse_content(content)?;
+            self.logs.push(SupportedLog::parse_from_content(content)?);
         } else if let Some(path) = &file.path {
-            // This is how content is accessible via drag-n-drop when the app is running natively
-            log::debug!("path: {path:?}");
             if path.is_dir() {
                 self.parse_directory(path)?;
             } else if is_zip_file(path) {
                 #[cfg(not(target_arch = "wasm32"))]
                 self.parse_zip_file(path)?;
             } else {
-                self.parse_path(path)?;
+                self.logs.push(SupportedLog::parse_from_path(path)?);
             }
-        } else {
-            unreachable!("What is this content??")
         }
         Ok(())
     }
 
-    // Parsing directory on native
     fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -112,76 +168,12 @@ impl SupportedLogs {
             } else if is_zip_file(&path) {
                 #[cfg(not(target_arch = "wasm32"))]
                 self.parse_zip_file(&path)?;
-            } else if let Err(e) = self.parse_path(&path) {
-                log::warn!("{e}");
+            } else {
+                match SupportedLog::parse_from_path(&path) {
+                    Ok(l) => self.logs.push(l),
+                    Err(e) => log::warn!("{e}"),
+                }
             }
-        }
-        Ok(())
-    }
-
-    // Parsing dropped content on web
-    fn parse_content(&mut self, mut content: &[u8]) -> io::Result<()> {
-        if PidLogHeaderV1::is_buf_header(content).unwrap_or(false) {
-            let log = PidLogV1::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v1.push(log);
-        } else if StatusLogHeaderV1::is_buf_header(content).unwrap_or(false) {
-            let log = StatusLogV1::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v1.push(log);
-        } else if PidLogHeaderV2::is_buf_header(content).unwrap_or(false) {
-            let log = PidLogV2::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v2.push(log);
-        } else if StatusLogHeaderV2::is_buf_header(content).unwrap_or(false) {
-            let log = StatusLogV2::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v2.push(log);
-        } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
-            let log = GeneratorLog::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.generator_log.push(log);
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Unrecognized file",
-            ));
-        }
-        Ok(())
-    }
-
-    // Parse file on native
-    fn parse_path(&mut self, path: &path::Path) -> io::Result<()> {
-        if PidLogHeaderV1::file_starts_with_header(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = PidLogV1::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v1.push(log);
-        } else if StatusLogHeaderV1::file_starts_with_header(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = StatusLogV1::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v1.push(log);
-        } else if PidLogHeaderV2::file_starts_with_header(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = PidLogV2::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v2.push(log);
-        } else if StatusLogHeaderV2::file_starts_with_header(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = StatusLogV2::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.status_log_v2.push(log);
-        } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = GeneratorLog::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.generator_log.push(log);
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Unrecognized file: {}", path.to_string_lossy()),
-            ));
         }
         Ok(())
     }
@@ -193,17 +185,12 @@ impl SupportedLogs {
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
-            log::debug!("Parsing zipped: {}", file.name());
-
-            if file.is_dir() {
-                continue;
-            }
-
-            let mut contents = Vec::new();
-            io::Read::read_to_end(&mut file, &mut contents)?;
-
-            if let Err(e) = self.parse_content(&contents) {
-                log::warn!("Failed to parse file {} in zip: {}", file.name(), e);
+            if file.is_file() {
+                let mut contents = Vec::new();
+                io::Read::read_to_end(&mut file, &mut contents)?;
+                if let Ok(log) = SupportedLog::parse_from_content(&contents) {
+                    self.logs.push(log);
+                }
             }
         }
         Ok(())
@@ -227,10 +214,10 @@ mod tests {
     #[test]
     fn test_supported_logs_dyn_vec() {
         let data = fs::read(TEST_DATA_STATUS).unwrap();
-        let status_log = StatusLogV1::from_reader(&mut data.as_slice()).unwrap();
+        let status_log = StatusLog::from_reader(&mut data.as_slice()).unwrap();
 
         let data = fs::read(TEST_DATA_PID).unwrap();
-        let pidlog = PidLogV1::from_reader(&mut data.as_slice()).unwrap();
+        let pidlog = PidLog::from_reader(&mut data.as_slice()).unwrap();
 
         let v: Vec<Box<dyn Plotable>> = vec![Box::new(status_log), Box::new(pidlog)];
         assert_eq!(v.len(), 2);
