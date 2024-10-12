@@ -133,11 +133,6 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
         Self::build_from_reader(reader)
     }
 
-    /// Deserialize a header from a byte slice
-    fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        Self::build_from_slice(slice)
-    }
-
     fn from_reader_with_uniq_descr_version(
         reader: &mut impl Read,
         unique_description: UniqueDescriptionData,

@@ -6,9 +6,9 @@ use serde_big_array::BigArray;
 
 use crate::mbed_motor_control::mbed_header::{
     BuildMbedLogHeaderV1, GitBranchData, GitRepoStatusData, GitShortShaData,
-    MbedMotorControlLogHeader, PidLogHeader, ProjectVersionData, StartupTimestamp,
-    UniqueDescriptionData, SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA,
-    SIZEOF_PROJECT_VERSION, SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
+    MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
+    SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION,
+    SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
 };
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
@@ -23,8 +23,6 @@ pub struct PidLogHeaderV1 {
     git_repo_status: GitRepoStatusData,
     startup_timestamp: StartupTimestamp,
 }
-
-impl PidLogHeader for PidLogHeaderV1 {}
 
 impl BuildMbedLogHeaderV1 for PidLogHeaderV1 {
     fn new(
@@ -126,10 +124,6 @@ impl MbedMotorControlLogHeader for PidLogHeaderV1 {
 
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
-    }
-    /// Deserialize a header from a byte slice
-    fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        Self::build_from_slice(slice)
     }
 
     /// Deserialize a header for a `reader` that implements [Read]

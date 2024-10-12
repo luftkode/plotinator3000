@@ -148,10 +148,6 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV2 {
     ) -> io::Result<Self> {
         Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
     }
-
-    fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        Self::build_from_slice(slice)
-    }
 }
 
 impl fmt::Display for StatusLogHeaderV2 {
