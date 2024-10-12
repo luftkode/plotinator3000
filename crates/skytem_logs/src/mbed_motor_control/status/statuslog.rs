@@ -25,8 +25,6 @@ pub struct StatusLog {
 }
 
 impl StatusLog {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
-
     /// Probes the buffer and check if it starts with [`Self::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
     pub fn is_buf_valid(content: &[u8]) -> bool {
         if content.len() < SIZEOF_UNIQ_DESC + 2 {
@@ -34,7 +32,7 @@ impl StatusLog {
         }
 
         let unique_description = &content[..SIZEOF_UNIQ_DESC];
-        parse_unique_description(unique_description) == Self::UNIQUE_DESCRIPTION
+        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
     }
 
     /// Checks if the file at the given path is a valid [`PidLog`] file

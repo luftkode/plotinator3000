@@ -4,7 +4,7 @@ use crate::{util::parse_timestamp, LogEntry};
 use byteorder::{LittleEndian, ReadBytesExt};
 use strum_macros::{Display, FromRepr};
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize, FromRepr, Display,
 )]

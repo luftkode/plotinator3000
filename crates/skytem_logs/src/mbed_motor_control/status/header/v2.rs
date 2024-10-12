@@ -100,7 +100,6 @@ impl GitMetadata for StatusLogHeaderV2 {
 
 impl MbedMotorControlLogHeader for StatusLogHeaderV2 {
     const VERSION: u16 = 2;
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
     /// Size of the header type in bytes if represented in raw binary
     const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
         + SIZEOF_PROJECT_VERSION
@@ -188,7 +187,7 @@ mod tests {
         eprintln!("{status_log_header}");
         assert_eq!(
             status_log_header.unique_description(),
-            StatusLogHeaderV2::UNIQUE_DESCRIPTION
+            crate::mbed_motor_control::status::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log_header.version, 2);
         assert_eq!(status_log_header.project_version().unwrap(), "2.0.2");

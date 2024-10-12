@@ -12,7 +12,7 @@ use crate::mbed_motor_control::mbed_header::{
 };
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
-pub struct PidLogHeaderV1 {
+pub(crate) struct PidLogHeaderV1 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -90,7 +90,6 @@ impl GitMetadata for PidLogHeaderV1 {
 
 impl MbedMotorControlLogHeader for PidLogHeaderV1 {
     const VERSION: u16 = 1;
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
     const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
         + SIZEOF_PROJECT_VERSION
         + SIZEOF_GIT_SHORT_SHA
@@ -180,7 +179,7 @@ mod tests {
         eprintln!("{pid_log_header}");
         assert_eq!(
             pid_log_header.unique_description(),
-            PidLogHeaderV1::UNIQUE_DESCRIPTION
+            crate::mbed_motor_control::pid::UNIQUE_DESCRIPTION
         );
         assert_eq!(pid_log_header.version, 1);
         assert_eq!(pid_log_header.project_version().unwrap(), "1.3.0");

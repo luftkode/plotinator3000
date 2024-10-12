@@ -98,7 +98,6 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
         + SIZEOF_GIT_REPO_STATUS
         + SIZEOF_STARTUP_TIMESTAMP;
     const VERSION: u16 = 1;
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
 
     fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description
@@ -180,7 +179,7 @@ mod tests {
         eprintln!("{status_log_header}");
         assert_eq!(
             status_log_header.unique_description(),
-            StatusLogHeaderV1::UNIQUE_DESCRIPTION
+            crate::mbed_motor_control::status::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log_header.version, 1);
         assert_eq!(status_log_header.project_version().unwrap(), "1.3.0");

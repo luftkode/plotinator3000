@@ -1,4 +1,3 @@
-use byteorder::{LittleEndian, ReadBytesExt};
 use chrono::{DateTime, Utc};
 use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -9,52 +8,11 @@ use std::{
 };
 
 use crate::{
-    mbed_motor_control::mbed_header::{
-        MbedMotorControlLogHeader, UniqueDescriptionData, SIZEOF_UNIQ_DESC,
-    },
+    mbed_motor_control::mbed_header::{MbedMotorControlLogHeader, SIZEOF_UNIQ_DESC},
     parse_unique_description,
 };
 
-use super::{entry::PidLogEntry, header_v1::PidLogHeaderV1, header_v2::PidLogHeaderV2};
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub enum PidLogHeader {
-    V1(PidLogHeaderV1),
-    V2(PidLogHeaderV2),
-}
-
-impl PidLogHeader {
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
-        let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
-        reader.read_exact(&mut unique_description)?;
-        if parse_unique_description(&unique_description) != PidLog::UNIQUE_DESCRIPTION {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Not an Mbed PidLog",
-            ));
-        }
-        let version = reader.read_u16::<LittleEndian>()?;
-        let header = match version {
-            1 => Self::V1(PidLogHeaderV1::from_reader_with_uniq_descr_version(
-                reader,
-                unique_description,
-                version,
-            )?),
-            2 => Self::V2(PidLogHeaderV2::from_reader_with_uniq_descr_version(
-                reader,
-                unique_description,
-                version,
-            )?),
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "Unsupported version",
-                ))
-            }
-        };
-        Ok(header)
-    }
-}
+use super::{entry::PidLogEntry, header::PidLogHeader};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
@@ -66,16 +24,14 @@ pub struct PidLog {
 }
 
 impl PidLog {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-PID-LOG-2024";
-
-    /// Probes the buffer and check if it starts with [`Self::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
+    /// Probes the buffer and check if it starts with [`super::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
     pub fn is_buf_valid(content: &[u8]) -> bool {
         if content.len() < SIZEOF_UNIQ_DESC + 2 {
             return false;
         }
 
         let unique_description = &content[..SIZEOF_UNIQ_DESC];
-        parse_unique_description(unique_description) == Self::UNIQUE_DESCRIPTION
+        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
     }
 
     /// Checks if the file at the given path is a valid [`PidLog`] file
@@ -277,14 +233,7 @@ impl Plotable for PidLog {
 
 impl fmt::Display for PidLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
-            f,
-            "Header: {}",
-            match self.header {
-                PidLogHeader::V1(h) => h.to_string(),
-                PidLogHeader::V2(h) => h.to_string(),
-            }
-        )?;
+        writeln!(f, "Header: {}", self.header)?;
         for e in &self.entries {
             writeln!(f, "{e}")?;
         }
@@ -330,7 +279,7 @@ mod tests {
     fn test_parse_and_display_v1() -> TestResult {
         let file = File::open(TEST_DATA_V1)?;
         let mut reader = io::BufReader::new(file);
-        let header = PidLogHeaderV1::from_reader(&mut reader)?;
+        let header = PidLogHeader::from_reader(&mut reader)?;
         println!("{header}");
         parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
         Ok(())
@@ -362,7 +311,7 @@ mod tests {
     fn test_parse_and_display_v2() -> TestResult {
         let file = File::open(TEST_DATA_V2)?;
         let mut reader = io::BufReader::new(file);
-        let header = PidLogHeaderV2::from_reader(&mut reader)?;
+        let header = PidLogHeader::from_reader(&mut reader)?;
         println!("{header}");
         parse_and_display_log_entries::<PidLogEntry, _>(&mut reader, Some(10));
         Ok(())

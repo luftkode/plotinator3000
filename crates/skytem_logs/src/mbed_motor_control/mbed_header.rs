@@ -30,9 +30,6 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync
     const RAW_SIZE: usize;
     const VERSION: u16;
 
-    /// Unique description is a field in the header that identifies the kind of log
-    const UNIQUE_DESCRIPTION: &'static str;
-
     fn unique_description_bytes(&self) -> &UniqueDescriptionData;
     fn version(&self) -> u16;
     fn project_version_raw(&self) -> &ProjectVersionData;
