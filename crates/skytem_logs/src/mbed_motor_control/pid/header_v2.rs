@@ -139,6 +139,7 @@ impl MbedMotorControlLogHeader for PidLogHeaderV2 {
     fn startup_timestamp_raw(&self) -> &StartupTimestamp {
         &self.startup_timestamp
     }
+
     /// Deserialize a header for a `reader` that implements [Read]
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         Self::build_from_reader(reader)

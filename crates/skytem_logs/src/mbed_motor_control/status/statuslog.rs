@@ -375,7 +375,7 @@ mod tests {
     fn test_parse_and_display_v2() -> TestResult {
         let file = File::open(TEST_DATA_V2)?;
         let mut reader = io::BufReader::new(file);
-        let header = StatusLogHeaderV2::from_reader(&mut reader)?;
+        let header = StatusLogHeader::from_reader(&mut reader)?;
         println!("{header}");
         parse_and_display_log_entries::<StatusLogEntry, _>(&mut reader, Some(10));
         Ok(())
