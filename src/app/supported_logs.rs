@@ -5,10 +5,7 @@ use skytem_logs::{
     generator::{GeneratorLog, GeneratorLogEntry},
     mbed_motor_control::{
         mbed_header::MbedMotorControlLogHeader,
-        pid::{
-            header_v1::PidLogHeaderV1, header_v2::PidLogHeaderV2, pidlog_v1::PidLogV1,
-            pidlog_v2::PidLogV2,
-        },
+        pid::pidlog::PidLog,
         status::{
             header_v1::StatusLogHeaderV1, header_v2::StatusLogHeaderV2, statuslog_v1::StatusLogV1,
             statuslog_v2::StatusLogV2,
@@ -25,8 +22,7 @@ use std::{
 /// that would require the log interface to also support a common way for plotting logs
 #[derive(Default, Deserialize, Serialize)]
 pub struct SupportedLogs {
-    pid_log_v1: Vec<PidLogV1>,
-    pid_log_v2: Vec<PidLogV2>,
+    pid_log: Vec<PidLog>,
     status_log_v1: Vec<StatusLogV1>,
     status_log_v2: Vec<StatusLogV2>,
     generator_log: Vec<GeneratorLog>,
@@ -36,10 +32,7 @@ impl SupportedLogs {
     /// Return a vector of immutable references to all logs
     pub fn logs(&self) -> Vec<&dyn Plotable> {
         let mut all_logs: Vec<&dyn Plotable> = Vec::new();
-        for pl in &self.pid_log_v1 {
-            all_logs.push(pl);
-        }
-        for pl in &self.pid_log_v2 {
+        for pl in &self.pid_log {
             all_logs.push(pl);
         }
         for sl in &self.status_log_v1 {
@@ -57,8 +50,7 @@ impl SupportedLogs {
     /// Take all the logs currently store in [`SupportedLogs`] and return them as a list
     pub fn take_logs(&mut self) -> Vec<Box<dyn Plotable>> {
         let mut all_logs: Vec<Box<dyn Plotable>> = Vec::new();
-        all_logs.extend(self.pid_log_v1.drain(..).map(|log| log.into()));
-        all_logs.extend(self.pid_log_v2.drain(..).map(|log| log.into()));
+        all_logs.extend(self.pid_log.drain(..).map(|log| log.into()));
         all_logs.extend(self.status_log_v1.drain(..).map(|log| log.into()));
         all_logs.extend(self.status_log_v2.drain(..).map(|log| log.into()));
         all_logs.extend(self.generator_log.drain(..).map(|log| log.into()));
@@ -121,18 +113,14 @@ impl SupportedLogs {
 
     // Parsing dropped content on web
     fn parse_content(&mut self, mut content: &[u8]) -> io::Result<()> {
-        if PidLogHeaderV1::is_buf_header(content).unwrap_or(false) {
-            let log = PidLogV1::from_reader(&mut content)?;
+        if PidLog::is_buf_valid(content) {
+            let log = PidLog::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v1.push(log);
+            self.pid_log.push(log);
         } else if StatusLogHeaderV1::is_buf_header(content).unwrap_or(false) {
             let log = StatusLogV1::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
             self.status_log_v1.push(log);
-        } else if PidLogHeaderV2::is_buf_header(content).unwrap_or(false) {
-            let log = PidLogV2::from_reader(&mut content)?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v2.push(log);
         } else if StatusLogHeaderV2::is_buf_header(content).unwrap_or(false) {
             let log = StatusLogV2::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
@@ -152,21 +140,16 @@ impl SupportedLogs {
 
     // Parse file on native
     fn parse_path(&mut self, path: &path::Path) -> io::Result<()> {
-        if PidLogHeaderV1::file_starts_with_header(path).unwrap_or(false) {
+        if PidLog::file_is_valid(path) {
             let f = fs::File::open(path)?;
-            let log = PidLogV1::from_reader(&mut BufReader::new(f))?;
+            let log = PidLog::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v1.push(log);
+            self.pid_log.push(log);
         } else if StatusLogHeaderV1::file_starts_with_header(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
             let log = StatusLogV1::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
             self.status_log_v1.push(log);
-        } else if PidLogHeaderV2::file_starts_with_header(path).unwrap_or(false) {
-            let f = fs::File::open(path)?;
-            let log = PidLogV2::from_reader(&mut BufReader::new(f))?;
-            log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log_v2.push(log);
         } else if StatusLogHeaderV2::file_starts_with_header(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
             let log = StatusLogV2::from_reader(&mut BufReader::new(f))?;
@@ -230,7 +213,7 @@ mod tests {
         let status_log = StatusLogV1::from_reader(&mut data.as_slice()).unwrap();
 
         let data = fs::read(TEST_DATA_PID).unwrap();
-        let pidlog = PidLogV1::from_reader(&mut data.as_slice()).unwrap();
+        let pidlog = PidLog::from_reader(&mut data.as_slice()).unwrap();
 
         let v: Vec<Box<dyn Plotable>> = vec![Box::new(status_log), Box::new(pidlog)];
         assert_eq!(v.len(), 2);
