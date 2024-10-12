@@ -11,39 +11,80 @@ use std::{
     path::{self, Path},
 };
 
-/// In the ideal future, this explicit list of supported logs is instead just a vector of log interfaces (traits)
-/// that would require the log interface to also support a common way for plotting logs
+/// Represents a supported log, which can be any of the supported log types.
+///
+/// This simply serves to encapsulate all the supported logs in a single type
+#[derive(Deserialize, Serialize)]
+pub enum SupportedLog {
+    MbedPid(PidLog),
+    MbedStatus(StatusLog),
+    Generator(GeneratorLog),
+}
+
+impl Plotable for SupportedLog {
+    fn raw_plots(&self) -> &[RawPlot] {
+        match self {
+            Self::MbedPid(l) => l.raw_plots(),
+            Self::MbedStatus(l) => l.raw_plots(),
+            Self::Generator(l) => l.raw_plots(),
+        }
+    }
+
+    fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        match self {
+            Self::MbedPid(l) => l.first_timestamp(),
+            Self::MbedStatus(l) => l.first_timestamp(),
+            Self::Generator(l) => l.first_timestamp(),
+        }
+    }
+
+    fn descriptive_name(&self) -> &str {
+        match self {
+            Self::MbedPid(l) => l.descriptive_name(),
+            Self::MbedStatus(l) => l.descriptive_name(),
+            Self::Generator(l) => l.descriptive_name(),
+        }
+    }
+
+    fn labels(&self) -> Option<&[PlotLabels]> {
+        match self {
+            Self::MbedPid(l) => l.labels(),
+            Self::MbedStatus(l) => l.labels(),
+            Self::Generator(l) => l.labels(),
+        }
+    }
+
+    fn metadata(&self) -> Option<Vec<(String, String)>> {
+        match self {
+            Self::MbedPid(l) => l.metadata(),
+            Self::MbedStatus(l) => l.metadata(),
+            Self::Generator(l) => l.metadata(),
+        }
+    }
+    // Implement any methods required by the Plotable trait for SupportedLog
+}
+
+/// Contains all supported logs in a single vector.
 #[derive(Default, Deserialize, Serialize)]
 pub struct SupportedLogs {
-    pid_log: Vec<PidLog>,
-    status_log: Vec<StatusLog>,
-    generator_log: Vec<GeneratorLog>,
+    logs: Vec<SupportedLog>,
 }
 
 impl SupportedLogs {
     /// Return a vector of immutable references to all logs
     pub fn logs(&self) -> Vec<&dyn Plotable> {
-        let mut all_logs: Vec<&dyn Plotable> = Vec::new();
-        for pl in &self.pid_log {
-            all_logs.push(pl);
-        }
-        for sl in &self.status_log {
-            all_logs.push(sl);
-        }
-        for gl in &self.generator_log {
-            all_logs.push(gl);
-        }
-        all_logs
+        self.logs
+            .iter()
+            .map(|log| {
+                let plotable: &dyn Plotable = log;
+                plotable
+            })
+            .collect()
     }
 
-    /// Take all the logs currently store in [`SupportedLogs`] and return them as a list
+    /// Take all the logs currently stored in [`SupportedLogs`] and return them as a list
     pub fn take_logs(&mut self) -> Vec<Box<dyn Plotable>> {
-        let mut all_logs: Vec<Box<dyn Plotable>> = Vec::new();
-        all_logs.extend(self.pid_log.drain(..).map(|log| log.into()));
-        all_logs.extend(self.status_log.drain(..).map(|log| log.into()));
-        all_logs.extend(self.generator_log.drain(..).map(|log| log.into()));
-
-        all_logs
+        self.logs.drain(..).map(|log| log.into()).collect()
     }
 
     /// Parse dropped files to supported logs.
@@ -61,10 +102,8 @@ impl SupportedLogs {
 
     fn parse_file(&mut self, file: &DroppedFile) -> io::Result<()> {
         if let Some(content) = file.bytes.as_ref() {
-            // This is how content is made accessible via drag-n-drop in a browser
             self.parse_content(content)?;
         } else if let Some(path) = &file.path {
-            // This is how content is accessible via drag-n-drop when the app is running natively
             log::debug!("path: {path:?}");
             if path.is_dir() {
                 self.parse_directory(path)?;
@@ -80,7 +119,6 @@ impl SupportedLogs {
         Ok(())
     }
 
-    // Parsing directory on native
     fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -99,20 +137,19 @@ impl SupportedLogs {
         Ok(())
     }
 
-    // Parsing dropped content on web
     fn parse_content(&mut self, mut content: &[u8]) -> io::Result<()> {
         if PidLog::is_buf_valid(content) {
             let log = PidLog::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log.push(log);
+            self.logs.push(SupportedLog::MbedPid(log));
         } else if StatusLog::is_buf_valid(content) {
             let log = StatusLog::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.status_log.push(log);
+            self.logs.push(SupportedLog::MbedStatus(log));
         } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
             let log = GeneratorLog::from_reader(&mut content)?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.generator_log.push(log);
+            self.logs.push(SupportedLog::Generator(log));
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -122,23 +159,22 @@ impl SupportedLogs {
         Ok(())
     }
 
-    // Parse file on native
     fn parse_path(&mut self, path: &path::Path) -> io::Result<()> {
         if PidLog::file_is_valid(path) {
             let f = fs::File::open(path)?;
             let log = PidLog::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.pid_log.push(log);
+            self.logs.push(SupportedLog::MbedPid(log));
         } else if StatusLog::file_is_valid(path) {
             let f = fs::File::open(path)?;
             let log = StatusLog::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.status_log.push(log);
+            self.logs.push(SupportedLog::MbedStatus(log));
         } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
             let f = fs::File::open(path)?;
             let log = GeneratorLog::from_reader(&mut BufReader::new(f))?;
             log::debug!("Got: {}", log.descriptive_name());
-            self.generator_log.push(log);
+            self.logs.push(SupportedLog::Generator(log));
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
