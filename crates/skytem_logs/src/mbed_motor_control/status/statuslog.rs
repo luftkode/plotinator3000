@@ -1,4 +1,3 @@
-use byteorder::{LittleEndian, ReadBytesExt};
 use chrono::{DateTime, Utc};
 use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -9,63 +8,11 @@ use std::{
 };
 
 use crate::{
-    mbed_motor_control::mbed_header::{
-        MbedMotorControlLogHeader, UniqueDescriptionData, SIZEOF_UNIQ_DESC,
-    },
+    mbed_motor_control::mbed_header::{MbedMotorControlLogHeader, SIZEOF_UNIQ_DESC},
     parse_unique_description,
 };
 
-use super::{entry::StatusLogEntry, header_v1::StatusLogHeaderV1, header_v2::StatusLogHeaderV2};
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub enum StatusLogHeader {
-    V1(StatusLogHeaderV1),
-    V2(StatusLogHeaderV2),
-}
-
-impl fmt::Display for StatusLogHeader {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::V1(h) => write!(f, "{h}"),
-            Self::V2(h) => write!(f, "{h}"),
-        }
-    }
-}
-
-impl StatusLogHeader {
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
-
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
-        let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
-        reader.read_exact(&mut unique_description)?;
-        if parse_unique_description(&unique_description) != Self::UNIQUE_DESCRIPTION {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Not an Mbed StatusLog",
-            ));
-        }
-        let version = reader.read_u16::<LittleEndian>()?;
-        let header = match version {
-            1 => Self::V1(StatusLogHeaderV1::from_reader_with_uniq_descr_version(
-                reader,
-                unique_description,
-                version,
-            )?),
-            2 => Self::V2(StatusLogHeaderV2::from_reader_with_uniq_descr_version(
-                reader,
-                unique_description,
-                version,
-            )?),
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "Unsupported version",
-                ))
-            }
-        };
-        Ok(header)
-    }
-}
+use super::{entry::StatusLogEntry, header::StatusLogHeader};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct StatusLog {
@@ -265,7 +212,7 @@ impl Plotable for StatusLog {
     }
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
-        let metadata = vec![
+        let mut metadata = vec![
             (
                 "Project Version".to_owned(),
                 self.project_version().unwrap_or_else(|| "N/A".to_owned()),
@@ -287,6 +234,16 @@ impl Plotable for StatusLog {
                 self.startup_timestamp.naive_utc().to_string(),
             ),
         ];
+
+        match self.header {
+            // V1 has no more than that
+            StatusLogHeader::V1(_) => (),
+            // V2 also has config values
+            StatusLogHeader::V2(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
+        }
 
         Some(metadata)
     }

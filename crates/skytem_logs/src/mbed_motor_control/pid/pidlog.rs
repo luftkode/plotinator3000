@@ -238,7 +238,7 @@ impl Plotable for PidLog {
     }
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
-        let metadata = vec![
+        let mut metadata = vec![
             (
                 "Project Version".to_owned(),
                 self.project_version().unwrap_or_else(|| "N/A".to_owned()),
@@ -260,6 +260,16 @@ impl Plotable for PidLog {
                 self.startup_timestamp.naive_utc().to_string(),
             ),
         ];
+
+        match self.header {
+            // V1 has no more than that
+            PidLogHeader::V1(_) => (),
+            // V2 also has config values
+            PidLogHeader::V2(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
+        }
 
         Some(metadata)
     }
