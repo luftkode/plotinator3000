@@ -221,7 +221,6 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
                 continue;
             }
 
-            // Narrow search ranges using approximations
             let start_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min);
             let end_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max);
 
@@ -366,11 +365,21 @@ mod tests {
         let source: Vec<[f64; 2]> = (0..source_len).map(|i| [i as f64, i as f64]).collect();
         let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
 
-        for (pixel_width, expected_lvl) in [(1usize, 3usize), (2, 2), (4, 1), (8, 0), (16, 0)] {
+        for (pixel_width, expected_lvl, expected_range) in [
+            (1usize, 3usize, Some((0, 2))),
+            (2, 2, Some((0, 4))),
+            (4, 1, Some((0, 8))),
+            (8, 0, Some((0, 15))),
+            (16, 0, None),
+        ] {
             let (lvl, range_res) = mipmap.get_level_match(pixel_width, (0, 15));
             assert_eq!(
                 lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
+            );
+            assert_eq!(
+                range_res, expected_range,
+                "Expected range {expected_range:?} for width: {pixel_width}"
             );
         }
     }
@@ -386,13 +395,22 @@ mod tests {
 
         let x_bounds = (UNIX_TS_NS + 300, UNIX_TS_NS + 5000);
 
-        for (pixel_width, expected_lvl) in
-            [(100usize, 3usize), (200, 2), (400, 1), (800, 0), (1600, 0)]
-        {
+        for (pixel_width, expected_lvl, expected_range) in [
+            (100usize, 3usize, Some((48, 200))),
+            (200, 2, Some((96, 400))),
+            (400, 1, Some((192, 800))),
+            (800, 0, Some((384, 1600))),
+            (1600, 0, None),
+        ] {
             let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds);
             assert_eq!(
                 lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
+            );
+
+            assert_eq!(
+                range_res, expected_range,
+                "Expected range {expected_range:?} for width: {pixel_width}"
             );
         }
     }
