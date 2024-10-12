@@ -91,14 +91,14 @@ impl BuildMbedLogHeaderV1 for StatusLogHeaderV1 {
 }
 
 impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
-    const VERSION: u16 = 1;
-    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
     const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
         + SIZEOF_PROJECT_VERSION
         + SIZEOF_GIT_SHORT_SHA
         + SIZEOF_GIT_BRANCH
         + SIZEOF_GIT_REPO_STATUS
         + SIZEOF_STARTUP_TIMESTAMP;
+    const VERSION: u16 = 1;
+    const UNIQUE_DESCRIPTION: &'static str = "MBED-MOTOR-CONTROL-STATUS-LOG-2024";
 
     fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description
@@ -128,14 +128,22 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
         &self.startup_timestamp
     }
 
+    /// Deserialize a header for a `reader` that implements [Read]
+    fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
+        Self::build_from_reader(reader)
+    }
+
     /// Deserialize a header from a byte slice
     fn from_slice(slice: &[u8]) -> io::Result<Self> {
         Self::build_from_slice(slice)
     }
 
-    /// Deserialize a header for a `reader` that implements [Read]
-    fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self> {
-        Self::build_from_reader(reader)
+    fn from_reader_with_uniq_descr_version(
+        reader: &mut impl Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self> {
+        Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
     }
 }
 

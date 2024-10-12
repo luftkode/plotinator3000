@@ -10,7 +10,7 @@ use crate::mbed_motor_control::{
 
 use log_if::prelude::*;
 use serde_big_array::BigArray;
-use std::fmt;
+use std::{fmt, io};
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize, Clone, Copy)]
 pub struct StatusLogHeaderV2 {
@@ -138,11 +138,18 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV2 {
         &self.startup_timestamp
     }
 
-    fn from_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+    fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         Self::build_from_reader(reader)
     }
+    fn from_reader_with_uniq_descr_version(
+        reader: &mut impl io::Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self> {
+        Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
+    }
 
-    fn from_slice(slice: &[u8]) -> std::io::Result<Self> {
+    fn from_slice(slice: &[u8]) -> io::Result<Self> {
         Self::build_from_slice(slice)
     }
 }

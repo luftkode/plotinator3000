@@ -16,8 +16,8 @@ pub mod util;
 /// This might only apply for binary formats or even only for the MBED binary log formats.
 /// Hopefully that becomes apparent soon, and if it is, this function should be pushed down
 /// to the `mbed_motor_control` module.
-pub fn parse_unique_description(raw_uniq_desc: [u8; 128]) -> String {
-    String::from_utf8_lossy(&raw_uniq_desc)
+pub fn parse_unique_description(raw_uniq_desc: &[u8]) -> String {
+    String::from_utf8_lossy(raw_uniq_desc)
         .trim_end_matches(char::from(0))
         .to_owned()
 }

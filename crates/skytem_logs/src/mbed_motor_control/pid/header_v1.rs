@@ -136,6 +136,14 @@ impl MbedMotorControlLogHeader for PidLogHeaderV1 {
     fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         Self::build_from_reader(reader)
     }
+
+    fn from_reader_with_uniq_descr_version(
+        reader: &mut impl io::Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self> {
+        Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
+    }
 }
 
 impl fmt::Display for PidLogHeaderV1 {

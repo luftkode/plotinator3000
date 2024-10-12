@@ -50,7 +50,7 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync
     }
 
     fn unique_description(&self) -> String {
-        parse_unique_description(*self.unique_description_bytes())
+        parse_unique_description(self.unique_description_bytes())
     }
 
     /// Returns whether or not a header is valid, meaning its unique description field matches the type
@@ -63,6 +63,13 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync
 
     /// Deserialize a header for a `reader` that implements [Read]
     fn from_reader<R: Read>(reader: &mut R) -> io::Result<Self>;
+
+    /// Deserialize a header with a reader starting just after the version field.
+    fn from_reader_with_uniq_descr_version(
+        reader: &mut impl io::Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self>;
 
     /// Deserialize a header from a byte slice
     fn from_slice(slice: &[u8]) -> io::Result<Self>;
@@ -204,6 +211,32 @@ pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
         ))
     }
 
+    fn build_from_reader_with_uniq_descr_version(
+        reader: &mut impl Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self> {
+        let mut project_version: ProjectVersionData = ProjectVersionData::default();
+        reader.read_exact(&mut project_version)?;
+        let mut git_short_sha: GitShortShaData = GitShortShaData::default();
+        reader.read_exact(&mut git_short_sha)?;
+        let mut git_branch: GitBranchData = [0u8; SIZEOF_GIT_BRANCH];
+        reader.read_exact(&mut git_branch)?;
+        let mut git_repo_status: GitRepoStatusData = GitRepoStatusData::default();
+        reader.read_exact(&mut git_repo_status)?;
+        let mut startup_timestamp: StartupTimestamp = StartupTimestamp::default();
+        reader.read_exact(&mut startup_timestamp)?;
+        Ok(Self::new(
+            unique_description,
+            version,
+            project_version,
+            git_short_sha,
+            git_branch,
+            git_repo_status,
+            startup_timestamp,
+        ))
+    }
+
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -308,6 +341,34 @@ pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
         let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
         reader.read_exact(&mut unique_description)?;
         let version = reader.read_u16::<LittleEndian>()?;
+        let mut project_version: ProjectVersionData = ProjectVersionData::default();
+        reader.read_exact(&mut project_version)?;
+        let mut git_short_sha: GitShortShaData = GitShortShaData::default();
+        reader.read_exact(&mut git_short_sha)?;
+        let mut git_branch: GitBranchData = [0u8; SIZEOF_GIT_BRANCH];
+        reader.read_exact(&mut git_branch)?;
+        let mut git_repo_status: GitRepoStatusData = GitRepoStatusData::default();
+        reader.read_exact(&mut git_repo_status)?;
+        let mut startup_timestamp: StartupTimestamp = StartupTimestamp::default();
+        reader.read_exact(&mut startup_timestamp)?;
+        let mbed_config = MbedConfig::from_reader(reader)?;
+        Ok(Self::new(
+            unique_description,
+            version,
+            project_version,
+            git_short_sha,
+            git_branch,
+            git_repo_status,
+            startup_timestamp,
+            mbed_config,
+        ))
+    }
+
+    fn build_from_reader_with_uniq_descr_version(
+        reader: &mut impl Read,
+        unique_description: UniqueDescriptionData,
+        version: u16,
+    ) -> io::Result<Self> {
         let mut project_version: ProjectVersionData = ProjectVersionData::default();
         reader.read_exact(&mut project_version)?;
         let mut git_short_sha: GitShortShaData = GitShortShaData::default();
