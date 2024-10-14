@@ -4,11 +4,14 @@ use crate::plot::LogPlotUi;
 use egui::{Color32, DroppedFile, Hyperlink, RichText, TextStyle};
 use egui_notify::Toasts;
 use log_if::prelude::Plotable;
-use supported_logs::SupportedLogs;
+use supported_logs::{SupportedLog, SupportedLogs};
 
 mod preview_dropped;
-mod supported_logs;
+pub mod supported_logs;
 mod util;
+
+/// Show a toasts warning notification if a log has more than this many unparsed bytes
+pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[allow(missing_debug_implementations)] // Some of the nested types are from egui or egui_plot and we cannot implement Debug for them
@@ -136,7 +139,7 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            notify_if_logs_added(&mut self.toasts, &self.logs.logs());
+            notify_if_logs_added(&mut self.toasts, self.logs.logs());
             self.plot.ui(ui, &self.logs.take_logs(), &mut self.toasts);
 
             if self.dropped_files.is_empty() {
@@ -238,7 +241,7 @@ fn collapsible_instructions(ui: &mut egui::Ui) {
 }
 
 /// Displays a toasts notification if logs are added with the names of all added logs
-fn notify_if_logs_added(toasts: &mut Toasts, logs: &[&dyn Plotable]) {
+fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedLog]) {
     if !logs.is_empty() {
         let mut log_names_str = String::new();
         for l in logs {
@@ -253,5 +256,22 @@ fn notify_if_logs_added(toasts: &mut Toasts, logs: &[&dyn Plotable]) {
                 if logs.len() == 1 { "" } else { "s" }
             ))
             .duration(Some(Duration::from_secs(2)));
+        for l in logs {
+            let parse_info = l.parse_info();
+            log::debug!(
+                "Unparsed bytes for {remainder}:{log_name}",
+                remainder = parse_info.remainder_bytes(),
+                log_name = l.descriptive_name()
+            );
+            if parse_info.remainder_bytes() > WARN_ON_UNPARSED_BYTES_THRESHOLD {
+                toasts.warning(format!(
+                    "Could only parse {parsed}/{total} bytes for {log_name}\n{remainder} bytes remain unparsed",
+                    parsed = parse_info.parsed_bytes(),
+                    total = parse_info.total_bytes(),
+                    log_name = l.descriptive_name(),
+                    remainder = parse_info.remainder_bytes()
+                ));
+            }
+        }
     }
 }

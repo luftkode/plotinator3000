@@ -34,15 +34,30 @@ impl GeneratorLog {
 impl SkytemLog for GeneratorLog {
     type Entry = GeneratorLogEntry;
 
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
-        let buf_reader = io::BufReader::new(reader);
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+        let mut buf_reader = BufReader::new(reader);
         let mut entries = Vec::new();
+        let mut total_bytes_read = 0;
 
-        for line in buf_reader.lines() {
-            let line = line?;
-            match GeneratorLogEntry::from_str(&line) {
-                Ok(entry) => entries.push(entry),
-                Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, e)),
+        // Read the buffer in chunks and handle the line parsing
+        loop {
+            let mut line = String::new();
+            let bytes_read = buf_reader.read_line(&mut line)?;
+
+            // If we didn't read any bytes, we're done
+            if bytes_read == 0 {
+                break;
+            }
+
+            // Create a Cursor from the line string to pass to from_reader
+            let line_bytes = line.as_bytes();
+            match GeneratorLogEntry::from_reader(&mut io::Cursor::new(line_bytes)) {
+                Ok((entry, _)) => {
+                    total_bytes_read += bytes_read;
+                    entries.push(entry);
+                }
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => log::warn!("Failed parsing generator log entry: {e}... Continuing"),
             }
         }
 
@@ -58,12 +73,15 @@ impl SkytemLog for GeneratorLog {
         }
 
         let all_plots_raw = build_all_plots(&entries);
-        Ok(Self {
-            entries,
-            power: power_vals,
-            all_plots_raw,
-            timestamps_ns,
-        })
+        Ok((
+            Self {
+                entries,
+                power: power_vals,
+                all_plots_raw,
+                timestamps_ns,
+            },
+            total_bytes_read,
+        ))
     }
 
     fn entries(&self) -> &[Self::Entry] {
@@ -214,13 +232,6 @@ pub struct GeneratorLogEntry {
 }
 
 impl GeneratorLogEntry {
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, io::Error> {
-        let mut bufreader = BufReader::new(bytes);
-        let mut line = String::new();
-        _ = bufreader.read_line(&mut line)?;
-        Self::from_str(&line)
-    }
-
     pub fn is_bytes_valid_generator_log_entry(bytes: &[u8]) -> bool {
         let mut bufreader = BufReader::new(bytes);
         let mut line = String::new();
@@ -270,12 +281,16 @@ impl GeneratorLogEntry {
 }
 
 impl LogEntry for GeneratorLogEntry {
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
         let mut line = String::new();
         let mut bufreader = BufReader::new(reader);
-        _ = bufreader.read_line(&mut line)?;
 
-        Self::from_str(&line)
+        // Read the line and track the number of bytes read
+        let bytes_read = bufreader.read_line(&mut line)?;
+
+        let gen_log_entry = Self::from_str(&line)?;
+
+        Ok((gen_log_entry, bytes_read))
     }
 
     /// Timestamp in nanoseconds since the epoch
@@ -374,8 +389,10 @@ mod tests {
     #[test]
     fn test_deserialize() -> TestResult {
         let data = fs::read(TEST_DATA)?;
-        let log = GeneratorLog::from_reader(&mut data.as_slice())?;
+        let full_data_len = data.len();
+        let (log, bytes_read) = GeneratorLog::from_reader(&mut data.as_slice())?;
 
+        assert_eq!(bytes_read, full_data_len);
         let first_entry = log.entries().first().expect("Empty entries");
 
         let first_ts_ns = first_entry.timestamp_ns();
@@ -468,5 +485,18 @@ mod tests {
         assert!(!GeneratorLogEntry::is_bytes_valid_generator_log_entry(
             invalid_bytes
         ));
+    }
+
+    #[test]
+    fn test_parse_valid_then_partial_valid() -> TestResult {
+        let valid_line_then_invalid_as_bytes = b"20230124_134745 Vout: 74.3 Vbat: 0.1 Iout: 0.0 RPM: 6075 Load: 10.2 PWM: 10.2 Temp1 6.9 Temp2 8.4 IIn: 8.8 Irotor: 0.7 Rrotor: 11.2
+20230124_134746 Vout: 59.3 Vbat: 0.1 Iout: 0.0 RPM: 5438 Load: 81.2 PWM: 18.0 Temp1 6.9 Temp2 8.6 IIn: 35.5 Irotor: 0.9 Rro
+";
+        let mut readable = io::Cursor::new(valid_line_then_invalid_as_bytes);
+
+        let (genlog, bytes_read) = GeneratorLog::from_reader(&mut readable)?;
+        assert_eq!(genlog.entries.len(), 1);
+        assert!(bytes_read < valid_line_then_invalid_as_bytes.len());
+        Ok(())
     }
 }

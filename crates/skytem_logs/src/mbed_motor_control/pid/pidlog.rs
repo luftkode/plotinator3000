@@ -51,8 +51,10 @@ impl PidLog {
 impl SkytemLog for PidLog {
     type Entry = PidLogEntry;
 
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
-        let header = PidLogHeader::from_reader(reader)?;
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+        let mut total_bytes_read: usize = 0;
+        let (header, bytes_read) = PidLogHeader::from_reader(reader)?;
+        total_bytes_read += bytes_read;
         let startup_timestamp = match &header {
             PidLogHeader::V1(h) => h.startup_timestamp(),
             PidLogHeader::V2(h) => h.startup_timestamp(),
@@ -63,11 +65,12 @@ impl SkytemLog for PidLog {
             .timestamp_nanos_opt()
             .expect("timestamp as nanoseconds out of range")
             as f64;
-        let vec_of_entries: Vec<PidLogEntry> = parse_to_vec(reader);
+        let (vec_of_entries, entries_bytes_read): (Vec<PidLogEntry>, usize) = parse_to_vec(reader);
         let timestamps_ns: Vec<f64> = vec_of_entries
             .iter()
             .map(|e| startup_timestamp_ns + e.timestamp_ns())
             .collect();
+        total_bytes_read += entries_bytes_read;
 
         let rpm_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
@@ -129,13 +132,16 @@ impl SkytemLog for PidLog {
             }
         }
 
-        Ok(Self {
-            header,
-            entries: vec_of_entries,
-            timestamps_ns,
-            all_plots_raw,
-            startup_timestamp,
-        })
+        Ok((
+            Self {
+                header,
+                entries: vec_of_entries,
+                timestamps_ns,
+                all_plots_raw,
+                startup_timestamp,
+            },
+            total_bytes_read,
+        ))
     }
 
     fn entries(&self) -> &[Self::Entry] {
@@ -256,8 +262,11 @@ mod tests {
     #[test]
     fn test_deserialize_v1() -> TestResult {
         let data = fs::read(TEST_DATA_V1)?;
-        let pidlog = PidLog::from_reader(&mut data.as_slice())?;
+        let full_data_len = data.len();
+        let (pidlog, bytes_read) = PidLog::from_reader(&mut data.as_slice())?;
 
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 873981);
         let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.17777778);
@@ -279,7 +288,8 @@ mod tests {
     fn test_parse_and_display_v1() -> TestResult {
         let file = File::open(TEST_DATA_V1)?;
         let mut reader = io::BufReader::new(file);
-        let header = PidLogHeader::from_reader(&mut reader)?;
+        let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
+        assert_eq!(bytes_read, 261);
         println!("{header}");
         parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
         Ok(())
@@ -288,8 +298,10 @@ mod tests {
     #[test]
     fn test_deserialize_v2() -> TestResult {
         let data = fs::read(TEST_DATA_V2)?;
-        let pidlog = PidLog::from_reader(&mut data.as_slice())?;
-
+        let full_data_len = data.len();
+        let (pidlog, bytes_read) = PidLog::from_reader(&mut data.as_slice())?;
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 722429);
         let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.0);
@@ -311,7 +323,8 @@ mod tests {
     fn test_parse_and_display_v2() -> TestResult {
         let file = File::open(TEST_DATA_V2)?;
         let mut reader = io::BufReader::new(file);
-        let header = PidLogHeader::from_reader(&mut reader)?;
+        let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
+        assert_eq!(bytes_read, 293);
         println!("{header}");
         parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
         Ok(())

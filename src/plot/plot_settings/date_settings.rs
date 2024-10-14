@@ -2,6 +2,8 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use plot_util::{PlotData, Plots};
 use serde::{Deserialize, Serialize};
 
+use crate::app::supported_logs::ParseInfo;
+
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoadedLogSettings {
     log_id: usize,
@@ -15,6 +17,7 @@ pub struct LoadedLogSettings {
     pub date_changed: bool,
     show: bool,
     log_metadata: Option<Vec<(String, String)>>,
+    parse_info: ParseInfo,
 }
 
 impl LoadedLogSettings {
@@ -23,6 +26,7 @@ impl LoadedLogSettings {
         descriptive_name: String,
         start_date: DateTime<Utc>,
         log_metadata: Option<Vec<(String, String)>>,
+        parse_info: ParseInfo,
     ) -> Self {
         Self {
             log_id,
@@ -36,6 +40,7 @@ impl LoadedLogSettings {
             date_changed: false,
             show: true,
             log_metadata,
+            parse_info,
         }
     }
 
@@ -70,6 +75,10 @@ impl LoadedLogSettings {
 
     pub fn log_metadata(&self) -> Option<&[(String, String)]> {
         self.log_metadata.as_deref()
+    }
+
+    pub fn parse_info(&self) -> ParseInfo {
+        self.parse_info
     }
 }
 

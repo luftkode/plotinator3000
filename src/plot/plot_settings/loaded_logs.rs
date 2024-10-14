@@ -46,6 +46,12 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name
         .open(&mut open)
         .anchor(egui::Align2::LEFT_TOP, egui::Vec2::ZERO)
         .show(ui.ctx(), |ui| {
+            egui::Grid::new("parseinfo").show(ui, |ui| {
+                ui.label(format!(
+                    "Parsed bytes {}",
+                    settings.parse_info().parsed_bytes()
+                ));
+            });
             if let Some(log_metadata) = settings.log_metadata() {
                 egui::Grid::new("metadata").show(ui, |ui| {
                     for (k, v) in log_metadata {

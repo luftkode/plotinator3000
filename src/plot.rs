@@ -1,5 +1,4 @@
 use egui_notify::Toasts;
-use log_if::plotable::Plotable;
 use plot_settings::PlotSettings;
 use plot_util::Plots;
 use serde::{Deserialize, Serialize};
@@ -7,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
+
+use crate::app::supported_logs::SupportedLog;
 mod axis_config;
 mod plot_graphics;
 mod plot_settings;
@@ -56,7 +57,7 @@ impl LogPlotUi {
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
-        logs: &[Box<dyn Plotable>],
+        logs: &[SupportedLog],
         _toasts: &mut Toasts,
     ) -> Response {
         let Self {
@@ -82,7 +83,7 @@ impl LogPlotUi {
         plot_ui::show_settings_grid(ui, line_width, axis_config, plot_settings);
 
         for log in logs {
-            util::add_plot_data_to_plot_collections(plots, log.as_ref(), plot_settings);
+            util::add_plot_data_to_plot_collections(plots, log, plot_settings);
         }
 
         plot_settings.refresh(plots);

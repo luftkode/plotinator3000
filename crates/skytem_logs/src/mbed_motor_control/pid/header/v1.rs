@@ -125,8 +125,8 @@ impl MbedMotorControlLogHeader for PidLogHeaderV1 {
         &self.startup_timestamp
     }
 
-    /// Deserialize a header for a `reader` that implements [Read]
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+    /// Deserialize a header for a `reader` that implements [`io::Read`]
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
         Self::build_from_reader(reader)
     }
 
@@ -134,7 +134,7 @@ impl MbedMotorControlLogHeader for PidLogHeaderV1 {
         reader: &mut impl io::Read,
         unique_description: UniqueDescriptionData,
         version: u16,
-    ) -> io::Result<Self> {
+    ) -> io::Result<(Self, usize)> {
         Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
     }
 }
@@ -168,15 +168,20 @@ mod tests {
     const TEST_DATA: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
 
+    use io::Read;
     use testresult::TestResult;
 
     use super::*;
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let data = fs::read(TEST_DATA)?;
-        let pid_log_header = PidLogHeaderV1::from_reader(&mut data.as_slice())?;
+        let mut file = fs::File::open(TEST_DATA)?;
+        let mut buffer = vec![0; 500];
+        file.read_exact(&mut buffer)?;
+
+        let (pid_log_header, bytes_read) = PidLogHeaderV1::from_reader(&mut buffer.as_slice())?;
         eprintln!("{pid_log_header}");
+        assert_eq!(bytes_read, 261);
         assert_eq!(
             pid_log_header.unique_description(),
             crate::mbed_motor_control::pid::UNIQUE_DESCRIPTION

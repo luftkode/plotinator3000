@@ -29,34 +29,55 @@ impl fmt::Display for PidLogHeader {
 }
 
 impl PidLogHeader {
-    pub(super) fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+    pub(super) fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+        let mut total_bytes_read = 0;
+
+        // Read unique description
         let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
         reader.read_exact(&mut unique_description)?;
+        total_bytes_read += SIZEOF_UNIQ_DESC;
+
+        // Validate unique description
         if parse_unique_description(&unique_description) != super::UNIQUE_DESCRIPTION {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "Not an Mbed PidLog",
             ));
         }
+
+        // Read version
         let version = reader.read_u16::<LittleEndian>()?;
+        total_bytes_read += std::mem::size_of::<u16>();
+
+        // Match the version and read the appropriate header
         let header = match version {
-            1 => Self::V1(PidLogHeaderV1::from_reader_with_uniq_descr_version(
-                reader,
-                unique_description,
-                version,
-            )?),
-            2 => Self::V2(PidLogHeaderV2::from_reader_with_uniq_descr_version(
-                reader,
-                unique_description,
-                version,
-            )?),
+            1 => {
+                let (header, bytes_read) = PidLogHeaderV1::from_reader_with_uniq_descr_version(
+                    reader,
+                    unique_description,
+                    version,
+                )?;
+                total_bytes_read += bytes_read;
+                Self::V1(header)
+            }
+            2 => {
+                let (header, bytes_read) = PidLogHeaderV2::from_reader_with_uniq_descr_version(
+                    reader,
+                    unique_description,
+                    version,
+                )?;
+                total_bytes_read += bytes_read;
+                Self::V2(header)
+            }
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     "Unsupported version",
-                ))
+                ));
             }
         };
-        Ok(header)
+
+        // Return the header and the total number of bytes read
+        Ok((header, total_bytes_read))
     }
 }
