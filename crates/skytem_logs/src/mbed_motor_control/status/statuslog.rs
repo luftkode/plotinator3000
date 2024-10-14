@@ -295,7 +295,7 @@ mod tests {
     const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20240822_085220/status_20240822_085220_00.bin";
+        "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
 
     use crate::{mbed_motor_control::status::entry::MotorState, parse_and_display_log_entries};
 

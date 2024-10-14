@@ -180,7 +180,7 @@ mod tests {
     use std::fs;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/v2/20240822_085220/pid_20240822_085220_00.bin";
+        "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
 
     use testresult::TestResult;
 

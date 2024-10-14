@@ -178,7 +178,7 @@ mod tests {
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/v2/20240822_085220/status_20240822_085220_00.bin";
+        "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {

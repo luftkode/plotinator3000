@@ -251,7 +251,7 @@ mod tests {
     const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20240822_085220/pid_20240822_085220_00.bin";
+        "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
