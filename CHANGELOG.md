@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.22.0]
+
+### Changed
+
+- Plots retain the color they originally were assigned, no matter if logs are toggled to be invisible or a plot filter is hiding some plots.
+- Min/max downsampled plots now have the same color
+
 ### Internals
 
 - Refactor to reduce a bunch of duplication and tech debt

@@ -1,5 +1,5 @@
 use log_if::prelude::*;
-use plot_util::{PlotValues, Plots, StoredPlotLabels};
+use plot_util::{Plots, StoredPlotLabels};
 
 use super::plot_settings::{date_settings::LoadedLogSettings, PlotSettings};
 
@@ -20,13 +20,19 @@ pub fn add_plot_data_to_plot_collections(
     for raw_plot in log.raw_plots() {
         match raw_plot.expected_range() {
             ExpectedPlotRange::Percentage => {
-                add_plot_to_vector(plots.percentage_mut().plots_as_mut(), raw_plot, log_id);
+                plots
+                    .percentage_mut()
+                    .add_plot_if_not_exists(raw_plot, log_id);
             }
             ExpectedPlotRange::OneToOneHundred => {
-                add_plot_to_vector(plots.one_to_hundred_mut().plots_as_mut(), raw_plot, log_id);
+                plots
+                    .one_to_hundred_mut()
+                    .add_plot_if_not_exists(raw_plot, log_id);
             }
             ExpectedPlotRange::Thousands => {
-                add_plot_to_vector(plots.thousands_mut().plots_as_mut(), raw_plot, log_id);
+                plots
+                    .thousands_mut()
+                    .add_plot_if_not_exists(raw_plot, log_id);
             }
         }
         plot_settings.add_plot_name_if_not_exists(raw_plot.name());
@@ -49,17 +55,5 @@ pub fn add_plot_data_to_plot_collections(
                     .add_plot_labels(StoredPlotLabels::new(owned_label_points, log_id)),
             }
         }
-    }
-}
-
-/// Add plot to the list of plots if a plot with the same name isn't already in the vector
-fn add_plot_to_vector(plots: &mut Vec<PlotValues>, raw_plot: &RawPlot, log_id: usize) {
-    let plot_label = format!("#{id} {name}", id = log_id, name = raw_plot.name());
-    if !plots.iter().any(|p| plot_label == p.label()) {
-        plots.push(PlotValues::new(
-            raw_plot.points().to_vec(),
-            raw_plot.name().to_owned(),
-            log_id,
-        ));
     }
 }

@@ -1,5 +1,6 @@
 pub mod mipmap;
 
+use egui::Color32;
 use egui_plot::{Line, PlotBounds, PlotPoint, PlotPoints};
 use log_if::prelude::*;
 
@@ -80,6 +81,7 @@ pub fn plot_lines(
                     plot_vals.label(),
                     (plot_points_min, plot_points_max),
                     line_width,
+                    plot_vals.get_color(),
                 );
             }
         }
@@ -123,14 +125,15 @@ fn plot_min_max_lines(
     base_label: &str,
     (points_min, points_max): (Vec<[f64; 2]>, Vec<[f64; 2]>),
     line_width: f32,
+    color: Color32,
 ) {
     let mut label_min = base_label.to_owned();
     label_min.push_str(" (min)");
     let mut label_max = base_label.to_owned();
     label_max.push_str(" (max)");
 
-    let line_min = Line::new(points_min).name(label_min);
-    let line_max = Line::new(points_max).name(label_max);
+    let line_min = Line::new(points_min).name(label_min).color(color);
+    let line_max = Line::new(points_max).name(label_max).color(color);
 
     plot_ui.line(line_min.width(line_width));
     plot_ui.line(line_max.width(line_width));
@@ -154,7 +157,9 @@ pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_fil
 fn plot_raw(plot_ui: &mut egui_plot::PlotUi, plot_vals: &PlotValues, x_min_max_ext: (f64, f64)) {
     let plot_points = plot_vals.get_raw();
     let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
-    let line = Line::new(filtered_points).name(plot_vals.label());
+    let line = Line::new(filtered_points)
+        .name(plot_vals.label())
+        .color(plot_vals.get_color());
     plot_ui.line(line);
 }
 
