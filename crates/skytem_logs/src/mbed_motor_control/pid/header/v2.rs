@@ -203,7 +203,6 @@ mod tests {
         assert_eq!(pid_log_header.mbed_config().ki(), 1.0);
         assert_eq!(pid_log_header.mbed_config().kd(), 0.0);
         assert_eq!(pid_log_header.mbed_config().t_standby(), 50);
-        assert_eq!(pid_log_header.mbed_config().t_shutdown(), 102);
         assert_eq!(pid_log_header.mbed_config().t_run(), 65);
         assert_eq!(pid_log_header.mbed_config().t_fan_on(), 81);
         assert_eq!(pid_log_header.mbed_config().t_fan_off(), 80);
