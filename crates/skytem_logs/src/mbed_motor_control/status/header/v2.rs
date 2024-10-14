@@ -178,7 +178,7 @@ mod tests {
     use testresult::TestResult;
 
     const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/v2/20240822_085220/status_20240822_085220_00.bin";
+        "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {
@@ -190,17 +190,13 @@ mod tests {
             crate::mbed_motor_control::status::UNIQUE_DESCRIPTION
         );
         assert_eq!(status_log_header.version, 2);
-        assert_eq!(status_log_header.project_version().unwrap(), "2.0.2");
-        assert_eq!(
-            status_log_header.git_branch().unwrap(),
-            "config-in-log-header"
-        );
-        assert_eq!(status_log_header.git_short_sha().unwrap(), "e5ebf4f");
+        assert_eq!(status_log_header.project_version().unwrap(), "2.3.2");
+        assert_eq!(status_log_header.git_branch(), None);
+        assert_eq!(status_log_header.git_short_sha(), None);
         assert_eq!(status_log_header.mbed_config().kp(), 3.0);
         assert_eq!(status_log_header.mbed_config().ki(), 1.0);
         assert_eq!(status_log_header.mbed_config().kd(), 0.0);
         assert_eq!(status_log_header.mbed_config().t_standby(), 50);
-        assert_eq!(status_log_header.mbed_config().t_shutdown(), 102);
         assert_eq!(status_log_header.mbed_config().t_run(), 65);
         assert_eq!(status_log_header.mbed_config().t_fan_on(), 81);
         assert_eq!(status_log_header.mbed_config().t_fan_off(), 80);
@@ -209,8 +205,8 @@ mod tests {
         assert_eq!(status_log_header.mbed_config().time_shutdown(), 60);
         assert_eq!(status_log_header.mbed_config().time_wait_for_cap(), 300);
         assert_eq!(status_log_header.mbed_config().vbat_ready(), 12.8);
-        assert_eq!(status_log_header.mbed_config().servo_max(), 1500);
-        assert_eq!(status_log_header.mbed_config().servo_min(), 900);
+        assert_eq!(status_log_header.mbed_config().servo_max(), 1583);
+        assert_eq!(status_log_header.mbed_config().servo_min(), 765);
 
         eprintln!("{:?}", status_log_header.mbed_config().field_value_pairs());
         Ok(())

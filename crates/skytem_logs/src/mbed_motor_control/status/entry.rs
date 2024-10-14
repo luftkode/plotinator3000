@@ -2,12 +2,11 @@ use std::{fmt, io};
 
 use crate::{util::parse_timestamp, LogEntry};
 use byteorder::{LittleEndian, ReadBytesExt};
+use serde::{Deserialize, Serialize};
 use strum_macros::{Display, FromRepr};
 
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize, FromRepr, Display,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, FromRepr, Display)]
 pub enum MotorState {
     POWER_HOLD = 0,
     ECU_ON_WAIT_PUMP,
@@ -21,9 +20,10 @@ pub enum MotorState {
     RUNNING,
     WAIT_TIME_SHUTDOWN,
     INVALID_STATE,
+    GOTO_RUN_WHEN_T_RUN,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct StatusLogEntry {
     timestamp_ms_str: String,
     pub timestamp_ms: u32,

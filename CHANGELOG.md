@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Remove unused `T_SHUTDOWN` config value that was not supposed to be in mbed log v2.
+
 ## [0.22.0]
 
 ### Changed

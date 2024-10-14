@@ -295,7 +295,7 @@ mod tests {
     const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20240822_085220/status_20240822_085220_00.bin";
+        "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
 
     use crate::{mbed_motor_control::status::entry::MotorState, parse_and_display_log_entries};
 
@@ -346,25 +346,25 @@ mod tests {
         eprintln!("{}", status_log.header);
 
         let first_entry = status_log.entries().first().expect("Empty entries vec");
-        assert_eq!(first_entry.engine_temp, 4.770642);
+        assert_eq!(first_entry.engine_temp, 4.8440366);
         assert!(!first_entry.fan_on);
-        assert_eq!(first_entry.vbat, 4.730086);
+        assert_eq!(first_entry.vbat, 11.928035);
         assert_eq!(first_entry.setpoint, 2500.0);
         assert_eq!(first_entry.motor_state, MotorState::POWER_HOLD);
         let second_entry = &status_log.entries[1];
-        assert_eq!(second_entry.engine_temp, 4.770642);
+        assert_eq!(second_entry.engine_temp, 4.8623853);
         assert!(!second_entry.fan_on);
-        assert_eq!(second_entry.vbat, 4.75265);
+        assert_eq!(second_entry.vbat, 11.943078);
         assert_eq!(second_entry.setpoint, 2500.0);
         assert_eq!(second_entry.motor_state, MotorState::POWER_HOLD);
 
         let last_entry = status_log.entries().last().expect("Empty entries vec");
-        assert_eq!(last_entry.timestamp_ns(), 14846000000.0);
-        assert_eq!(last_entry.engine_temp, 4.770642);
+        assert_eq!(last_entry.timestamp_ns(), 687042000000.0);
+        assert_eq!(last_entry.engine_temp, 76.5566);
         assert!(!last_entry.fan_on);
-        assert_eq!(last_entry.vbat, 4.7075214);
-        assert_eq!(last_entry.setpoint, 2500.0);
-        assert_eq!(last_entry.motor_state, MotorState::POWER_HOLD);
+        assert_eq!(last_entry.vbat, 13.868547);
+        assert_eq!(last_entry.setpoint, 3600.0);
+        assert_eq!(last_entry.motor_state, MotorState::STANDBY_READY);
         //eprintln!("{status_log}");
         Ok(())
     }

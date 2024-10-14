@@ -251,7 +251,7 @@ mod tests {
     const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20240822_085220/pid_20240822_085220_00.bin";
+        "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
@@ -293,14 +293,14 @@ mod tests {
         let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.0);
-        assert_eq!(first_entry.servo_duty_cycle, 0.045);
+        assert_eq!(first_entry.servo_duty_cycle, 0.03825);
         assert_eq!(first_entry.rpm_error_count, 0);
         assert_eq!(first_entry.first_valid_rpm_count, 0);
 
         let second_entry = &pidlog.entries[1];
         assert_eq!(second_entry.rpm, 0.0);
         assert_eq!(second_entry.pid_output, 0.0);
-        assert_eq!(second_entry.servo_duty_cycle, 0.045);
+        assert_eq!(second_entry.servo_duty_cycle, 0.03825);
         assert_eq!(second_entry.rpm_error_count, 0);
         assert_eq!(second_entry.first_valid_rpm_count, 0);
         //eprintln!("{pidlog}");

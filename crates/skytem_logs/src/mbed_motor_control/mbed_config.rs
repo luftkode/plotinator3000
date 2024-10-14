@@ -16,8 +16,6 @@ pub struct MbedConfig {
     #[getset(get_copy = "pub")]
     t_standby: u8,
     #[getset(get_copy = "pub")]
-    t_shutdown: u8,
-    #[getset(get_copy = "pub")]
     t_run: u8,
     #[getset(get_copy = "pub")]
     t_fan_on: u8,
@@ -63,7 +61,6 @@ impl MbedConfig {
         let ki = reader.read_f32::<LittleEndian>()?;
         let kd = reader.read_f32::<LittleEndian>()?;
         let t_standby = reader.read_u8()?;
-        let t_shutdown = reader.read_u8()?;
         let t_run = reader.read_u8()?;
         let t_fan_on = reader.read_u8()?;
         let t_fan_off = reader.read_u8()?;
@@ -79,7 +76,6 @@ impl MbedConfig {
             ki,
             kd,
             t_standby,
-            t_shutdown,
             t_run,
             t_fan_on,
             t_fan_off,
@@ -99,7 +95,6 @@ impl MbedConfig {
             ("Ki".to_owned(), self.ki().to_string()),
             ("Kd".to_owned(), self.kd().to_string()),
             ("T_STANDBY".to_owned(), self.t_standby.to_string()),
-            ("T_SHUTDOWN".to_owned(), self.t_shutdown.to_string()),
             ("T_RUN".to_owned(), self.t_run.to_string()),
             ("T_FAN_On".to_owned(), self.t_fan_on.to_string()),
             ("T_FAN_Off".to_owned(), self.t_fan_off.to_string()),
