@@ -3,7 +3,6 @@ use plot_util::{PlotData, Plots};
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, PlotType};
 
-#[allow(clippy::too_many_arguments)]
 pub fn paint_plots(
     ui: &mut egui::Ui,
     plots: &mut Plots,
@@ -73,7 +72,6 @@ pub fn paint_plots(
     );
 }
 
-#[allow(clippy::too_many_arguments)]
 /// Iterate and fill/paint all plots with plot data
 fn fill_plots(
     gui: &mut egui::Ui,
@@ -95,7 +93,6 @@ fn fill_plots(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 /// Iterate and fill/paint a plot with plot data
 fn fill_plot(
     plot_ui: &mut egui_plot::PlotUi,
