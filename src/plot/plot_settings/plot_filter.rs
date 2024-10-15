@@ -10,7 +10,7 @@ pub struct PlotNameFilter {
 impl PlotNameFilter {
     pub fn add_plot(&mut self, plot_name_show: PlotNameShow) {
         self.plots.push(plot_name_show);
-        // sort in alpabetical order
+        // sort in alphabetical order
         self.plots.sort_unstable_by(|a, b| a.name().cmp(b.name()));
     }
 
