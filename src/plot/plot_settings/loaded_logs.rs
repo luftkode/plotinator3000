@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use egui::{Color32, Key, RichText, TextEdit};
 use egui_phosphor::regular;
 
-use crate::app::WARN_ON_UNPARSED_BYTES_THRESHOLD;
+use crate::{app::WARN_ON_UNPARSED_BYTES_THRESHOLD, util::format_data_size};
 
 use super::date_settings::LoadedLogSettings;
 
@@ -51,18 +51,21 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name
             ui.horizontal_wrapped(|ui| {
                 let parse_info = settings.parse_info();
                 let parse_info_str = format!(
-                    "Parsed {parsed}/{total} bytes",
-                    parsed = settings.parse_info().parsed_bytes(),
-                    total = settings.parse_info().total_bytes(),
+                    "Parsed {parsed}/{total}",
+                    parsed = format_data_size(settings.parse_info().parsed_bytes()),
+                    total = format_data_size(settings.parse_info().total_bytes()),
                 );
-                let unparsed_text =
-                    format!("({} unparsed)", settings.parse_info().remainder_bytes());
+                let unparsed_text = format!(
+                    "({} unparsed)",
+                    format_data_size(settings.parse_info().remainder_bytes())
+                );
                 if parse_info.remainder_bytes() > WARN_ON_UNPARSED_BYTES_THRESHOLD {
                     ui.label(RichText::new("⚠").color(Color32::YELLOW));
                     ui.label(parse_info_str);
                     ui.label(RichText::new(unparsed_text).color(Color32::YELLOW));
                 } else {
                     ui.label(parse_info_str);
+                    ui.label(RichText::new(unparsed_text));
                 }
             });
             if let Some(log_metadata) = settings.log_metadata() {

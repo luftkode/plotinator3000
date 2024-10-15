@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::plot::LogPlotUi;
+use crate::{plot::LogPlotUi, util::format_data_size};
 use egui::{Color32, DroppedFile, Hyperlink, RichText, TextStyle};
 use egui_notify::Toasts;
 use log_if::prelude::Plotable;
@@ -10,7 +10,9 @@ mod preview_dropped;
 pub mod supported_logs;
 mod util;
 
-/// Show a toasts warning notification if a log has more than this many unparsed bytes
+/// if a log is loaded from content that exceeds this many unparsed bytes:
+/// - Show a toasts warning notification
+/// - Show warnings in the UI when viewing parse info for the loaded log
 pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -264,13 +266,15 @@ fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedLog]) {
                 log_name = l.descriptive_name()
             );
             if parse_info.remainder_bytes() > WARN_ON_UNPARSED_BYTES_THRESHOLD {
-                toasts.warning(format!(
-                    "Could only parse {parsed}/{total} bytes for {log_name}\n{remainder} bytes remain unparsed",
-                    parsed = parse_info.parsed_bytes(),
-                    total = parse_info.total_bytes(),
+                toasts
+                    .warning(format!(
+                    "Could only parse {parsed}/{total} for {log_name}\n{remainder} remain unparsed",
+                    parsed = format_data_size(parse_info.parsed_bytes()),
+                    total = format_data_size(parse_info.total_bytes()),
                     log_name = l.descriptive_name(),
-                    remainder = parse_info.remainder_bytes()
-                ));
+                    remainder = format_data_size(parse_info.remainder_bytes())
+                ))
+                    .duration(Some(Duration::from_secs(30)));
             }
         }
     }
