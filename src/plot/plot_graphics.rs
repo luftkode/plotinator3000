@@ -3,6 +3,17 @@ use plot_util::{PlotData, Plots};
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, PlotType};
 
+/// Paints multiple plots based on the provided settings and configurations.
+///
+/// # Arguments
+///
+/// * `ui` - The egui UI to paint on.
+/// * `plots` - The [`Plots`] struct containing plot data.
+/// * `plot_settings` - Controls plot display.
+/// * `legend_cfg` - Legend configuration.
+/// * `axis_cfg` - For axis customization.
+/// * `link_group` - An [`egui::Id`] for linking plots.
+/// * `line_width` - The width of plot lines.
 pub fn paint_plots(
     ui: &mut egui::Ui,
     plots: &mut Plots,
@@ -72,7 +83,15 @@ pub fn paint_plots(
     );
 }
 
-/// Iterate and fill/paint all plots with plot data
+/// Iterates through and fills/paints all plots with their respective data.
+///
+/// # Arguments
+///
+/// * `gui` - The egui UI to paint on.
+/// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`PlotType`].
+/// * `axis_config` - For axis customization.
+/// * `line_width` - The width of plot lines.
+/// * `plot_settings` - Controls which plots to display.
 fn fill_plots(
     gui: &mut egui::Ui,
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
@@ -93,7 +112,15 @@ fn fill_plots(
     }
 }
 
-/// Iterate and fill/paint a plot with plot data
+/// Fills and paints a single plot with its data.
+///
+/// # Arguments
+///
+/// * `plot_ui` - The plot UI to paint on.
+/// * `plot` - A tuple containing [`PlotData`] and [`PlotType`].
+/// * `axis_config` - For axis customization.
+/// * `line_width` - The width of plot lines.
+/// * `plot_settings` - Controls which plots to display.
 fn fill_plot(
     plot_ui: &mut egui_plot::PlotUi,
     plot: (&mut PlotData, PlotType),
@@ -116,6 +143,20 @@ fn fill_plot(
     axis_config.handle_y_axis_lock(plot_ui, plot_type, |_| {});
 }
 
+/// Builds and configures a Plot UI (layout) with the specified settings.
+///
+/// # Arguments
+///
+/// * `name` - The name of the plot.
+/// * `plot_height` - The height of the plot.
+/// * `legend_cfg` - The legend configuration.
+/// * `axis_config` - For axis customization.
+/// * `x_axes` - A vector of [`AxisHints`] for x-axis configuration.
+/// * `link_group` - An [`egui::Id`] for linking plots.
+///
+/// # Returns
+///
+/// A configured [`Plot`] instance.
 fn build_plot_ui<'a>(
     name: &str,
     plot_height: f32,
