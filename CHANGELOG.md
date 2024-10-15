@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.23.0]
+
 ### Added
 
 - A warning notification is now shown if a log was parsed from contents where more than 128 bytes of the content was not recognized as log content (and therefor skipped)
@@ -16,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Plot labels are now sorted alphabetically
 - Remove unused `T_SHUTDOWN` config value that was not supposed to be in mbed log v2.
+- Avoid downsampling all the way to 2 samples by setting a minimum downsample threshold (set to 512 samples)
+- Avoid storing redundant copies of source plot data when creating multiple mipmaps from the same source.
 
 ### Internals
 
