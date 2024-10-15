@@ -26,7 +26,8 @@ where
 /// An instance of a `MipMap` configuration for a given frame
 #[derive(Debug, Clone, Copy)]
 pub enum MipMapConfiguration {
-    Enabled(Option<usize>),
+    Manual(usize),
+    Auto,
     Disabled,
 }
 
@@ -41,43 +42,67 @@ pub fn plot_lines<'pv>(
     for plot_vals in plots {
         match mipmap_cfg {
             MipMapConfiguration::Disabled => plot_raw(plot_ui, plot_vals, (x_lower, x_higher)),
-            MipMapConfiguration::Enabled(level_option) => {
-                let (level, idx_range) = match level_option {
-                    Some(lvl) => (lvl, None),
-                    None => plot_vals.get_scaled_mipmap_levels(
-                        plots_width_pixels,
-                        (x_lower as usize, x_higher as usize),
-                    ),
-                };
+            MipMapConfiguration::Auto => {
+                let (level, idx_range) = plot_vals.get_scaled_mipmap_levels(
+                    plots_width_pixels,
+                    (x_lower as usize, x_higher as usize),
+                );
 
-                if level == 0 {
-                    plot_raw(plot_ui, plot_vals, (x_lower, x_higher));
-                    continue;
-                }
-
-                let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(level);
-                if plot_points_min.is_empty() {
-                    continue;
-                }
-
-                let (plot_points_min, plot_points_max) = match idx_range {
-                    Some((start, end)) => {
-                        extract_range_points(plot_points_min, plot_points_max, start, end)
-                    }
-                    None => (
-                        filter_plot_points(plot_points_min, (x_lower, x_higher)),
-                        filter_plot_points(plot_points_max, (x_lower, x_higher)),
-                    ),
-                };
-
-                plot_min_max_lines(
+                plot_with_mipmapping(
                     plot_ui,
-                    plot_vals.label(),
-                    (plot_points_min, plot_points_max),
+                    plot_vals,
                     line_width,
-                    plot_vals.get_color(),
+                    level,
+                    (x_lower, x_higher),
+                    idx_range,
                 );
             }
+            MipMapConfiguration::Manual(level) => {
+                plot_with_mipmapping(
+                    plot_ui,
+                    plot_vals,
+                    line_width,
+                    level,
+                    (x_lower, x_higher),
+                    None,
+                );
+            }
+        }
+    }
+}
+
+fn plot_with_mipmapping(
+    plot_ui: &mut egui_plot::PlotUi,
+    plot_vals: &PlotValues,
+    line_width: f32,
+    mipmap_lvl: usize,
+    x_range: (f64, f64),
+    // if the range is already known then we can skip filtering
+    known_idx_range: Option<(usize, usize)>,
+) {
+    let (x_lower, x_higher) = x_range;
+    if mipmap_lvl == 0 {
+        plot_raw(plot_ui, plot_vals, (x_lower, x_higher));
+    } else {
+        let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(mipmap_lvl);
+        if !plot_points_min.is_empty() {
+            let (plot_points_min, plot_points_max) = match known_idx_range {
+                Some((start, end)) => {
+                    extract_range_points(plot_points_min, plot_points_max, start, end)
+                }
+                None => (
+                    filter_plot_points(plot_points_min, (x_lower, x_higher)),
+                    filter_plot_points(plot_points_max, (x_lower, x_higher)),
+                ),
+            };
+
+            plot_min_max_lines(
+                plot_ui,
+                plot_vals.label(),
+                (plot_points_min, plot_points_max),
+                line_width,
+                plot_vals.get_color(),
+            );
         }
     }
 }

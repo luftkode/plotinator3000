@@ -1,5 +1,6 @@
 use egui::{Response, RichText};
 use egui_phosphor::regular;
+use plot_util::MipMapConfiguration;
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
@@ -51,13 +52,13 @@ impl MipMapSettings {
     /// Return the current configuration as a [`plot_util::MipMapSetting`].
     pub fn configuration(&self) -> plot_util::MipMapConfiguration {
         if self.enabled {
-            plot_util::MipMapConfiguration::Enabled(if self.auto_set {
-                None
+            if self.auto_set {
+                MipMapConfiguration::Auto
             } else {
-                Some(self.level)
-            })
+                MipMapConfiguration::Manual(self.level)
+            }
         } else {
-            plot_util::MipMapConfiguration::Disabled
+            MipMapConfiguration::Disabled
         }
     }
 }
