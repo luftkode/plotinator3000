@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Plot labels are now sorted alphabetically
 - Remove unused `T_SHUTDOWN` config value that was not supposed to be in mbed log v2.
 
+### Internals
+
+- Refactor to simplify mipmap configuration
+
 ## [0.22.0]
 
 ### Changed
