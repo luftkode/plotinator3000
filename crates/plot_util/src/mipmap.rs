@@ -114,7 +114,7 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
         // Include an empty vector at level 0 to make the levels align with what they normally would.
         let mut data = vec![Vec::<[T; 2]>::default()];
 
-        let mut current = Self::downsample(&source, strategy);
+        let mut current = Self::downsample(source, strategy);
         if current.len() > min_elements {
             data.push(current.clone());
             while current.len() > min_elements {
