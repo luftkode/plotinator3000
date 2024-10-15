@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- A warning notification is now shown if a log was parsed from contents where more than 128 bytes of the content was not recognized as log content (and therefor skipped)
+- When viewing log info, the first line shows parse info, how many bytes were parsed out of the total length of the file.
+
 ### Changed
 
 - Remove unused `T_SHUTDOWN` config value that was not supposed to be in mbed log v2.
