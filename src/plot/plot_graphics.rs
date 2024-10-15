@@ -1,5 +1,5 @@
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
-use plot_util::{MipMapConfiguration, PlotData, Plots};
+use plot_util::{PlotData, Plots};
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, PlotType};
 
@@ -69,9 +69,7 @@ pub fn paint_plots(
         plot_components_list,
         axis_cfg,
         line_width,
-        &plot_settings.plot_name_filter(),
-        &plot_settings.log_id_filter(),
-        plot_settings.mipmap_cfg(),
+        plot_settings,
     );
 }
 
@@ -82,9 +80,7 @@ fn fill_plots(
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
     axis_config: &mut AxisConfig,
     line_width: f32,
-    plot_name_filter: &[&str],
-    plot_id_filter: &[usize],
-    mipmap_cfg: MipMapConfiguration,
+    plot_settings: &PlotSettings,
 ) {
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
@@ -93,9 +89,7 @@ fn fill_plots(
                 (plot, ptype),
                 axis_config,
                 line_width,
-                plot_name_filter,
-                plot_id_filter,
-                mipmap_cfg,
+                plot_settings,
             );
         });
     }
@@ -108,23 +102,19 @@ fn fill_plot(
     plot: (&mut PlotData, PlotType),
     axis_config: &mut AxisConfig,
     line_width: f32,
-    name_filter: &[&str],
-    id_filter: &[usize],
-    mipmap_cfg: MipMapConfiguration,
+    plot_settings: &PlotSettings,
 ) {
     let (plot_data, plot_type) = plot;
 
     plot_util::plot_lines(
         plot_ui,
-        plot_data.plots_as_mut(),
-        name_filter,
-        id_filter,
+        plot_settings.apply_filters(plot_data.plots()),
         line_width,
-        mipmap_cfg,
+        plot_settings.mipmap_cfg(),
         plot_ui.ctx().used_size().x as usize,
     );
 
-    plot_util::plot_labels(plot_ui, plot_data, id_filter);
+    plot_util::plot_labels(plot_ui, plot_data, &plot_settings.log_id_filter());
 
     axis_config.handle_y_axis_lock(plot_ui, plot_type, |_| {});
 }

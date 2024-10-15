@@ -30,21 +30,15 @@ pub enum MipMapConfiguration {
     Disabled,
 }
 
-pub fn plot_lines(
+pub fn plot_lines<'pv>(
     plot_ui: &mut egui_plot::PlotUi,
-    plots: &mut [PlotValues],
-    name_filter: &[&str],
-    id_filter: &[usize],
+    plots: impl Iterator<Item = &'pv PlotValues>,
     line_width: f32,
     mipmap_cfg: MipMapConfiguration,
     plots_width_pixels: usize,
 ) {
     let (x_lower, x_higher) = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
-    for plot_vals in plots
-        .iter_mut()
-        .filter(|p| !name_filter.contains(&p.name()) && !id_filter.contains(&p.log_id()))
-    {
-        // TODO: Make some kind of rotating color scheme such that min/max plots look kind of similar but that a lot of different colors are still used
+    for plot_vals in plots {
         match mipmap_cfg {
             MipMapConfiguration::Disabled => plot_raw(plot_ui, plot_vals, (x_lower, x_higher)),
             MipMapConfiguration::Enabled(level_option) => {
