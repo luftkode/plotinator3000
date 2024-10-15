@@ -142,7 +142,7 @@ impl PlotValues {
     }
 
     pub fn get_scaled_mipmap_levels(
-        &mut self,
+        &self,
         pixel_width: usize,
         x_bounds: (usize, usize),
     ) -> (usize, Option<(usize, usize)>) {
