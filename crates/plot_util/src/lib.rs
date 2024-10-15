@@ -60,7 +60,7 @@ pub fn plot_lines<'pv>(
             MipMapConfiguration::Manual(level) => {
                 plot_with_mipmapping(
                     plot_ui,
-                    &plot_vals,
+                    plot_vals,
                     line_width,
                     level,
                     (x_lower, x_higher),
