@@ -86,11 +86,22 @@ pub struct PlotValues {
 type PointList<'pl> = &'pl [[f64; 2]];
 
 impl PlotValues {
+    // Don't mipmap/downsample to more than this amount of elements
+    const MIPMAP_MIN_ELEMENTS: usize = 512;
+
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: usize) -> Self {
         let label = format!("{name} #{log_id}");
         Self {
-            mipmap_max: MipMap2D::new(raw_plot.clone(), MipMapStrategy::Max),
-            mipmap_min: MipMap2D::new(raw_plot.clone(), MipMapStrategy::Min),
+            mipmap_max: MipMap2D::without_base(
+                &raw_plot,
+                MipMapStrategy::Max,
+                Self::MIPMAP_MIN_ELEMENTS,
+            ),
+            mipmap_min: MipMap2D::without_base(
+                &raw_plot,
+                MipMapStrategy::Min,
+                Self::MIPMAP_MIN_ELEMENTS,
+            ),
             raw_plot,
             name,
             log_id,
@@ -156,8 +167,16 @@ impl PlotValues {
     }
 
     fn recalc_mipmaps(&mut self) {
-        self.mipmap_min = MipMap2D::new(self.raw_plot.clone(), MipMapStrategy::Min);
-        self.mipmap_max = MipMap2D::new(self.raw_plot.clone(), MipMapStrategy::Max);
+        self.mipmap_min = MipMap2D::without_base(
+            &self.raw_plot,
+            MipMapStrategy::Min,
+            Self::MIPMAP_MIN_ELEMENTS,
+        );
+        self.mipmap_max = MipMap2D::without_base(
+            &self.raw_plot,
+            MipMapStrategy::Max,
+            Self::MIPMAP_MIN_ELEMENTS,
+        );
     }
 
     /// Returns a borrowed list of all plot points

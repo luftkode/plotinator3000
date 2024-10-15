@@ -85,7 +85,10 @@ fn plot_with_mipmapping(
         plot_raw(plot_ui, plot_vals, (x_lower, x_higher));
     } else {
         let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(mipmap_lvl);
-        if !plot_points_min.is_empty() {
+        if plot_points_min.is_empty() {
+            // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
+            plot_raw(plot_ui, plot_vals, (x_lower, x_higher));
+        } else {
             let (plot_points_min, plot_points_max) = match known_idx_range {
                 Some((start, end)) => {
                     extract_range_points(plot_points_min, plot_points_max, start, end)
