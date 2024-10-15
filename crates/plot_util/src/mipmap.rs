@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 /// Adapted from: <https://github.com/nchechulin/mipmap-1d/>
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -84,7 +86,7 @@ impl LevelLookupCached {
 pub struct MipMap2D<T: Num + ToPrimitive + FromPrimitive + PartialOrd> {
     strategy: MipMapStrategy,
     data: Vec<Vec<[T; 2]>>,
-    most_recent_lookup: LevelLookupCached,
+    most_recent_lookup: RefCell<LevelLookupCached>,
 }
 
 impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
@@ -101,7 +103,7 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
         Self {
             data,
             strategy,
-            most_recent_lookup: LevelLookupCached::default(),
+            most_recent_lookup: RefCell::new(LevelLookupCached::default()),
         }
     }
 
@@ -196,14 +198,18 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     /// the match was found in a level below the max resolution, also returns a tuple
     /// of the start and end index of the level that matches the requirement.
     pub fn get_level_match(
-        &mut self,
+        &self,
         pixel_width: usize,
         x_bounds: (usize, usize),
     ) -> (usize, Option<(usize, usize)>) {
-        if self.most_recent_lookup.is_equal(pixel_width, x_bounds) {
+        if self
+            .most_recent_lookup
+            .borrow()
+            .is_equal(pixel_width, x_bounds)
+        {
             return (
-                self.most_recent_lookup.result_idx,
-                Some(self.most_recent_lookup.result_span),
+                self.most_recent_lookup.borrow().result_idx,
+                Some(self.most_recent_lookup.borrow().result_span),
             );
         }
         let target_point_count = pixel_width;
@@ -228,13 +234,13 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
             let count_within_bounds = end_idx.saturating_sub(start_idx);
 
             if count_within_bounds > target_point_count {
-                self.most_recent_lookup = LevelLookupCached {
+                let new_cached = LevelLookupCached {
                     pixel_width,
                     x_bounds,
                     result_span: (start_idx, end_idx),
                     result_idx: lvl_idx,
                 };
-
+                self.most_recent_lookup.replace(new_cached);
                 return (lvl_idx, Some((start_idx, end_idx)));
             }
         }
@@ -363,7 +369,7 @@ mod tests {
         // - [4]: 1
         let source_len = 16;
         let source: Vec<[f64; 2]> = (0..source_len).map(|i| [i as f64, i as f64]).collect();
-        let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
+        let mipmap = MipMap2D::new(source, MipMapStrategy::Min);
 
         for (pixel_width, expected_lvl, expected_range) in [
             (1usize, 3usize, Some((0, 2))),
@@ -391,7 +397,7 @@ mod tests {
         let source: Vec<[f64; 2]> = (0..source_len)
             .map(|i| [(i + UNIX_TS_NS) as f64, (i + UNIX_TS_NS) as f64])
             .collect();
-        let mut mipmap = MipMap2D::new(source, MipMapStrategy::Min);
+        let mipmap = MipMap2D::new(source, MipMapStrategy::Min);
 
         let x_bounds = (UNIX_TS_NS + 300, UNIX_TS_NS + 5000);
 

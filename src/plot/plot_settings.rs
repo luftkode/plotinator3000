@@ -2,13 +2,15 @@ use date_settings::LoadedLogSettings;
 use egui::{Key, Response, RichText};
 use egui_phosphor::regular;
 use mipmap_settings::MipMapSettings;
-use plot_util::{MipMapConfiguration, Plots};
+use plot_filter::{PlotNameFilter, PlotNameShow};
+use plot_util::{MipMapConfiguration, PlotValues, Plots};
 use plot_visibility_config::PlotVisibilityConfig;
 use serde::{Deserialize, Serialize};
 
 pub mod date_settings;
 mod loaded_logs;
 pub mod mipmap_settings;
+mod plot_filter;
 mod plot_visibility_config;
 
 #[derive(PartialEq, Deserialize, Serialize)]
@@ -49,7 +51,7 @@ pub struct PlotSettings {
     display_thousands_plot: bool,
     display_plot_count: u8,
     // Plot names and whether or not they should be shown (painted)
-    plot_names_show: Vec<(String, bool)>,
+    plot_name_filter: PlotNameFilter,
     ps_ui: PlotSettingsUi,
     log_start_date_settings: Vec<LoadedLogSettings>,
     mipmap_settings: MipMapSettings,
@@ -64,35 +66,7 @@ impl PlotSettings {
                 egui::Window::new(self.ps_ui.filter_settings_text())
                     .open(&mut self.ps_ui.show_filter_settings)
                     .show(ui.ctx(), |ui| {
-                        let mut enable_all = false;
-                        let mut disable_all = false;
-                        egui::Grid::new("global_filter_settings").show(ui, |ui| {
-                            if ui
-                                .button(RichText::new("Show all").strong().heading())
-                                .clicked()
-                            {
-                                enable_all = true;
-                            }
-                            if ui
-                                .button(RichText::new("Hide all").strong().heading())
-                                .clicked()
-                            {
-                                disable_all = true;
-                            }
-                        });
-                        if enable_all {
-                            for (_, show) in &mut *self.plot_names_show {
-                                *show = true;
-                            }
-                        } else if disable_all {
-                            for (_, show) in &mut *self.plot_names_show {
-                                *show = false;
-                            }
-                        }
-
-                        for (pname, show) in &mut self.plot_names_show {
-                            ui.toggle_value(show, pname.as_str());
-                        }
+                        self.plot_name_filter.show(ui);
                     });
                 if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
                     self.ps_ui.show_filter_settings = false;
@@ -187,20 +161,26 @@ impl PlotSettings {
     /// # Arguments
     /// - `plot_name` The name of the plot, i.e. the name that appears on the plot legend
     pub fn add_plot_name_if_not_exists(&mut self, plot_name: &str) {
-        if !self
-            .plot_names_show
-            .iter()
-            .any(|(name, _)| name == plot_name)
-        {
-            self.plot_names_show.push((plot_name.to_owned(), true));
+        if !self.plot_name_filter.contains_name(plot_name) {
+            self.plot_name_filter
+                .add_plot(PlotNameShow::new(plot_name.to_owned(), true));
         }
     }
 
-    pub fn plot_name_filter(&self) -> Vec<&str> {
-        self.plot_names_show
-            .iter()
-            .filter_map(|(name, show)| if *show { None } else { Some((*name).as_str()) })
-            .collect()
+    pub fn apply_filters<'pv>(
+        &'pv self,
+        plot_vals: &'pv [PlotValues],
+    ) -> impl Iterator<Item = &'pv PlotValues> {
+        let id_filter = self.log_id_filter();
+        self.plot_name_filter
+            .filter_plot_values(plot_vals, move |id| {
+                for id_inst in &id_filter {
+                    if *id_inst == id {
+                        return false;
+                    }
+                }
+                true
+            })
     }
 
     /// Get the next ID for a log, used for when a new log is loaded and added to the collection of logs and log settings
