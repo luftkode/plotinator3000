@@ -54,9 +54,9 @@ pub fn parse_and_display_log_entries<T: LogEntry>(
     limit: Option<usize>,
 ) {
     let mut entry_count = 0;
-    while let Ok(e) = T::from_reader(reader) {
+    while let Ok((entry, _bytes_read)) = T::from_reader(reader) {
         entry_count += 1;
-        println!("{e}");
+        println!("{entry}");
         if limit.is_some_and(|l| l == entry_count) {
             break;
         }

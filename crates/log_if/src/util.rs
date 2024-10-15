@@ -2,13 +2,29 @@ use crate::prelude::*;
 use std::io;
 
 /// Take a reader and parse [`LogEntry`]s from it until it returns an error,
-/// then return a vector of all [`LogEntry`]s.
-pub fn parse_to_vec<T: LogEntry, R: io::Read>(reader: &mut R) -> Vec<T> {
-    let mut v = Vec::new();
-    while let Ok(e) = T::from_reader(reader) {
-        v.push(e);
+/// then return a vector of all [`LogEntry`]s and the total number of bytes read from the reader.
+pub fn parse_to_vec<T: LogEntry>(reader: &mut impl io::Read) -> (Vec<T>, usize) {
+    let mut entries = Vec::new();
+    let mut total_bytes_read = 0;
+
+    loop {
+        match T::from_reader(reader) {
+            Ok((entry, bytes_read)) => {
+                entries.push(entry);
+                total_bytes_read += bytes_read;
+            }
+            Err(e) => {
+                if e.kind() == io::ErrorKind::UnexpectedEof {
+                    break;
+                } else {
+                    log::warn!("Failed parsing log entry: {e}");
+                    break;
+                }
+            }
+        }
     }
-    v
+
+    (entries, total_bytes_read)
 }
 
 /// Utility function for converting a slice of [`LogEntry`] to plot points by supplying extractor functions

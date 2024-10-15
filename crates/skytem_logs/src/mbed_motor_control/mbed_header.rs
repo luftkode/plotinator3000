@@ -46,49 +46,69 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync
     }
 
     /// Deserialize a header for a `reader` that implements [Read]
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self>;
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)>;
 
     /// Deserialize a header with a reader starting just after the version field.
     fn from_reader_with_uniq_descr_version(
         reader: &mut impl io::Read,
         unique_description: UniqueDescriptionData,
         version: u16,
-    ) -> io::Result<Self>;
+    ) -> io::Result<(Self, usize)>;
 }
 
 /// Helper trait such that Pid and Status log v1 can reuse all this code
 pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
     /// Deserialize a header for a `reader` that implements [Read]
-    fn build_from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+    fn build_from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+        let mut total_bytes_read = 0;
         let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
+        total_bytes_read += SIZEOF_UNIQ_DESC;
         reader.read_exact(&mut unique_description)?;
         let version = reader.read_u16::<LittleEndian>()?;
-        Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
+        total_bytes_read += size_of_val(&version);
+        let (inst, bytes_read) =
+            Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)?;
+        total_bytes_read += bytes_read;
+        Ok((inst, total_bytes_read))
     }
 
     fn build_from_reader_with_uniq_descr_version(
         reader: &mut impl Read,
         unique_description: UniqueDescriptionData,
         version: u16,
-    ) -> io::Result<Self> {
-        let mut project_version: ProjectVersionData = ProjectVersionData::default();
+    ) -> io::Result<(Self, usize)> {
+        let mut total_bytes_read = 0;
+
+        let mut project_version: ProjectVersionData = [0u8; SIZEOF_PROJECT_VERSION];
         reader.read_exact(&mut project_version)?;
-        let mut git_short_sha: GitShortShaData = GitShortShaData::default();
+        total_bytes_read += SIZEOF_PROJECT_VERSION;
+
+        let mut git_short_sha: GitShortShaData = [0u8; SIZEOF_GIT_SHORT_SHA];
         reader.read_exact(&mut git_short_sha)?;
+        total_bytes_read += SIZEOF_GIT_SHORT_SHA;
+
         let mut git_branch: GitBranchData = [0u8; SIZEOF_GIT_BRANCH];
         reader.read_exact(&mut git_branch)?;
-        let mut git_repo_status: GitRepoStatusData = GitRepoStatusData::default();
+        total_bytes_read += SIZEOF_GIT_BRANCH;
+
+        let mut git_repo_status: GitRepoStatusData = [0u8; SIZEOF_GIT_REPO_STATUS];
         reader.read_exact(&mut git_repo_status)?;
-        let mut startup_timestamp: StartupTimestamp = StartupTimestamp::default();
+        total_bytes_read += SIZEOF_GIT_REPO_STATUS;
+
+        let mut startup_timestamp: StartupTimestamp = [0u8; SIZEOF_STARTUP_TIMESTAMP];
         reader.read_exact(&mut startup_timestamp)?;
-        Ok(Self::new(
-            unique_description,
-            version,
-            project_version,
-            git_short_sha,
-            git_branch,
-            git_repo_status,
-            startup_timestamp,
+        total_bytes_read += SIZEOF_STARTUP_TIMESTAMP;
+        Ok((
+            Self::new(
+                unique_description,
+                version,
+                project_version,
+                git_short_sha,
+                git_branch,
+                git_repo_status,
+                startup_timestamp,
+            ),
+            total_bytes_read,
         ))
     }
 
@@ -106,38 +126,61 @@ pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
 /// Helper trait such that Pid and Status log v2 can reuse all this code
 pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
     /// Deserialize a header for a `reader` that implements [Read]
-    fn build_from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+    fn build_from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+        let mut total_bytes_read = 0;
         let mut unique_description: UniqueDescriptionData = [0u8; SIZEOF_UNIQ_DESC];
+        total_bytes_read += SIZEOF_UNIQ_DESC;
         reader.read_exact(&mut unique_description)?;
         let version = reader.read_u16::<LittleEndian>()?;
-        Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)
+        total_bytes_read += size_of_val(&version);
+        let (inst, bytes_read) =
+            Self::build_from_reader_with_uniq_descr_version(reader, unique_description, version)?;
+        total_bytes_read += bytes_read;
+        Ok((inst, total_bytes_read))
     }
 
     fn build_from_reader_with_uniq_descr_version(
         reader: &mut impl Read,
         unique_description: UniqueDescriptionData,
         version: u16,
-    ) -> io::Result<Self> {
-        let mut project_version: ProjectVersionData = ProjectVersionData::default();
+    ) -> io::Result<(Self, usize)> {
+        let mut total_bytes_read = 0;
+
+        let mut project_version: ProjectVersionData = [0u8; SIZEOF_PROJECT_VERSION];
         reader.read_exact(&mut project_version)?;
-        let mut git_short_sha: GitShortShaData = GitShortShaData::default();
+        total_bytes_read += SIZEOF_PROJECT_VERSION;
+
+        let mut git_short_sha: GitShortShaData = [0u8; SIZEOF_GIT_SHORT_SHA];
         reader.read_exact(&mut git_short_sha)?;
+        total_bytes_read += SIZEOF_GIT_SHORT_SHA;
+
         let mut git_branch: GitBranchData = [0u8; SIZEOF_GIT_BRANCH];
         reader.read_exact(&mut git_branch)?;
-        let mut git_repo_status: GitRepoStatusData = GitRepoStatusData::default();
+        total_bytes_read += SIZEOF_GIT_BRANCH;
+
+        let mut git_repo_status: GitRepoStatusData = [0u8; SIZEOF_GIT_REPO_STATUS];
         reader.read_exact(&mut git_repo_status)?;
-        let mut startup_timestamp: StartupTimestamp = StartupTimestamp::default();
+        total_bytes_read += SIZEOF_GIT_REPO_STATUS;
+
+        let mut startup_timestamp: StartupTimestamp = [0u8; SIZEOF_STARTUP_TIMESTAMP];
         reader.read_exact(&mut startup_timestamp)?;
+        total_bytes_read += SIZEOF_STARTUP_TIMESTAMP;
+
         let mbed_config = MbedConfig::from_reader(reader)?;
-        Ok(Self::new(
-            unique_description,
-            version,
-            project_version,
-            git_short_sha,
-            git_branch,
-            git_repo_status,
-            startup_timestamp,
-            mbed_config,
+        total_bytes_read += MbedConfig::size();
+
+        Ok((
+            Self::new(
+                unique_description,
+                version,
+                project_version,
+                git_short_sha,
+                git_branch,
+                git_repo_status,
+                startup_timestamp,
+                mbed_config,
+            ),
+            total_bytes_read,
         ))
     }
 

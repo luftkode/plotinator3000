@@ -50,28 +50,52 @@ impl fmt::Display for StatusLogEntry {
 }
 
 impl LogEntry for StatusLogEntry {
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+        // Start with 0 bytes read
+        let mut total_bytes_read = 0;
+
+        // Read and track the number of bytes read after each operation
         let timestamp_ms = reader.read_u32::<LittleEndian>()?;
+        total_bytes_read += size_of_val(&timestamp_ms);
+
         let timestamp_ms_str = parse_timestamp(timestamp_ms);
+
         let engine_temp = reader.read_f32::<LittleEndian>()?;
-        let fan_on = reader.read_u8()? == 1;
+        total_bytes_read += size_of_val(&engine_temp);
+
+        let fan_on_byte = reader.read_u8()?;
+        let fan_on = fan_on_byte == 1;
+        total_bytes_read += size_of_val(&fan_on_byte);
+
         let vbat = reader.read_f32::<LittleEndian>()?;
+        total_bytes_read += size_of_val(&vbat);
+
         let setpoint = reader.read_f32::<LittleEndian>()?;
-        let Some(motor_state) = MotorState::from_repr(reader.read_u8()?.into()) else {
+        total_bytes_read += size_of_val(&setpoint);
+
+        // Handle MotorState with size tracking for the u8 used
+        let motor_state_byte = reader.read_u8()?;
+        total_bytes_read += size_of_val(&motor_state_byte);
+        let Some(motor_state) = MotorState::from_repr(motor_state_byte.into()) else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "Invalid motor state",
             ));
         };
-        Ok(Self {
-            timestamp_ms_str,
-            timestamp_ms,
-            engine_temp,
-            fan_on,
-            vbat,
-            setpoint,
-            motor_state,
-        })
+
+        // Return the instance and total bytes read
+        Ok((
+            Self {
+                timestamp_ms_str,
+                timestamp_ms,
+                engine_temp,
+                fan_on,
+                vbat,
+                setpoint,
+                motor_state,
+            },
+            total_bytes_read,
+        ))
     }
 
     fn timestamp_ns(&self) -> f64 {

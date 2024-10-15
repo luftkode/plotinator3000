@@ -1638,6 +1638,7 @@ name = "log_if"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "log",
  "serde",
 ]
 
@@ -1652,6 +1653,7 @@ dependencies = [
  "egui-phosphor",
  "egui_plot",
  "env_logger",
+ "getset",
  "log",
  "log_if",
  "plot_util",
@@ -2515,6 +2517,7 @@ dependencies = [
  "derive_more",
  "egui_plot",
  "getset",
+ "log",
  "log_if",
  "plot_util",
  "serde",

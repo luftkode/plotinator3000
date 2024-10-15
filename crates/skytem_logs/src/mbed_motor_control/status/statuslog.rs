@@ -108,9 +108,12 @@ impl StatusLog {
 impl SkytemLog for StatusLog {
     type Entry = StatusLogEntry;
 
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<Self> {
-        let header = StatusLogHeader::from_reader(reader)?;
-        let vec_of_entries: Vec<StatusLogEntry> = parse_to_vec(reader);
+    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+        let mut total_bytes_read: usize = 0;
+        let (header, bytes_read) = StatusLogHeader::from_reader(reader)?;
+        total_bytes_read += bytes_read;
+        let (vec_of_entries, entry_bytes_read): (Vec<StatusLogEntry>, usize) = parse_to_vec(reader);
+        total_bytes_read += entry_bytes_read;
         let startup_timestamp = match header {
             StatusLogHeader::V1(h) => h.startup_timestamp(),
             StatusLogHeader::V2(h) => h.startup_timestamp(),
@@ -145,14 +148,17 @@ impl SkytemLog for StatusLog {
             }
         }
 
-        Ok(Self {
-            header,
-            entries: vec_of_entries,
-            labels,
-            timestamp_ns,
-            all_plots_raw,
-            startup_timestamp,
-        })
+        Ok((
+            Self {
+                header,
+                entries: vec_of_entries,
+                labels,
+                timestamp_ns,
+                all_plots_raw,
+                startup_timestamp,
+            },
+            total_bytes_read,
+        ))
     }
 
     fn entries(&self) -> &[Self::Entry] {
@@ -302,9 +308,12 @@ mod tests {
     #[test]
     fn test_deserialize_v1() -> TestResult {
         let data = fs::read(TEST_DATA_V1)?;
-        let status_log = StatusLog::from_reader(&mut data.as_slice())?;
-        eprintln!("{}", status_log.header);
+        let full_data_len = data.len();
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
 
+        eprintln!("{}", status_log.header);
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 16371);
         let first_entry = status_log.entries().first().expect("Empty entries vec");
         assert_eq!(first_entry.engine_temp, 64.394905);
         assert!(!first_entry.fan_on);
@@ -333,7 +342,8 @@ mod tests {
     fn test_parse_and_display_v1() -> TestResult {
         let file = File::open(TEST_DATA_V1)?;
         let mut reader = io::BufReader::new(file);
-        let header = StatusLogHeader::from_reader(&mut reader)?;
+        let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
+        assert_eq!(bytes_read, 261);
         println!("{header}");
         parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
         Ok(())
@@ -342,7 +352,11 @@ mod tests {
     #[test]
     fn test_deserialize_v2() -> TestResult {
         let data = fs::read(TEST_DATA_V2)?;
-        let status_log = StatusLog::from_reader(&mut data.as_slice())?;
+        let full_data_len = data.len();
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
+
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 12281);
         eprintln!("{}", status_log.header);
 
         let first_entry = status_log.entries().first().expect("Empty entries vec");
@@ -373,8 +387,10 @@ mod tests {
     fn test_parse_and_display_v2() -> TestResult {
         let file = File::open(TEST_DATA_V2)?;
         let mut reader = io::BufReader::new(file);
-        let header = StatusLogHeader::from_reader(&mut reader)?;
+        let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
+
         println!("{header}");
+        assert_eq!(bytes_read, 293);
         parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
         Ok(())
     }

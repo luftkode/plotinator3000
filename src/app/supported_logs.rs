@@ -10,26 +10,79 @@ use std::{
     io::{self, BufReader},
     path::Path,
 };
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ParsedBytes(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+pub struct TotalBytes(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ParseInfo {
+    parsed_bytes: ParsedBytes,
+    total_bytes: TotalBytes,
+}
+
+impl ParseInfo {
+    pub fn new(parsed_bytes: ParsedBytes, total_bytes: TotalBytes) -> Self {
+        let parsed = parsed_bytes.0;
+        let total = total_bytes.0;
+
+        debug_assert!(
+            parsed <= total,
+            "Unsound condition, parsed more than the total bytes! Parsed: {parsed}, total: {total}"
+        );
+        Self {
+            parsed_bytes,
+            total_bytes,
+        }
+    }
+    pub fn parsed_bytes(&self) -> usize {
+        self.parsed_bytes.0
+    }
+
+    pub fn total_bytes(&self) -> usize {
+        self.total_bytes.0
+    }
+
+    pub fn remainder_bytes(&self) -> usize {
+        self.total_bytes.0 - self.parsed_bytes.0
+    }
+}
 
 /// Represents a supported log, which can be any of the supported log types.
 ///
 /// This simply serves to encapsulate all the supported logs in a single type
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum SupportedLog {
-    MbedPid(PidLog),
-    MbedStatus(StatusLog),
-    Generator(GeneratorLog),
+    MbedPid(PidLog, ParseInfo),
+    MbedStatus(StatusLog, ParseInfo),
+    Generator(GeneratorLog, ParseInfo),
 }
 
 impl SupportedLog {
     /// Attempts to parse a log from raw content.
     fn parse_from_content(mut content: &[u8]) -> io::Result<Self> {
+        let total_bytes = content.len();
+        log::debug!("Parsing content of length: {total_bytes}");
         let log = if PidLog::is_buf_valid(content) {
-            Self::MbedPid(PidLog::from_reader(&mut content)?)
+            let (log, read_bytes) = PidLog::from_reader(&mut content)?;
+            log::debug!("Read: {read_bytes} bytes");
+            Self::MbedPid(
+                log,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
         } else if StatusLog::is_buf_valid(content) {
-            Self::MbedStatus(StatusLog::from_reader(&mut content)?)
+            let (log, read_bytes) = StatusLog::from_reader(&mut content)?;
+            Self::MbedStatus(
+                log,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(read_bytes)),
+            )
         } else if GeneratorLogEntry::is_bytes_valid_generator_log_entry(content) {
-            Self::Generator(GeneratorLog::from_reader(&mut content)?)
+            let (log, read_bytes) = GeneratorLog::from_reader(&mut content)?;
+            Self::Generator(
+                log,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -43,14 +96,29 @@ impl SupportedLog {
     /// Attempts to parse a log from a file path.
     fn parse_from_path(path: &Path) -> io::Result<Self> {
         let file = fs::File::open(path)?;
+        let total_bytes = file.metadata()?.len() as usize;
+        log::debug!("Parsing content of length: {total_bytes}");
         let mut reader = BufReader::new(file);
 
         let log = if PidLog::file_is_valid(path) {
-            Self::MbedPid(PidLog::from_reader(&mut reader)?)
+            let (log, parsed_bytes) = PidLog::from_reader(&mut reader)?;
+            log::debug!("Read: {parsed_bytes} bytes");
+            Self::MbedPid(
+                log,
+                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
+            )
         } else if StatusLog::file_is_valid(path) {
-            Self::MbedStatus(StatusLog::from_reader(&mut reader)?)
+            let (log, parsed_bytes) = StatusLog::from_reader(&mut reader)?;
+            Self::MbedStatus(
+                log,
+                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
+            )
         } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
-            Self::Generator(GeneratorLog::from_reader(&mut reader)?)
+            let (log, parsed_bytes) = GeneratorLog::from_reader(&mut reader)?;
+            Self::Generator(
+                log,
+                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
+            )
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -60,46 +128,54 @@ impl SupportedLog {
         log::debug!("Got: {}", log.descriptive_name());
         Ok(log)
     }
+
+    pub fn parse_info(&self) -> ParseInfo {
+        match self {
+            Self::MbedPid(_, parse_info)
+            | Self::MbedStatus(_, parse_info)
+            | Self::Generator(_, parse_info) => *parse_info,
+        }
+    }
 }
 
 impl Plotable for SupportedLog {
     fn raw_plots(&self) -> &[RawPlot] {
         match self {
-            Self::MbedPid(l) => l.raw_plots(),
-            Self::MbedStatus(l) => l.raw_plots(),
-            Self::Generator(l) => l.raw_plots(),
+            Self::MbedPid(l, _) => l.raw_plots(),
+            Self::MbedStatus(l, _) => l.raw_plots(),
+            Self::Generator(l, _) => l.raw_plots(),
         }
     }
 
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
         match self {
-            Self::MbedPid(l) => l.first_timestamp(),
-            Self::MbedStatus(l) => l.first_timestamp(),
-            Self::Generator(l) => l.first_timestamp(),
+            Self::MbedPid(l, _) => l.first_timestamp(),
+            Self::MbedStatus(l, _) => l.first_timestamp(),
+            Self::Generator(l, _) => l.first_timestamp(),
         }
     }
 
     fn descriptive_name(&self) -> &str {
         match self {
-            Self::MbedPid(l) => l.descriptive_name(),
-            Self::MbedStatus(l) => l.descriptive_name(),
-            Self::Generator(l) => l.descriptive_name(),
+            Self::MbedPid(l, _) => l.descriptive_name(),
+            Self::MbedStatus(l, _) => l.descriptive_name(),
+            Self::Generator(l, _) => l.descriptive_name(),
         }
     }
 
     fn labels(&self) -> Option<&[PlotLabels]> {
         match self {
-            Self::MbedPid(l) => l.labels(),
-            Self::MbedStatus(l) => l.labels(),
-            Self::Generator(l) => l.labels(),
+            Self::MbedPid(l, _) => l.labels(),
+            Self::MbedStatus(l, _) => l.labels(),
+            Self::Generator(l, _) => l.labels(),
         }
     }
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
         match self {
-            Self::MbedPid(l) => l.metadata(),
-            Self::MbedStatus(l) => l.metadata(),
-            Self::Generator(l) => l.metadata(),
+            Self::MbedPid(l, _) => l.metadata(),
+            Self::MbedStatus(l, _) => l.metadata(),
+            Self::Generator(l, _) => l.metadata(),
         }
     }
     // Implement any methods required by the Plotable trait for SupportedLog
@@ -113,19 +189,13 @@ pub struct SupportedLogs {
 
 impl SupportedLogs {
     /// Return a vector of immutable references to all logs
-    pub fn logs(&self) -> Vec<&dyn Plotable> {
-        self.logs
-            .iter()
-            .map(|log| {
-                let plotable: &dyn Plotable = log;
-                plotable
-            })
-            .collect()
+    pub fn logs(&self) -> &[SupportedLog] {
+        &self.logs
     }
 
     /// Take all the logs currently stored in [`SupportedLogs`] and return them as a list
-    pub fn take_logs(&mut self) -> Vec<Box<dyn Plotable>> {
-        self.logs.drain(..).map(|log| log.into()).collect()
+    pub fn take_logs(&mut self) -> Vec<SupportedLog> {
+        self.logs.drain(..).collect()
     }
 
     /// Parse dropped files to supported logs.
@@ -214,10 +284,11 @@ mod tests {
     #[test]
     fn test_supported_logs_dyn_vec() {
         let data = fs::read(TEST_DATA_STATUS).unwrap();
-        let status_log = StatusLog::from_reader(&mut data.as_slice()).unwrap();
+        let (status_log, _status_log_bytes_read) =
+            StatusLog::from_reader(&mut data.as_slice()).unwrap();
 
         let data = fs::read(TEST_DATA_PID).unwrap();
-        let pidlog = PidLog::from_reader(&mut data.as_slice()).unwrap();
+        let (pidlog, _pid_log_bytes_read) = PidLog::from_reader(&mut data.as_slice()).unwrap();
 
         let v: Vec<Box<dyn Plotable>> = vec![Box::new(status_log), Box::new(pidlog)];
         assert_eq!(v.len(), 2);
