@@ -157,9 +157,13 @@ jobs:
         # different architectures (and native) with cross on the generic ubuntu-latest.
         key: ${{ matrix.TARGET }}
 
-    - if: ${{ matrix.os == 'ubuntu-latest' }}
+    - if: contains('ubuntu', matrix.os)
       name: Install HDF development headers
       run: sudo apt install libhdf5-dev
+
+    - if: contains('macos', matrix.os )
+      name: Install HDF development headers
+      run: brew install hdf5
 
 
     - if: ${{ !matrix.cross }}
