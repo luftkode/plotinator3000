@@ -34,9 +34,6 @@ jobs:
         with:
           targets: ${{matrix.TARGET}}
       - uses: Swatinem/rust-cache@v2
-      - if: ${{ matrix.TARGET != 'wasm32-unknown-unknown' }}
-        name: Install HDF development headers
-        run: sudo apt install libhdf5-dev
       - run: cargo check ${{matrix.flags}} --target ${{matrix.TARGET}}
 
   audit:
@@ -53,8 +50,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Install HDF development headers
-        run: sudo apt install libhdf5-dev
       - run: cargo test --workspace
 
   format:
@@ -75,8 +70,6 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Install HDF development headers
-        run: sudo apt install libhdf5-dev
       - name: Lint native
         run: cargo clippy --workspace --all-features -- -D warnings -W clippy::all
       - name: Lint WASM
@@ -156,15 +149,6 @@ jobs:
         # The cache checks the rustc host which doesn't record us targeting
         # different architectures (and native) with cross on the generic ubuntu-latest.
         key: ${{ matrix.TARGET }}
-
-    - if: contains('ubuntu', matrix.os)
-      name: Install HDF development headers
-      run: sudo apt install libhdf5-dev
-
-    - if: contains('macos', matrix.os )
-      name: Install HDF development headers
-      run: brew install hdf5
-
 
     - if: ${{ !matrix.cross }}
       name: Cargo Build
