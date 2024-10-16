@@ -150,6 +150,11 @@ jobs:
         # different architectures (and native) with cross on the generic ubuntu-latest.
         key: ${{ matrix.TARGET }}
 
+    - if: ${{ matrix.TARGET != 'x86_64-pc-windows-msvc' }}
+      name: Install HDF dev headers
+      run: sudo apt install libhdf5-dev
+
+
     - if: ${{ !matrix.cross }}
       name: Cargo Build
       run: cargo build --verbose --release --target=${{ matrix.TARGET }}
