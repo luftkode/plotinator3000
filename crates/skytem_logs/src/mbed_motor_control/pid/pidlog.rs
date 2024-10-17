@@ -24,16 +24,6 @@ pub struct PidLog {
 }
 
 impl PidLog {
-    /// Probes the buffer and check if it starts with [`super::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
-    pub fn is_buf_valid(content: &[u8]) -> bool {
-        if content.len() < SIZEOF_UNIQ_DESC + 2 {
-            return false;
-        }
-
-        let unique_description = &content[..SIZEOF_UNIQ_DESC];
-        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
-    }
-
     /// Checks if the file at the given path is a valid [`PidLog`] file
     pub fn file_is_valid(path: &Path) -> bool {
         let Ok(mut file) = fs::File::open(path) else {
@@ -57,6 +47,18 @@ impl SkytemLog for PidLog {
 }
 
 impl Parseable for PidLog {
+    const DESCRIPTIVE_NAME: &str = "Mbed PID log";
+
+    /// Probes the buffer and check if it starts with [`super::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
+    fn is_buf_valid(content: &[u8]) -> bool {
+        if content.len() < SIZEOF_UNIQ_DESC + 2 {
+            return false;
+        }
+
+        let unique_description = &content[..SIZEOF_UNIQ_DESC];
+        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
+    }
+
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read: usize = 0;
         let (header, bytes_read) = PidLogHeader::from_reader(reader)?;
