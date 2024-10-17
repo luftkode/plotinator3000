@@ -55,7 +55,7 @@ impl fmt::Display for StatusLogEntry {
 }
 
 impl LogEntry for StatusLogEntry {
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         // Start with 0 bytes read
         let mut total_bytes_read = 0;
 

@@ -57,7 +57,7 @@ impl SkytemLog for PidLog {
 }
 
 impl Parseable for PidLog {
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read: usize = 0;
         let (header, bytes_read) = PidLogHeader::from_reader(reader)?;
         total_bytes_read += bytes_read;

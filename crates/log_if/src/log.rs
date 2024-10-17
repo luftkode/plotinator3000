@@ -19,7 +19,7 @@ pub trait LogEntry: Sized + Display + Send + Sync {
     /// Returns a tuple containing:
     /// - The created `LogEntry` instance
     /// - The number of bytes consumed from the reader
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)>;
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)>;
 
     /// Timestamp in nanoseconds
     fn timestamp_ns(&self) -> f64;

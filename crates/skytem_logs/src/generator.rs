@@ -40,15 +40,14 @@ impl SkytemLog for GeneratorLog {
 }
 
 impl Parseable for GeneratorLog {
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
-        let mut buf_reader = BufReader::new(reader);
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut entries = Vec::new();
         let mut total_bytes_read = 0;
 
         // Read the buffer in chunks and handle the line parsing
         loop {
             let mut line = String::new();
-            let bytes_read = buf_reader.read_line(&mut line)?;
+            let bytes_read = reader.read_line(&mut line)?;
 
             // If we didn't read any bytes, we're done
             if bytes_read == 0 {
@@ -283,12 +282,11 @@ impl GeneratorLogEntry {
 }
 
 impl LogEntry for GeneratorLogEntry {
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut line = String::new();
-        let mut bufreader = BufReader::new(reader);
 
         // Read the line and track the number of bytes read
-        let bytes_read = bufreader.read_line(&mut line)?;
+        let bytes_read = reader.read_line(&mut line)?;
 
         let gen_log_entry = Self::from_str(&line)?;
 
