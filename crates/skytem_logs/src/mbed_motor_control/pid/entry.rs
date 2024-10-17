@@ -1,7 +1,9 @@
 use std::{fmt, io};
 
-use crate::{util::parse_timestamp, LogEntry};
+use crate::util::parse_timestamp;
+
 use byteorder::{LittleEndian, ReadBytesExt};
+use log_if::log::LogEntry;
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PidLogEntry {

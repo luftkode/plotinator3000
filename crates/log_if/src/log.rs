@@ -4,7 +4,7 @@ use crate::{parseable::Parseable, plotable::Plotable};
 
 /// A given log should implement this trait
 pub trait SkytemLog:
-    Plotable + Parseable + Clone + Display + Send + Sync + Sized + GitMetadata
+    Plotable + Parseable + GitMetadata + Clone + Display + Send + Sync + Sized
 {
     type Entry: LogEntry;
 

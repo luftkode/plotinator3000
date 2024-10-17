@@ -1,7 +1,8 @@
 use std::{fmt, io};
 
-use crate::{util::parse_timestamp, LogEntry};
+use crate::util::parse_timestamp;
 use byteorder::{LittleEndian, ReadBytesExt};
+use log_if::log::LogEntry;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, FromRepr};
 

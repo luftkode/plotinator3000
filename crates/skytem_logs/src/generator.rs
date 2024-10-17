@@ -6,7 +6,7 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
-use log_if::{parseable::Parseable, prelude::*};
+use log_if::{log::LogEntry, parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

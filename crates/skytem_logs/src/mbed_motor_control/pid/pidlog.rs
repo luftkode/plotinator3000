@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use log_if::{parseable::Parseable, prelude::*};
+use log_if::{log::LogEntry, parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt, fs,
