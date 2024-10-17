@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use log_if::prelude::*;
+use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt, fs,
@@ -51,6 +51,12 @@ impl PidLog {
 impl SkytemLog for PidLog {
     type Entry = PidLogEntry;
 
+    fn entries(&self) -> &[Self::Entry] {
+        &self.entries
+    }
+}
+
+impl Parseable for PidLog {
     fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
         let mut total_bytes_read: usize = 0;
         let (header, bytes_read) = PidLogHeader::from_reader(reader)?;
@@ -142,10 +148,6 @@ impl SkytemLog for PidLog {
             },
             total_bytes_read,
         ))
-    }
-
-    fn entries(&self) -> &[Self::Entry] {
-        &self.entries
     }
 }
 

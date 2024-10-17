@@ -1,12 +1,12 @@
 use std::{fmt::Display, io};
 
-use crate::plotable::Plotable;
+use crate::{parseable::Parseable, plotable::Plotable};
 
 /// A given log should implement this trait
-pub trait SkytemLog: Plotable + Clone + Display + Send + Sync + Sized + GitMetadata {
+pub trait SkytemLog:
+    Plotable + Parseable + Clone + Display + Send + Sync + Sized + GitMetadata
+{
     type Entry: LogEntry;
-    /// Create a [`SkytemLog`] instance from a reader and return the log along with the number of bytes read
-    fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)>;
 
     /// Return a borrowed slice (list) of log entries
     fn entries(&self) -> &[Self::Entry];

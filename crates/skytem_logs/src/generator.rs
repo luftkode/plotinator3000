@@ -6,7 +6,7 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
-use log_if::prelude::*;
+use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -34,6 +34,12 @@ impl GeneratorLog {
 impl SkytemLog for GeneratorLog {
     type Entry = GeneratorLogEntry;
 
+    fn entries(&self) -> &[Self::Entry] {
+        &self.entries
+    }
+}
+
+impl Parseable for GeneratorLog {
     fn from_reader(reader: &mut impl io::Read) -> io::Result<(Self, usize)> {
         let mut buf_reader = BufReader::new(reader);
         let mut entries = Vec::new();
@@ -82,10 +88,6 @@ impl SkytemLog for GeneratorLog {
             },
             total_bytes_read,
         ))
-    }
-
-    fn entries(&self) -> &[Self::Entry] {
-        &self.entries
     }
 }
 
