@@ -2,7 +2,7 @@
 name = "logviewer-rs"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "0.23.0"
+version = "0.24.0"
 edition = "2021"
 repository = "https://github.com/luftkode/logviewer-rs"
 homepage = "https://github.com/luftkode/logviewer-rs"
@@ -30,6 +30,8 @@ byteorder = "1.5.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 getset = "0.1.3"
 derive_more = { version = "1", features = ["full"] }
+num-traits = "0.2.19"
+toml = "0.8.19"
 
 # Dev dependencies
 testresult = "0.4.1"
@@ -39,6 +41,7 @@ pretty_assertions = "1.4.1"
 skytem_logs = { version = "*", path = "crates/skytem_logs" }
 log_if = { version = "*", path = "crates/log_if" }
 plot_util = { version = "*", path = "crates/plot_util" }
+skytem_hdf = { version = "*", path = "crates/skytem_hdf" }
 egui_plot.workspace = true
 log.workspace = true
 serde.workspace = true
@@ -59,10 +62,15 @@ egui-notify = "0.16.0"
 [dev-dependencies]
 testresult.workspace = true
 
+[features]
+default = []
+hdf = []
+
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 zip = "2.2.0"
+
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -84,26 +92,6 @@ opt-level = 2
 # The profile that 'cargo dist' will build with
 [profile.dist]
 inherits = "release"
-
-# Config for 'cargo dist'
-[workspace.metadata.dist]
-# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.22.1"
-# CI backends to support
-ci = "github"
-# The installers to generate for each app
-installers = ["shell", "powershell", "msi"]
-# Target platforms to build apps for (Rust target-triple syntax)
-targets = [
-    "aarch64-apple-darwin",
-    "x86_64-apple-darwin",
-    "x86_64-unknown-linux-gnu",
-    "x86_64-pc-windows-msvc",
-]
-# Path that installers should place binaries in
-install-path = "CARGO_HOME"
-# Whether to install an updater program
-install-updater = true
 
 [lints]
 workspace = true
