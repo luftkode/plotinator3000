@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
-use egui::{Color32, Hyperlink, RichText, TextStyle};
+use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
 use egui_notify::Toasts;
 use egui_phosphor::regular;
 use log_if::prelude::Plotable;
@@ -141,7 +141,6 @@ impl eframe::App for App {
                     self.loaded_files = LoadedFiles::default();
                     self.plot = LogPlotUi::default();
                 }
-                ui.add_space(8.);
                 if ui
                     .button(RichText::new(format!(
                         "{} Open File",
@@ -154,7 +153,6 @@ impl eframe::App for App {
                     #[cfg(not(target_arch = "wasm32"))]
                     self.native_file_dialog.open();
                 }
-                ui.add_space(8.);
                 ui.label(RichText::new(regular::TEXT_T));
                 if let Some(ref mut font_size) = self.font_size {
                     if ui
@@ -168,7 +166,7 @@ impl eframe::App for App {
                     {}
                 }
 
-                egui::widgets::global_theme_preference_buttons(ui);
+                show_theme_toggle_buttons(ui);
                 ui.add(Hyperlink::from_label_and_url(
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
@@ -206,12 +204,8 @@ impl eframe::App for App {
 impl App {
     fn show_error(&mut self, ui: &egui::Ui) {
         if let Some(error) = self.error_message.clone() {
-            let screen_rect = ui.ctx().screen_rect();
-            let window_width = screen_rect.width().clamp(400.0, 600.0);
-            let window_height = screen_rect.height().clamp(200.0, 300.0);
-
             egui::Window::new(RichText::new("⚠").size(40.0).color(Color32::RED))
-                .fixed_size([window_width, window_height])
+                .auto_sized()
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
@@ -226,7 +220,7 @@ impl App {
                             .size(18.0)
                             .strong();
 
-                        let button_size = egui::Vec2::new(100.0, 40.0);
+                        let button_size = egui::Vec2::new(80.0, 40.0);
                         if ui
                             .add_sized(button_size, egui::Button::new(button_text))
                             .on_hover_text("Click to dismiss the error")
@@ -294,4 +288,16 @@ fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]) {
             }
         }
     }
+}
+
+fn show_theme_toggle_buttons(ui: &mut egui::Ui) {
+    let mut theme_preference = ui.ctx().options(|opt| opt.theme_preference);
+
+    ui.horizontal(|ui| {
+        ui.selectable_value(&mut theme_preference, ThemePreference::Light, "☀");
+        ui.selectable_value(&mut theme_preference, ThemePreference::Dark, "🌙 ");
+        ui.selectable_value(&mut theme_preference, ThemePreference::System, "💻");
+    });
+
+    ui.ctx().set_theme(theme_preference);
 }

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.26.0]
+
+### Changed
+
+- Make some UI elements smaller
+- Allow main window (viewport) to be shrink much more than before
+- Plot setting UI elements wrap instead of stay fixed when window shrinks
+
 ## [0.25.0]
 
 ### Added
