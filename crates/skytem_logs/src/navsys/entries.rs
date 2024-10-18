@@ -1,10 +1,10 @@
 use gps::Gps;
-use he::He;
+use he::AltimeterEntry;
 use log_if::log::LogEntry;
 use mag::MagSensor;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, str::FromStr};
-use tl::TiltSensorEntry;
+use tl::InclinometerEntry;
 
 pub mod gps;
 pub mod he;
@@ -13,10 +13,10 @@ pub mod tl;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum NavSysSpsEntry {
-    HE1(He),
-    HE2(He),
-    TL1(TiltSensorEntry),
-    TL2(TiltSensorEntry),
+    HE1(AltimeterEntry),
+    HE2(AltimeterEntry),
+    TL1(InclinometerEntry),
+    TL2(InclinometerEntry),
     GP1(Gps),
     GP2(Gps),
     MA1(MagSensor),
@@ -47,7 +47,7 @@ impl LogEntry for NavSysSpsEntry {
         let first_three_chars = &line[..3];
         let entry: Self = match first_three_chars {
             "HE1" | "HE2" => {
-                let he = He::from_str(&line)
+                let he = AltimeterEntry::from_str(&line)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
                 debug_assert!(he.id == 1 || he.id == 2);
                 if he.id == 1 {
@@ -57,7 +57,7 @@ impl LogEntry for NavSysSpsEntry {
                 }
             }
             "TL1" | "TL2" => {
-                let tl = TiltSensorEntry::from_str(&line)
+                let tl = InclinometerEntry::from_str(&line)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
                 debug_assert!(tl.id == 1 || tl.id == 2);
                 if tl.id == 1 {
@@ -76,7 +76,23 @@ impl LogEntry for NavSysSpsEntry {
                     Self::GP2(gps)
                 }
             }
-            "MA1" => todo!(),
+            "MA1" => {
+                let mag = MagSensor::from_str(&line)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+                debug_assert_eq!(
+                    mag.id, 1,
+                    "Expected navsys data to only contain magsensor with ID 1, got: ID{}",
+                    mag.id
+                );
+                if mag.id == 1 {
+                    Self::MA1(mag)
+                } else {
+                    unreachable!(
+                        "Expected navsys data to only contain magsensor with ID 1, got: ID{}",
+                        mag.id
+                    )
+                }
+            }
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
@@ -118,8 +134,8 @@ MA1 2024 10 03 12 52 55 747 49894.8659
         let (entries, bytes_read): (Vec<NavSysSpsEntry>, usize) =
             parse_to_vec(&mut TEST_ENTRIES.as_bytes());
 
-        assert_eq!(entries.len(), 6);
-        assert_eq!(bytes_read, 333);
+        assert_eq!(entries.len(), 7);
+        assert_eq!(bytes_read, 372);
 
         Ok(())
     }

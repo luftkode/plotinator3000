@@ -221,6 +221,7 @@ MRK 2024 10 03 12 52 42 432 CalAng 2 X: 3.30737";
         eprintln!("{header}");
 
         let expected_string_format = r#"Version: 3
+Timestamp: 2024-10-03 12:52:42.401 UTC
 Software Revision: Build: 2.0.0.6
 Tilt sensor ID: 1459_1458
 #1 Calibration Data: Angle offset Y: 0.495

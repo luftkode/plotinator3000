@@ -134,7 +134,7 @@ impl FromStr for Gps {
         let other_metric_1 = parts[16].parse().map_err(|_| GpsError::InvalidMetric1)?;
         let other_metric_2 = parts[17].parse().map_err(|_| GpsError::InvalidMetric2)?;
 
-        Ok(Gps::new(
+        Ok(Self::new(
             id,
             timestamp,
             latitude,

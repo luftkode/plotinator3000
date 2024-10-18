@@ -22,7 +22,7 @@ pub trait Parseable: Sized {
         Self::from_reader(&mut reader)
     }
 
-    /// Create an instance of a [`Parseable`] from a reader ([io::BufRead]) and return
+    /// Create an instance of a [`Parseable`] from a reader ([`io::BufRead`]) and return
     /// the instance along with the number of bytes read
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)>;
 

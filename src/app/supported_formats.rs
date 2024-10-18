@@ -6,7 +6,7 @@ use logs::{
 };
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
-    generator::{GeneratorLog, GeneratorLogEntry},
+    generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
 };
 use std::{
