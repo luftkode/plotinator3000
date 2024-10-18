@@ -31,8 +31,9 @@ mod util;
 )]
 pub enum SupportedFormat {
     Log(SupportedLog),
-    #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF...")]
+    #[cfg(feature = "hdf")]
     #[cfg(not(target_arch = "wasm32"))]
+    #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF...")]
     HDF(hdf::SupportedHdfFormat),
 }
 
@@ -179,6 +180,7 @@ impl SupportedFormat {
     pub fn parse_info(&self) -> Option<ParseInfo> {
         match self {
             Self::Log(l) => Some(l.parse_info()),
+            #[cfg(feature = "hdf")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(_) => None,
         }
@@ -189,6 +191,8 @@ impl Plotable for SupportedFormat {
     fn raw_plots(&self) -> &[RawPlot] {
         match self {
             Self::Log(l) => l.raw_plots(),
+
+            #[cfg(feature = "hdf")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.raw_plots(),
         }
@@ -197,6 +201,7 @@ impl Plotable for SupportedFormat {
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
         match self {
             Self::Log(l) => l.first_timestamp(),
+            #[cfg(feature = "hdf")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.first_timestamp(),
         }
@@ -205,6 +210,7 @@ impl Plotable for SupportedFormat {
     fn descriptive_name(&self) -> &str {
         match self {
             Self::Log(l) => l.descriptive_name(),
+            #[cfg(feature = "hdf")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.descriptive_name(),
         }
@@ -213,6 +219,7 @@ impl Plotable for SupportedFormat {
     fn labels(&self) -> Option<&[PlotLabels]> {
         match self {
             Self::Log(l) => l.labels(),
+            #[cfg(feature = "hdf")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.labels(),
         }
@@ -221,6 +228,7 @@ impl Plotable for SupportedFormat {
     fn metadata(&self) -> Option<Vec<(String, String)>> {
         match self {
             Self::Log(l) => l.metadata(),
+            #[cfg(feature = "hdf")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.metadata(),
         }
