@@ -15,9 +15,11 @@ use std::{
     path::Path,
 };
 
+#[cfg(feature = "hdf")]
 #[cfg(not(target_arch = "wasm32"))]
 mod hdf;
 pub(crate) mod logs;
+mod util;
 
 /// Represents a supported format, which can be any of the supported format types.
 ///
@@ -100,7 +102,7 @@ impl SupportedFormat {
         log::debug!("Parsing content of length: {total_bytes}");
 
         let mut reader = BufReader::new(file);
-        let log: Self = if skytem_hdf::path_has_hdf_extension(path) {
+        let log: Self = if util::path_has_hdf_extension(path) {
             Self::parse_hdf_from_path(path)?
         } else if PidLog::file_is_valid(path) {
             let (log, parsed_bytes) = PidLog::from_reader(&mut reader)?;
@@ -134,6 +136,7 @@ impl SupportedFormat {
         Ok(log)
     }
 
+    #[cfg(feature = "hdf")]
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
         use skytem_hdf::bifrost::BifrostLoopCurrent;
@@ -146,6 +149,18 @@ impl SupportedFormat {
                 "Unrecognized HDF file",
             ))
         }
+    }
+
+    #[cfg(not(feature = "hdf"))]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "Recognized '{}' as an HDF file. But the HDF feature is turned off.",
+                path.display()
+            ),
+        ))
     }
 
     #[cfg(target_arch = "wasm32")]
