@@ -77,7 +77,7 @@ pub fn draw_empty_state(gui: &mut egui::Ui) {
                             ui.end_row();
 
 
-                            ui.label(RichText::new("Bifrost TX Loop Current").strong());
+                            ui.label(RichText::new("⚠ Coming soon: Bifrost TX Loop Current ⚠"));
                             ui.label("Loop Current measurements");
 
                             ui.add(Hyperlink::from_label_and_url(

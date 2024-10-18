@@ -2,7 +2,7 @@
 name = "logviewer-rs"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "0.23.0"
+version = "0.24.0"
 edition = "2021"
 repository = "https://github.com/luftkode/logviewer-rs"
 homepage = "https://github.com/luftkode/logviewer-rs"
@@ -62,6 +62,10 @@ egui-notify = "0.16.0"
 
 [dev-dependencies]
 testresult.workspace = true
+
+[features]
+default = []
+hdf = []
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

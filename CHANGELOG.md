@@ -11,11 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial support for `HDF` files, starting with bifrost (TX) loop current.
+- Initial support for `HDF` files, starting with bifrost (TX) loop current. The feature is currently guarded behind a feature flag, enabling it is tracked at: https://github.com/luftkode/logviewer-rs/issues/84.
+-
 
 ### Changed
 
 - Various UI tweaks
+
+### Internal
+
+- Upgraded `cargo-dist` `0.22.1` -> `0.23.0`
 
 ## [0.23.0]
 
