@@ -176,4 +176,5 @@ fn build_plot_ui<'a>(
         .label_formatter(crate::util::format_label_ns)
         .link_axis(link_group, axis_config.link_x(), false)
         .link_cursor(link_group, axis_config.link_cursor_x(), false)
+        .y_axis_min_width(50.0) // Adds enough margin for 5-digits
 }
