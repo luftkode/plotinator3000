@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.26.0]
 
+### Fix
+
+- Plot alignment
+
 ### Changed
 
 - Make some UI elements smaller
