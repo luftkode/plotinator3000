@@ -60,9 +60,9 @@ pub struct PlotSettings {
 impl PlotSettings {
     pub fn show(&mut self, ui: &mut egui::Ui) {
         if self.log_start_date_settings.is_empty() {
-            ui.label(RichText::new("No Logs Loaded").color(Color32::RED));
+            ui.label(RichText::new("No Files Loaded").color(Color32::RED));
         } else {
-            self.show_loaded_logs(ui);
+            self.show_loaded_files(ui);
             self.ui_plot_filter_settings(ui);
             self.mipmap_settings.show(ui);
         }
@@ -83,15 +83,15 @@ impl PlotSettings {
         }
     }
 
-    fn show_loaded_logs(&mut self, ui: &mut egui::Ui) {
-        let loaded_log_count = self.log_start_date_settings.len();
+    fn show_loaded_files(&mut self, ui: &mut egui::Ui) {
+        let loaded_files_count = self.log_start_date_settings.len();
         let visibility_icon = if self.ps_ui.show_loaded_logs {
             regular::EYE
         } else {
             regular::EYE_SLASH
         };
         let show_loaded_logs_text = RichText::new(format!(
-            "{visibility_icon} Loaded logs ({loaded_log_count})",
+            "{visibility_icon} Loaded files ({loaded_files_count})",
         ));
         ui.toggle_value(
             &mut self.ps_ui.show_loaded_logs,

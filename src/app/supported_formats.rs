@@ -1,4 +1,3 @@
-use egui::DroppedFile;
 use log_if::prelude::*;
 use logs::{
     parse_info::{ParseInfo, ParsedBytes, TotalBytes},
@@ -87,7 +86,7 @@ impl SupportedFormat {
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "Unrecognized log type",
+                "Unrecognized format",
             ));
         };
         log::debug!("Got: {}", log.descriptive_name());
@@ -130,7 +129,7 @@ impl SupportedFormat {
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "Unrecognized log type",
+                "Unrecognized format",
             ));
         };
         log::debug!("Got: {}", log.descriptive_name());
@@ -237,48 +236,35 @@ impl Plotable for SupportedFormat {
 
 /// Contains all supported logs in a single vector.
 #[derive(Default, Deserialize, Serialize)]
-pub struct SupportedLogs {
-    logs: Vec<SupportedFormat>,
+pub struct LoadedFiles {
+    loaded: Vec<SupportedFormat>,
 }
 
-impl SupportedLogs {
+impl LoadedFiles {
     /// Return a vector of immutable references to all logs
-    pub fn logs(&self) -> &[SupportedFormat] {
-        &self.logs
+    pub(crate) fn loaded(&self) -> &[SupportedFormat] {
+        &self.loaded
     }
 
-    /// Take all the logs currently stored in [`SupportedLogs`] and return them as a list
-    pub fn take_logs(&mut self) -> Vec<SupportedFormat> {
-        self.logs.drain(..).collect()
+    /// Take all the `loaded_files` currently stored and return them as a list
+    pub(crate) fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
+        self.loaded.drain(..).collect()
     }
 
-    /// Parse dropped files to supported logs.
-    ///
-    /// ### Note to developers who are not seasoned Rust devs :)
-    /// This cannot take `&mut self` as that breaks ownership rules when looping over dropped files
-    /// meaning you would be forced to make a copy which isn't actually needed, but required for it to compile.
-    pub fn parse_dropped_files(&mut self, dropped_files: &[DroppedFile]) -> io::Result<()> {
-        for file in dropped_files {
-            log::debug!("Parsing dropped file: {file:?}");
-            self.parse_file(file)?;
+    pub(crate) fn parse_path(&mut self, path: &Path) -> io::Result<()> {
+        if path.is_dir() {
+            self.parse_directory(path)?;
+        } else if is_zip_file(path) {
+            #[cfg(not(target_arch = "wasm32"))]
+            self.parse_zip_file(path)?;
+        } else {
+            self.loaded.push(SupportedFormat::parse_from_path(path)?);
         }
         Ok(())
     }
 
-    fn parse_file(&mut self, file: &DroppedFile) -> io::Result<()> {
-        if let Some(content) = file.bytes.as_ref() {
-            self.logs
-                .push(SupportedFormat::parse_from_content(content)?);
-        } else if let Some(path) = &file.path {
-            if path.is_dir() {
-                self.parse_directory(path)?;
-            } else if is_zip_file(path) {
-                #[cfg(not(target_arch = "wasm32"))]
-                self.parse_zip_file(path)?;
-            } else {
-                self.logs.push(SupportedFormat::parse_from_path(path)?);
-            }
-        }
+    pub(crate) fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.loaded.push(SupportedFormat::parse_from_content(buf)?);
         Ok(())
     }
 
@@ -295,7 +281,7 @@ impl SupportedLogs {
                 self.parse_zip_file(&path)?;
             } else {
                 match SupportedFormat::parse_from_path(&path) {
-                    Ok(l) => self.logs.push(l),
+                    Ok(l) => self.loaded.push(l),
                     Err(e) => log::warn!("{e}"),
                 }
             }
@@ -314,7 +300,7 @@ impl SupportedLogs {
                 let mut contents = Vec::new();
                 io::Read::read_to_end(&mut file, &mut contents)?;
                 if let Ok(log) = SupportedFormat::parse_from_content(&contents) {
-                    self.logs.push(log);
+                    self.loaded.push(log);
                 }
             }
         }
