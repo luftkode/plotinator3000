@@ -43,10 +43,8 @@ pub fn plot_lines<'pv>(
         match mipmap_cfg {
             MipMapConfiguration::Disabled => plot_raw(plot_ui, plot_vals, (x_lower, x_higher)),
             MipMapConfiguration::Auto => {
-                let (level, idx_range) = plot_vals.get_scaled_mipmap_levels(
-                    plots_width_pixels,
-                    (x_lower as usize, x_higher as usize),
-                );
+                let (level, idx_range) =
+                    plot_vals.get_scaled_mipmap_levels(plots_width_pixels, (x_lower, x_higher));
 
                 plot_with_mipmapping(
                     plot_ui,

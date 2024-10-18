@@ -67,29 +67,29 @@ pub enum MipMapStrategy {
     Max,
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-struct LevelLookupCached {
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+struct LevelLookupCached<T: Num + ToPrimitive + FromPrimitive + PartialOrd> {
     pixel_width: usize,
-    x_bounds: (usize, usize),
+    x_bounds: (T, T),
     result_span: (usize, usize),
     result_idx: usize,
 }
 
-impl LevelLookupCached {
-    pub fn is_equal(&self, pixel_width: usize, x_bounds: (usize, usize)) -> bool {
+impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> LevelLookupCached<T> {
+    pub fn is_equal(&self, pixel_width: usize, x_bounds: (T, T)) -> bool {
         // Compare bounds first because pixel_width is much more stable
         self.x_bounds == x_bounds && self.pixel_width == pixel_width
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct MipMap2D<T: Num + ToPrimitive + FromPrimitive + PartialOrd> {
     strategy: MipMapStrategy,
     data: Vec<Vec<[T; 2]>>,
-    most_recent_lookup: RefCell<LevelLookupCached>,
+    most_recent_lookup: RefCell<LevelLookupCached<T>>,
 }
 
-impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
+impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd + Default> MipMap2D<T> {
     pub fn new(source: Vec<[T; 2]>, strategy: MipMapStrategy, min_elements: usize) -> Self {
         let mut data = vec![source.clone()];
         let mut current = source;
@@ -223,7 +223,7 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     pub fn get_level_match(
         &self,
         pixel_width: usize,
-        x_bounds: (usize, usize),
+        x_bounds: (T, T),
     ) -> (usize, Option<(usize, usize)>) {
         if self
             .most_recent_lookup
@@ -250,8 +250,8 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
                 continue;
             }
 
-            let start_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_min);
-            let end_idx = lvl.partition_point(|x| fast_unix_ns_to_usize(x[0]) < x_max);
+            let start_idx = lvl.partition_point(|x| x[0] < x_min);
+            let end_idx = lvl.partition_point(|x| x[0] < x_max);
 
             // Use saturating_sub for safety and to avoid potential panic
             let count_within_bounds = end_idx.saturating_sub(start_idx);
@@ -271,40 +271,12 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> MipMap2D<T> {
     }
 }
 
-/// Converts a unix timestamp in nanoseconds to `usize`.
-///
-/// This function is highly optimized for performance.
-#[inline(always)]
-#[allow(
-    clippy::needless_pass_by_value,
-    reason = "It's a numeric primitive, we don't mind passing by value"
-)]
-pub fn fast_unix_ns_to_usize<T: Num + ToPrimitive + FromPrimitive + PartialOrd>(
-    unix_ts_ns: T,
-) -> usize {
-    // On 64-bit platforms, we can assume that `unix_ts_ns` fits in usize, so we just cast it directly.
-    #[cfg(not(target_pointer_width = "32"))]
-    #[allow(unsafe_code)]
-    // SAFETY:
-    // Assumes:
-    // - That `usize` is at least 64 bits.
-    // - That the argument is a unix timestamp that is less than the year ~2554
-    unsafe {
-        unix_ts_ns.to_usize().unwrap_unchecked()
-    }
-    #[cfg(target_pointer_width = "32")]
-    unix_ts_ns.to_usize().expect("Doesn't fit in usize")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    #[cfg(not(target_pointer_width = "32"))]
-    const UNIX_TS_NS: usize = 1_728_470_564_000_000_000;
-    #[cfg(target_pointer_width = "32")]
-    const UNIX_TS_NS: usize = 1_728_470_564;
+    const UNIX_TS_NS: f64 = 1_728_470_564_000_000_000.0;
 
     #[test]
     fn test_mipmap_strategy_max() {
@@ -404,7 +376,7 @@ mod tests {
             (8, 0, Some((0, 15))),
             (16, 0, None),
         ] {
-            let (lvl, range_res) = mipmap.get_level_match(pixel_width, (0, 15));
+            let (lvl, range_res) = mipmap.get_level_match(pixel_width, (0., 15.));
             assert_eq!(
                 lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
@@ -421,17 +393,17 @@ mod tests {
     fn test_level_match_large_timestamps() {
         let source_len = 1600;
         let source: Vec<[f64; 2]> = (0..source_len)
-            .map(|i| [(i + UNIX_TS_NS) as f64, (i + UNIX_TS_NS) as f64])
+            .map(|i| [i as f64 + UNIX_TS_NS, i as f64 + UNIX_TS_NS])
             .collect();
         let mipmap = MipMap2D::new(source, MipMapStrategy::Min, 1);
 
-        let x_bounds = (UNIX_TS_NS + 300, UNIX_TS_NS + 5000);
+        let x_bounds = (UNIX_TS_NS + 300., UNIX_TS_NS + 1500.);
 
         for (pixel_width, expected_lvl, expected_range) in [
-            (100usize, 3usize, Some((48, 200))),
-            (200, 2, Some((96, 400))),
-            (400, 1, Some((192, 800))),
-            (800, 0, Some((384, 1600))),
+            (100usize, 3usize, Some((17, 176))),
+            (200, 2, Some((33, 352))),
+            (400, 1, Some((65, 704))),
+            (800, 0, Some((129, 1408))),
             (1600, 0, None),
         ] {
             let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds);
