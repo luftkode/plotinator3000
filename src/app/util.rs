@@ -1,23 +1,4 @@
-use egui::{DroppedFile, Hyperlink, RichText, Stroke};
-
-pub fn file_info(file: &DroppedFile) -> String {
-    let path = file
-        .path
-        .as_ref()
-        .map(|p| p.display().to_string())
-        .or_else(|| (!file.name.is_empty()).then(|| file.name.clone()))
-        .unwrap_or_else(|| "???".to_owned());
-
-    let mut info = vec![path];
-    if !file.mime.is_empty() {
-        info.push(format!("type: {}", file.mime));
-    }
-    if let Some(bytes) = &file.bytes {
-        info.push(format!("{} bytes", bytes.len()));
-    }
-
-    info.join(" ")
-}
+use egui::{Hyperlink, RichText, Stroke};
 
 pub fn draw_empty_state(gui: &mut egui::Ui) {
     gui.vertical_centered(|arg_ui| {

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.25.0]
+
+### Added
+
+- File dialog for native and web, which also allows mobile users to load logs.
+
+### Changed
+
+- Various UI tweaks
+- Clean up some outdated error messages.
+
+### Internals
+
+- Decouple file parsing from file loading method.
+
 ## [0.24.1]
 
 ### Fix
