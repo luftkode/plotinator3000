@@ -19,6 +19,11 @@ impl AltimeterEntry {
             .timestamp_nanos_opt()
             .expect("timestamp as nanoseconds out of range") as f64
     }
+
+    /// Altitude in meters above mean sea level
+    pub(crate) fn altitude_m(&self) -> f64 {
+        self.altitude_m
+    }
 }
 
 #[derive(Debug, Clone, Copy, Error)]

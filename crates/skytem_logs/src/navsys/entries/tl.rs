@@ -1,15 +1,18 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::Display;
+use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize, Display, CopyGetters)]
 #[display("TL{id} {timestamp}: {pitch_angle_degrees} {roll_angle_degrees}")]
 pub struct InclinometerEntry {
     pub id: u8,
     timestamp: DateTime<Utc>,
+    #[getset(get_copy = "pub")]
     pitch_angle_degrees: f64,
+    #[getset(get_copy = "pub")]
     roll_angle_degrees: f64,
 }
 

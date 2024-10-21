@@ -1,14 +1,16 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::Display;
+use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy, Display, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Display, PartialEq, Deserialize, Serialize, CopyGetters)]
 #[display("MA{id} {timestamp}: {field_nanotesla}")]
 pub struct MagSensor {
     pub id: u8,
     timestamp: DateTime<Utc>,
+    #[getset(get_copy = "pub")]
     field_nanotesla: f64,
 }
 
