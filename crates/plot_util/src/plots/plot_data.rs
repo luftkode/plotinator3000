@@ -155,7 +155,7 @@ impl PlotValues {
     pub fn get_scaled_mipmap_levels(
         &self,
         pixel_width: usize,
-        x_bounds: (usize, usize),
+        x_bounds: (f64, f64),
     ) -> (usize, Option<(usize, usize)>) {
         self.mipmap_min.get_level_match(pixel_width, x_bounds)
     }

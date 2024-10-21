@@ -1,12 +1,18 @@
 use std::time::Duration;
 
 use crate::{plot::LogPlotUi, util::format_data_size};
-use egui::{Color32, DroppedFile, Hyperlink, RichText, TextStyle};
+use dropped_files::handle_dropped_files;
+use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
 use egui_notify::Toasts;
+use egui_phosphor::regular;
 use log_if::prelude::Plotable;
-use supported_formats::{SupportedFormat, SupportedLogs};
 
-mod preview_dropped;
+use file_dialog as fd;
+use supported_formats::{LoadedFiles, SupportedFormat};
+
+mod dropped_files;
+mod file_dialog;
+
 pub mod supported_formats;
 mod util;
 
@@ -25,24 +31,34 @@ pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 pub struct App {
     #[serde(skip)]
     toasts: Toasts,
-    dropped_files: Vec<DroppedFile>,
-    picked_path: Option<String>,
-    logs: SupportedLogs,
+    loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: Option<f32>,
     error_message: Option<String>,
+
+    #[cfg(target_arch = "wasm32")]
+    #[serde(skip)]
+    web_file_dialog: fd::web::WebFileDialog,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[serde(skip)]
+    native_file_dialog: fd::native::NativeFileDialog,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
             toasts: Toasts::default(),
-            dropped_files: Vec::new(),
-            picked_path: None,
-            logs: SupportedLogs::default(),
+            loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
             font_size: Some(Self::DEFAULT_FONT_SIZE),
             error_message: None,
+
+            #[cfg(target_arch = "wasm32")]
+            web_file_dialog: fd::web::WebFileDialog::default(),
+
+            #[cfg(not(target_arch = "wasm32"))]
+            native_file_dialog: fd::native::NativeFileDialog::default(),
         }
     }
 }
@@ -88,21 +104,31 @@ impl eframe::App for App {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        #[cfg(target_arch = "wasm32")]
+        if let Err(e) = self
+            .web_file_dialog
+            .poll_received_files(&mut self.loaded_files)
+        {
+            self.error_message = Some(e.to_string());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Err(e) = self
+            .native_file_dialog
+            .parse_picked_files(&mut self.loaded_files)
+        {
+            self.error_message = Some(e.to_string());
+        }
+
         Self::configure_text_styles(ctx, self.font_size.unwrap_or_default());
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
-
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
-                if ui.button("Reset plot").clicked() {
+                if ui
+                    .button(RichText::new(format!(
+                        "{} Reset",
+                        egui_phosphor::regular::TRASH
+                    )))
+                    .clicked()
+                {
                     if self.plot.plot_count() == 0 {
                         self.toasts
                             .warning("No loaded plots...")
@@ -112,12 +138,22 @@ impl eframe::App for App {
                             .info("All loaded logs removed...")
                             .duration(Some(std::time::Duration::from_secs(3)));
                     }
-                    self.logs = SupportedLogs::default();
+                    self.loaded_files = LoadedFiles::default();
                     self.plot = LogPlotUi::default();
-                    self.dropped_files.clear();
                 }
-
-                ui.label("Font size:");
+                if ui
+                    .button(RichText::new(format!(
+                        "{} Open File",
+                        egui_phosphor::regular::FOLDER_OPEN
+                    )))
+                    .clicked()
+                {
+                    #[cfg(target_arch = "wasm32")]
+                    self.web_file_dialog.open(ctx.clone());
+                    #[cfg(not(target_arch = "wasm32"))]
+                    self.native_file_dialog.open();
+                }
+                ui.label(RichText::new(regular::TEXT_T));
                 if let Some(ref mut font_size) = self.font_size {
                     if ui
                         .add(
@@ -130,56 +166,33 @@ impl eframe::App for App {
                     {}
                 }
 
-                egui::widgets::global_theme_preference_buttons(ui);
+                show_theme_toggle_buttons(ui);
                 ui.add(Hyperlink::from_label_and_url(
                     "Homepage",
                     "https://github.com/luftkode/logviewer-rs",
                 ));
 
-                if is_web {
-                    _ = ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
+                if cfg!(target_arch = "wasm32") {
+                    ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
                 }
+                collapsible_instructions(ui);
             });
-            collapsible_instructions(ui);
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            notify_if_logs_added(&mut self.toasts, self.logs.logs());
-            self.plot.ui(ui, &self.logs.take_logs(), &mut self.toasts);
-
-            if self.dropped_files.is_empty() {
-                // Display the message when no files have been dropped and no logs are loaded
+            notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
+            self.plot
+                .ui(ui, &self.loaded_files.take_loaded_files(), &mut self.toasts);
+            if self.plot.plot_count() == 0 {
+                // Display the message when plots are shown
                 util::draw_empty_state(ui);
-            } else {
-                ui.group(|ui| {
-                    ui.label("Dropped files:");
-                    for file in &self.dropped_files {
-                        ui.label(util::file_info(file));
-                    }
-                });
             }
 
-            preview_dropped::preview_files_being_dropped(ctx);
-            // Collect dropped files:
-            ctx.input(|i| {
-                if !i.raw.dropped_files.is_empty() {
-                    self.dropped_files.clone_from(&i.raw.dropped_files);
-                    match self.logs.parse_dropped_files(&self.dropped_files) {
-                        Ok(()) => {
-                            log::info!("OK parsing dropped file(s)");
-                            self.toasts.success("Parsing complete");
-
-                            self.error_message = None; // Clear any previous error message on success
-                        }
-                        Err(e) => {
-                            self.error_message = Some(format!("Error parsing dropped files: {e}"));
-                        }
-                    }
-                }
-            });
+            if let Err(e) = handle_dropped_files(ctx, &mut self.loaded_files) {
+                self.error_message = Some(e.to_string());
+            }
 
             self.show_error(ui);
-
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 egui::warn_if_debug_build(ui);
             });
@@ -191,23 +204,15 @@ impl eframe::App for App {
 impl App {
     fn show_error(&mut self, ui: &egui::Ui) {
         if let Some(error) = self.error_message.clone() {
-            let screen_rect = ui.ctx().screen_rect();
-            let window_width = screen_rect.width().clamp(400.0, 600.0);
-            let window_height = screen_rect.height().clamp(200.0, 300.0);
-
-            egui::Window::new(RichText::new("⚠").size(40.0))
-                .fixed_size([window_width, window_height])
+            egui::Window::new(RichText::new("⚠").size(40.0).color(Color32::RED))
+                .auto_sized()
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
                 .show(ui.ctx(), |ui| {
                     ui.vertical_centered(|ui| {
                         ui.add_space(10.0);
-                        let error_text = RichText::new(&error)
-                            .text_style(TextStyle::Body)
-                            .size(18.0)
-                            .color(Color32::RED);
-                        ui.label(error_text);
+                        ui.label(RichText::new(&error).text_style(TextStyle::Body).strong());
                         ui.add_space(20.0);
 
                         let button_text = RichText::new("OK")
@@ -215,11 +220,12 @@ impl App {
                             .size(18.0)
                             .strong();
 
-                        let button_size = egui::Vec2::new(100.0, 40.0);
+                        let button_size = egui::Vec2::new(80.0, 40.0);
                         if ui
                             .add_sized(button_size, egui::Button::new(button_text))
                             .on_hover_text("Click to dismiss the error")
                             .clicked()
+                            || ui.input(|i| i.key_pressed(egui::Key::Enter))
                         {
                             self.error_message = None;
                         }
@@ -282,4 +288,16 @@ fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]) {
             }
         }
     }
+}
+
+fn show_theme_toggle_buttons(ui: &mut egui::Ui) {
+    let mut theme_preference = ui.ctx().options(|opt| opt.theme_preference);
+
+    ui.horizontal(|ui| {
+        ui.selectable_value(&mut theme_preference, ThemePreference::Light, "☀");
+        ui.selectable_value(&mut theme_preference, ThemePreference::Dark, "🌙 ");
+        ui.selectable_value(&mut theme_preference, ThemePreference::System, "💻");
+    });
+
+    ui.ctx().set_theme(theme_preference);
 }

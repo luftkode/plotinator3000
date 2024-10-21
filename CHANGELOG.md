@@ -7,12 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.26.0]
+
+### Fix
+
+- Plot alignment
+
+### Changed
+
+- Make some UI elements smaller
+- Allow main window (viewport) to be shrink much more than before
+- Plot setting UI elements wrap instead of stay fixed when window shrinks
+
+## [0.25.0]
+
+### Added
+
+- File dialog for native and web, which also allows mobile users to load logs.
+
+### Changed
+
+- Various UI tweaks
+- Clean up some outdated error messages.
+
+### Internals
+
+- Decouple file parsing from file loading method.
+
+## [0.24.1]
+
+### Fix
+
+- Web version of `logviewer-rs` was broken due an integer overflow. When determining down sample level, a cast from 64-bit float to pointer size caused integer overflow on wasm due to wasm having a 32-bit pointer size.
+
 ## [0.24.0]
 
 ### Added
 
 - Initial support for `HDF` files, starting with bifrost (TX) loop current. The feature is currently guarded behind a feature flag, enabling it is tracked at: https://github.com/luftkode/logviewer-rs/issues/84.
--
 
 ### Changed
 
