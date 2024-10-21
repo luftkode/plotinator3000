@@ -14,6 +14,9 @@ pub struct AltimeterEntry {
 }
 
 impl AltimeterEntry {
+    /// This value is placeholder for an invalid reading
+    pub(crate) const INVALID_VALUE: f64 = 99999.99;
+
     pub(crate) fn timestamp_ns(&self) -> f64 {
         self.timestamp
             .timestamp_nanos_opt()

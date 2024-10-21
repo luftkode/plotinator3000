@@ -1,10 +1,11 @@
 use std::{
-    fmt,
+    fmt, fs,
     io::{self, BufReader},
+    path::Path,
 };
 
 use chrono::{DateTime, Utc};
-use entries::NavSysSpsEntry;
+use entries::{he::AltimeterEntry, NavSysSpsEntry};
 use header::NavSysSpsHeader;
 use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -20,9 +21,24 @@ pub struct NavSysSps {
 }
 
 impl NavSysSps {
+    /// Read a file and attempt to deserialize a NavSysSps header from it
+    ///
+    /// Return true if a valid header was deserialized
+    pub fn file_is_valid(path: &Path) -> bool {
+        let Ok(file) = fs::File::open(path) else {
+            return false;
+        };
+        let mut reader = BufReader::new(file);
+        NavSysSpsHeader::from_reader(&mut reader).is_ok()
+    }
+
     fn build_raw_plots(entries: &[NavSysSpsEntry]) -> Vec<RawPlot> {
         let mut raw_he1_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_he2_points_altitude: Vec<[f64; 2]> = Vec::new();
+        let mut he1_invalid_value_count: u64 = 0;
+        let mut raw_he1_points_invalid_value: Vec<[f64; 2]> = Vec::new();
+        let mut he2_invalid_value_count: u64 = 0;
+        let mut raw_he2_points_invalid_value: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl1_points_pitch: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl2_points_pitch: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl1_points_roll: Vec<[f64; 2]> = Vec::new();
@@ -50,10 +66,22 @@ impl NavSysSps {
         for entry in entries {
             match entry {
                 NavSysSpsEntry::HE1(e) => {
-                    raw_he1_points_altitude.push([e.timestamp_ns(), e.altitude_m()]);
+                    if e.altitude_m() == AltimeterEntry::INVALID_VALUE {
+                        he1_invalid_value_count += 1;
+                        raw_he1_points_invalid_value
+                            .push([e.timestamp_ns(), he1_invalid_value_count as f64]);
+                    } else {
+                        raw_he1_points_altitude.push([e.timestamp_ns(), e.altitude_m()]);
+                    }
                 }
                 NavSysSpsEntry::HE2(e) => {
-                    raw_he2_points_altitude.push([e.timestamp_ns(), e.altitude_m()]);
+                    if e.altitude_m() == AltimeterEntry::INVALID_VALUE {
+                        he2_invalid_value_count += 1;
+                        raw_he2_points_invalid_value
+                            .push([e.timestamp_ns(), he2_invalid_value_count as f64]);
+                    } else {
+                        raw_he2_points_altitude.push([e.timestamp_ns(), e.altitude_m()]);
+                    }
                 }
                 NavSysSpsEntry::TL1(e) => {
                     raw_tl1_points_pitch.push([e.timestamp_ns(), e.pitch_angle_degrees()]);
@@ -96,11 +124,21 @@ impl NavSysSps {
             RawPlot::new(
                 "HE1 Altitude [M]".into(),
                 raw_he1_points_altitude,
-                ExpectedPlotRange::Thousands,
+                ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
                 "HE2 Altitude [M]".into(),
                 raw_he2_points_altitude,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "HE1 Invalid Count".into(),
+                raw_he1_points_invalid_value,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "HE2 Invalid Count".into(),
+                raw_he2_points_invalid_value,
                 ExpectedPlotRange::Thousands,
             ),
             RawPlot::new(
@@ -250,7 +288,7 @@ impl Plotable for NavSysSps {
     }
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
-        let mut metadata: Vec<(String, String)> = vec![
+        let metadata: Vec<(String, String)> = vec![
             ("Version".into(), self.header.version().to_string()),
             (
                 "NavSys Software rev.".into(),
