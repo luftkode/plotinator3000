@@ -1,23 +1,34 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::Display;
+use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Display, PartialEq, Deserialize, Serialize)]
-#[display("GP{id} {timestamp}: {latitude:.5} {longitude:.5} {gp_time} {num_satellites} WGS84 {hdop:.1} {vdop:.1} {pdop:.1} {other_metric_1:.1} {other_metric_2:.1}")]
+#[derive(Debug, Clone, Display, PartialEq, Deserialize, Serialize, CopyGetters)]
+#[display("GP{id} {timestamp}: {latitude:.5} {longitude:.5} {gp_time} {num_satellites} WGS84 {speed_kmh:.1} {hdop:.1} {vdop:.1} {pdop:.1} {altitude_above_mean_sea:.1}")]
 pub struct Gps {
     pub id: u8,
     timestamp: DateTime<Utc>,
+    #[getset(get_copy = "pub")]
     latitude: f64,
+    #[getset(get_copy = "pub")]
     longitude: f64,
+    // format: HH:MM:SS.<ms_fraction>
+    #[getset(get = "pub")]
     gp_time: String,
-    num_satellites: u8,
+    #[getset(get_copy = "pub")]
+    num_satellites: u16,
+    #[getset(get_copy = "pub")]
+    speed_kmh: f32,
+    #[getset(get_copy = "pub")]
     hdop: f32,
+    #[getset(get_copy = "pub")]
     vdop: f32,
+    #[getset(get_copy = "pub")]
     pdop: f32,
-    other_metric_1: f32,
-    other_metric_2: f32,
+    #[getset(get_copy = "pub")]
+    altitude_above_mean_sea: f32,
 }
 
 impl Gps {
@@ -27,18 +38,45 @@ impl Gps {
             .expect("timestamp as nanoseconds out of range") as f64
     }
 
+    /// Returns the difference between the entry timestamp (system time) and the timestamp received
+    /// by the GPS in milliseconds
+    pub(crate) fn gps_time_delta_ms(&self) -> f64 {
+        // Parse the GPS time string (HH:MM:SS.000) into components
+        let parts: Vec<&str> = self.gp_time.split(':').collect();
+        let hours: i64 = parts[0].parse().unwrap_or(0);
+        let minutes: i64 = parts[1].parse().unwrap_or(0);
+        let seconds_parts: Vec<&str> = parts[2].split('.').collect();
+        let seconds: i64 = seconds_parts[0].parse().unwrap_or(0);
+        let millis: i64 = seconds_parts[1].parse().unwrap_or(0);
+
+        // Create a NaiveDateTime for the same date but with GPS time
+        let gps_timestamp = self
+            .timestamp
+            .date_naive()
+            .and_hms_milli_opt(hours as u32, minutes as u32, seconds as u32, millis as u32)
+            .expect("Invalid timestamp")
+            .and_utc();
+
+        // Calculate difference in milliseconds
+        let system_ms = self.timestamp.timestamp_millis();
+        let gps_ms = gps_timestamp.timestamp_millis();
+
+        // Return the difference as a float
+        (system_ms - gps_ms) as f64
+    }
+
     pub fn new(
         id: u8,
         timestamp: DateTime<Utc>,
         latitude: f64,
         longitude: f64,
         gp_time: String,
-        num_satellites: u8,
+        num_satellites: u16,
+        speed_kmh: f32,
         hdop: f32,
         vdop: f32,
         pdop: f32,
-        other_metric_1: f32,
-        other_metric_2: f32,
+        altitude_above_mean_sea: f32,
     ) -> Self {
         Gps {
             id,
@@ -47,11 +85,11 @@ impl Gps {
             longitude,
             gp_time,
             num_satellites,
+            speed_kmh,
             hdop,
             vdop,
             pdop,
-            other_metric_1,
-            other_metric_2,
+            altitude_above_mean_sea,
         }
     }
 }
@@ -170,11 +208,11 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
         assert_eq!(gp1.longitude, 933.01392);
         assert_eq!(gp1.gp_time, "12:52:43.000");
         assert_eq!(gp1.num_satellites, 16);
-        assert_eq!(gp1.hdop, 0.0);
-        assert_eq!(gp1.vdop, 0.8);
-        assert_eq!(gp1.pdop, 1.3);
-        assert_eq!(gp1.other_metric_1, 1.5);
-        assert_eq!(gp1.other_metric_2, 0.2);
+        assert_eq!(gp1.speed_kmh, 0.0);
+        assert_eq!(gp1.hdop, 0.8);
+        assert_eq!(gp1.vdop, 1.3);
+        assert_eq!(gp1.pdop, 1.5);
+        assert_eq!(gp1.altitude_above_mean_sea, 0.2);
         assert_eq!(
             gp1.timestamp.naive_utc(),
             NaiveDateTime::parse_from_str("2024-10-03 12:52:42.994", "%Y-%m-%d %H:%M:%S.%3f")?
@@ -186,11 +224,11 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
         assert_eq!(gp2.longitude, 933.01312);
         assert_eq!(gp2.gp_time, "12:52:43.000");
         assert_eq!(gp2.num_satellites, 17);
-        assert_eq!(gp2.hdop, 0.0);
-        assert_eq!(gp2.vdop, 0.9);
-        assert_eq!(gp2.pdop, 1.2);
-        assert_eq!(gp2.other_metric_1, 1.5);
-        assert_eq!(gp2.other_metric_2, -0.1);
+        assert_eq!(gp2.speed_kmh, 0.0);
+        assert_eq!(gp2.hdop, 0.9);
+        assert_eq!(gp2.vdop, 1.2);
+        assert_eq!(gp2.pdop, 1.5);
+        assert_eq!(gp2.altitude_above_mean_sea, -0.1);
 
         Ok(())
     }
@@ -243,6 +281,16 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
         let expected_ns = (gp1.timestamp.timestamp() as f64) * 1e9
             + (gp1.timestamp.timestamp_subsec_nanos() as f64);
         assert_eq!(gp1.timestamp_ns(), expected_ns);
+        Ok(())
+    }
+
+    #[test]
+    fn test_gps_time_delta() -> TestResult {
+        let gps = Gps::from_str("GP1 2024 10 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 WGS84 0.0 0.8 1.3 1.5 0.2")?;
+        // System time is 42.994, GPS time is 43.000
+        // Expected delta: 42.994 - 43.000 = -0.006 seconds = -6 milliseconds
+        let gps_time_delta_ms = gps.gps_time_delta_ms();
+        assert_eq!(gps_time_delta_ms, -6.);
         Ok(())
     }
 }
