@@ -41,8 +41,9 @@ impl LogEntry for NavSysSpsEntry {
         if line.len() < 10 {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "Expected NavSysSps entry line but line is too short to be a NavSysSps entry",
-            ));
+                format!(
+                "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={}", line.len(), line
+            )));
         }
         let first_three_chars = &line[..3];
         let entry: Self = match first_three_chars {
