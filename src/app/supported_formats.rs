@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
+    navsys::NavSysSps,
 };
 use std::{
     fs,
@@ -58,7 +59,7 @@ impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     ///
     /// This is how content is made available in a browser.
-    fn parse_from_content(content: &[u8]) -> io::Result<Self> {
+    fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
         let total_bytes = content.len();
         log::debug!("Parsing content of length: {total_bytes}");
         let log: Self = if let Ok((pidlog, read_bytes)) = PidLog::try_from_buf(content) {
@@ -261,7 +262,7 @@ impl LoadedFiles {
     }
 
     pub(crate) fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.loaded.push(SupportedFormat::parse_from_content(buf)?);
+        self.loaded.push(SupportedFormat::parse_from_buf(buf)?);
         Ok(())
     }
 
@@ -296,7 +297,7 @@ impl LoadedFiles {
             if file.is_file() {
                 let mut contents = Vec::new();
                 io::Read::read_to_end(&mut file, &mut contents)?;
-                if let Ok(log) = SupportedFormat::parse_from_content(&contents) {
+                if let Ok(log) = SupportedFormat::parse_from_buf(&contents) {
                     self.loaded.push(log);
                 }
             }
