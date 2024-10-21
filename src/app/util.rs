@@ -57,6 +57,11 @@ pub fn draw_empty_state(gui: &mut egui::Ui) {
                             ));
                             ui.end_row();
 
+                            ui.label(RichText::new("Navsys").strong());
+                            ui.label("Navsys.sps logs with data from GPS, Magsensor, Altimeter, etc.");
+                            ui.add(Hyperlink::from_label_and_url("https://github.com/luftkode/navsys", "https://github.com/luftkode/navsys"));
+                            ui.end_row();
+
 
                             list_supported_hdf_formats(ui);
 
