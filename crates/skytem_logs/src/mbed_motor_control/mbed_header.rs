@@ -184,7 +184,6 @@ pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
         ))
     }
 
-    // Not much to do about this lint other than wrap some arguments in another struct but it is not worth the effort, this is a simple constructor
     #[allow(
         clippy::too_many_arguments,
         reason = "It's a constructor with a lot of data that doesn't benefit from being grouped/wrapped into a struct"

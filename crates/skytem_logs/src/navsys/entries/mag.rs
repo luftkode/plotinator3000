@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::Display;
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{num::ParseFloatError, str::FromStr};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, Display, PartialEq, Deserialize, Serialize, CopyGetters)]
@@ -22,16 +22,16 @@ impl MagSensor {
     }
 }
 
-#[derive(Debug, Clone, Copy, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum MagSensorParseError {
     #[error("Invalid format")]
-    InvalidFormat,
+    Format(String),
     #[error("Invalid ID")]
-    InvalidId,
+    Id(String),
     #[error("Invalid timestamp: {0}")]
-    InvalidTimestamp(#[from] chrono::ParseError),
+    Timestamp(#[from] chrono::ParseError),
     #[error("Invalid field strength")]
-    InvalidFieldStrength,
+    FieldStrength(String),
 }
 
 impl FromStr for MagSensor {
@@ -40,14 +40,19 @@ impl FromStr for MagSensor {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split_whitespace().collect();
         if parts.len() != 9 {
-            return Err(MagSensorParseError::InvalidFormat);
+            return Err(MagSensorParseError::Format(
+                "Separating line by whitespace did not return 9 parts".to_owned(),
+            ));
         }
 
         // Parse ID (format: "MA1" -> 1)
         let id = parts[0]
             .strip_prefix("MA")
             .and_then(|id| id.parse().ok())
-            .ok_or(MagSensorParseError::InvalidId)?;
+            .ok_or(MagSensorParseError::Id(format!(
+                "Expected ID=MA, got '{}'",
+                parts[0]
+            )))?;
 
         // Parse timestamp
         let timestamp_str = format!(
@@ -60,9 +65,9 @@ impl FromStr for MagSensor {
         // Parse field strength
         let field_nanotesla = parts[8]
             .parse()
-            .map_err(|_| MagSensorParseError::InvalidFieldStrength)?;
+            .map_err(|e: ParseFloatError| MagSensorParseError::FieldStrength(e.to_string()))?;
 
-        Ok(MagSensor {
+        Ok(Self {
             id,
             timestamp,
             field_nanotesla,
@@ -112,19 +117,19 @@ MA2 2024 10 03 15 00 18 592 49751.2684
         // Test error cases
         assert!(matches!(
             MagSensor::from_str("invalid").unwrap_err(),
-            MagSensorParseError::InvalidFormat
+            MagSensorParseError::Format(_)
         ));
         assert!(matches!(
             MagSensor::from_str("MAX 2024 10 03 15 00 18 491 49750.1573").unwrap_err(),
-            MagSensorParseError::InvalidId
+            MagSensorParseError::Id(_)
         ));
         assert!(matches!(
             MagSensor::from_str("MA1 2024 10 03 15 00 18 491 invalid").unwrap_err(),
-            MagSensorParseError::InvalidFieldStrength
+            MagSensorParseError::FieldStrength(_)
         ));
         assert!(matches!(
             MagSensor::from_str("MA1 2024 13 03 15 00 18 491 49750.1573").unwrap_err(),
-            MagSensorParseError::InvalidTimestamp(_)
+            MagSensorParseError::Timestamp(_)
         ));
 
         // Test Display formatting

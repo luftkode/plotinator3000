@@ -1,7 +1,10 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use std::{fmt, io};
+use std::{
+    fmt, io,
+    num::{ParseFloatError, ParseIntError},
+};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub(crate) struct NavSysSpsHeader {
@@ -69,7 +72,7 @@ impl CalibrationData {
                 })?
                 .trim()
                 .parse()
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse float"))
+                .map_err(|e: ParseFloatError| io::Error::new(io::ErrorKind::InvalidData, e))
         };
         let angle_offset_y = parse_value("OffsetY: ")?;
         let angle_y = parse_value("Y: ")?;
@@ -77,7 +80,7 @@ impl CalibrationData {
         let angle_x = parse_value("X: ")?;
 
         Ok((
-            CalibrationData {
+            Self {
                 angle_offset_y,
                 angle_y,
                 angle_offset_x,
@@ -103,7 +106,12 @@ impl NavSysSpsHeader {
             .nth(1)
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Invalid version format"))?
             .parse()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse version"))?;
+            .map_err(|e: ParseIntError| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Failed to parse version: {e}"),
+                )
+            })?;
 
         // Parse first timestamp (format: MRK YYYY MM DD HH MM SS SSS)
         line.clear();
@@ -116,8 +124,11 @@ impl NavSysSpsHeader {
             .join(" ");
         let first_timestamp =
             NaiveDateTime::parse_from_str(&timestamp_str, "%Y %m %d %H %M %S %3f")
-                .map_err(|_| {
-                    io::Error::new(io::ErrorKind::InvalidData, "Invalid timestamp format")
+                .map_err(|e| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Invalid timestamp format: {e}"),
+                    )
                 })?
                 .and_utc();
 
@@ -132,7 +143,7 @@ impl NavSysSpsHeader {
                 )
             })?
             .trim()
-            .to_string();
+            .to_owned();
 
         // Parse tilt sensor ID
         line.clear();
@@ -144,7 +155,7 @@ impl NavSysSpsHeader {
                 io::Error::new(io::ErrorKind::InvalidData, "Invalid tilt sensor ID format")
             })?
             .trim()
-            .to_string();
+            .to_owned();
 
         // Parse both calibration data sets
         let (calibration_data_1, bytes_cal_1) = CalibrationData::from_reader(reader)?;
@@ -152,7 +163,7 @@ impl NavSysSpsHeader {
         bytes_read += bytes_cal_1 + bytes_cal_2;
 
         Ok((
-            NavSysSpsHeader {
+            Self {
                 version,
                 first_timestamp,
                 software_rev,

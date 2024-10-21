@@ -5,7 +5,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use entries::{he::AltimeterEntry, NavSysSpsEntry};
+use entries::NavSysSpsEntry;
 use header::NavSysSpsHeader;
 use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ pub struct NavSysSps {
 }
 
 impl NavSysSps {
-    /// Read a file and attempt to deserialize a NavSysSps header from it
+    /// Read a file and attempt to deserialize a `NavSysSps` header from it
     ///
     /// Return true if a valid header was deserialized
     pub fn file_is_valid(path: &Path) -> bool {
@@ -32,6 +32,10 @@ impl NavSysSps {
         NavSysSpsHeader::from_reader(&mut reader).is_ok()
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "There's a lot of plottable stuff in navsys sps, maybe this could be prettier, but yea..."
+    )]
     fn build_raw_plots(entries: &[NavSysSpsEntry]) -> Vec<RawPlot> {
         let mut raw_he1_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_he2_points_altitude: Vec<[f64; 2]> = Vec::new();
@@ -66,21 +70,21 @@ impl NavSysSps {
         for entry in entries {
             match entry {
                 NavSysSpsEntry::HE1(e) => {
-                    if e.altitude_m() == AltimeterEntry::INVALID_VALUE {
+                    if let Some(altitude) = e.altitude_m() {
+                        raw_he1_points_altitude.push([e.timestamp_ns(), altitude]);
+                    } else {
                         he1_invalid_value_count += 1;
                         raw_he1_points_invalid_value
                             .push([e.timestamp_ns(), he1_invalid_value_count as f64]);
-                    } else {
-                        raw_he1_points_altitude.push([e.timestamp_ns(), e.altitude_m()]);
                     }
                 }
                 NavSysSpsEntry::HE2(e) => {
-                    if e.altitude_m() == AltimeterEntry::INVALID_VALUE {
+                    if let Some(altitude) = e.altitude_m() {
+                        raw_he2_points_altitude.push([e.timestamp_ns(), altitude]);
+                    } else {
                         he2_invalid_value_count += 1;
                         raw_he2_points_invalid_value
                             .push([e.timestamp_ns(), he2_invalid_value_count as f64]);
-                    } else {
-                        raw_he2_points_altitude.push([e.timestamp_ns(), e.altitude_m()]);
                     }
                 }
                 NavSysSpsEntry::TL1(e) => {

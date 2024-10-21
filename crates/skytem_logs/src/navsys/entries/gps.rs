@@ -2,7 +2,10 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::Display;
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{
+    num::{ParseFloatError, ParseIntError},
+    str::FromStr,
+};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Display, PartialEq, Deserialize, Serialize, CopyGetters)]
@@ -65,6 +68,10 @@ impl Gps {
         (system_ms - gps_ms) as f64
     }
 
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "It's a constructor with a lot of data that doesn't benefit from being grouped/wrapped into a struct"
+    )]
     pub fn new(
         id: u8,
         timestamp: DateTime<Utc>,
@@ -78,7 +85,7 @@ impl Gps {
         pdop: f32,
         altitude_above_mean_sea: f32,
     ) -> Self {
-        Gps {
+        Self {
             id,
             timestamp,
             latitude,
@@ -94,34 +101,34 @@ impl Gps {
     }
 }
 
-#[derive(Debug, Clone, Copy, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum GpsError {
     #[error("Invalid format")]
-    InvalidFormat,
+    Format,
     #[error("Invalid ID")]
-    InvalidId,
+    Id,
     #[error("Invalid timestamp: {0}")]
-    InvalidTimestamp(#[from] chrono::ParseError),
-    #[error("Invalid latitude")]
-    InvalidLatitude,
-    #[error("Invalid longitude")]
-    InvalidLongitude,
-    #[error("Invalid GPS time format")]
-    InvalidGpsTime,
-    #[error("Invalid number of satellites")]
-    InvalidSatellites,
+    Timestamp(#[from] chrono::ParseError),
+    #[error("Invalid latitude: {0}")]
+    Latitude(String),
+    #[error("Invalid longitude: {0}")]
+    Longitude(String),
+    #[error("Invalid GPS time format: {0}")]
+    GpsTime(String),
+    #[error("Invalid number of satellites: {0}")]
+    Satellites(String),
     #[error("Invalid coordinate system (expected WGS84)")]
-    InvalidCoordinateSystem,
-    #[error("Invalid HDOP")]
-    InvalidHdop,
-    #[error("Invalid VDOP")]
-    InvalidVdop,
-    #[error("Invalid PDOP")]
-    InvalidPdop,
-    #[error("Invalid metric 1")]
-    InvalidMetric1,
-    #[error("Invalid metric 2")]
-    InvalidMetric2,
+    CoordinateSystem,
+    #[error("Invalid Speed: {0}")]
+    Speed(String),
+    #[error("Invalid HDOP: {0}")]
+    Hdop(String),
+    #[error("Invalid VDOP: {0}")]
+    Vdop(String),
+    #[error("Invalid PDOP: {0}")]
+    Pdop(String),
+    #[error("Invalid Altitude: {0}")]
+    Altitude(String),
 }
 
 impl FromStr for Gps {
@@ -130,14 +137,14 @@ impl FromStr for Gps {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split_whitespace().collect();
         if parts.len() != 18 {
-            return Err(GpsError::InvalidFormat);
+            return Err(GpsError::Format);
         }
 
         // Parse ID (format: "GP1" -> 1)
         let id = parts[0]
             .strip_prefix("GP")
             .and_then(|id| id.parse().ok())
-            .ok_or(GpsError::InvalidId)?;
+            .ok_or(GpsError::Id)?;
 
         // Parse timestamp
         let timestamp_str = format!(
@@ -148,29 +155,45 @@ impl FromStr for Gps {
             NaiveDateTime::parse_from_str(&timestamp_str, "%Y %m %d %H %M %S %3f")?.and_utc();
 
         // Parse latitude and longitude
-        let latitude = parts[8].parse().map_err(|_| GpsError::InvalidLatitude)?;
-        let longitude = parts[9].parse().map_err(|_| GpsError::InvalidLongitude)?;
+        let latitude = parts[8]
+            .parse()
+            .map_err(|e: ParseFloatError| GpsError::Latitude(e.to_string()))?;
+        let longitude = parts[9]
+            .parse()
+            .map_err(|e: ParseFloatError| GpsError::Longitude(e.to_string()))?;
 
         // Parse GPS time
-        let gp_time = parts[10].to_string();
+        let gp_time = parts[10].to_owned();
         if !gp_time.matches(':').count() == 2 {
-            return Err(GpsError::InvalidGpsTime);
+            return Err(GpsError::GpsTime(format!("Invalid format: {gp_time}")));
         }
 
         // Parse number of satellites
-        let num_satellites = parts[11].parse().map_err(|_| GpsError::InvalidSatellites)?;
+        let num_satellites = parts[11]
+            .parse()
+            .map_err(|e: ParseIntError| GpsError::Satellites(e.to_string()))?;
 
         // Verify coordinate system
         if parts[12] != "WGS84" {
-            return Err(GpsError::InvalidCoordinateSystem);
+            return Err(GpsError::CoordinateSystem);
         }
 
         // Parse DOP values and other metrics
-        let hdop = parts[13].parse().map_err(|_| GpsError::InvalidHdop)?;
-        let vdop = parts[14].parse().map_err(|_| GpsError::InvalidVdop)?;
-        let pdop = parts[15].parse().map_err(|_| GpsError::InvalidPdop)?;
-        let other_metric_1 = parts[16].parse().map_err(|_| GpsError::InvalidMetric1)?;
-        let other_metric_2 = parts[17].parse().map_err(|_| GpsError::InvalidMetric2)?;
+        let speed = parts[13]
+            .parse()
+            .map_err(|e: ParseFloatError| GpsError::Speed(e.to_string()))?;
+        let hdop = parts[14]
+            .parse()
+            .map_err(|e: ParseFloatError| GpsError::Hdop(e.to_string()))?;
+        let vdop = parts[15]
+            .parse()
+            .map_err(|e: ParseFloatError| GpsError::Vdop(e.to_string()))?;
+        let pdop = parts[16]
+            .parse()
+            .map_err(|e: ParseFloatError| GpsError::Pdop(e.to_string()))?;
+        let altitude = parts[17]
+            .parse()
+            .map_err(|e: ParseFloatError| GpsError::Altitude(e.to_string()))?;
 
         Ok(Self::new(
             id,
@@ -179,11 +202,11 @@ impl FromStr for Gps {
             longitude,
             gp_time,
             num_satellites,
+            speed,
             hdop,
             vdop,
             pdop,
-            other_metric_1,
-            other_metric_2,
+            altitude,
         ))
     }
 }
@@ -238,25 +261,25 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
         // Test invalid format
         assert!(matches!(
             Gps::from_str("invalid").unwrap_err(),
-            GpsError::InvalidFormat
+            GpsError::Format
         ));
 
         // Test invalid ID
         assert!(matches!(
             Gps::from_str("GPA 2024 10 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 WGS84 0.0 0.8 1.3 1.5 0.2").unwrap_err(),
-            GpsError::InvalidId
+            GpsError::Id
         ));
 
         // Test invalid coordinate system
         assert!(matches!(
             Gps::from_str("GP1 2024 10 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 NAD83 0.0 0.8 1.3 1.5 0.2").unwrap_err(),
-            GpsError::InvalidCoordinateSystem
+            GpsError::CoordinateSystem
         ));
 
         // Test invalid timestamp
         assert!(matches!(
             Gps::from_str("GP1 2024 13 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 WGS84 0.0 0.8 1.3 1.5 0.2").unwrap_err(),
-            GpsError::InvalidTimestamp(_)
+            GpsError::Timestamp(_)
         ));
 
         // Test multi-line parsing

@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use derive_more::Display;
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{num::ParseFloatError, str::FromStr};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize, Display, CopyGetters)]
@@ -24,18 +24,18 @@ impl InclinometerEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum InclinometerEntryError {
     #[error("Invalid format")]
-    InvalidFormat,
+    Format(String),
     #[error("Invalid ID")]
-    InvalidId,
+    Id(String),
     #[error("Invalid timestamp: {0}")]
-    InvalidTimestamp(#[from] chrono::ParseError),
+    Timestamp(#[from] chrono::ParseError),
     #[error("Invalid pitch angle")]
-    InvalidPitchAngle,
+    PitchAngle(String),
     #[error("Invalid roll angle")]
-    InvalidRollAngle,
+    RollAngle(String),
 }
 
 impl FromStr for InclinometerEntry {
@@ -44,14 +44,19 @@ impl FromStr for InclinometerEntry {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split_whitespace().collect();
         if parts.len() != 10 {
-            return Err(InclinometerEntryError::InvalidFormat);
+            return Err(InclinometerEntryError::Format(
+                "Separating line by whitespace did not return 10 parts".to_owned(),
+            ));
         }
 
         // Parse ID (format: "TL1" -> 1)
         let id = parts[0]
             .strip_prefix("TL")
             .and_then(|id| id.parse().ok())
-            .ok_or(InclinometerEntryError::InvalidId)?;
+            .ok_or(InclinometerEntryError::Id(format!(
+                "Expected ID=TL, got '{}'",
+                parts[0]
+            )))?;
 
         // Parse timestamp
         let timestamp_str = format!(
@@ -63,13 +68,13 @@ impl FromStr for InclinometerEntry {
 
         let pitch_angle_degrees = parts[8]
             .parse()
-            .map_err(|_| InclinometerEntryError::InvalidPitchAngle)?;
+            .map_err(|e: ParseFloatError| InclinometerEntryError::PitchAngle(e.to_string()))?;
 
         let roll_angle_degrees = parts[9]
             .parse()
-            .map_err(|_| InclinometerEntryError::InvalidRollAngle)?;
+            .map_err(|e: ParseFloatError| InclinometerEntryError::RollAngle(e.to_string()))?;
 
-        Ok(InclinometerEntry {
+        Ok(Self {
             id,
             timestamp,
             pitch_angle_degrees,
@@ -122,31 +127,31 @@ TL2 2024 10 03 12 52 42 542 2.34 0.58
         // Test invalid format
         assert!(matches!(
             InclinometerEntry::from_str("invalid").unwrap_err(),
-            InclinometerEntryError::InvalidFormat
+            InclinometerEntryError::Format(_)
         ));
 
         // Test invalid ID
         assert!(matches!(
             InclinometerEntry::from_str("TLA 2024 10 03 12 52 42 838 2.15 0.24").unwrap_err(),
-            InclinometerEntryError::InvalidId
+            InclinometerEntryError::Id(_)
         ));
 
         // Test invalid angle
         assert!(matches!(
             InclinometerEntry::from_str("TL1 2024 10 03 12 52 42 838 invalid 0.24").unwrap_err(),
-            InclinometerEntryError::InvalidPitchAngle
+            InclinometerEntryError::PitchAngle(_)
         ));
 
         // Test invalid uncertainty
         assert!(matches!(
             InclinometerEntry::from_str("TL1 2024 10 03 12 52 42 838 2.15 invalid").unwrap_err(),
-            InclinometerEntryError::InvalidRollAngle
+            InclinometerEntryError::RollAngle(_)
         ));
 
         // Test invalid timestamp
         assert!(matches!(
             InclinometerEntry::from_str("TL1 2024 13 03 12 52 42 838 2.15 0.24").unwrap_err(),
-            InclinometerEntryError::InvalidTimestamp(_)
+            InclinometerEntryError::Timestamp(_)
         ));
 
         Ok(())
