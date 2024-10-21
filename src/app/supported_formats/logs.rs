@@ -50,6 +50,12 @@ impl From<(GeneratorLog, ParseInfo)> for SupportedLog {
     }
 }
 
+impl From<(NavSysSps, ParseInfo)> for SupportedLog {
+    fn from(value: (NavSysSps, ParseInfo)) -> Self {
+        Self::NavSysSps(value.0, value.1)
+    }
+}
+
 impl Plotable for SupportedLog {
     fn raw_plots(&self) -> &[RawPlot] {
         match self {

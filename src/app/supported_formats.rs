@@ -55,6 +55,12 @@ impl From<(GeneratorLog, ParseInfo)> for SupportedFormat {
     }
 }
 
+impl From<(NavSysSps, ParseInfo)> for SupportedFormat {
+    fn from(value: (NavSysSps, ParseInfo)) -> Self {
+        Self::Log(SupportedLog::from(value))
+    }
+}
+
 impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     ///
@@ -78,6 +84,12 @@ impl SupportedFormat {
         } else if let Ok((genlog, read_bytes)) = GeneratorLog::try_from_buf(content) {
             (
                 genlog,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
+        } else if let Ok((navsyssps_log, read_bytes)) = NavSysSps::try_from_buf(content) {
+            (
+                navsyssps_log,
                 ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
             )
                 .into()
@@ -119,6 +131,13 @@ impl SupportedFormat {
                 .into()
         } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
             let (log, parsed_bytes) = GeneratorLog::from_reader(&mut reader)?;
+            (
+                log,
+                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
+        } else if NavSysSps::file_is_valid(path) {
+            let (log, parsed_bytes) = NavSysSps::from_reader(&mut reader)?;
             (
                 log,
                 ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
