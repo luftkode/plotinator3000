@@ -99,6 +99,7 @@ enum UpdateStep {
     Initial,
     LoadMetadata,
     WaitingForCountdown(u8),
+    UpdateNowClicked,
     InstallUpdate,
     Completed(String),
     Cancelled,
@@ -111,7 +112,7 @@ impl UpdateStep {
             Self::WaitingForCountdown(countdown) => {
                 LOAD_METADATA_PROGRESS + (COUNTDOWN_FOR_UPGRADE_SECS - countdown) as f32 * 2.
             }
-            UpdateStep::InstallUpdate => {
+            Self::UpdateNowClicked | Self::InstallUpdate => {
                 WAIT_FOR_COUNTDOWN_PROGRESS + (COUNTDOWN_FOR_UPGRADE_SECS as f32 * 10.)
             }
             UpdateStep::Completed(_) => UPDATE_DONE_PROGRESS,
@@ -127,7 +128,7 @@ impl UpdateStep {
             Self::WaitingForCountdown(countdown) => {
                 (COUNTDOWN_FOR_UPGRADE_SECS - countdown) as f32 * 10.
             }
-            UpdateStep::InstallUpdate => UPDATE_DONE_PROGRESS,
+            Self::UpdateNowClicked | UpdateStep::InstallUpdate => UPDATE_DONE_PROGRESS,
             UpdateStep::Completed(_) => UPDATE_DONE_PROGRESS,
             Self::Cancelled => 0.0,
         }
@@ -145,6 +146,7 @@ impl UpdateStep {
                     format!("{countdown}... ")
                 }
             }
+            Self::UpdateNowClicked => "Now!\n".to_owned(),
             UpdateStep::InstallUpdate => "Retrieving update...\n".to_owned(),
             UpdateStep::Completed(description) => description.to_owned(),
             Self::Cancelled => "Update Cancelled!\n".to_owned(),
@@ -156,6 +158,7 @@ fn run_update_process(
     sender: mpsc::Sender<UpdateStep>,
     countdown: Arc<AtomicU8>,
     update_cancelled: Arc<AtomicBool>,
+    update_now_clicked: Arc<AtomicBool>,
 ) -> AxoupdateResult<bool> {
     sender
         .send(UpdateStep::Initial)
@@ -172,7 +175,10 @@ fn run_update_process(
     updater.always_update(FORCE_UPGRADE);
 
     // wait for countdown
-    while countdown.load(Ordering::SeqCst) != 0 && !update_cancelled.load(Ordering::SeqCst) {
+    while countdown.load(Ordering::SeqCst) != 0
+        && !update_cancelled.load(Ordering::SeqCst)
+        && !update_now_clicked.load(Ordering::SeqCst)
+    {
         let prev_val = countdown.fetch_sub(1, Ordering::SeqCst);
         sender
             .send(UpdateStep::WaitingForCountdown(prev_val - 1))
@@ -184,6 +190,11 @@ fn run_update_process(
             .send(UpdateStep::Cancelled)
             .expect("Failed sending update to gui");
         return Ok(false);
+    }
+    if update_now_clicked.load(Ordering::SeqCst) {
+        sender
+            .send(UpdateStep::UpdateNowClicked)
+            .expect("Failed sending update to gui");
     }
     sender
         .send(UpdateStep::InstallUpdate)
@@ -228,6 +239,7 @@ pub fn show_simple_update_window() -> eframe::Result<bool> {
 
     let countdown = Arc::new(AtomicU8::new(COUNTDOWN_FOR_UPGRADE_SECS));
     let update_cancelled = Arc::new(AtomicBool::new(false));
+    let update_now_clicked = Arc::new(AtomicBool::new(false));
 
     // Run the update in a separate thread
     let updater_thread = thread::Builder::new()
@@ -236,8 +248,11 @@ pub fn show_simple_update_window() -> eframe::Result<bool> {
             let update_clone = update_clone.clone();
             let countdown = countdown.clone();
             let update_cancelled = update_cancelled.clone();
+            let update_now_clicked = update_now_clicked.clone();
             move || {
-                if let Ok(did_update) = run_update_process(tx, countdown, update_cancelled) {
+                if let Ok(did_update) =
+                    run_update_process(tx, countdown, update_cancelled, update_now_clicked)
+                {
                     update_clone.store(did_update, Ordering::Relaxed);
                 }
             }
@@ -288,17 +303,26 @@ pub fn show_simple_update_window() -> eframe::Result<bool> {
                 } else {
                     // Show the countdown or disable updates button
                     let countdown_val = countdown.load(Ordering::SeqCst);
-                    if countdown_val != 0 {
-                        ui.label(
-                            RichText::new(format!("Updating in {countdown_val}s...")).strong(),
-                        );
-                        if ui
-                            .button(RichText::new("Disable Updates (can be enabled later)"))
-                            .clicked()
-                        {
-                            update_cancelled.store(true, Ordering::SeqCst);
-                            // Create the disable updates file
-                            create_disable_update_file().expect("Failed to disable updates");
+                    if countdown_val != 0 && !update_clone.load(Ordering::SeqCst) {
+                        if update_now_clicked.load(Ordering::SeqCst) {
+                            ui.label(RichText::new(format!("Updating now!")).strong());
+                        } else {
+                            ui.label(
+                                RichText::new(format!("Updating in {countdown_val}s...")).strong(),
+                            );
+                            ui.add_space(5.0);
+                            if ui.button(RichText::new("Update now!").strong()).clicked() {
+                                update_now_clicked.store(true, Ordering::SeqCst);
+                            }
+                            ui.add_space(10.0);
+                            if ui
+                                .button(RichText::new("Disable Updates (can be enabled later)"))
+                                .clicked()
+                            {
+                                update_cancelled.store(true, Ordering::SeqCst);
+                                // Create the disable updates file
+                                create_disable_update_file().expect("Failed to disable updates");
+                            }
                         }
                     }
                 }
