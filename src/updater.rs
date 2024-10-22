@@ -9,7 +9,7 @@ use crate::APP_NAME;
 const DISABLE_UPDATES_FILE: &str = "logviewer_disable_updates";
 const BYPASS_UPDATES_ENV_VAR: &str = "LOGVIEWER_BYPASS_UPDATES";
 // Use this to debug the update workflow
-const FORCE_UPGRADE: bool = true;
+const FORCE_UPGRADE: bool = false;
 
 mod ui;
 
