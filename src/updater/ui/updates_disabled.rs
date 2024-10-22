@@ -45,7 +45,7 @@ pub(crate) fn show_simple_updates_are_disabled_window() -> eframe::Result<bool> 
                     }
                 } else {
                     ui.label(
-                        RichText::new(format!("Updates are currently disabled"))
+                        RichText::new("Updates are currently disabled".to_owned())
                             .strong()
                             .size(18.),
                     );

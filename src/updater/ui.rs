@@ -39,38 +39,37 @@ enum UpdateStep {
 impl UpdateStep {
     fn update_progress(&self) -> f32 {
         match self {
-            UpdateStep::UnInit | UpdateStep::Initial => 0.0,
-            UpdateStep::LoadMetadata => START_UPDATE_PROGRESS,
+            Self::Cancelled | Self::UnInit | Self::Initial => 0.0,
+            Self::LoadMetadata => START_UPDATE_PROGRESS,
             Self::WaitingForCountdown(countdown) => {
                 LOAD_METADATA_PROGRESS + (COUNTDOWN_FOR_UPGRADE_SECS - countdown) as f32 * 2.
             }
             Self::UpdateNowClicked | Self::InstallUpdate => {
                 WAIT_FOR_COUNTDOWN_PROGRESS + (COUNTDOWN_FOR_UPGRADE_SECS as f32 * 10.)
             }
-            UpdateStep::Completed(_) => UPDATE_DONE_PROGRESS,
-            Self::Cancelled => 0.0,
+            Self::Completed(_) => UPDATE_DONE_PROGRESS,
         }
     }
 
     fn next_progress(&self) -> f32 {
         match self {
-            UpdateStep::UnInit => 0.0,
-            UpdateStep::Initial => START_UPDATE_PROGRESS,
-            UpdateStep::LoadMetadata => LOAD_METADATA_PROGRESS,
+            Self::Cancelled | Self::UnInit => 0.0,
+            Self::Initial => START_UPDATE_PROGRESS,
+            Self::LoadMetadata => LOAD_METADATA_PROGRESS,
             Self::WaitingForCountdown(countdown) => {
                 (COUNTDOWN_FOR_UPGRADE_SECS - countdown) as f32 * 10.
             }
-            Self::UpdateNowClicked | UpdateStep::InstallUpdate => UPDATE_DONE_PROGRESS,
-            UpdateStep::Completed(_) => UPDATE_DONE_PROGRESS,
-            Self::Cancelled => 0.0,
+            Self::Completed(_) | Self::UpdateNowClicked | Self::InstallUpdate => {
+                UPDATE_DONE_PROGRESS
+            }
         }
     }
 
     fn description(&self) -> String {
         match self {
-            UpdateStep::UnInit => "Waiting for update agent...\n".to_owned(),
-            UpdateStep::Initial => "Starting update...\n".to_owned(),
-            UpdateStep::LoadMetadata => "Loading update metadata...\n".to_owned(),
+            Self::UnInit => "Waiting for update agent...\n".to_owned(),
+            Self::Initial => "Starting update...\n".to_owned(),
+            Self::LoadMetadata => "Loading update metadata...\n".to_owned(),
             Self::WaitingForCountdown(countdown) => {
                 if *countdown == 0 {
                     "0...\n".to_owned()
@@ -79,19 +78,23 @@ impl UpdateStep {
                 }
             }
             Self::UpdateNowClicked => "Now!\n".to_owned(),
-            UpdateStep::InstallUpdate => "Retrieving update...\n".to_owned(),
-            UpdateStep::Completed(description) => description.to_owned(),
+            Self::InstallUpdate => "Retrieving update...\n".to_owned(),
+            Self::Completed(description) => description.to_owned(),
             Self::Cancelled => "Update Cancelled!\n".to_owned(),
         }
     }
 }
 
 /// Runs in a separate thread and performs update steps
+#[allow(
+    clippy::result_large_err,
+    reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really out fault"
+)]
 fn perform_update(
-    sender: mpsc::Sender<UpdateStep>,
-    countdown: Arc<AtomicU8>,
-    update_cancelled: Arc<AtomicBool>,
-    update_now_clicked: Arc<AtomicBool>,
+    sender: &mpsc::Sender<UpdateStep>,
+    countdown: &AtomicU8,
+    update_cancelled: &AtomicBool,
+    update_now_clicked: &AtomicBool,
 ) -> AxoupdateResult<bool> {
     sender
         .send(UpdateStep::Initial)
@@ -145,7 +148,7 @@ fn perform_update(
     } else {
         sender
             .send(UpdateStep::Completed(
-                "The newest version is already installed!\n".to_string(),
+                "The newest version is already installed!\n".to_owned(),
             ))
             .expect("Failed sending update to gui");
         Ok(false)
@@ -184,7 +187,7 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
             let update_now_clicked = update_now_clicked.clone();
             move || {
                 if let Ok(did_update) =
-                    perform_update(tx, countdown, update_cancelled, update_now_clicked)
+                    perform_update(&tx, &countdown, &update_cancelled, &update_now_clicked)
                 {
                     update_clone.store(did_update, Ordering::Relaxed);
                 }
@@ -232,7 +235,7 @@ fn ui_show_update_window_central_panel(
 ) {
     egui::CentralPanel::default().show(ctx, |ui| {
         ui.vertical_centered(|ui| {
-            ui.heading(RichText::new(format!("Updating {}", APP_NAME)).size(24.0));
+            ui.heading(RichText::new(format!("Updating {APP_NAME}")).size(24.0));
             ui.add_space(10.0);
 
             // Show the progress bar
@@ -252,7 +255,7 @@ fn ui_show_update_window_central_panel(
                 let countdown_val = countdown.load(Ordering::SeqCst);
                 if countdown_val != 0 && !is_updated.load(Ordering::SeqCst) {
                     if update_now_clicked.load(Ordering::SeqCst) {
-                        ui.label(RichText::new(format!("Updating now!")).strong());
+                        ui.label(RichText::new("Updating now!".to_owned()).strong());
                     } else {
                         ui.label(
                             RichText::new(format!("Updating in {countdown_val}s...")).strong(),
@@ -276,7 +279,7 @@ fn ui_show_update_window_central_panel(
 
             // Show a "Close" button once the update is done
             if is_updated.load(Ordering::Relaxed) {
-                ui_show_update_done_close_button(&ctx, ui);
+                ui_show_update_done_close_button(ctx, ui);
             }
 
             // Display the log output in a scrollable area
@@ -321,13 +324,12 @@ fn process_updater_thread_messages(
         *current_update_step.lock() = update_msg;
     }
     if !update_cancelled.load(Ordering::SeqCst) {
-        let tmp_curr_update_step = current_update_step.lock();
+        let progress_target = current_update_step.lock().next_progress();
         let mut progress = progress_value.lock();
-        let target = tmp_curr_update_step.next_progress();
 
         // Slow down increment as it approaches the target
-        if *progress < target {
-            let distance = target - *progress;
+        if *progress < progress_target {
+            let distance = progress_target - *progress;
             let increment = distance / 100.0; // Decrease increment as we approach the target
             *progress += increment;
         }
