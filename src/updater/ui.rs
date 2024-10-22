@@ -1,7 +1,8 @@
 use std::{
     sync::{
         atomic::{AtomicBool, AtomicU8, Ordering},
-        mpsc, Arc,
+        mpsc::{self, Receiver},
+        Arc,
     },
     thread,
     time::Duration,
@@ -165,9 +166,9 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     let (tx, rx) = mpsc::channel::<UpdateStep>();
 
     // Shared log output and progress state
-    let log_output = Arc::new(Mutex::new(String::new()));
-    let progress_value = Arc::new(Mutex::new(0.0));
-    let current_update_step = Arc::new(Mutex::new(UpdateStep::UnInit));
+    let log_output: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let progress_value: Arc<Mutex<f32>> = Arc::new(Mutex::new(0.0));
+    let current_update_step: Arc<Mutex<UpdateStep>> = Arc::new(Mutex::new(UpdateStep::UnInit));
 
     let countdown = Arc::new(AtomicU8::new(COUNTDOWN_FOR_UPGRADE_SECS));
     let update_cancelled = Arc::new(AtomicBool::new(false));
@@ -193,28 +194,13 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
 
     eframe::run_simple_native("Update Available", options, move |ctx, _frame| {
         // Process messages from the channel
-        while let Ok(update_msg) = rx.try_recv() {
-            if matches!(update_msg, UpdateStep::Completed(_)) {
-                log_output.lock().clear();
-            }
-            log_output.lock().push_str(&update_msg.description());
-            if !update_cancelled.load(Ordering::SeqCst) {
-                *progress_value.lock() = update_msg.update_progress();
-            }
-            *current_update_step.lock() = update_msg;
-        }
-        if !update_cancelled.load(Ordering::SeqCst) {
-            let tmp_curr_update_step = current_update_step.lock();
-            let mut progress = progress_value.lock();
-            let target = tmp_curr_update_step.next_progress();
-
-            // Slow down increment as it approaches the target
-            if *progress < target {
-                let distance = target - *progress;
-                let increment = distance / 100.0; // Decrease increment as we approach the target
-                *progress += increment;
-            }
-        }
+        process_updater_thread_messages(
+            &rx,
+            &log_output,
+            &update_cancelled,
+            &progress_value,
+            &current_update_step,
+        );
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.heading(RichText::new(format!("Updating {}", APP_NAME)).size(24.0));
@@ -296,4 +282,35 @@ fn ui_show_update_done_close_button(ctx: &Context, ui: &mut egui::Ui) {
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
     ui.add_space(20.0);
+}
+
+fn process_updater_thread_messages(
+    rx: &Receiver<UpdateStep>,
+    log_output: &Mutex<String>,
+    update_cancelled: &AtomicBool,
+    progress_value: &Mutex<f32>,
+    current_update_step: &Mutex<UpdateStep>,
+) {
+    while let Ok(update_msg) = rx.try_recv() {
+        if matches!(update_msg, UpdateStep::Completed(_)) {
+            log_output.lock().clear();
+        }
+        log_output.lock().push_str(&update_msg.description());
+        if !update_cancelled.load(Ordering::SeqCst) {
+            *progress_value.lock() = update_msg.update_progress();
+        }
+        *current_update_step.lock() = update_msg;
+    }
+    if !update_cancelled.load(Ordering::SeqCst) {
+        let tmp_curr_update_step = current_update_step.lock();
+        let mut progress = progress_value.lock();
+        let target = tmp_curr_update_step.next_progress();
+
+        // Slow down increment as it approaches the target
+        if *progress < target {
+            let distance = target - *progress;
+            let increment = distance / 100.0; // Decrease increment as we approach the target
+            *progress += increment;
+        }
+    }
 }
