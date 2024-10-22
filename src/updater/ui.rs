@@ -86,7 +86,7 @@ impl UpdateStep {
 /// Runs in a separate thread and performs update steps
 #[allow(
     clippy::result_large_err,
-    reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really out fault"
+    reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really our fault"
 )]
 fn perform_update(
     sender: &mpsc::Sender<UpdateStep>,

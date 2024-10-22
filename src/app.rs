@@ -169,11 +169,11 @@ impl eframe::App for App {
                 show_theme_toggle_buttons(ui);
                 ui.add(Hyperlink::from_label_and_url(
                     "Homepage",
-                    "https://github.com/luftkode/logviewer-rs",
+                    "https://github.com/luftkode/plotinator3000",
                 ));
 
                 if cfg!(target_arch = "wasm32") {
-                    ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
+                    ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
                 }
                 collapsible_instructions(ui);
             });

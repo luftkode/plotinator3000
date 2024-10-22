@@ -3,7 +3,7 @@ use std::{ops::RangeInclusive, time::Duration};
 use chrono::{DateTime, Timelike};
 use egui_plot::{GridMark, PlotPoint};
 
-/// Function to format milliseconds into HH:MM:SS.ms
+/// Format a timestamp in milliseconds into `HH:MM:SS.ms`
 pub fn format_ms_timestamp(timestamp_ms: f64) -> String {
     let duration = Duration::from_millis(timestamp_ms as u64);
     let hours = duration.as_secs() / 3600;

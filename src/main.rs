@@ -4,7 +4,7 @@
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    use logviewer_rs::updater;
+    use plotinator3000::updater;
 
     // Log to stderr (if run with `RUST_LOG=debug`).
     env_logger::init();
@@ -36,9 +36,9 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        &format!("Logviewer v{}", env!("CARGO_PKG_VERSION")),
+        &format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")),
         native_options,
-        Box::new(|cc| Ok(Box::new(logviewer_rs::App::new(cc)))),
+        Box::new(|cc| Ok(Box::new(plotinator3000::App::new(cc)))),
     )
 }
 
@@ -67,7 +67,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(logviewer_rs::App::new(cc)))),
+                Box::new(|cc| Ok(Box::new(plotinator3000::App::new(cc)))),
             )
             .await;
 

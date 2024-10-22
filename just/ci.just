@@ -7,7 +7,7 @@ ci: lint check fmt test trunk audit dist-plan
 
 check:
     cargo check --all-features --bins --target x86_64-unknown-linux-gnu
-    cargo check --bin logviewer-rs --target wasm32-unknown-unknown
+    cargo check --bin plotinator3000 --target wasm32-unknown-unknown
 
 fmt:
     cargo fmt --all -- --check

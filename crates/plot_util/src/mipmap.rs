@@ -388,7 +388,7 @@ mod tests {
         }
     }
 
-    /// Test for: `<https://github.com/luftkode/logviewer-rs/issues/62>`
+    /// Test for: `<https://github.com/luftkode/plotinator3000/issues/62>`
     #[test]
     fn test_level_match_large_timestamps() {
         let source_len = 1600;
