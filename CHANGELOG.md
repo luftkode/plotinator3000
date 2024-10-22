@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.0.0]
+
+### Changed
+
+- `logviewer-rs` is now renamed to `Plotinator3000`, signifying that it is not really a logviewer and more of a plotting app that will plot any supported format, and do it very fast.
+
 ## [0.28.0]
 
 ### Added
