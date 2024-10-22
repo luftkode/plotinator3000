@@ -8,7 +8,8 @@ use crate::APP_NAME;
 
 const DISABLE_UPDATES_FILE: &str = "logviewer_disable_updates";
 const BYPASS_UPDATES_ENV_VAR: &str = "LOGVIEWER_BYPASS_UPDATES";
-const FORCE_UPGRADE: bool = true;
+// Use this to debug the update workflow
+const FORCE_UPGRADE: bool = false;
 
 mod ui;
 
@@ -121,11 +122,13 @@ fn is_updates_disabled() -> io::Result<bool> {
     reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really out fault"
 )]
 fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
-    if axoupdater::AxoUpdater::new_for(APP_NAME)
-        .load_receipt()?
-        .always_update(FORCE_UPGRADE) // Set to test it
-        .is_update_needed_sync()?
-    {
+    let mut updater = axoupdater::AxoUpdater::new_for(APP_NAME);
+    updater.load_receipt()?;
+    if cfg!(debug_assertions) {
+        log::warn!("Forcing upgrade");
+        updater.always_update(FORCE_UPGRADE); // Set to test it
+    }
+    if updater.is_update_needed_sync()? {
         log::warn!("{APP_NAME} is outdated and should be upgraded");
         Ok(true)
     } else {
