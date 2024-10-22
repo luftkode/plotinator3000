@@ -20,7 +20,7 @@ mod ui;
 /// - `Ok(false)` if it shouldn't, e.g. because updates were disabled or bypassed
 #[allow(
     clippy::result_large_err,
-    reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really out fault"
+    reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really our fault"
 )]
 pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
     if !bypass_updates() {
@@ -119,7 +119,7 @@ fn is_updates_disabled() -> io::Result<bool> {
 /// Uses the [`axoupdater::AxoUpdater`] to query for a newer version than what is currently installed
 #[allow(
     clippy::result_large_err,
-    reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really out fault"
+    reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really our fault"
 )]
 fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
     let mut updater = axoupdater::AxoUpdater::new_for(APP_NAME);
