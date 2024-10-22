@@ -8,7 +8,7 @@ use std::{
 };
 
 use axoupdater::AxoupdateResult;
-use egui::{mutex::Mutex, RichText, ScrollArea};
+use egui::{mutex::Mutex, Context, RichText, ScrollArea};
 
 pub(super) mod updates_disabled;
 
@@ -262,16 +262,7 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
 
                 // Show a "Close" button once the update is done
                 if update_clone.load(Ordering::Relaxed) {
-                    ui.label(RichText::new("Restart to use the new version").strong());
-                    ui.add_space(10.0);
-                    if ui
-                        .button(RichText::new("Close").strong().size(18.0))
-                        .clicked()
-                        || ui.input(|i| i.key_pressed(egui::Key::Enter))
-                    {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                    ui.add_space(20.0);
+                    ui_show_update_done_close_button(&ctx, ui);
                 }
 
                 // Display the log output in a scrollable area
@@ -292,4 +283,17 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     }
 
     Ok(is_updated.load(Ordering::Relaxed))
+}
+
+fn ui_show_update_done_close_button(ctx: &Context, ui: &mut egui::Ui) {
+    ui.label(RichText::new("Restart to use the new version").strong());
+    ui.add_space(10.0);
+    if ui
+        .button(RichText::new("Close").strong().size(18.0))
+        .clicked()
+        || ui.input(|i| i.key_pressed(egui::Key::Enter))
+    {
+        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+    }
+    ui.add_space(20.0);
 }
