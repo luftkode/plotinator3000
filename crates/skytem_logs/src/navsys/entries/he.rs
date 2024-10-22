@@ -57,7 +57,7 @@ impl FromStr for AltimeterEntry {
             .strip_prefix("HE")
             .and_then(|id| id.parse().ok())
             .ok_or(AltimeterParseError::Id(format!(
-                "Expected ID=HE, got '{}'",
+                "Expected prefix 'HE', got '{}'",
                 parts[0]
             )))?;
 

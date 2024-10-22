@@ -50,7 +50,7 @@ impl FromStr for MagSensor {
             .strip_prefix("MA")
             .and_then(|id| id.parse().ok())
             .ok_or(MagSensorParseError::Id(format!(
-                "Expected ID=MA, got '{}'",
+                "Expected prefix 'MA', got '{}'",
                 parts[0]
             )))?;
 

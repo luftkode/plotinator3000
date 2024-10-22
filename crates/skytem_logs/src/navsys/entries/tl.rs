@@ -54,7 +54,7 @@ impl FromStr for InclinometerEntry {
             .strip_prefix("TL")
             .and_then(|id| id.parse().ok())
             .ok_or(InclinometerEntryError::Id(format!(
-                "Expected ID=TL, got '{}'",
+                "Expected prefix 'TL', got '{}'",
                 parts[0]
             )))?;
 
