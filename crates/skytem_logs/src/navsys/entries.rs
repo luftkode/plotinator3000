@@ -116,10 +116,8 @@ impl LogEntry for NavSysSpsEntry {
 
 #[cfg(test)]
 mod tests {
-    use log_if::util::parse_to_vec;
-    use testresult::TestResult;
-
     use super::*;
+    use log_if::util::parse_to_vec;
 
     const TEST_ENTRIES: &str = "HE1 2024 10 03 12 52 42 448 99999.99
 TL2 2024 10 03 12 52 42 542 2.34 0.58
@@ -131,13 +129,11 @@ MA1 2024 10 03 12 52 55 747 49894.8659
 ";
 
     #[test]
-    fn test_parse_navsys_entries() -> TestResult {
+    fn test_parse_navsys_entries() {
         let (entries, bytes_read): (Vec<NavSysSpsEntry>, usize) =
             parse_to_vec(&mut TEST_ENTRIES.as_bytes());
 
         assert_eq!(entries.len(), 7);
         assert_eq!(bytes_read, 372);
-
-        Ok(())
     }
 }

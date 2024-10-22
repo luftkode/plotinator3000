@@ -257,7 +257,7 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
     }
 
     #[test]
-    fn test_error_cases() -> TestResult {
+    fn test_error_cases() {
         // Test invalid format
         assert!(matches!(
             Gps::from_str("invalid").unwrap_err(),
@@ -284,8 +284,6 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
 
         // Test multi-line parsing
         assert!(Gps::from_str(TEST_TWO_LINES_BOTH).is_err());
-
-        Ok(())
     }
 
     #[test]

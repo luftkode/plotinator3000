@@ -123,7 +123,7 @@ TL2 2024 10 03 12 52 42 542 2.34 0.58
     }
 
     #[test]
-    fn test_error_cases() -> TestResult {
+    fn test_error_cases() {
         // Test invalid format
         assert!(matches!(
             InclinometerEntry::from_str("invalid").unwrap_err(),
@@ -153,8 +153,6 @@ TL2 2024 10 03 12 52 42 542 2.34 0.58
             InclinometerEntry::from_str("TL1 2024 13 03 12 52 42 838 2.15 0.24").unwrap_err(),
             InclinometerEntryError::Timestamp(_)
         ));
-
-        Ok(())
     }
 
     #[test]
