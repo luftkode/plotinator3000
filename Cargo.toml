@@ -58,7 +58,6 @@ eframe = { version = "0.29", default-features = false, features = [
 rfd = "0.15"
 egui-phosphor = "0.7.1"
 egui-notify = "0.16.0"
-axoupdater = { version = "0.7.2", features = ["blocking"] }
 
 [dev-dependencies]
 testresult.workspace = true
@@ -71,6 +70,7 @@ hdf = []
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 zip = "2.2.0"
+axoupdater = { version = "0.7.2", features = ["blocking"] }
 
 
 # web:
