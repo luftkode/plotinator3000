@@ -20,7 +20,7 @@ mod ui;
 pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
     if !bypass_updates().unwrap_or(false) {
         if is_updates_disabled().unwrap_or(false) {
-            if ui::show_simple_updates_are_disabled_window()
+            if ui::updates_disabled::show_simple_updates_are_disabled_window()
                 .is_ok_and(|updates_re_enabled| updates_re_enabled)
             {
                 log::info!("Updates are re-enabled");

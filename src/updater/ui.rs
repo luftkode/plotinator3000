@@ -10,10 +10,10 @@ use std::{
 use axoupdater::AxoupdateResult;
 use egui::{mutex::Mutex, RichText, ScrollArea};
 
+pub(super) mod updates_disabled;
+
 use crate::APP_NAME;
 
-const DISABLE_UPDATES_FILE: &str = "logviewer_disable_updates";
-const BYPASS_UPDATES_ENV_VAR: &str = "LOGVIEWER_BYPASS_UPDATES";
 const FORCE_UPGRADE: bool = true;
 
 const START_UPDATE_PROGRESS: f32 = 10.0;
@@ -23,6 +23,7 @@ const UPDATE_DONE_PROGRESS: f32 = 100.0;
 
 const COUNTDOWN_FOR_UPGRADE_SECS: u8 = 5;
 
+/// Messages sent from the thread that performs the update, to the GUI thread that displays update progress
 #[derive(Debug)]
 enum UpdateStep {
     UnInit,
@@ -84,7 +85,8 @@ impl UpdateStep {
     }
 }
 
-fn run_update_process(
+/// Runs in a separate thread and performs update steps
+fn perform_update(
     sender: mpsc::Sender<UpdateStep>,
     countdown: Arc<AtomicU8>,
     update_cancelled: Arc<AtomicBool>,
@@ -149,7 +151,7 @@ fn run_update_process(
     }
 }
 
-pub fn show_simple_update_window() -> eframe::Result<bool> {
+pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([400.0, 300.0]),
         //centered: true,
@@ -181,7 +183,7 @@ pub fn show_simple_update_window() -> eframe::Result<bool> {
             let update_now_clicked = update_now_clicked.clone();
             move || {
                 if let Ok(did_update) =
-                    run_update_process(tx, countdown, update_cancelled, update_now_clicked)
+                    perform_update(tx, countdown, update_cancelled, update_now_clicked)
                 {
                     update_clone.store(did_update, Ordering::Relaxed);
                 }
@@ -251,7 +253,8 @@ pub fn show_simple_update_window() -> eframe::Result<bool> {
                             {
                                 update_cancelled.store(true, Ordering::SeqCst);
                                 // Create the disable updates file
-                                create_disable_update_file().expect("Failed to disable updates");
+                                super::create_disable_update_file()
+                                    .expect("Failed to disable updates");
                             }
                         }
                     }
@@ -289,68 +292,4 @@ pub fn show_simple_update_window() -> eframe::Result<bool> {
     }
 
     Ok(is_updated.load(Ordering::Relaxed))
-}
-
-/// Returns true if updates are re-enabled
-pub fn show_simple_updates_are_disabled_window() -> eframe::Result<bool> {
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([400.0, 300.0]),
-        //centered: true,
-        ..Default::default()
-    };
-
-    let re_enable_updates_local = Arc::new(AtomicBool::new(false));
-    let re_enable_updates = re_enable_updates_local.clone();
-
-    eframe::run_simple_native(APP_NAME, options, move |ctx, _frame| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.heading(RichText::new("⚠").size(30.0));
-                ui.add_space(10.0);
-
-                if re_enable_updates.load(Ordering::SeqCst) {
-                    ui.label(
-                        RichText::new("Restart to run the updater")
-                            .size(18.)
-                            .strong(),
-                    );
-                    ui.add_space(10.0);
-                    if ui
-                        .button(RichText::new("Close").strong().size(18.0))
-                        .clicked()
-                        || ui.input(|i| i.key_pressed(egui::Key::Enter))
-                    {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                } else {
-                    ui.label(
-                        RichText::new(format!("Updates are currently disabled"))
-                            .strong()
-                            .size(18.),
-                    );
-                    ui.add_space(10.0);
-                    if ui
-                        .button(RichText::new("Re-enable updates").strong().size(18.0))
-                        .clicked()
-                    {
-                        // Remove the disable updates file
-                        super::remove_disable_update_file().expect("Failed to disable updates");
-                        re_enable_updates.store(true, Ordering::SeqCst);
-                    }
-                }
-
-                // Show a "Continue" button to open the GUI
-                ui.add_space(10.0);
-                if ui
-                    .button(RichText::new("Continue...").strong().size(18.0))
-                    .clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::Enter))
-                {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                }
-            });
-        });
-    })?;
-
-    Ok(re_enable_updates_local.load(Ordering::SeqCst))
 }
