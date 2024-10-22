@@ -4,7 +4,23 @@
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    use logviewer_rs::updater;
+
+    // Log to stderr (if run with `RUST_LOG=debug`).
+    env_logger::init();
+
+    match updater::update_if_applicable() {
+        Ok(needs_restart) => {
+            if needs_restart {
+                return Ok(());
+            }
+        }
+        Err(e) => {
+            return Err(eframe::Error::AppCreation(
+                format!("Error in updater: {e}").into(),
+            ))
+        }
+    }
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()

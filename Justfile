@@ -10,6 +10,9 @@ alias ca := check-all
 alias f := fmt
 alias t := test
 
+# Achieve higher verbosity in run command e.g. by running "RUST_LOG=debug just run --release"
+export RUST_LOG := env_var_or_default("RUST_LOG", "info")
+
 @_default:
     just --list --no-aliases
 
@@ -29,12 +32,12 @@ check-wasm: (check "--target wasm32-unknown-unknown")
 # Get trunk: https://trunkrs.dev/guide/introduction.html
 [doc("serve as a local webserver with hot reloading and logging enabled (requires trunk)")]
 serve *ARGS:
-    RUST_LOG=debug trunk serve {{ARGS}}
+    trunk serve {{ARGS}}
 
 # Run as a native app with logging enabled
 [no-exit-message]
 run *ARGS:
-    RUST_LOG=debug cargo {{run}} {{ARGS}}
+    cargo {{run}} {{ARGS}}
 
 # Run tests
 [no-exit-message]

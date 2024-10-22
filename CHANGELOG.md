@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.28.0]
+
+### Added
+
+- Auto updater that queries for newer versions and opens an installer window if a new update is available
+
 ## [0.27.0]
 
 ### Added
