@@ -15,8 +15,6 @@ pub(super) mod updates_disabled;
 
 use crate::APP_NAME;
 
-const FORCE_UPGRADE: bool = true;
-
 const START_UPDATE_PROGRESS: f32 = 10.0;
 const LOAD_METADATA_PROGRESS: f32 = 30.0;
 const WAIT_FOR_COUNTDOWN_PROGRESS: f32 = 40.0;
@@ -108,7 +106,9 @@ fn perform_update(
         .expect("Failed sending update to gui");
     updater.load_receipt()?;
 
-    updater.always_update(FORCE_UPGRADE);
+    if cfg!(debug_assertions) {
+        updater.always_update(super::FORCE_UPGRADE);
+    }
 
     // wait for countdown
     while countdown.load(Ordering::SeqCst) != 0
