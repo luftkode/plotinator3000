@@ -9,7 +9,7 @@ use crate::APP_NAME;
 const DISABLE_UPDATES_FILE: &str = "plotinator_disable_updates";
 const BYPASS_UPDATES_ENV_VAR: &str = "PLOTINATOR_BYPASS_UPDATES";
 // Use this to debug the update workflow
-const FORCE_UPGRADE: bool = true;
+const FORCE_UPGRADE: bool = false;
 
 mod ui;
 
@@ -48,6 +48,17 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
                     } else {
                         log::info!("Already running newest version");
                     }
+                    return Ok(false);
+                }
+                Err(e)
+                    if matches!(
+                        &e,
+                        axoupdater::AxoupdateError::ReceiptLoadFailed { app_name: _ }
+                    ) =>
+                {
+                    log::warn!(
+                        "{e}. Possible failure due to a faulty installation, skipping update checks"
+                    );
                     return Ok(false);
                 }
                 Err(e) => {
@@ -125,7 +136,9 @@ fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
     let mut updater = axoupdater::AxoUpdater::new_for(APP_NAME);
     updater.load_receipt()?;
     if cfg!(debug_assertions) {
-        log::warn!("Forcing upgrade");
+        if FORCE_UPGRADE {
+            log::warn!("Forcing upgrade");
+        }
         updater.always_update(FORCE_UPGRADE); // Set to test it
     }
     if updater.is_update_needed_sync()? {
