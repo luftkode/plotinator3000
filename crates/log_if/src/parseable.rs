@@ -1,4 +1,4 @@
-use std::io::{self, BufReader};
+use std::io;
 
 /// The interface that a supported format has to implement to be able to load it from a file or any buffer.
 pub trait Parseable: Sized {
@@ -18,7 +18,7 @@ pub trait Parseable: Sized {
                 format!("Buffer is not a valid '{}'", Self::DESCRIPTIVE_NAME),
             ));
         }
-        let mut reader = BufReader::new(buf);
+        let mut reader = io::Cursor::new(buf);
         Self::from_reader(&mut reader)
     }
 
