@@ -1,6 +1,6 @@
 {
-  "name": "SkyTEM Logviewer-rs",
-  "short_name": "skytem-logviewer-rs",
+  "name": "SkyTEM plotinator3000",
+  "short_name": "skytem-plotinator3000",
   "icons": [
     {
       "src": "./skytem-icon-256.png",

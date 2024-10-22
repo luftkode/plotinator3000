@@ -2005,34 +2005,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "logviewer-rs"
-version = "0.28.0"
-dependencies = [
- "axoupdater",
- "chrono",
- "eframe",
- "egui",
- "egui-notify",
- "egui-phosphor",
- "egui_plot",
- "env_logger",
- "getset",
- "log",
- "log_if",
- "plot_util",
- "rfd",
- "serde",
- "skytem_hdf",
- "skytem_logs",
- "strum",
- "strum_macros",
- "testresult",
- "wasm-bindgen-futures",
- "web-sys",
- "zip",
-]
-
-[[package]]
 name = "lzma-rs"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2603,6 +2575,34 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "testresult",
+]
+
+[[package]]
+name = "plotinator3000"
+version = "0.28.0"
+dependencies = [
+ "axoupdater",
+ "chrono",
+ "eframe",
+ "egui",
+ "egui-notify",
+ "egui-phosphor",
+ "egui_plot",
+ "env_logger",
+ "getset",
+ "log",
+ "log_if",
+ "plot_util",
+ "rfd",
+ "serde",
+ "skytem_hdf",
+ "skytem_logs",
+ "strum",
+ "strum_macros",
+ "testresult",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "zip",
 ]
 
 [[package]]

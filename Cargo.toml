@@ -1,11 +1,11 @@
 [package]
-name = "logviewer-rs"
+name = "plotinator3000"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
 version = "0.28.0"
 edition = "2021"
-repository = "https://github.com/luftkode/logviewer-rs"
-homepage = "https://github.com/luftkode/logviewer-rs"
+repository = "https://github.com/luftkode/plotinator3000"
+homepage = "https://github.com/luftkode/plotinator3000"
 license = "MIT OR Apache-2.0"
 
 [package.metadata.wix]

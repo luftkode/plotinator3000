@@ -1,9 +1,9 @@
-var cacheName = 'logviewer-rs-pwa';
+var cacheName = 'plotinator3000-pwa';
 var filesToCache = [
   './',
   './index.html',
-  './logviewer-rs.js',
-  './logviewer-rs_bg.wasm',
+  './plotinator3000.js',
+  './plotinator3000_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */

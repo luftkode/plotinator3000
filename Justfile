@@ -1,7 +1,7 @@
 import 'just/default_cmd.just'
 mod ci 'just/ci.just'
 
-PROJECT_NAME := "logviewer-rs"
+PROJECT_NAME := "plotinator3000"
 
 alias r := run
 alias l := lint
