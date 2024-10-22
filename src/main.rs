@@ -9,33 +9,16 @@ fn main() -> eframe::Result {
     // Log to stderr (if run with `RUST_LOG=debug`).
     env_logger::init();
 
-    if !updater::bypass_updates().is_ok_and(|r| r) {
-        if updater::is_updates_disabled().is_ok_and(|r| r) {
-            if updater::show_simple_updates_are_disabled_window()
-                .is_ok_and(|updates_re_enabled| updates_re_enabled)
-            {
-                log::info!("Updates are re-enabled");
+    match updater::update_if_applicable() {
+        Ok(needs_restart) => {
+            if needs_restart {
                 return Ok(());
-            } else {
-                log::debug!("Continuing with updates disabled");
             }
-        } else {
-            match updater::is_update_available() {
-                Ok(is_update_available) => {
-                    if is_update_available {
-                        // show update window and perform upgrade or cancel it
-                        if let Ok(did_update) = updater::show_simple_update_window() {
-                            if did_update {
-                                log::info!("Update performed... Closing");
-                                return Ok(());
-                            }
-                        }
-                    } else {
-                        log::info!("Already running newest version");
-                    }
-                }
-                Err(e) => log::error!("Error checking for update: {e}"),
-            }
+        }
+        Err(e) => {
+            return Err(eframe::Error::AppCreation(
+                format!("Error in updater: {e}").into(),
+            ))
         }
     }
 

@@ -17,8 +17,49 @@ use crate::APP_NAME;
 
 const DISABLE_UPDATES_FILE: &str = "logviewer_disable_updates";
 const BYPASS_UPDATES_ENV_VAR: &str = "LOGVIEWER_BYPASS_UPDATES";
-
 const FORCE_UPGRADE: bool = true;
+
+/// Handles showning update related UI and all the logic involved in performing an upgrade.
+///
+/// returns `Ok(true)` if the app should be restarted
+/// returns `Ok(false)` if it shouldn't
+pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
+    if !bypass_updates().unwrap_or(false) {
+        if is_updates_disabled().unwrap_or(false) {
+            if show_simple_updates_are_disabled_window()
+                .is_ok_and(|updates_re_enabled| updates_re_enabled)
+            {
+                log::info!("Updates are re-enabled");
+                return Ok(true);
+            } else {
+                log::debug!("Continuing with updates disabled");
+                return Ok(false);
+            }
+        } else {
+            match is_update_available() {
+                Ok(is_update_available) => {
+                    if is_update_available {
+                        // show update window and perform upgrade or cancel it
+                        if let Ok(did_update) = show_simple_update_window() {
+                            if did_update {
+                                log::info!("Update performed... Closing");
+                                return Ok(true);
+                            }
+                        }
+                    } else {
+                        log::info!("Already running newest version");
+                    }
+                    return Ok(false);
+                }
+                Err(e) => {
+                    log::error!("Error checking for update: {e}");
+                    return Err(e);
+                }
+            }
+        }
+    }
+    Ok(false)
+}
 
 /// Check for the environment variable to bypass updates
 pub fn bypass_updates() -> io::Result<bool> {
