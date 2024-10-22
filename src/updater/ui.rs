@@ -160,7 +160,7 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     };
 
     let is_updated = Arc::new(AtomicBool::new(false));
-    let update_clone = is_updated.clone();
+    let is_updated_clone: Arc<AtomicBool> = is_updated.clone();
 
     // Channel for log messages and progress updates
     let (tx, rx) = mpsc::channel::<UpdateStep>();
@@ -170,15 +170,15 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     let progress_value: Arc<Mutex<f32>> = Arc::new(Mutex::new(0.0));
     let current_update_step: Arc<Mutex<UpdateStep>> = Arc::new(Mutex::new(UpdateStep::UnInit));
 
-    let countdown = Arc::new(AtomicU8::new(COUNTDOWN_FOR_UPGRADE_SECS));
-    let update_cancelled = Arc::new(AtomicBool::new(false));
-    let update_now_clicked = Arc::new(AtomicBool::new(false));
+    let countdown: Arc<AtomicU8> = Arc::new(AtomicU8::new(COUNTDOWN_FOR_UPGRADE_SECS));
+    let update_cancelled: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    let update_now_clicked: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
     // Run the update in a separate thread
     let updater_thread = thread::Builder::new()
         .name("Updater thread".to_owned())
         .spawn({
-            let update_clone = update_clone.clone();
+            let update_clone = is_updated_clone.clone();
             let countdown = countdown.clone();
             let update_cancelled = update_cancelled.clone();
             let update_now_clicked = update_now_clicked.clone();
@@ -201,65 +201,15 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
             &progress_value,
             &current_update_step,
         );
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.heading(RichText::new(format!("Updating {}", APP_NAME)).size(24.0));
-                ui.add_space(10.0);
-
-                // Show the progress bar
-                ui.add(egui::ProgressBar::new(*progress_value.lock() / 100.0));
-                ui.add_space(20.0);
-
-                if update_cancelled.load(Ordering::SeqCst) {
-                    if ui
-                        .button(RichText::new("Continue...").strong().size(18.0))
-                        .clicked()
-                        || ui.input(|i| i.key_pressed(egui::Key::Enter))
-                    {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                } else {
-                    // Show the countdown or disable updates button
-                    let countdown_val = countdown.load(Ordering::SeqCst);
-                    if countdown_val != 0 && !update_clone.load(Ordering::SeqCst) {
-                        if update_now_clicked.load(Ordering::SeqCst) {
-                            ui.label(RichText::new(format!("Updating now!")).strong());
-                        } else {
-                            ui.label(
-                                RichText::new(format!("Updating in {countdown_val}s...")).strong(),
-                            );
-                            ui.add_space(5.0);
-                            if ui.button(RichText::new("Update now!").strong()).clicked() {
-                                update_now_clicked.store(true, Ordering::SeqCst);
-                            }
-                            ui.add_space(10.0);
-                            if ui
-                                .button(RichText::new("Disable Updates (can be enabled later)"))
-                                .clicked()
-                            {
-                                update_cancelled.store(true, Ordering::SeqCst);
-                                // Create the disable updates file
-                                super::create_disable_update_file()
-                                    .expect("Failed to disable updates");
-                            }
-                        }
-                    }
-                }
-
-                // Show a "Close" button once the update is done
-                if update_clone.load(Ordering::Relaxed) {
-                    ui_show_update_done_close_button(&ctx, ui);
-                }
-
-                // Display the log output in a scrollable area
-                ScrollArea::vertical()
-                    .auto_shrink([true; 2])
-                    .show(ui, |ui| {
-                        let log = log_output.lock();
-                        ui.label(log.as_str());
-                    });
-            });
-        });
+        ui_show_update_window_central_panel(
+            ctx,
+            &log_output,
+            &update_cancelled,
+            &progress_value,
+            &countdown,
+            &update_now_clicked,
+            &is_updated_clone,
+        );
         // Keep the UI updated with new log messages and progress
         ctx.request_repaint();
     })?;
@@ -269,6 +219,75 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     }
 
     Ok(is_updated.load(Ordering::Relaxed))
+}
+
+fn ui_show_update_window_central_panel(
+    ctx: &Context,
+    log_output: &Mutex<String>,
+    update_cancelled: &AtomicBool,
+    progress_value: &Mutex<f32>,
+    countdown: &AtomicU8,
+    update_now_clicked: &AtomicBool,
+    is_updated: &AtomicBool,
+) {
+    egui::CentralPanel::default().show(ctx, |ui| {
+        ui.vertical_centered(|ui| {
+            ui.heading(RichText::new(format!("Updating {}", APP_NAME)).size(24.0));
+            ui.add_space(10.0);
+
+            // Show the progress bar
+            ui.add(egui::ProgressBar::new(*progress_value.lock() / 100.0));
+            ui.add_space(20.0);
+
+            if update_cancelled.load(Ordering::SeqCst) {
+                if ui
+                    .button(RichText::new("Continue...").strong().size(18.0))
+                    .clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Enter))
+                {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
+            } else {
+                // Show the countdown or disable updates button
+                let countdown_val = countdown.load(Ordering::SeqCst);
+                if countdown_val != 0 && !is_updated.load(Ordering::SeqCst) {
+                    if update_now_clicked.load(Ordering::SeqCst) {
+                        ui.label(RichText::new(format!("Updating now!")).strong());
+                    } else {
+                        ui.label(
+                            RichText::new(format!("Updating in {countdown_val}s...")).strong(),
+                        );
+                        ui.add_space(5.0);
+                        if ui.button(RichText::new("Update now!").strong()).clicked() {
+                            update_now_clicked.store(true, Ordering::SeqCst);
+                        }
+                        ui.add_space(10.0);
+                        if ui
+                            .button(RichText::new("Disable Updates (can be enabled later)"))
+                            .clicked()
+                        {
+                            update_cancelled.store(true, Ordering::SeqCst);
+                            // Create the disable updates file
+                            super::create_disable_update_file().expect("Failed to disable updates");
+                        }
+                    }
+                }
+            }
+
+            // Show a "Close" button once the update is done
+            if is_updated.load(Ordering::Relaxed) {
+                ui_show_update_done_close_button(&ctx, ui);
+            }
+
+            // Display the log output in a scrollable area
+            ScrollArea::vertical()
+                .auto_shrink([true; 2])
+                .show(ui, |ui| {
+                    let log = log_output.lock();
+                    ui.label(log.as_str());
+                });
+        });
+    });
 }
 
 fn ui_show_update_done_close_button(ctx: &Context, ui: &mut egui::Ui) {
