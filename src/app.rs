@@ -173,7 +173,7 @@ impl eframe::App for App {
                 ));
 
                 if cfg!(target_arch = "wasm32") {
-                    ui.label(format!("Logviewer v{}", env!("CARGO_PKG_VERSION")));
+                    ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
                 }
                 collapsible_instructions(ui);
             });

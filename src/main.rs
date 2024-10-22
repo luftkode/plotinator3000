@@ -36,7 +36,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        &format!("Logviewer v{}", env!("CARGO_PKG_VERSION")),
+        &format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")),
         native_options,
         Box::new(|cc| Ok(Box::new(plotinator3000::App::new(cc)))),
     )

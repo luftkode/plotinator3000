@@ -6,8 +6,8 @@ use std::{
 
 use crate::APP_NAME;
 
-const DISABLE_UPDATES_FILE: &str = "logviewer_disable_updates";
-const BYPASS_UPDATES_ENV_VAR: &str = "LOGVIEWER_BYPASS_UPDATES";
+const DISABLE_UPDATES_FILE: &str = "plotinator_disable_updates";
+const BYPASS_UPDATES_ENV_VAR: &str = "PLOTINATOR_BYPASS_UPDATES";
 // Use this to debug the update workflow
 const FORCE_UPGRADE: bool = true;
 
@@ -107,7 +107,7 @@ fn is_updates_disabled() -> io::Result<bool> {
         )
     })?;
 
-    // Check if the logviewer_disable_updates file exists
+    // Check if the plotinator_disable_updates file exists
     let disable_updates_file = exe_dir.join(DISABLE_UPDATES_FILE);
     if disable_updates_file.exists() {
         log::warn!("Update bypassed due to presence of '{DISABLE_UPDATES_FILE}' file.");
