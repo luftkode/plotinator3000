@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Internal
 
 - Cleanup unused library code
+- Prepare support for a new version of the mbed config present in mbed log headers.
 
 ## [1.0.0]
 
