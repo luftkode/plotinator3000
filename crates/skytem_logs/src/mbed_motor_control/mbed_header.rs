@@ -10,7 +10,7 @@ use std::{
     mem::size_of,
 };
 
-use super::mbed_config::MbedConfig;
+use super::mbed_config::v1::MbedConfig;
 
 pub type UniqueDescriptionData = [u8; 128];
 pub const SIZEOF_UNIQ_DESC: usize = size_of::<UniqueDescriptionData>();
@@ -124,7 +124,7 @@ pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
 }
 
 /// Helper trait such that Pid and Status log v2 can reuse all this code
-pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
+pub trait BuildMbedLogHeaderV2Beta: Sized + MbedMotorControlLogHeader {
     /// Deserialize a header for a `reader` that implements [Read]
     fn build_from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read = 0;

@@ -1,21 +1,19 @@
-use std::{fmt, io};
-
 use crate::mbed_motor_control::{
-    mbed_config::MbedConfig,
+    mbed_config::v1::MbedConfig,
     mbed_header::{
-        BuildMbedLogHeaderV2, GitBranchData, GitRepoStatusData, GitShortShaData,
+        BuildMbedLogHeaderV2Beta, GitBranchData, GitRepoStatusData, GitShortShaData,
         MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
         SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION,
         SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
     },
 };
 
-use log_if::log::GitMetadata;
-use serde::{Deserialize, Serialize};
+use log_if::prelude::*;
 use serde_big_array::BigArray;
+use std::{fmt, io};
 
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
-pub(crate) struct PidLogHeaderV2 {
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize, Clone, Copy)]
+pub struct StatusLogHeaderV2Beta {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -28,13 +26,13 @@ pub(crate) struct PidLogHeaderV2 {
     mbed_config: MbedConfig,
 }
 
-impl PidLogHeaderV2 {
+impl StatusLogHeaderV2Beta {
     pub fn mbed_config(&self) -> &MbedConfig {
         &self.mbed_config
     }
 }
 
-impl BuildMbedLogHeaderV2 for PidLogHeaderV2 {
+impl BuildMbedLogHeaderV2Beta for StatusLogHeaderV2Beta {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -58,7 +56,7 @@ impl BuildMbedLogHeaderV2 for PidLogHeaderV2 {
     }
 }
 
-impl GitMetadata for PidLogHeaderV2 {
+impl GitMetadata for StatusLogHeaderV2Beta {
     fn project_version(&self) -> Option<String> {
         Some(
             String::from_utf8_lossy(self.project_version_raw())
@@ -100,7 +98,7 @@ impl GitMetadata for PidLogHeaderV2 {
     }
 }
 
-impl MbedMotorControlLogHeader for PidLogHeaderV2 {
+impl MbedMotorControlLogHeader for StatusLogHeaderV2Beta {
     const VERSION: u16 = 2;
     /// Size of the header type in bytes if represented in raw binary
     const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
@@ -111,7 +109,7 @@ impl MbedMotorControlLogHeader for PidLogHeaderV2 {
         + SIZEOF_STARTUP_TIMESTAMP
         + MbedConfig::size();
 
-    fn unique_description_bytes(&self) -> &UniqueDescriptionData {
+    fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description
     }
 
@@ -139,11 +137,9 @@ impl MbedMotorControlLogHeader for PidLogHeaderV2 {
         &self.startup_timestamp
     }
 
-    /// Deserialize a header for a `reader` that implements [Read]
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         Self::build_from_reader(reader)
     }
-
     fn from_reader_with_uniq_descr_version(
         reader: &mut impl io::BufRead,
         unique_description: UniqueDescriptionData,
@@ -153,7 +149,7 @@ impl MbedMotorControlLogHeader for PidLogHeaderV2 {
     }
 }
 
-impl fmt::Display for PidLogHeaderV2 {
+impl fmt::Display for StatusLogHeaderV2Beta {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(
@@ -177,46 +173,44 @@ impl fmt::Display for PidLogHeaderV2 {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
-    const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
-
-    use io::Read;
+    use super::*;
+    use std::fs::{self};
     use testresult::TestResult;
 
-    use super::*;
+    const TEST_DATA: &str =
+        "../../test_data/mbed_motor_control/v2_beta/20241014_080729/status_20241014_080729_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let mut file = fs::File::open(TEST_DATA)?;
-        let mut buffer = vec![0; 500];
-        file.read_exact(&mut buffer)?;
-        let (pid_log_header, bytes_read) = PidLogHeaderV2::from_reader(&mut buffer.as_slice())?;
-        eprintln!("{pid_log_header}");
+        let data = fs::read(TEST_DATA)?;
+        let (status_log_header, bytes_read) =
+            StatusLogHeaderV2Beta::from_reader(&mut data.as_slice())?;
+        eprintln!("{status_log_header}");
         assert_eq!(bytes_read, 293);
         assert_eq!(
-            pid_log_header.unique_description(),
-            crate::mbed_motor_control::pid::UNIQUE_DESCRIPTION
+            status_log_header.unique_description(),
+            crate::mbed_motor_control::status::UNIQUE_DESCRIPTION
         );
-        assert_eq!(pid_log_header.version, 2);
-        assert_eq!(pid_log_header.project_version().unwrap(), "2.3.2");
-        assert_eq!(pid_log_header.git_branch(), None);
-        assert_eq!(pid_log_header.git_short_sha(), None);
-        assert_eq!(pid_log_header.mbed_config().kp(), 3.0);
-        assert_eq!(pid_log_header.mbed_config().ki(), 1.0);
-        assert_eq!(pid_log_header.mbed_config().kd(), 0.0);
-        assert_eq!(pid_log_header.mbed_config().t_standby(), 50);
-        assert_eq!(pid_log_header.mbed_config().t_run(), 65);
-        assert_eq!(pid_log_header.mbed_config().t_fan_on(), 81);
-        assert_eq!(pid_log_header.mbed_config().t_fan_off(), 80);
-        assert_eq!(pid_log_header.mbed_config().rpm_standby(), 3600);
-        assert_eq!(pid_log_header.mbed_config().rpm_running(), 6000);
-        assert_eq!(pid_log_header.mbed_config().time_shutdown(), 60);
-        assert_eq!(pid_log_header.mbed_config().time_wait_for_cap(), 300);
-        assert_eq!(pid_log_header.mbed_config().vbat_ready(), 12.8);
-        assert_eq!(pid_log_header.mbed_config().servo_max(), 1583);
-        assert_eq!(pid_log_header.mbed_config().servo_min(), 765);
+        assert_eq!(status_log_header.version, 2);
+        assert_eq!(status_log_header.project_version().unwrap(), "2.3.2");
+        assert_eq!(status_log_header.git_branch(), None);
+        assert_eq!(status_log_header.git_short_sha(), None);
+        assert_eq!(status_log_header.mbed_config().kp(), 3.0);
+        assert_eq!(status_log_header.mbed_config().ki(), 1.0);
+        assert_eq!(status_log_header.mbed_config().kd(), 0.0);
+        assert_eq!(status_log_header.mbed_config().t_standby(), 50);
+        assert_eq!(status_log_header.mbed_config().t_run(), 65);
+        assert_eq!(status_log_header.mbed_config().t_fan_on(), 81);
+        assert_eq!(status_log_header.mbed_config().t_fan_off(), 80);
+        assert_eq!(status_log_header.mbed_config().rpm_standby(), 3600);
+        assert_eq!(status_log_header.mbed_config().rpm_running(), 6000);
+        assert_eq!(status_log_header.mbed_config().time_shutdown(), 60);
+        assert_eq!(status_log_header.mbed_config().time_wait_for_cap(), 300);
+        assert_eq!(status_log_header.mbed_config().vbat_ready(), 12.8);
+        assert_eq!(status_log_header.mbed_config().servo_max(), 1583);
+        assert_eq!(status_log_header.mbed_config().servo_min(), 765);
+
+        eprintln!("{:?}", status_log_header.mbed_config().field_value_pairs());
         Ok(())
     }
 }

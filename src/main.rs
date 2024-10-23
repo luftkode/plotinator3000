@@ -24,7 +24,7 @@ fn main() -> eframe::Result {
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([800.0, 800.0])
+            .with_inner_size([1400.0, 800.0])
             .with_min_inner_size([100.0, 80.0])
             .with_drag_and_drop(true)
             .with_icon(

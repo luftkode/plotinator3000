@@ -124,7 +124,7 @@ impl Parseable for StatusLog {
         total_bytes_read += entry_bytes_read;
         let startup_timestamp = match header {
             StatusLogHeader::V1(h) => h.startup_timestamp(),
-            StatusLogHeader::V2(h) => h.startup_timestamp(),
+            StatusLogHeader::V2Beta(h) => h.startup_timestamp(),
         }
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
         .and_utc();
@@ -174,27 +174,27 @@ impl GitMetadata for StatusLog {
     fn project_version(&self) -> Option<String> {
         match &self.header {
             StatusLogHeader::V1(h) => h.project_version(),
-            StatusLogHeader::V2(h) => h.project_version(),
+            StatusLogHeader::V2Beta(h) => h.project_version(),
         }
     }
     fn git_short_sha(&self) -> Option<String> {
         match &self.header {
             StatusLogHeader::V1(h) => h.git_short_sha(),
-            StatusLogHeader::V2(h) => h.git_short_sha(),
+            StatusLogHeader::V2Beta(h) => h.git_short_sha(),
         }
     }
 
     fn git_branch(&self) -> Option<String> {
         match &self.header {
             StatusLogHeader::V1(h) => h.git_branch(),
-            StatusLogHeader::V2(h) => h.git_branch(),
+            StatusLogHeader::V2Beta(h) => h.git_branch(),
         }
     }
 
     fn git_repo_status(&self) -> Option<String> {
         match &self.header {
             StatusLogHeader::V1(h) => h.git_repo_status(),
-            StatusLogHeader::V2(h) => h.git_repo_status(),
+            StatusLogHeader::V2Beta(h) => h.git_repo_status(),
         }
     }
 }
@@ -211,7 +211,7 @@ impl Plotable for StatusLog {
     fn descriptive_name(&self) -> &str {
         match self.header {
             StatusLogHeader::V1(_) => "Mbed Status v1",
-            StatusLogHeader::V2(_) => "Mbed Status v2",
+            StatusLogHeader::V2Beta(_) => "Mbed Status v2 beta",
         }
     }
 
@@ -247,7 +247,7 @@ impl Plotable for StatusLog {
             // V1 has no more than that
             StatusLogHeader::V1(_) => (),
             // V2 also has config values
-            StatusLogHeader::V2(h) => {
+            StatusLogHeader::V2Beta(h) => {
                 metadata.push(("Config values".to_owned(), String::new()));
                 metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
             }
@@ -304,8 +304,8 @@ mod tests {
 
     const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
-    const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
+    const TEST_DATA_V2_BETA: &str =
+        "../../test_data/mbed_motor_control/v2_beta/20241014_080729/status_20241014_080729_00.bin";
 
     use crate::{mbed_motor_control::status::entry::MotorState, parse_and_display_log_entries};
 
@@ -354,8 +354,8 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_v2() -> TestResult {
-        let data = fs::read(TEST_DATA_V2)?;
+    fn test_deserialize_v2_beta() -> TestResult {
+        let data = fs::read(TEST_DATA_V2_BETA)?;
         let full_data_len = data.len();
         let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
 
@@ -388,8 +388,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_and_display_v2() -> TestResult {
-        let file = File::open(TEST_DATA_V2)?;
+    fn test_parse_and_display_v2_beta() -> TestResult {
+        let file = File::open(TEST_DATA_V2_BETA)?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
 

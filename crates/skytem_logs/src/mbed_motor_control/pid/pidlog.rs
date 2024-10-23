@@ -65,7 +65,7 @@ impl Parseable for PidLog {
         total_bytes_read += bytes_read;
         let startup_timestamp = match &header {
             PidLogHeader::V1(h) => h.startup_timestamp(),
-            PidLogHeader::V2(h) => h.startup_timestamp(),
+            PidLogHeader::V2Beta(h) => h.startup_timestamp(),
         }
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
         .and_utc();
@@ -157,28 +157,28 @@ impl GitMetadata for PidLog {
     fn project_version(&self) -> Option<String> {
         match &self.header {
             PidLogHeader::V1(h) => h.project_version(),
-            PidLogHeader::V2(h) => h.project_version(),
+            PidLogHeader::V2Beta(h) => h.project_version(),
         }
     }
 
     fn git_short_sha(&self) -> Option<String> {
         match &self.header {
             PidLogHeader::V1(h) => h.git_short_sha(),
-            PidLogHeader::V2(h) => h.git_short_sha(),
+            PidLogHeader::V2Beta(h) => h.git_short_sha(),
         }
     }
 
     fn git_branch(&self) -> Option<String> {
         match &self.header {
             PidLogHeader::V1(h) => h.git_branch(),
-            PidLogHeader::V2(h) => h.git_branch(),
+            PidLogHeader::V2Beta(h) => h.git_branch(),
         }
     }
 
     fn git_repo_status(&self) -> Option<String> {
         match &self.header {
             PidLogHeader::V1(h) => h.git_repo_status(),
-            PidLogHeader::V2(h) => h.git_repo_status(),
+            PidLogHeader::V2Beta(h) => h.git_repo_status(),
         }
     }
 }
@@ -195,7 +195,7 @@ impl Plotable for PidLog {
     fn descriptive_name(&self) -> &str {
         match self.header {
             PidLogHeader::V1(_) => "Mbed PID v1",
-            PidLogHeader::V2(_) => "Mbed PID v2",
+            PidLogHeader::V2Beta(_) => "Mbed PID v2 beta",
         }
     }
 
@@ -231,7 +231,7 @@ impl Plotable for PidLog {
             // V1 has no more than that
             PidLogHeader::V1(_) => (),
             // V2 also has config values
-            PidLogHeader::V2(h) => {
+            PidLogHeader::V2Beta(h) => {
                 metadata.push(("Config values".to_owned(), String::new()));
                 metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
             }
@@ -261,7 +261,7 @@ mod tests {
     const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
+        "../../test_data/mbed_motor_control/v2_beta/20241014_080729/pid_20241014_080729_00.bin";
 
     #[test]
     fn test_deserialize_v1() -> TestResult {

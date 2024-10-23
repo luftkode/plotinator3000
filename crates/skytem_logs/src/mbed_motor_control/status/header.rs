@@ -3,7 +3,7 @@ use std::{fmt, io};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Deserialize, Serialize};
 use v1::StatusLogHeaderV1;
-use v2::StatusLogHeaderV2;
+use v2_beta::StatusLogHeaderV2Beta;
 
 use crate::{
     mbed_motor_control::mbed_header::{
@@ -13,19 +13,19 @@ use crate::{
 };
 
 mod v1;
-mod v2;
+mod v2_beta;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum StatusLogHeader {
     V1(StatusLogHeaderV1),
-    V2(StatusLogHeaderV2),
+    V2Beta(StatusLogHeaderV2Beta),
 }
 
 impl fmt::Display for StatusLogHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::V1(h) => write!(f, "{h}"),
-            Self::V2(h) => write!(f, "{h}"),
+            Self::V2Beta(h) => write!(f, "{h}"),
         }
     }
 }
@@ -63,13 +63,14 @@ impl StatusLogHeader {
                 Self::V1(header)
             }
             2 => {
-                let (header, bytes_read) = StatusLogHeaderV2::from_reader_with_uniq_descr_version(
-                    reader,
-                    unique_description,
-                    version,
-                )?;
+                let (header, bytes_read) =
+                    StatusLogHeaderV2Beta::from_reader_with_uniq_descr_version(
+                        reader,
+                        unique_description,
+                        version,
+                    )?;
                 total_bytes_read += bytes_read;
-                Self::V2(header)
+                Self::V2Beta(header)
             }
             _ => {
                 return Err(io::Error::new(
