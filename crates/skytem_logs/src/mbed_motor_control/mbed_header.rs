@@ -10,7 +10,7 @@ use std::{
     mem::size_of,
 };
 
-use super::mbed_config::MbedConfig;
+use super::mbed_config::MbedConfigV1;
 
 pub type UniqueDescriptionData = [u8; 128];
 pub const SIZEOF_UNIQ_DESC: usize = size_of::<UniqueDescriptionData>();
@@ -166,8 +166,8 @@ pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
         reader.read_exact(&mut startup_timestamp)?;
         total_bytes_read += SIZEOF_STARTUP_TIMESTAMP;
 
-        let mbed_config = MbedConfig::from_reader(reader)?;
-        total_bytes_read += MbedConfig::size();
+        let mbed_config = MbedConfigV1::from_reader(reader)?;
+        total_bytes_read += MbedConfigV1::size();
 
         Ok((
             Self::new(
@@ -196,6 +196,6 @@ pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
         git_branch: GitBranchData,
         git_repo_status: GitRepoStatusData,
         startup_timestamp: StartupTimestamp,
-        mbed_config: MbedConfig,
+        mbed_config: MbedConfigV1,
     ) -> Self;
 }

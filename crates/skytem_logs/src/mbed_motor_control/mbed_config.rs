@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
 #[repr(packed)]
-pub struct MbedConfig {
+pub(crate) struct MbedConfigV1 {
     #[getset(get_copy = "pub")]
     kp: f32,
     #[getset(get_copy = "pub")]
@@ -39,7 +39,7 @@ pub struct MbedConfig {
     servo_max: u16,
 }
 
-impl MbedConfig {
+impl MbedConfigV1 {
     pub const fn size() -> usize {
         size_of::<Self>()
     }
