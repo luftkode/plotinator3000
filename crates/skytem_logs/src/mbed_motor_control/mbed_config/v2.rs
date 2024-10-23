@@ -10,18 +10,9 @@ use super::MbedConfig;
 #[repr(packed)]
 pub(crate) struct MbedConfigV2 {
     #[getset(get_copy = "pub")]
-    kp: f32,
+    pid_cfg: PidConfig,
     #[getset(get_copy = "pub")]
-    ki: f32,
-    #[getset(get_copy = "pub")]
-    kd: f32,
     general_cfg: GeneralConfig,
-}
-
-impl MbedConfigV2 {
-    fn general_cfg(&self) -> GeneralConfig {
-        self.general_cfg
-    }
 }
 
 impl MbedConfig for MbedConfigV2 {
@@ -30,34 +21,25 @@ impl MbedConfig for MbedConfigV2 {
     }
 
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self> {
-        let kp = reader.read_f32::<LittleEndian>()?;
-        let ki = reader.read_f32::<LittleEndian>()?;
-        let kd = reader.read_f32::<LittleEndian>()?;
+        let pid_cfg = PidConfig::from_reader(reader)?;
         let general_cfg = GeneralConfig::from_reader(reader)?;
 
         Ok(Self {
-            kp,
-            ki,
-            kd,
+            pid_cfg,
             general_cfg,
         })
     }
 
     fn field_value_pairs(&self) -> Vec<(String, String)> {
-        let mut fvp = vec![
-            ("Kp".to_owned(), self.kp().to_string()),
-            ("Ki".to_owned(), self.ki().to_string()),
-            ("Kd".to_owned(), self.kd().to_string()),
-        ];
-
-        fvp.append(&mut self.general_cfg().field_value_pairs());
+        let mut fvp = self.general_cfg.field_value_pairs();
+        fvp.append(&mut self.pid_cfg.field_value_pairs());
         fvp
     }
 }
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
 #[repr(packed)]
-struct GeneralConfig {
+pub(crate) struct GeneralConfig {
     #[getset(get_copy = "pub")]
     t_standby: u8,
     #[getset(get_copy = "pub")]
@@ -132,6 +114,94 @@ impl MbedConfig for GeneralConfig {
             ("VBAT_READY".to_owned(), self.vbat_ready().to_string()),
             ("SERVO_MIN".to_owned(), self.servo_min().to_string()),
             ("SERVO_MAX".to_owned(), self.servo_max().to_string()),
+        ]
+    }
+}
+
+#[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
+#[repr(packed)]
+pub(crate) struct PidConfig {
+    #[getset(get_copy = "pub")]
+    kp_initial: f32,
+    #[getset(get_copy = "pub")]
+    ki_initial: f32,
+    #[getset(get_copy = "pub")]
+    kd_initial: f32,
+
+    #[getset(get_copy = "pub")]
+    kp_idle: f32,
+    #[getset(get_copy = "pub")]
+    ki_idle: f32,
+    #[getset(get_copy = "pub")]
+    kd_idle: f32,
+
+    #[getset(get_copy = "pub")]
+    kp_standby: f32,
+    #[getset(get_copy = "pub")]
+    ki_standby: f32,
+    #[getset(get_copy = "pub")]
+    kd_standby: f32,
+
+    #[getset(get_copy = "pub")]
+    kp_running: f32,
+    #[getset(get_copy = "pub")]
+    ki_running: f32,
+    #[getset(get_copy = "pub")]
+    kd_running: f32,
+}
+
+impl MbedConfig for PidConfig {
+    fn raw_size() -> usize {
+        size_of::<Self>()
+    }
+
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self> {
+        let kp_initial = reader.read_f32::<LittleEndian>()?;
+        let ki_initial = reader.read_f32::<LittleEndian>()?;
+        let kd_initial = reader.read_f32::<LittleEndian>()?;
+
+        let kp_idle = reader.read_f32::<LittleEndian>()?;
+        let ki_idle = reader.read_f32::<LittleEndian>()?;
+        let kd_idle = reader.read_f32::<LittleEndian>()?;
+
+        let kp_standby = reader.read_f32::<LittleEndian>()?;
+        let ki_standby = reader.read_f32::<LittleEndian>()?;
+        let kd_standby = reader.read_f32::<LittleEndian>()?;
+
+        let kp_running = reader.read_f32::<LittleEndian>()?;
+        let ki_running = reader.read_f32::<LittleEndian>()?;
+        let kd_running = reader.read_f32::<LittleEndian>()?;
+
+        Ok(Self {
+            kp_initial,
+            ki_initial,
+            kd_initial,
+            kp_idle,
+            ki_idle,
+            kd_idle,
+            kp_standby,
+            ki_standby,
+            kd_standby,
+            kp_running,
+            ki_running,
+            kd_running,
+        })
+    }
+
+    fn field_value_pairs(&self) -> Vec<(String, String)> {
+        vec![
+            ("Kp_initial".to_owned(), self.kp_initial().to_string()),
+            ("Ki_initial".to_owned(), self.ki_initial().to_string()),
+            ("Kd_initial".to_owned(), self.kd_initial().to_string()),
+            ("Kp_idle".to_owned(), self.kp_idle().to_string()),
+            ("Ki_idle".to_owned(), self.ki_idle().to_string()),
+            ("Kd_idle".to_owned(), self.kd_idle().to_string()),
+            ("Kp_standby".to_owned(), self.kp_standby().to_string()),
+            ("Ki_standby".to_owned(), self.ki_standby().to_string()),
+            ("Kd_standby".to_owned(), self.kd_standby().to_string()),
+            ("Kp_running".to_owned(), self.kp_running().to_string()),
+            ("Ki_running".to_owned(), self.ki_running().to_string()),
+            ("Kd_running".to_owned(), self.kd_running().to_string()),
         ]
     }
 }
