@@ -4,6 +4,28 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 
+pub(crate) trait MbedConfig: Sized {
+    /// As long as implementors are packed structs, this can just return `size_of::<Self>()`, otherwise it should return
+    /// the combined memory footprint of all members as if they were packed
+    fn raw_size() -> usize;
+
+    fn from_slice(slice: &[u8]) -> io::Result<Self> {
+        if slice.len() < Self::raw_size() {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Slice is too short to contain a valid MbedConfig",
+            ));
+        }
+
+        let mut cursor = io::Cursor::new(slice);
+        Self::from_reader(&mut cursor)
+    }
+
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self>;
+
+    fn field_value_pairs(&self) -> Vec<(String, String)>;
+}
+
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
 #[repr(packed)]
 pub(crate) struct MbedConfigV1 {
@@ -39,13 +61,13 @@ pub(crate) struct MbedConfigV1 {
     servo_max: u16,
 }
 
-impl MbedConfigV1 {
-    pub const fn size() -> usize {
+impl MbedConfig for MbedConfigV1 {
+    fn raw_size() -> usize {
         size_of::<Self>()
     }
 
-    pub fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        if slice.len() < Self::size() {
+    fn from_slice(slice: &[u8]) -> io::Result<Self> {
+        if slice.len() < Self::raw_size() {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "Slice is too short to contain a valid MbedConfig",
@@ -56,7 +78,7 @@ impl MbedConfigV1 {
         Self::from_reader(&mut cursor)
     }
 
-    pub fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self> {
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self> {
         let kp = reader.read_f32::<LittleEndian>()?;
         let ki = reader.read_f32::<LittleEndian>()?;
         let kd = reader.read_f32::<LittleEndian>()?;
@@ -89,7 +111,7 @@ impl MbedConfigV1 {
         })
     }
 
-    pub fn field_value_pairs(&self) -> Vec<(String, String)> {
+    fn field_value_pairs(&self) -> Vec<(String, String)> {
         vec![
             ("Kp".to_owned(), self.kp().to_string()),
             ("Ki".to_owned(), self.ki().to_string()),

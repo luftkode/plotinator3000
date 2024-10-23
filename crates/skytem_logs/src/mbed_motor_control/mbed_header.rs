@@ -10,7 +10,7 @@ use std::{
     mem::size_of,
 };
 
-use super::mbed_config::MbedConfigV1;
+use super::mbed_config::{MbedConfig, MbedConfigV1};
 
 pub type UniqueDescriptionData = [u8; 128];
 pub const SIZEOF_UNIQ_DESC: usize = size_of::<UniqueDescriptionData>();
@@ -124,7 +124,7 @@ pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
 }
 
 /// Helper trait such that Pid and Status log v2 can reuse all this code
-pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
+pub trait BuildMbedLogHeaderV2<C: MbedConfig>: Sized + MbedMotorControlLogHeader {
     /// Deserialize a header for a `reader` that implements [Read]
     fn build_from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
@@ -166,8 +166,8 @@ pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
         reader.read_exact(&mut startup_timestamp)?;
         total_bytes_read += SIZEOF_STARTUP_TIMESTAMP;
 
-        let mbed_config = MbedConfigV1::from_reader(reader)?;
-        total_bytes_read += MbedConfigV1::size();
+        let mbed_config = C::from_reader(reader)?;
+        total_bytes_read += C::raw_size();
 
         Ok((
             Self::new(
@@ -196,6 +196,6 @@ pub trait BuildMbedLogHeaderV2: Sized + MbedMotorControlLogHeader {
         git_branch: GitBranchData,
         git_repo_status: GitRepoStatusData,
         startup_timestamp: StartupTimestamp,
-        mbed_config: MbedConfigV1,
+        mbed_config: C,
     ) -> Self;
 }

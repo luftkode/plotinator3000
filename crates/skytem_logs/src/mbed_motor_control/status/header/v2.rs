@@ -1,5 +1,5 @@
 use crate::mbed_motor_control::{
-    mbed_config::MbedConfigV1,
+    mbed_config::{MbedConfig, MbedConfigV1},
     mbed_header::{
         BuildMbedLogHeaderV2, GitBranchData, GitRepoStatusData, GitShortShaData,
         MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
@@ -32,7 +32,7 @@ impl StatusLogHeaderV2 {
     }
 }
 
-impl BuildMbedLogHeaderV2 for StatusLogHeaderV2 {
+impl BuildMbedLogHeaderV2<MbedConfigV1> for StatusLogHeaderV2 {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -107,7 +107,7 @@ impl MbedMotorControlLogHeader for StatusLogHeaderV2 {
         + SIZEOF_GIT_BRANCH
         + SIZEOF_GIT_REPO_STATUS
         + SIZEOF_STARTUP_TIMESTAMP
-        + MbedConfigV1::size();
+        + size_of::<MbedConfigV1>();
 
     fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description

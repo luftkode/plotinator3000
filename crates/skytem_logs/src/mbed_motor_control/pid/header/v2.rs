@@ -34,7 +34,7 @@ impl PidLogHeaderV2 {
     }
 }
 
-impl BuildMbedLogHeaderV2 for PidLogHeaderV2 {
+impl BuildMbedLogHeaderV2<MbedConfigV1> for PidLogHeaderV2 {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -109,7 +109,7 @@ impl MbedMotorControlLogHeader for PidLogHeaderV2 {
         + SIZEOF_GIT_BRANCH
         + SIZEOF_GIT_REPO_STATUS
         + SIZEOF_STARTUP_TIMESTAMP
-        + MbedConfigV1::size();
+        + size_of::<MbedConfigV1>();
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description

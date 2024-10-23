@@ -8,7 +8,10 @@ use std::{
 };
 
 use crate::{
-    mbed_motor_control::mbed_header::{MbedMotorControlLogHeader, SIZEOF_UNIQ_DESC},
+    mbed_motor_control::{
+        mbed_config::MbedConfig,
+        mbed_header::{MbedMotorControlLogHeader, SIZEOF_UNIQ_DESC},
+    },
     parse_unique_description,
 };
 
