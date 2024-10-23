@@ -1,9 +1,7 @@
 use crate::mbed_motor_control::mbed_header::BuildMbedLogHeaderV1;
 use crate::mbed_motor_control::mbed_header::{
     GitBranchData, GitRepoStatusData, GitShortShaData, MbedMotorControlLogHeader,
-    ProjectVersionData, StartupTimestamp, UniqueDescriptionData, SIZEOF_GIT_BRANCH,
-    SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION, SIZEOF_STARTUP_TIMESTAMP,
-    SIZEOF_UNIQ_DESC,
+    ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
 };
 
 use log_if::prelude::*;
@@ -91,12 +89,6 @@ impl BuildMbedLogHeaderV1 for StatusLogHeaderV1 {
 }
 
 impl MbedMotorControlLogHeader for StatusLogHeaderV1 {
-    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
-        + SIZEOF_PROJECT_VERSION
-        + SIZEOF_GIT_SHORT_SHA
-        + SIZEOF_GIT_BRANCH
-        + SIZEOF_GIT_REPO_STATUS
-        + SIZEOF_STARTUP_TIMESTAMP;
     const VERSION: u16 = 1;
 
     fn unique_description_bytes(&self) -> &[u8; 128] {

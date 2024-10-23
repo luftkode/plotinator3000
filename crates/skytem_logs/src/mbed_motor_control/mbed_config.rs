@@ -9,18 +9,6 @@ pub(crate) trait MbedConfig: Sized {
     /// the combined memory footprint of all members as if they were packed
     fn raw_size() -> usize;
 
-    fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        if slice.len() < Self::raw_size() {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "Slice is too short to contain a valid MbedConfig",
-            ));
-        }
-
-        let mut cursor = io::Cursor::new(slice);
-        Self::from_reader(&mut cursor)
-    }
-
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self>;
 
     fn field_value_pairs(&self) -> Vec<(String, String)>;
@@ -64,18 +52,6 @@ pub(crate) struct MbedConfigV1 {
 impl MbedConfig for MbedConfigV1 {
     fn raw_size() -> usize {
         size_of::<Self>()
-    }
-
-    fn from_slice(slice: &[u8]) -> io::Result<Self> {
-        if slice.len() < Self::raw_size() {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "Slice is too short to contain a valid MbedConfig",
-            ));
-        }
-
-        let mut cursor = io::Cursor::new(slice);
-        Self::from_reader(&mut cursor)
     }
 
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self> {

@@ -5,8 +5,6 @@ use crate::mbed_motor_control::{
     mbed_header::{
         BuildMbedLogHeaderV2, GitBranchData, GitRepoStatusData, GitShortShaData,
         MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
-        SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION,
-        SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
     },
 };
 
@@ -102,14 +100,6 @@ impl GitMetadata for PidLogHeaderV2 {
 
 impl MbedMotorControlLogHeader for PidLogHeaderV2 {
     const VERSION: u16 = 2;
-    /// Size of the header type in bytes if represented in raw binary
-    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
-        + SIZEOF_PROJECT_VERSION
-        + SIZEOF_GIT_SHORT_SHA
-        + SIZEOF_GIT_BRANCH
-        + SIZEOF_GIT_REPO_STATUS
-        + SIZEOF_STARTUP_TIMESTAMP
-        + size_of::<MbedConfigV1>();
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description

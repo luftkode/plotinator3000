@@ -10,7 +10,7 @@ use std::{
     mem::size_of,
 };
 
-use super::mbed_config::{MbedConfig, MbedConfigV1};
+use super::mbed_config::MbedConfig;
 
 pub type UniqueDescriptionData = [u8; 128];
 pub const SIZEOF_UNIQ_DESC: usize = size_of::<UniqueDescriptionData>();
@@ -27,7 +27,6 @@ pub const SIZEOF_STARTUP_TIMESTAMP: usize = size_of::<StartupTimestamp>();
 
 pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync + Clone {
     /// Size of the header type in bytes if represented in raw binary
-    const RAW_SIZE: usize;
     const VERSION: u16;
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData;
@@ -57,7 +56,7 @@ pub trait MbedMotorControlLogHeader: GitMetadata + Sized + Display + Send + Sync
 }
 
 /// Helper trait such that Pid and Status log v1 can reuse all this code
-pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
+pub(crate) trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
     /// Deserialize a header for a `reader` that implements [Read]
     fn build_from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
@@ -124,7 +123,9 @@ pub trait BuildMbedLogHeaderV1: Sized + MbedMotorControlLogHeader {
 }
 
 /// Helper trait such that Pid and Status log v2 can reuse all this code
-pub trait BuildMbedLogHeaderV2<C: MbedConfig>: Sized + MbedMotorControlLogHeader {
+pub(crate) trait BuildMbedLogHeaderV2<C: MbedConfig>:
+    Sized + MbedMotorControlLogHeader
+{
     /// Deserialize a header for a `reader` that implements [Read]
     fn build_from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
