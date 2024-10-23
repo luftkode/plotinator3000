@@ -1,12 +1,10 @@
 use std::{fmt, io};
 
 use crate::mbed_motor_control::{
-    mbed_config::MbedConfig,
+    mbed_config::MbedConfigV1,
     mbed_header::{
         BuildMbedLogHeaderV2, GitBranchData, GitRepoStatusData, GitShortShaData,
         MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
-        SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION,
-        SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
     },
 };
 
@@ -25,16 +23,16 @@ pub(crate) struct PidLogHeaderV2 {
     git_branch: GitBranchData,
     git_repo_status: GitRepoStatusData,
     startup_timestamp: StartupTimestamp,
-    mbed_config: MbedConfig,
+    mbed_config: MbedConfigV1,
 }
 
 impl PidLogHeaderV2 {
-    pub fn mbed_config(&self) -> &MbedConfig {
+    pub fn mbed_config(&self) -> &MbedConfigV1 {
         &self.mbed_config
     }
 }
 
-impl BuildMbedLogHeaderV2 for PidLogHeaderV2 {
+impl BuildMbedLogHeaderV2<MbedConfigV1> for PidLogHeaderV2 {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -43,7 +41,7 @@ impl BuildMbedLogHeaderV2 for PidLogHeaderV2 {
         git_branch: GitBranchData,
         git_repo_status: GitRepoStatusData,
         startup_timestamp: StartupTimestamp,
-        mbed_config: MbedConfig,
+        mbed_config: MbedConfigV1,
     ) -> Self {
         Self {
             unique_description,
@@ -102,14 +100,6 @@ impl GitMetadata for PidLogHeaderV2 {
 
 impl MbedMotorControlLogHeader for PidLogHeaderV2 {
     const VERSION: u16 = 2;
-    /// Size of the header type in bytes if represented in raw binary
-    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
-        + SIZEOF_PROJECT_VERSION
-        + SIZEOF_GIT_SHORT_SHA
-        + SIZEOF_GIT_BRANCH
-        + SIZEOF_GIT_REPO_STATUS
-        + SIZEOF_STARTUP_TIMESTAMP
-        + MbedConfig::size();
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description

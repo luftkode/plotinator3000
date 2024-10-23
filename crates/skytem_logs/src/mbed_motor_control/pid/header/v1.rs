@@ -7,8 +7,6 @@ use serde_big_array::BigArray;
 use crate::mbed_motor_control::mbed_header::{
     BuildMbedLogHeaderV1, GitBranchData, GitRepoStatusData, GitShortShaData,
     MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
-    SIZEOF_GIT_BRANCH, SIZEOF_GIT_REPO_STATUS, SIZEOF_GIT_SHORT_SHA, SIZEOF_PROJECT_VERSION,
-    SIZEOF_STARTUP_TIMESTAMP, SIZEOF_UNIQ_DESC,
 };
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
@@ -90,12 +88,6 @@ impl GitMetadata for PidLogHeaderV1 {
 
 impl MbedMotorControlLogHeader for PidLogHeaderV1 {
     const VERSION: u16 = 1;
-    const RAW_SIZE: usize = SIZEOF_UNIQ_DESC
-        + SIZEOF_PROJECT_VERSION
-        + SIZEOF_GIT_SHORT_SHA
-        + SIZEOF_GIT_BRANCH
-        + SIZEOF_GIT_REPO_STATUS
-        + SIZEOF_STARTUP_TIMESTAMP;
 
     fn unique_description_bytes(&self) -> &UniqueDescriptionData {
         &self.unique_description
