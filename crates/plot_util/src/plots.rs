@@ -13,6 +13,21 @@ pub struct Plots {
 }
 
 impl Plots {
+    pub fn total_data_points(&self) -> u64 {
+        let mut total_points: u64 = 0;
+        for p in self.percentage().plots() {
+            total_points += p.get_raw().len() as u64;
+        }
+        for p in self.one_to_hundred().plots() {
+            total_points += p.get_raw().len() as u64;
+        }
+        for p in self.thousands().plots() {
+            total_points += p.get_raw().len() as u64;
+        }
+
+        total_points
+    }
+
     pub fn percentage(&self) -> &PlotData {
         &self.percentage
     }
