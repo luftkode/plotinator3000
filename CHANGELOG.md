@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.0.1]
+
+### Changed
+
+- Added a notification whenever a log is loaded, showing the total data points of loaded files.
+
 ### Internal
 
 - Cleanup unused library code

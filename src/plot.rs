@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
 use plot_util::Plots;
@@ -61,7 +63,7 @@ impl LogPlotUi {
         &mut self,
         ui: &mut egui::Ui,
         logs: &[SupportedFormat],
-        _toasts: &mut Toasts,
+        toasts: &mut Toasts,
     ) -> Response {
         let Self {
             legend_cfg,
@@ -87,6 +89,15 @@ impl LogPlotUi {
 
         for log in logs {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);
+        }
+        if !logs.is_empty() {
+            log::info!("Total data points: {}", plots.total_data_points());
+            toasts
+                .info(format!(
+                    "Total data points in loaded files: {}",
+                    plots.total_data_points(),
+                ))
+                .duration(Some(Duration::from_secs(20)));
         }
 
         plot_settings.refresh(plots);
