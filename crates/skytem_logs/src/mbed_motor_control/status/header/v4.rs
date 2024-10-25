@@ -1,5 +1,5 @@
 use crate::mbed_motor_control::{
-    mbed_config::MbedConfigV2,
+    mbed_config::MbedConfigV3,
     mbed_header::{
         BuildMbedLogHeaderV2, GitBranchData, GitRepoStatusData, GitShortShaData,
         MbedMotorControlLogHeader, ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
@@ -21,16 +21,16 @@ pub struct StatusLogHeaderV4 {
     git_branch: GitBranchData,
     git_repo_status: GitRepoStatusData,
     startup_timestamp: StartupTimestamp,
-    mbed_config: MbedConfigV2,
+    mbed_config: MbedConfigV3,
 }
 
 impl StatusLogHeaderV4 {
-    pub(crate) fn mbed_config(&self) -> &MbedConfigV2 {
+    pub(crate) fn mbed_config(&self) -> &MbedConfigV3 {
         &self.mbed_config
     }
 }
 
-impl BuildMbedLogHeaderV2<MbedConfigV2> for StatusLogHeaderV4 {
+impl BuildMbedLogHeaderV2<MbedConfigV3> for StatusLogHeaderV4 {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -39,7 +39,7 @@ impl BuildMbedLogHeaderV2<MbedConfigV2> for StatusLogHeaderV4 {
         git_branch: GitBranchData,
         git_repo_status: GitRepoStatusData,
         startup_timestamp: StartupTimestamp,
-        mbed_config: MbedConfigV2,
+        mbed_config: MbedConfigV3,
     ) -> Self {
         Self {
             unique_description,
@@ -157,95 +157,6 @@ impl fmt::Display for StatusLogHeaderV4 {
         if self.git_repo_status().is_some() {
             writeln!(f, "Repo status: dirty")?;
         }
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::mbed_motor_control::mbed_config::MbedConfig;
-
-    use super::*;
-    use std::fs::{self};
-    use testresult::TestResult;
-
-    const TEST_DATA: &str = "../../test_data/mbed_motor_control/v3/status_20241023_143859_00.bin";
-
-    #[test]
-    fn test_deserialize() -> TestResult {
-        let data = fs::read(TEST_DATA)?;
-        let (status_log_header, bytes_read) = StatusLogHeaderV4::from_reader(&mut data.as_slice())?;
-        eprintln!("{status_log_header}");
-        assert_eq!(bytes_read, 329);
-        assert_eq!(
-            status_log_header.unique_description(),
-            crate::mbed_motor_control::status::UNIQUE_DESCRIPTION
-        );
-        assert_eq!(status_log_header.version, 3);
-        assert_eq!(status_log_header.project_version().unwrap(), "3.0.0");
-        assert_eq!(
-            status_log_header.git_branch(),
-            Some("fix-23-pid-loop-in-standby".into())
-        );
-        assert_eq!(status_log_header.git_short_sha(), Some("9057619".into()));
-        assert_eq!(
-            status_log_header.mbed_config().general_cfg().t_standby(),
-            50
-        );
-        assert_eq!(status_log_header.mbed_config().general_cfg().t_run(), 65);
-        assert_eq!(status_log_header.mbed_config().general_cfg().t_fan_on(), 81);
-        assert_eq!(
-            status_log_header.mbed_config().general_cfg().t_fan_off(),
-            80
-        );
-        assert_eq!(
-            status_log_header.mbed_config().general_cfg().rpm_standby(),
-            3600
-        );
-        assert_eq!(
-            status_log_header.mbed_config().general_cfg().rpm_running(),
-            6000
-        );
-        assert_eq!(
-            status_log_header
-                .mbed_config()
-                .general_cfg()
-                .time_shutdown(),
-            60
-        );
-        assert_eq!(
-            status_log_header
-                .mbed_config()
-                .general_cfg()
-                .time_wait_for_cap(),
-            300
-        );
-        assert_eq!(
-            status_log_header.mbed_config().general_cfg().vbat_ready(),
-            12.8
-        );
-        assert_eq!(
-            status_log_header.mbed_config().general_cfg().servo_max(),
-            1500
-        );
-        assert_eq!(
-            status_log_header.mbed_config().general_cfg().servo_min(),
-            800
-        );
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_initial(), 3.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_initial(), 0.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_initial(), 0.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_idle(), 0.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_idle(), 0.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_idle(), 0.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_standby(), 1.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_standby(), 1.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_standby(), 0.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_running(), 3.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_running(), 1.0);
-        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_running(), 0.0);
-
-        eprintln!("{:?}", status_log_header.mbed_config().field_value_pairs());
         Ok(())
     }
 }

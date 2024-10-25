@@ -75,6 +75,7 @@ impl StatusLogHeader {
                 total_bytes_read += bytes_read;
                 Self::V2(header)
             }
+            // This is still a todo
             4 => {
                 let (header, bytes_read) = StatusLogHeaderV4::from_reader_with_uniq_descr_version(
                     reader,
