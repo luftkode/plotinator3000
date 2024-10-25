@@ -9,17 +9,17 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, io};
 use v1::PidLogHeaderV1;
 use v2::PidLogHeaderV2;
-use v3::PidLogHeaderV3;
+use v4::PidLogHeaderV4;
 
 mod v1;
 mod v2;
-mod v3;
+mod v4;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub(crate) enum PidLogHeader {
     V1(PidLogHeaderV1),
     V2(PidLogHeaderV2),
-    V3(PidLogHeaderV3),
+    V3(PidLogHeaderV4),
 }
 
 impl fmt::Display for PidLogHeader {
@@ -73,8 +73,8 @@ impl PidLogHeader {
                 total_bytes_read += bytes_read;
                 Self::V2(header)
             }
-            3 => {
-                let (header, bytes_read) = PidLogHeaderV3::from_reader_with_uniq_descr_version(
+            4 => {
+                let (header, bytes_read) = PidLogHeaderV4::from_reader_with_uniq_descr_version(
                     reader,
                     unique_description,
                     version,

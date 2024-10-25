@@ -1,5 +1,3 @@
-use std::{fmt, io};
-
 use crate::mbed_motor_control::{
     mbed_config::MbedConfigV2,
     mbed_header::{
@@ -8,12 +6,12 @@ use crate::mbed_motor_control::{
     },
 };
 
-use log_if::log::GitMetadata;
-use serde::{Deserialize, Serialize};
+use log_if::prelude::*;
 use serde_big_array::BigArray;
+use std::{fmt, io};
 
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
-pub(crate) struct PidLogHeaderV3 {
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize, Clone, Copy)]
+pub struct StatusLogHeaderV4 {
     #[serde(with = "BigArray")]
     unique_description: UniqueDescriptionData,
     version: u16,
@@ -26,13 +24,13 @@ pub(crate) struct PidLogHeaderV3 {
     mbed_config: MbedConfigV2,
 }
 
-impl PidLogHeaderV3 {
+impl StatusLogHeaderV4 {
     pub(crate) fn mbed_config(&self) -> &MbedConfigV2 {
         &self.mbed_config
     }
 }
 
-impl BuildMbedLogHeaderV2<MbedConfigV2> for PidLogHeaderV3 {
+impl BuildMbedLogHeaderV2<MbedConfigV2> for StatusLogHeaderV4 {
     fn new(
         unique_description: UniqueDescriptionData,
         version: u16,
@@ -56,7 +54,7 @@ impl BuildMbedLogHeaderV2<MbedConfigV2> for PidLogHeaderV3 {
     }
 }
 
-impl GitMetadata for PidLogHeaderV3 {
+impl GitMetadata for StatusLogHeaderV4 {
     fn project_version(&self) -> Option<String> {
         Some(
             String::from_utf8_lossy(self.project_version_raw())
@@ -98,10 +96,10 @@ impl GitMetadata for PidLogHeaderV3 {
     }
 }
 
-impl MbedMotorControlLogHeader for PidLogHeaderV3 {
+impl MbedMotorControlLogHeader for StatusLogHeaderV4 {
     const VERSION: u16 = 2;
 
-    fn unique_description_bytes(&self) -> &UniqueDescriptionData {
+    fn unique_description_bytes(&self) -> &[u8; 128] {
         &self.unique_description
     }
 
@@ -129,11 +127,9 @@ impl MbedMotorControlLogHeader for PidLogHeaderV3 {
         &self.startup_timestamp
     }
 
-    /// Deserialize a header for a `reader` that implements [Read]
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         Self::build_from_reader(reader)
     }
-
     fn from_reader_with_uniq_descr_version(
         reader: &mut impl io::BufRead,
         unique_description: UniqueDescriptionData,
@@ -143,7 +139,7 @@ impl MbedMotorControlLogHeader for PidLogHeaderV3 {
     }
 }
 
-impl fmt::Display for PidLogHeaderV3 {
+impl fmt::Display for StatusLogHeaderV4 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}-v{}", self.unique_description(), self.version)?;
         writeln!(
@@ -167,75 +163,89 @@ impl fmt::Display for PidLogHeaderV3 {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
-    const TEST_DATA: &str = "../../test_data/mbed_motor_control/v3/pid_20241023_143859_00.bin";
-
-    use io::Read;
-    use testresult::TestResult;
+    use crate::mbed_motor_control::mbed_config::MbedConfig;
 
     use super::*;
+    use std::fs::{self};
+    use testresult::TestResult;
+
+    const TEST_DATA: &str = "../../test_data/mbed_motor_control/v3/status_20241023_143859_00.bin";
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let mut file = fs::File::open(TEST_DATA)?;
-        let mut buffer = vec![0; 500];
-        file.read_exact(&mut buffer)?;
-        let (pid_log_header, bytes_read) = PidLogHeaderV3::from_reader(&mut buffer.as_slice())?;
-        eprintln!("{pid_log_header}");
+        let data = fs::read(TEST_DATA)?;
+        let (status_log_header, bytes_read) = StatusLogHeaderV4::from_reader(&mut data.as_slice())?;
+        eprintln!("{status_log_header}");
         assert_eq!(bytes_read, 329);
         assert_eq!(
-            pid_log_header.unique_description(),
-            crate::mbed_motor_control::pid::UNIQUE_DESCRIPTION
+            status_log_header.unique_description(),
+            crate::mbed_motor_control::status::UNIQUE_DESCRIPTION
         );
-        assert_eq!(pid_log_header.version, 3);
-        assert_eq!(pid_log_header.project_version().unwrap(), "3.0.0");
+        assert_eq!(status_log_header.version, 3);
+        assert_eq!(status_log_header.project_version().unwrap(), "3.0.0");
         assert_eq!(
-            pid_log_header.git_branch(),
+            status_log_header.git_branch(),
             Some("fix-23-pid-loop-in-standby".into())
         );
-        assert_eq!(pid_log_header.git_short_sha(), Some("9057619".into()));
-        assert_eq!(pid_log_header.mbed_config().general_cfg().t_standby(), 50);
-        assert_eq!(pid_log_header.mbed_config().general_cfg().t_run(), 65);
-        assert_eq!(pid_log_header.mbed_config().general_cfg().t_fan_on(), 81);
-        assert_eq!(pid_log_header.mbed_config().general_cfg().t_fan_off(), 80);
+        assert_eq!(status_log_header.git_short_sha(), Some("9057619".into()));
         assert_eq!(
-            pid_log_header.mbed_config().general_cfg().rpm_standby(),
+            status_log_header.mbed_config().general_cfg().t_standby(),
+            50
+        );
+        assert_eq!(status_log_header.mbed_config().general_cfg().t_run(), 65);
+        assert_eq!(status_log_header.mbed_config().general_cfg().t_fan_on(), 81);
+        assert_eq!(
+            status_log_header.mbed_config().general_cfg().t_fan_off(),
+            80
+        );
+        assert_eq!(
+            status_log_header.mbed_config().general_cfg().rpm_standby(),
             3600
         );
         assert_eq!(
-            pid_log_header.mbed_config().general_cfg().rpm_running(),
+            status_log_header.mbed_config().general_cfg().rpm_running(),
             6000
         );
         assert_eq!(
-            pid_log_header.mbed_config().general_cfg().time_shutdown(),
+            status_log_header
+                .mbed_config()
+                .general_cfg()
+                .time_shutdown(),
             60
         );
         assert_eq!(
-            pid_log_header
+            status_log_header
                 .mbed_config()
                 .general_cfg()
                 .time_wait_for_cap(),
             300
         );
         assert_eq!(
-            pid_log_header.mbed_config().general_cfg().vbat_ready(),
+            status_log_header.mbed_config().general_cfg().vbat_ready(),
             12.8
         );
-        assert_eq!(pid_log_header.mbed_config().general_cfg().servo_max(), 1500);
-        assert_eq!(pid_log_header.mbed_config().general_cfg().servo_min(), 800);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kp_initial(), 3.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().ki_initial(), 0.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kd_initial(), 0.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kp_idle(), 0.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().ki_idle(), 0.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kd_idle(), 0.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kp_standby(), 1.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().ki_standby(), 1.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kd_standby(), 0.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kp_running(), 3.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().ki_running(), 1.0);
-        assert_eq!(pid_log_header.mbed_config().pid_cfg().kd_running(), 0.0);
+        assert_eq!(
+            status_log_header.mbed_config().general_cfg().servo_max(),
+            1500
+        );
+        assert_eq!(
+            status_log_header.mbed_config().general_cfg().servo_min(),
+            800
+        );
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_initial(), 3.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_initial(), 0.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_initial(), 0.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_idle(), 0.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_idle(), 0.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_idle(), 0.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_standby(), 1.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_standby(), 1.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_standby(), 0.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kp_running(), 3.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().ki_running(), 1.0);
+        assert_eq!(status_log_header.mbed_config().pid_cfg().kd_running(), 0.0);
+
+        eprintln!("{:?}", status_log_header.mbed_config().field_value_pairs());
         Ok(())
     }
 }
