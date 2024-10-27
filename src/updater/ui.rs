@@ -104,8 +104,7 @@ fn perform_update(
     sender
         .send(UpdateStep::LoadMetadata)
         .expect("Failed sending update to gui");
-    updater.load_receipt()?;
-
+    
     if cfg!(debug_assertions) {
         updater.always_update(super::FORCE_UPGRADE);
     }
