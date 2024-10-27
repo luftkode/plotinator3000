@@ -4,6 +4,8 @@ use std::{
     io
 };
 
+use axoupdater::AxoupdateResult;
+
 use crate::{get_app_install_dir, APP_NAME, APP_OWNER};
 
 const DISABLE_UPDATES_FILE: &str = "plotinator_disable_updates";
@@ -30,6 +32,7 @@ impl PlotinatorUpdater {
             name: APP_NAME.to_owned(),
             app_name: APP_NAME.to_owned(),
             });
+        updater.disable_installer_output();
 
         Ok(Self { updater })
     }
@@ -40,6 +43,10 @@ impl PlotinatorUpdater {
 
     pub fn always_update(&mut self, setting: bool) {
         self.updater.always_update(setting);
+    }
+
+    pub fn run(&mut self) -> AxoupdateResult<Option<axoupdater::UpdateResult>> {
+        self.updater.run_sync()
     }
 }
 
