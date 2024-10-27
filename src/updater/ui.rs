@@ -15,6 +15,8 @@ pub(super) mod updates_disabled;
 
 use crate::APP_NAME;
 
+use super::PlotinatorUpdater;
+
 const START_UPDATE_PROGRESS: f32 = 10.0;
 const LOAD_METADATA_PROGRESS: f32 = 30.0;
 const WAIT_FOR_COUNTDOWN_PROGRESS: f32 = 40.0;
@@ -98,8 +100,7 @@ fn perform_update(
         .send(UpdateStep::Initial)
         .expect("Failed sending update to gui");
 
-    let mut updater = axoupdater::AxoUpdater::new_for(APP_NAME);
-    updater.disable_installer_output();
+    let mut updater = PlotinatorUpdater::new()?;
 
     sender
         .send(UpdateStep::LoadMetadata)
@@ -135,7 +136,7 @@ fn perform_update(
         .send(UpdateStep::InstallUpdate)
         .expect("Failed sending update to gui");
 
-    if let Some(result) = updater.run_sync()? {
+    if let Some(result) = updater.run()? {
         let msg = format!(
             "Updated to: {APP_NAME} v{}\nInstalled at {}",
             result.new_version, result.install_prefix
