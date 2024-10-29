@@ -17,22 +17,22 @@ pub(crate) enum StatusLogEntry {
 impl StatusLogEntry {
     pub(crate) fn timestamp_ns(&self) -> f64 {
         match self {
-            StatusLogEntry::V1(e) => e.timestamp_ns(),
-            StatusLogEntry::V2(e) => e.timestamp_ns(),
+            Self::V1(e) => e.timestamp_ns(),
+            Self::V2(e) => e.timestamp_ns(),
         }
     }
 
     pub(crate) fn motor_state(&self) -> u8 {
         match self {
-            StatusLogEntry::V1(e) => e.motor_state as u8,
-            StatusLogEntry::V2(e) => e.motor_state as u8,
+            Self::V1(e) => e.motor_state as u8,
+            Self::V2(e) => e.motor_state as u8,
         }
     }
 
     pub(crate) fn motor_state_string(&self) -> String {
         match self {
-            StatusLogEntry::V1(e) => e.motor_state.to_string(),
-            StatusLogEntry::V2(e) => e.motor_state.to_string(),
+            Self::V1(e) => e.motor_state.to_string(),
+            Self::V2(e) => e.motor_state.to_string(),
         }
     }
 }
