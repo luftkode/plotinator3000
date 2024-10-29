@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Deserialize, Serialize};
 use v1::StatusLogHeaderV1;
 use v2::StatusLogHeaderV2;
+use v3::StatusLogHeaderV3;
 use v4::StatusLogHeaderV4;
 
 use crate::{
@@ -15,13 +16,15 @@ use crate::{
 
 mod v1;
 mod v2;
+mod v3;
 mod v4;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum StatusLogHeader {
     V1(StatusLogHeaderV1),
     V2(StatusLogHeaderV2),
-    V3(StatusLogHeaderV4),
+    V3(StatusLogHeaderV3),
+    V4(StatusLogHeaderV4),
 }
 
 impl fmt::Display for StatusLogHeader {
@@ -30,11 +33,21 @@ impl fmt::Display for StatusLogHeader {
             Self::V1(h) => write!(f, "{h}"),
             Self::V2(h) => write!(f, "{h}"),
             Self::V3(h) => write!(f, "{h}"),
+            Self::V4(h) => write!(f, "{h}"),
         }
     }
 }
 
 impl StatusLogHeader {
+    pub(super) fn version(&self) -> usize {
+        match self {
+            Self::V1(_) => 1,
+            Self::V2(_) => 2,
+            Self::V3(_) => 3,
+            Self::V4(_) => 4,
+        }
+    }
+
     pub(super) fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
 
@@ -75,7 +88,16 @@ impl StatusLogHeader {
                 total_bytes_read += bytes_read;
                 Self::V2(header)
             }
-            // This is still a todo
+            3 => {
+                let (header, bytes_read) = StatusLogHeaderV3::from_reader_with_uniq_descr_version(
+                    reader,
+                    unique_description,
+                    version,
+                )?;
+                total_bytes_read += bytes_read;
+                Self::V3(header)
+            }
+
             4 => {
                 let (header, bytes_read) = StatusLogHeaderV4::from_reader_with_uniq_descr_version(
                     reader,
@@ -83,7 +105,7 @@ impl StatusLogHeader {
                     version,
                 )?;
                 total_bytes_read += bytes_read;
-                Self::V3(header)
+                Self::V4(header)
             }
             _ => {
                 return Err(io::Error::new(
