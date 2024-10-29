@@ -41,14 +41,6 @@ impl PidLog {
     }
 }
 
-impl SkytemLog for PidLog {
-    type Entry = PidLogEntry;
-
-    fn entries(&self) -> &[Self::Entry] {
-        &self.entries
-    }
-}
-
 impl Parseable for PidLog {
     const DESCRIPTIVE_NAME: &str = "Mbed PID log";
 
@@ -70,6 +62,7 @@ impl Parseable for PidLog {
             PidLogHeader::V1(h) => h.startup_timestamp(),
             PidLogHeader::V2(h) => h.startup_timestamp(),
             PidLogHeader::V3(h) => h.startup_timestamp(),
+            PidLogHeader::V4(h) => h.startup_timestamp(),
         }
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
         .and_utc();
@@ -163,6 +156,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V1(h) => h.project_version(),
             PidLogHeader::V2(h) => h.project_version(),
             PidLogHeader::V3(h) => h.project_version(),
+            PidLogHeader::V4(h) => h.project_version(),
         }
     }
 
@@ -171,6 +165,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V1(h) => h.git_short_sha(),
             PidLogHeader::V2(h) => h.git_short_sha(),
             PidLogHeader::V3(h) => h.git_short_sha(),
+            PidLogHeader::V4(h) => h.git_short_sha(),
         }
     }
 
@@ -179,6 +174,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V1(h) => h.git_branch(),
             PidLogHeader::V2(h) => h.git_branch(),
             PidLogHeader::V3(h) => h.git_branch(),
+            PidLogHeader::V4(h) => h.git_branch(),
         }
     }
 
@@ -187,6 +183,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V1(h) => h.git_repo_status(),
             PidLogHeader::V2(h) => h.git_repo_status(),
             PidLogHeader::V3(h) => h.git_repo_status(),
+            PidLogHeader::V4(h) => h.git_repo_status(),
         }
     }
 }
@@ -205,6 +202,7 @@ impl Plotable for PidLog {
             PidLogHeader::V1(_) => "Mbed PID v1",
             PidLogHeader::V2(_) => "Mbed PID v2",
             PidLogHeader::V3(_) => "Mbed PID v3",
+            PidLogHeader::V4(_) => "Mbed PID v4",
         }
     }
 
@@ -245,6 +243,10 @@ impl Plotable for PidLog {
                 metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
             }
             PidLogHeader::V3(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
+            PidLogHeader::V4(h) => {
                 metadata.push(("Config values".to_owned(), String::new()));
                 metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
             }
