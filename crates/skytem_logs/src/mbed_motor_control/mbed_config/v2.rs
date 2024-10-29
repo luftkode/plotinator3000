@@ -16,8 +16,6 @@ pub(crate) struct MbedConfigV2 {
     #[getset(get_copy = "pub")]
     kd: f32,
     #[getset(get_copy = "pub")]
-    t_standby: u8,
-    #[getset(get_copy = "pub")]
     t_run: u8,
     #[getset(get_copy = "pub")]
     t_fan_on: u8,
@@ -28,6 +26,8 @@ pub(crate) struct MbedConfigV2 {
     #[getset(get_copy = "pub")]
     rpm_running: u16,
 
+    #[getset(get_copy = "pub")]
+    time_in_idle: u8,
     #[getset(get_copy = "pub")]
     time_shutdown: u16,
     #[getset(get_copy = "pub")]
@@ -50,12 +50,12 @@ impl MbedConfig for MbedConfigV2 {
         let kp = reader.read_f32::<LittleEndian>()?;
         let ki = reader.read_f32::<LittleEndian>()?;
         let kd = reader.read_f32::<LittleEndian>()?;
-        let t_standby = reader.read_u8()?;
         let t_run = reader.read_u8()?;
         let t_fan_on = reader.read_u8()?;
         let t_fan_off = reader.read_u8()?;
         let rpm_standby = reader.read_u16::<LittleEndian>()?;
         let rpm_running = reader.read_u16::<LittleEndian>()?;
+        let time_in_idle = reader.read_u8()?;
         let time_shutdown = reader.read_u16::<LittleEndian>()?;
         let time_wait_for_cap = reader.read_u16::<LittleEndian>()?;
         let vbat_ready = reader.read_f32::<LittleEndian>()?;
@@ -65,12 +65,12 @@ impl MbedConfig for MbedConfigV2 {
             kp,
             ki,
             kd,
-            t_standby,
             t_run,
             t_fan_on,
             t_fan_off,
             rpm_standby,
             rpm_running,
+            time_in_idle,
             time_shutdown,
             time_wait_for_cap,
             vbat_ready,
@@ -84,12 +84,12 @@ impl MbedConfig for MbedConfigV2 {
             ("Kp".to_owned(), self.kp().to_string()),
             ("Ki".to_owned(), self.ki().to_string()),
             ("Kd".to_owned(), self.kd().to_string()),
-            ("T_STANDBY".to_owned(), self.t_standby.to_string()),
             ("T_RUN".to_owned(), self.t_run.to_string()),
             ("T_FAN_On".to_owned(), self.t_fan_on.to_string()),
             ("T_FAN_Off".to_owned(), self.t_fan_off.to_string()),
             ("RPM_STANDBY".to_owned(), self.rpm_standby().to_string()),
             ("RPM_RUNNING".to_owned(), self.rpm_running().to_string()),
+            ("TIME_IN_IDLE".to_owned(), self.time_in_idle().to_string()),
             ("TIME_SHUTDOWN".to_owned(), self.time_shutdown().to_string()),
             (
                 "TIME_WAIT_FOR_CAP".to_owned(),
