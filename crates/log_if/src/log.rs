@@ -6,10 +6,6 @@ use crate::{parseable::Parseable, plotable::Plotable};
 pub trait SkytemLog:
     Plotable + Parseable + GitMetadata + Clone + Display + Send + Sync + Sized
 {
-    type Entry: LogEntry;
-
-    /// Return a borrowed slice (list) of log entries
-    fn entries(&self) -> &[Self::Entry];
 }
 
 /// A given log entry should implement this trait

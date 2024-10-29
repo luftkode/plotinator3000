@@ -27,9 +27,9 @@ pub fn parse_to_vec<T: LogEntry>(reader: &mut impl io::BufRead) -> (Vec<T>, usiz
     (entries, total_bytes_read)
 }
 
-/// Utility function for converting a slice of [`LogEntry`] to plot points by supplying extractor functions
-/// detailing how to extract the timestamp (X) and the data (Y) from [`LogEntry`]s.
-pub fn plot_points_from_log_entry<XF, YF, L: LogEntry>(
+/// Utility function for converting a slice of log entries to plot points by supplying extractor functions
+/// detailing how to extract the timestamp (X) and the data (Y) from log entries.
+pub fn plot_points_from_log_entry<XF, YF, L>(
     log: &[L],
     x_extractor: XF,
     y_extractor: YF,
