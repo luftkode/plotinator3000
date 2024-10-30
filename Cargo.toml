@@ -73,7 +73,7 @@ hdf = []
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 zip = "2.2.0"
-axoupdater = { version = "0.7.2", features = ["blocking"] }
+axoupdater = { version = "0.7.3", features = ["blocking"] }
 
 
 # web:
