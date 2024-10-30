@@ -15,7 +15,13 @@ use crate::{
     parse_unique_description,
 };
 
-use super::{entry::StatusLogEntry, header::StatusLogHeader};
+use super::{
+    entry::{
+        convert_v1_to_status_log_entry, convert_v2_to_status_log_entry, v1::StatusLogEntryV1,
+        v2::StatusLogEntryV2, StatusLogEntry,
+    },
+    header::StatusLogHeader,
+};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct StatusLog {
@@ -43,66 +49,98 @@ impl StatusLog {
 
     // helper function build all the plots that can be made from a statuslog
     fn build_raw_plots(startup_timestamp_ns: f64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
-        let engine_temp_plot_raw = plot_points_from_log_entry(
-            entries,
-            |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| e.engine_temp as f64,
-        );
-        let fan_on_plot_raw = plot_points_from_log_entry(
-            entries,
-            |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| (e.fan_on as u8) as f64,
-        );
-        let vbat_plot_raw = plot_points_from_log_entry(
-            entries,
-            |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| e.vbat as f64,
-        );
-        let setpoint_plot_raw = plot_points_from_log_entry(
-            entries,
-            |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| e.setpoint as f64,
-        );
-        let motor_state_plot_raw = plot_points_from_log_entry(
-            entries,
-            |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| (e.motor_state as u8) as f64,
-        );
-        vec![
-            RawPlot::new(
+        let mut raw_plots = vec![];
+        let entry_count = entries.len();
+        let mut engine_temp_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
+        let mut fan_on_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
+        let mut vbat_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
+        let mut setpoint_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
+        let mut motor_state_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
+
+        for e in entries {
+            match e {
+                StatusLogEntry::V1(e) => {
+                    engine_temp_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        e.engine_temp as f64,
+                    ]);
+                    fan_on_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        (e.fan_on as u8) as f64,
+                    ]);
+                    vbat_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        (e.vbat as u8) as f64,
+                    ]);
+                    setpoint_plot_raw
+                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+
+                    motor_state_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        (e.motor_state as u8) as f64,
+                    ]);
+                }
+                StatusLogEntry::V2(e) => {
+                    engine_temp_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        e.engine_temp as f64,
+                    ]);
+                    fan_on_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        (e.fan_on as u8) as f64,
+                    ]);
+                    vbat_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        (e.vbat as u8) as f64,
+                    ]);
+                    setpoint_plot_raw
+                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+
+                    motor_state_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        (e.motor_state as u8) as f64,
+                    ]);
+                }
+            }
+        }
+
+        if !engine_temp_plot_raw.is_empty() {
+            raw_plots.push(RawPlot::new(
                 "Engine Temp °C".into(),
                 engine_temp_plot_raw,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            ));
+        }
+        if !fan_on_plot_raw.is_empty() {
+            raw_plots.push(RawPlot::new(
                 "Fan On".into(),
                 fan_on_plot_raw,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            ));
+        }
+        if !vbat_plot_raw.is_empty() {
+            raw_plots.push(RawPlot::new(
                 "Vbat [V]".into(),
                 vbat_plot_raw,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            ));
+        }
+        if !setpoint_plot_raw.is_empty() {
+            raw_plots.push(RawPlot::new(
                 "Setpoint".into(),
                 setpoint_plot_raw,
                 ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
+            ));
+        }
+
+        if !motor_state_plot_raw.is_empty() {
+            raw_plots.push(RawPlot::new(
                 "Motor State".into(),
                 motor_state_plot_raw,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-        ]
-    }
-}
-
-impl SkytemLog for StatusLog {
-    type Entry = StatusLogEntry;
-
-    fn entries(&self) -> &[Self::Entry] {
-        &self.entries
+            ));
+        }
+        raw_plots
     }
 }
 
@@ -123,11 +161,21 @@ impl Parseable for StatusLog {
         let mut total_bytes_read: usize = 0;
         let (header, bytes_read) = StatusLogHeader::from_reader(reader)?;
         total_bytes_read += bytes_read;
-        let (vec_of_entries, entry_bytes_read): (Vec<StatusLogEntry>, usize) = parse_to_vec(reader);
+
+        let (vec_of_entries, entry_bytes_read): (Vec<StatusLogEntry>, usize) =
+            if header.version() < 3 {
+                let (v1_vec, entry_bytes_read) = parse_to_vec::<StatusLogEntryV1>(reader);
+                (convert_v1_to_status_log_entry(v1_vec), entry_bytes_read)
+            } else {
+                let (v2_vec, entry_bytes_read) = parse_to_vec::<StatusLogEntryV2>(reader);
+                (convert_v2_to_status_log_entry(v2_vec), entry_bytes_read)
+            };
         total_bytes_read += entry_bytes_read;
         let startup_timestamp = match header {
             StatusLogHeader::V1(h) => h.startup_timestamp(),
             StatusLogHeader::V2(h) => h.startup_timestamp(),
+            StatusLogHeader::V3(h) => h.startup_timestamp(),
+            StatusLogHeader::V4(h) => h.startup_timestamp(),
         }
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
         .and_utc();
@@ -178,12 +226,16 @@ impl GitMetadata for StatusLog {
         match &self.header {
             StatusLogHeader::V1(h) => h.project_version(),
             StatusLogHeader::V2(h) => h.project_version(),
+            StatusLogHeader::V3(h) => h.project_version(),
+            StatusLogHeader::V4(h) => h.project_version(),
         }
     }
     fn git_short_sha(&self) -> Option<String> {
         match &self.header {
             StatusLogHeader::V1(h) => h.git_short_sha(),
             StatusLogHeader::V2(h) => h.git_short_sha(),
+            StatusLogHeader::V3(h) => h.git_short_sha(),
+            StatusLogHeader::V4(h) => h.git_short_sha(),
         }
     }
 
@@ -191,6 +243,8 @@ impl GitMetadata for StatusLog {
         match &self.header {
             StatusLogHeader::V1(h) => h.git_branch(),
             StatusLogHeader::V2(h) => h.git_branch(),
+            StatusLogHeader::V3(h) => h.git_branch(),
+            StatusLogHeader::V4(h) => h.git_branch(),
         }
     }
 
@@ -198,6 +252,8 @@ impl GitMetadata for StatusLog {
         match &self.header {
             StatusLogHeader::V1(h) => h.git_repo_status(),
             StatusLogHeader::V2(h) => h.git_repo_status(),
+            StatusLogHeader::V3(h) => h.git_repo_status(),
+            StatusLogHeader::V4(h) => h.git_repo_status(),
         }
     }
 }
@@ -215,6 +271,8 @@ impl Plotable for StatusLog {
         match self.header {
             StatusLogHeader::V1(_) => "Mbed Status v1",
             StatusLogHeader::V2(_) => "Mbed Status v2",
+            StatusLogHeader::V3(_) => "Mbed Status v3",
+            StatusLogHeader::V4(_) => "Mbed Status v4",
         }
     }
 
@@ -254,6 +312,14 @@ impl Plotable for StatusLog {
                 metadata.push(("Config values".to_owned(), String::new()));
                 metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
             }
+            StatusLogHeader::V3(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
+            StatusLogHeader::V4(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
         }
 
         Some(metadata)
@@ -279,9 +345,9 @@ fn parse_timestamps_with_state_changes(
 
     for entry in entries {
         // Check if the current state is different from the last recorded state
-        if last_state != Some(entry.motor_state) {
+        if last_state != Some(entry.motor_state()) {
             // apply negative offset if we're going to a state with a lower value
-            let offset = if last_state.is_some_and(|ls| ls as u8 > entry.motor_state as u8) {
+            let offset = if last_state.is_some_and(|ls| ls > entry.motor_state()) {
                 -0.5
             } else {
                 0.5
@@ -289,11 +355,11 @@ fn parse_timestamps_with_state_changes(
             result.push((
                 [
                     entry.timestamp_ns() + startup_timestamp_ns,
-                    (entry.motor_state as u8) as f64 + offset,
+                    (entry.motor_state()) as f64 + offset,
                 ],
-                entry.motor_state.to_string(),
+                entry.motor_state_string(),
             ));
-            last_state = Some(entry.motor_state);
+            last_state = Some(entry.motor_state());
         }
     }
     result
@@ -309,8 +375,13 @@ mod tests {
         "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
         "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
+    const TEST_DATA_V3: &str =
+        "../../test_data/mbed_motor_control/v3/short_start/status_20241029_133931_00.bin";
 
-    use crate::{mbed_motor_control::status::entry::MotorState, parse_and_display_log_entries};
+    use crate::{
+        mbed_motor_control::status::entry::{v1::MotorState, v2},
+        parse_and_display_log_entries,
+    };
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
@@ -321,26 +392,43 @@ mod tests {
         eprintln!("{}", status_log.header);
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 16371);
-        let first_entry = status_log.entries().first().expect("Empty entries vec");
-        assert_eq!(first_entry.engine_temp, 64.394905);
-        assert!(!first_entry.fan_on);
-        assert_eq!(first_entry.vbat, 11.76342);
-        assert_eq!(first_entry.setpoint, 1800.0);
-        assert_eq!(first_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
-        let second_entry = &status_log.entries[1];
-        assert_eq!(second_entry.engine_temp, 64.394905);
-        assert!(!second_entry.fan_on);
-        assert_eq!(second_entry.vbat, 11.718291);
-        assert_eq!(second_entry.setpoint, 1800.0);
-        assert_eq!(second_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
+        let first_entry = status_log.entries.first().expect("Empty entries vec");
+        match first_entry {
+            StatusLogEntry::V1(first_entry) => {
+                assert_eq!(first_entry.engine_temp, 64.394905);
+                assert!(!first_entry.fan_on);
+                assert_eq!(first_entry.vbat, 11.76342);
+                assert_eq!(first_entry.setpoint, 1800.0);
+                assert_eq!(first_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
+            }
+            StatusLogEntry::V2(_) => panic!("Expected status log entry v1"),
+        }
 
-        let last_entry = status_log.entries().last().expect("Empty entries vec");
-        assert_eq!(last_entry.timestamp_ns(), 930624.0 * 1_000_000.0);
-        assert_eq!(last_entry.engine_temp, 77.31132);
-        assert!(!last_entry.fan_on);
-        assert_eq!(last_entry.vbat, 11.996582);
-        assert_eq!(last_entry.setpoint, 3600.0);
-        assert_eq!(last_entry.motor_state, MotorState::STANDBY_WAIT_FOR_CAP);
+        let second_entry = &status_log.entries[1];
+        match second_entry {
+            StatusLogEntry::V1(second_entry) => {
+                assert_eq!(second_entry.engine_temp, 64.394905);
+                assert!(!second_entry.fan_on);
+                assert_eq!(second_entry.vbat, 11.718291);
+                assert_eq!(second_entry.setpoint, 1800.0);
+                assert_eq!(second_entry.motor_state, MotorState::ECU_ON_WAIT_PUMP);
+            }
+            StatusLogEntry::V2(_) => panic!("Expected status log entry v1"),
+        }
+
+        let last_entry = status_log.entries.last().expect("Empty entries vec");
+        match last_entry {
+            StatusLogEntry::V1(last_entry) => {
+                assert_eq!(last_entry.timestamp_ns(), 930624.0 * 1_000_000.0);
+                assert_eq!(last_entry.engine_temp, 77.31132);
+                assert!(!last_entry.fan_on);
+                assert_eq!(last_entry.vbat, 11.996582);
+                assert_eq!(last_entry.setpoint, 3600.0);
+                assert_eq!(last_entry.motor_state, MotorState::STANDBY_WAIT_FOR_CAP);
+            }
+            StatusLogEntry::V2(_) => panic!("Expected status log entry v1"),
+        }
+
         //eprintln!("{status_log}");
         Ok(())
     }
@@ -352,7 +440,7 @@ mod tests {
         let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 261);
         println!("{header}");
-        parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
+        parse_and_display_log_entries::<StatusLogEntryV1>(&mut reader, Some(10));
         Ok(())
     }
 
@@ -366,20 +454,32 @@ mod tests {
         assert_eq!(bytes_read, 12281);
         eprintln!("{}", status_log.header);
 
-        let first_entry = status_log.entries().first().expect("Empty entries vec");
+        let first_entry = status_log.entries.first().expect("Empty entries vec");
+        let first_entry: &StatusLogEntryV1 = match first_entry {
+            StatusLogEntry::V1(status_log_entry_v1) => status_log_entry_v1,
+            StatusLogEntry::V2(_) => panic!("Expected status log entry v1"),
+        };
         assert_eq!(first_entry.engine_temp, 4.8440366);
         assert!(!first_entry.fan_on);
         assert_eq!(first_entry.vbat, 11.928035);
         assert_eq!(first_entry.setpoint, 2500.0);
         assert_eq!(first_entry.motor_state, MotorState::POWER_HOLD);
         let second_entry = &status_log.entries[1];
+        let second_entry = match second_entry {
+            StatusLogEntry::V1(status_log_entry_v1) => status_log_entry_v1,
+            StatusLogEntry::V2(_) => panic!("Expected status log entry v1"),
+        };
         assert_eq!(second_entry.engine_temp, 4.8623853);
         assert!(!second_entry.fan_on);
         assert_eq!(second_entry.vbat, 11.943078);
         assert_eq!(second_entry.setpoint, 2500.0);
         assert_eq!(second_entry.motor_state, MotorState::POWER_HOLD);
 
-        let last_entry = status_log.entries().last().expect("Empty entries vec");
+        let last_entry = status_log.entries.last().expect("Empty entries vec");
+        let last_entry = match last_entry {
+            StatusLogEntry::V1(status_log_entry_v1) => status_log_entry_v1,
+            StatusLogEntry::V2(_) => panic!("Expected status log entry v1"),
+        };
         assert_eq!(last_entry.timestamp_ns(), 687042000000.0);
         assert_eq!(last_entry.engine_temp, 76.5566);
         assert!(!last_entry.fan_on);
@@ -398,7 +498,53 @@ mod tests {
 
         println!("{header}");
         assert_eq!(bytes_read, 293);
-        parse_and_display_log_entries::<StatusLogEntry>(&mut reader, Some(10));
+        parse_and_display_log_entries::<StatusLogEntryV1>(&mut reader, Some(10));
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_v3() -> TestResult {
+        let data = fs::read(TEST_DATA_V3)?;
+        let full_data_len = data.len();
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
+
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 509);
+        eprintln!("{}", status_log.header);
+
+        let first_entry = status_log.entries.first().expect("Empty entries vec");
+        let first_entry = match first_entry {
+            StatusLogEntry::V1(_) => panic!("Expected status log entry v2"),
+            StatusLogEntry::V2(status_log_entry_v2) => status_log_entry_v2,
+        };
+        assert_eq!(first_entry.engine_temp, 40.482456);
+        assert!(!first_entry.fan_on);
+        assert_eq!(first_entry.vbat, 12.958463);
+        assert_eq!(first_entry.setpoint, 2500.0);
+        assert_eq!(first_entry.motor_state, v2::MotorState::POWER_HOLD);
+        let second_entry = &status_log.entries[1];
+        let second_entry = match second_entry {
+            StatusLogEntry::V1(_) => panic!("Expected status log entry v2"),
+            StatusLogEntry::V2(status_log_entry_v2) => status_log_entry_v2,
+        };
+        assert_eq!(second_entry.engine_temp, 40.482456);
+        assert!(!second_entry.fan_on);
+        assert_eq!(second_entry.vbat, 12.928377);
+        assert_eq!(second_entry.setpoint, 2500.0);
+        assert_eq!(second_entry.motor_state, v2::MotorState::ECU_ON_WAIT_PUMP);
+
+        let last_entry = status_log.entries.last().expect("Empty entries vec");
+        let last_entry = match last_entry {
+            StatusLogEntry::V1(_) => panic!("Expected status log entry v2"),
+            StatusLogEntry::V2(status_log_entry_v2) => status_log_entry_v2,
+        };
+        assert_eq!(last_entry.timestamp_ns(), 14300000000.0);
+        assert_eq!(last_entry.engine_temp, 40.964912);
+        assert!(!last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 12.552309);
+        assert_eq!(last_entry.setpoint, 2500.0);
+        assert_eq!(last_entry.motor_state, v2::MotorState::IDLE);
+        //eprintln!("{status_log}");
         Ok(())
     }
 }

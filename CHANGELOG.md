@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.1.0]
+
+### Added
+
+- Support for Mbed log v3
+- Preliminary support for Mbed log v3
+
 ## [1.0.2]
 
 ### Fix

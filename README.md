@@ -27,6 +27,10 @@ See the [latest release](https://github.com/luftkode/plotinator3000/releases/lat
 
 Installing with the shell script (unix) or powershell script (windows) will also install an updater which can be used to fetch the latest version.
 
+## Use in browser: https://plotinator3000.web.app/
+
+A more stripped down version is also available as a web app at https://plotinator3000.web.app/ it lacks certain features like drag-n-dropping zip-files and directories, and will likely never have HDF5 support.
+
 ## Quick start
 
 Check the [Justfile](Justfile) for recipes to get started, or invoke `just` to list available recipes.

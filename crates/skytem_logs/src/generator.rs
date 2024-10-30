@@ -31,14 +31,6 @@ impl GeneratorLog {
     }
 }
 
-impl SkytemLog for GeneratorLog {
-    type Entry = GeneratorLogEntry;
-
-    fn entries(&self) -> &[Self::Entry] {
-        &self.entries
-    }
-}
-
 impl Parseable for GeneratorLog {
     const DESCRIPTIVE_NAME: &str = "Legacy Generator Log";
     fn is_buf_valid(buf: &[u8]) -> bool {
@@ -106,7 +98,7 @@ impl Plotable for GeneratorLog {
     }
 
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
-        self.entries()
+        self.entries
             .first()
             .expect("No entries")
             .timestamp
@@ -394,7 +386,7 @@ mod tests {
         let (log, bytes_read) = GeneratorLog::from_reader(&mut data.as_slice())?;
 
         assert_eq!(bytes_read, full_data_len);
-        let first_entry = log.entries().first().expect("Empty entries");
+        let first_entry = log.entries.first().expect("Empty entries");
 
         let first_ts_ns = first_entry.timestamp_ns();
         assert_eq!(
@@ -426,7 +418,7 @@ mod tests {
         assert_eq!(first_entry.i_rotor, 0.7);
         assert_eq!(first_entry.r_rotor, 11.2);
 
-        let last_entry = log.entries().last().expect("Empty entries");
+        let last_entry = log.entries.last().expect("Empty entries");
         assert_eq!(
             last_entry.timestamp,
             NaiveDate::from_ymd_opt(2023, 1, 24)

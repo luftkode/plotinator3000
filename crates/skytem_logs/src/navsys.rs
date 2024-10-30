@@ -308,14 +308,6 @@ impl Plotable for NavSysSps {
     }
 }
 
-impl SkytemLog for NavSysSps {
-    type Entry = NavSysSpsEntry;
-
-    fn entries(&self) -> &[Self::Entry] {
-        &self.entries
-    }
-}
-
 impl Parseable for NavSysSps {
     const DESCRIPTIVE_NAME: &str = "NavSys Sps";
 
