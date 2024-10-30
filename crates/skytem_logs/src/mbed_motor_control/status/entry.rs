@@ -1,6 +1,7 @@
+use core::fmt;
+
 use log_if::log::LogEntry;
 use serde::{Deserialize, Serialize};
-use strum_macros::Display;
 use v1::StatusLogEntryV1;
 use v2::StatusLogEntryV2;
 
@@ -8,10 +9,19 @@ pub(crate) mod v1;
 /// Only difference between v1 and v2 is changes to the motor state enum
 pub(crate) mod v2;
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Display)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub(crate) enum StatusLogEntry {
     V1(StatusLogEntryV1),
     V2(StatusLogEntryV2),
+}
+
+impl fmt::Display for StatusLogEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StatusLogEntry::V1(e) => write!(f, "{e}"),
+            StatusLogEntry::V2(e) => write!(f, "{e}"),
+        }
+    }
 }
 
 impl StatusLogEntry {
