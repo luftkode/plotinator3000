@@ -373,8 +373,13 @@ mod tests {
         "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
         "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
+    const TEST_DATA_V3: &str =
+        "../../test_data/mbed_motor_control/v3/short_start/status_20241029_133931_00.bin";
 
-    use crate::{mbed_motor_control::status::entry::v1::MotorState, parse_and_display_log_entries};
+    use crate::{
+        mbed_motor_control::status::entry::{v1::MotorState, v2},
+        parse_and_display_log_entries,
+    };
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
@@ -492,6 +497,52 @@ mod tests {
         println!("{header}");
         assert_eq!(bytes_read, 293);
         parse_and_display_log_entries::<StatusLogEntryV1>(&mut reader, Some(10));
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_v3() -> TestResult {
+        let data = fs::read(TEST_DATA_V3)?;
+        let full_data_len = data.len();
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
+
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 509);
+        eprintln!("{}", status_log.header);
+
+        let first_entry = status_log.entries.first().expect("Empty entries vec");
+        let first_entry = match first_entry {
+            StatusLogEntry::V1(_) => panic!("Expected status log entry v2"),
+            StatusLogEntry::V2(status_log_entry_v2) => status_log_entry_v2,
+        };
+        assert_eq!(first_entry.engine_temp, 40.482456);
+        assert!(!first_entry.fan_on);
+        assert_eq!(first_entry.vbat, 12.958463);
+        assert_eq!(first_entry.setpoint, 2500.0);
+        assert_eq!(first_entry.motor_state, v2::MotorState::POWER_HOLD);
+        let second_entry = &status_log.entries[1];
+        let second_entry = match second_entry {
+            StatusLogEntry::V1(_) => panic!("Expected status log entry v2"),
+            StatusLogEntry::V2(status_log_entry_v2) => status_log_entry_v2,
+        };
+        assert_eq!(second_entry.engine_temp, 40.482456);
+        assert!(!second_entry.fan_on);
+        assert_eq!(second_entry.vbat, 12.928377);
+        assert_eq!(second_entry.setpoint, 2500.0);
+        assert_eq!(second_entry.motor_state, v2::MotorState::ECU_ON_WAIT_PUMP);
+
+        let last_entry = status_log.entries.last().expect("Empty entries vec");
+        let last_entry = match last_entry {
+            StatusLogEntry::V1(_) => panic!("Expected status log entry v2"),
+            StatusLogEntry::V2(status_log_entry_v2) => status_log_entry_v2,
+        };
+        assert_eq!(last_entry.timestamp_ns(), 14300000000.0);
+        assert_eq!(last_entry.engine_temp, 40.964912);
+        assert!(!last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 12.552309);
+        assert_eq!(last_entry.setpoint, 2500.0);
+        assert_eq!(last_entry.motor_state, v2::MotorState::IDLE);
+        //eprintln!("{status_log}");
         Ok(())
     }
 }
