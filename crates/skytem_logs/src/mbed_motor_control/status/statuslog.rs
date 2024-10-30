@@ -70,10 +70,11 @@ impl StatusLog {
                     ]);
                     vbat_plot_raw.push([
                         e.timestamp_ns() + startup_timestamp_ns,
-                        (e.fan_on as u8) as f64,
+                        (e.vbat as u8) as f64,
                     ]);
                     setpoint_plot_raw
-                        .push([e.timestamp_ns() + startup_timestamp_ns, e.vbat as f64]);
+                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+
                     motor_state_plot_raw.push([
                         e.timestamp_ns() + startup_timestamp_ns,
                         (e.motor_state as u8) as f64,
@@ -90,10 +91,11 @@ impl StatusLog {
                     ]);
                     vbat_plot_raw.push([
                         e.timestamp_ns() + startup_timestamp_ns,
-                        (e.fan_on as u8) as f64,
+                        (e.vbat as u8) as f64,
                     ]);
                     setpoint_plot_raw
-                        .push([e.timestamp_ns() + startup_timestamp_ns, e.vbat as f64]);
+                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+
                     motor_state_plot_raw.push([
                         e.timestamp_ns() + startup_timestamp_ns,
                         (e.motor_state as u8) as f64,
