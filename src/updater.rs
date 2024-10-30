@@ -1,17 +1,69 @@
+#![allow(
+    clippy::result_large_err,
+    reason = "This lint is triggered by the axoupdater library, due to their AxoupdateResult enum being very large. The updater is only run once, so performance doesn't really suffer."
+)]
+use crate::{APP_NAME, APP_OWNER};
+use axoupdater::AxoupdateResult;
 use std::{
     env,
     fs::{self, File},
     io,
+    path::PathBuf,
+    sync::OnceLock,
 };
 
-use crate::APP_NAME;
+pub static APP_INSTALL_DIR: OnceLock<PathBuf> = OnceLock::new();
+pub fn get_app_install_dir() -> &'static PathBuf {
+    APP_INSTALL_DIR.get_or_init(|| {
+        let exe_path = std::env::current_exe().expect("Could not find executable");
+        exe_path
+            .parent()
+            .expect("Could not find parent directory")
+            .to_path_buf()
+    })
+}
 
 const DISABLE_UPDATES_FILE: &str = "plotinator_disable_updates";
 const BYPASS_UPDATES_ENV_VAR: &str = "PLOTINATOR_BYPASS_UPDATES";
-// Use this to debug the update workflow
+// Use this to debug the update workflow (or use the environment variable)
 const FORCE_UPGRADE: bool = false;
 
 mod ui;
+
+/// A wrapper around the [`axoupdater::AxoUpdater`] struct that sets up the updater with the correct parameters
+/// for plotinator3000. It doesn't use an install receipt but sets the necessary parameters manually.
+pub(crate) struct PlotinatorUpdater {
+    updater: axoupdater::AxoUpdater,
+}
+
+impl PlotinatorUpdater {
+    pub fn new() -> axoupdater::AxoupdateResult<Self> {
+        let mut updater = axoupdater::AxoUpdater::new_for(APP_NAME);
+        updater.set_install_dir(get_app_install_dir().to_string_lossy().into_owned());
+        updater.set_current_version(crate::get_app_version().clone())?;
+        updater.set_release_source(axoupdater::ReleaseSource {
+            release_type: axoupdater::ReleaseSourceType::GitHub,
+            owner: APP_OWNER.to_owned(),
+            name: APP_NAME.to_owned(),
+            app_name: APP_NAME.to_owned(),
+        });
+        updater.disable_installer_output();
+
+        Ok(Self { updater })
+    }
+
+    pub fn is_update_needed(&mut self) -> axoupdater::AxoupdateResult<bool> {
+        self.updater.is_update_needed_sync()
+    }
+
+    pub fn always_update(&mut self, setting: bool) {
+        self.updater.always_update(setting);
+    }
+
+    pub fn run(&mut self) -> AxoupdateResult<Option<axoupdater::UpdateResult>> {
+        self.updater.run_sync()
+    }
+}
 
 /// Handles showning update related UI and all the logic involved in performing an upgrade.
 ///
@@ -24,7 +76,7 @@ mod ui;
 )]
 pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
     if !bypass_updates() {
-        if is_updates_disabled().unwrap_or(false) {
+        if is_updates_disabled() {
             if ui::updates_disabled::show_simple_updates_are_disabled_window()
                 .is_ok_and(|updates_re_enabled| updates_re_enabled)
             {
@@ -48,17 +100,6 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
                     } else {
                         log::info!("Already running newest version");
                     }
-                    return Ok(false);
-                }
-                Err(e)
-                    if matches!(
-                        &e,
-                        axoupdater::AxoupdateError::ReceiptLoadFailed { app_name: _ }
-                    ) =>
-                {
-                    log::warn!(
-                        "{e}. Possible failure due to a faulty installation, skipping update checks"
-                    );
                     return Ok(false);
                 }
                 Err(e) => {
@@ -85,10 +126,7 @@ fn bypass_updates() -> bool {
 /// Creates a file in the same directory as the executable which is used to indicate that
 /// updates are disabled (not the best solution...)
 fn create_disable_update_file() -> io::Result<()> {
-    let exe_path = std::env::current_exe()?;
-    let exe_dir = exe_path
-        .parent()
-        .expect("Could not find executable directory");
+    let exe_dir = get_app_install_dir();
     let disable_updates_file = exe_dir.join(DISABLE_UPDATES_FILE);
     File::create(disable_updates_file)?;
     log::info!("Updates disabled");
@@ -97,10 +135,7 @@ fn create_disable_update_file() -> io::Result<()> {
 
 /// Removes the file that indicates that updates are disabled
 fn remove_disable_update_file() -> io::Result<()> {
-    let exe_path = std::env::current_exe()?;
-    let exe_dir = exe_path
-        .parent()
-        .expect("Could not find executable directory");
+    let exe_dir = get_app_install_dir();
     let disable_updates_file = exe_dir.join(DISABLE_UPDATES_FILE);
     fs::remove_file(disable_updates_file)?;
     log::info!("Updates re-enabled");
@@ -108,23 +143,17 @@ fn remove_disable_update_file() -> io::Result<()> {
 }
 
 /// Checks for the file that indicates that updates are disabled
-fn is_updates_disabled() -> io::Result<bool> {
+fn is_updates_disabled() -> bool {
     // Get the path of the executable
-    let exe_path = std::env::current_exe()?;
-    let exe_dir = exe_path.parent().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::NotFound,
-            "Could not find executable directory",
-        )
-    })?;
+    let exe_dir = get_app_install_dir();
 
     // Check if the plotinator_disable_updates file exists
     let disable_updates_file = exe_dir.join(DISABLE_UPDATES_FILE);
     if disable_updates_file.exists() {
         log::warn!("Update bypassed due to presence of '{DISABLE_UPDATES_FILE}' file.");
-        return Ok(true);
+        return true;
     }
-    Ok(false)
+    false
 }
 
 /// Uses the [`axoupdater::AxoUpdater`] to query for a newer version than what is currently installed
@@ -133,19 +162,30 @@ fn is_updates_disabled() -> io::Result<bool> {
     reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really our fault"
 )]
 fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
-    let mut updater = axoupdater::AxoUpdater::new_for(APP_NAME);
-    updater.load_receipt()?;
+    let mut updater = PlotinatorUpdater::new()?;
+
     if cfg!(debug_assertions) {
         if FORCE_UPGRADE {
             log::warn!("Forcing upgrade");
         }
         updater.always_update(FORCE_UPGRADE); // Set to test it
     }
-    if updater.is_update_needed_sync()? {
+    if updater.is_update_needed()? {
         log::warn!("{APP_NAME} is outdated and should be upgraded");
         Ok(true)
     } else {
         log::info!("{APP_NAME} is up to date");
         Ok(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_update_available() {
+        let check_update = is_update_available();
+        assert!(check_update.is_ok());
     }
 }
