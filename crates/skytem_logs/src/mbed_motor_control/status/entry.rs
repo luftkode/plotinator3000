@@ -18,8 +18,8 @@ pub(crate) enum StatusLogEntry {
 impl fmt::Display for StatusLogEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StatusLogEntry::V1(e) => write!(f, "{e}"),
-            StatusLogEntry::V2(e) => write!(f, "{e}"),
+            Self::V1(e) => write!(f, "{e}"),
+            Self::V2(e) => write!(f, "{e}"),
         }
     }
 }
