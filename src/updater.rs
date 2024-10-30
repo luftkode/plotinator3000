@@ -1,12 +1,27 @@
+#![allow(
+    clippy::result_large_err,
+    reason = "This lint is triggered by the axoupdater library, due to their AxoupdateResult enum being very large. The updater is only run once, so performance doesn't really suffer."
+)]
+use crate::{APP_NAME, APP_OWNER};
+use axoupdater::AxoupdateResult;
 use std::{
     env,
     fs::{self, File},
-    io
+    io,
+    path::PathBuf,
+    sync::OnceLock,
 };
 
-use axoupdater::AxoupdateResult;
-
-use crate::{get_app_install_dir, APP_NAME, APP_OWNER};
+pub static APP_INSTALL_DIR: OnceLock<PathBuf> = OnceLock::new();
+pub fn get_app_install_dir() -> &'static PathBuf {
+    APP_INSTALL_DIR.get_or_init(|| {
+        let exe_path = std::env::current_exe().expect("Could not find executable");
+        exe_path
+            .parent()
+            .expect("Could not find parent directory")
+            .to_path_buf()
+    })
+}
 
 const DISABLE_UPDATES_FILE: &str = "plotinator_disable_updates";
 const BYPASS_UPDATES_ENV_VAR: &str = "PLOTINATOR_BYPASS_UPDATES";
@@ -31,7 +46,7 @@ impl PlotinatorUpdater {
             owner: APP_OWNER.to_owned(),
             name: APP_NAME.to_owned(),
             app_name: APP_NAME.to_owned(),
-            });
+        });
         updater.disable_installer_output();
 
         Ok(Self { updater })
@@ -61,7 +76,7 @@ impl PlotinatorUpdater {
 )]
 pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
     if !bypass_updates() {
-        if is_updates_disabled().unwrap_or(false) {
+        if is_updates_disabled() {
             if ui::updates_disabled::show_simple_updates_are_disabled_window()
                 .is_ok_and(|updates_re_enabled| updates_re_enabled)
             {
@@ -128,7 +143,7 @@ fn remove_disable_update_file() -> io::Result<()> {
 }
 
 /// Checks for the file that indicates that updates are disabled
-fn is_updates_disabled() -> io::Result<bool> {
+fn is_updates_disabled() -> bool {
     // Get the path of the executable
     let exe_dir = get_app_install_dir();
 
@@ -136,9 +151,9 @@ fn is_updates_disabled() -> io::Result<bool> {
     let disable_updates_file = exe_dir.join(DISABLE_UPDATES_FILE);
     if disable_updates_file.exists() {
         log::warn!("Update bypassed due to presence of '{DISABLE_UPDATES_FILE}' file.");
-        return Ok(true);
+        return true;
     }
-    Ok(false)
+    false
 }
 
 /// Uses the [`axoupdater::AxoUpdater`] to query for a newer version than what is currently installed
@@ -164,7 +179,6 @@ fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,6 +186,6 @@ mod tests {
     #[test]
     fn test_is_update_available() {
         let check_update = is_update_available();
-        assert!(check_update.is_ok())
+        assert!(check_update.is_ok());
     }
 }

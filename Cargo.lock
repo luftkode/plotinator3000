@@ -2594,6 +2594,7 @@ dependencies = [
  "log_if",
  "plot_util",
  "rfd",
+ "semver",
  "serde",
  "skytem_hdf",
  "skytem_logs",
