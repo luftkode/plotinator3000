@@ -66,7 +66,8 @@ fn plot_with_mipmapping(
     known_idx_range: Option<(usize, usize)>,
 ) {
     let (x_lower, x_higher) = x_range;
-    if mipmap_lvl == 0 {
+    // If the mipmap level is 0 or 1 plotting all data points is just as efficient.
+    if mipmap_lvl < 2 {
         plot_raw(plot_ui, plot_vals, (x_lower, x_higher));
     } else {
         let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(mipmap_lvl);
