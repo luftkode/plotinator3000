@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.1.1]
+
+### Changed
+
+- When auto downsampling is enabled and the mipmap level for a given plot is determined to be 1, we use all data points instead of downsampling to level 1. When we are plotting a downsampled min and max, level 1 is just as many data points as the original non-downsampled plot, so this is a strictly better solution.
+
 ## [1.1.0]
 
 ### Added
