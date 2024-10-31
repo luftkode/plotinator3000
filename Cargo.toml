@@ -68,6 +68,7 @@ testresult.workspace = true
 [features]
 default = []
 hdf = []
+selfupdater = []
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

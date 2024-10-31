@@ -25,6 +25,7 @@ pub fn get_app_version() -> &'static Version {
 }
 
 pub mod plot;
+#[cfg(feature = "selfupdater")]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod updater;
 pub mod util;

@@ -4,12 +4,11 @@
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    use plotinator3000::updater;
-
     // Log to stderr (if run with `RUST_LOG=debug`).
     env_logger::init();
 
-    match updater::update_if_applicable() {
+    #[cfg(feature = "selfupdater")]
+    match plotinator3000::updater::update_if_applicable() {
         Ok(needs_restart) => {
             if needs_restart {
                 return Ok(());
