@@ -195,19 +195,42 @@ impl MbedConfig for PidConfig {
     }
 
     fn field_value_pairs(&self) -> Vec<(String, String)> {
+        let pid_vals_initial = (
+            "Kp, Ki, Kd: INITIAL".to_owned(),
+            format!(
+                "{}, {}, {}",
+                self.kp_initial(),
+                self.ki_initial(),
+                self.kd_initial()
+            ),
+        );
+        let pid_vals_idle = (
+            "Kp, Ki, Kd: IDLE".to_owned(),
+            format!("{}, {}, {}", self.kp_idle(), self.ki_idle(), self.kd_idle()),
+        );
+        let pid_vals_standby = (
+            "Kp, Ki, Kd: STANDBY".to_owned(),
+            format!(
+                "{}, {}, {}",
+                self.kp_standby(),
+                self.ki_standby(),
+                self.kd_standby()
+            ),
+        );
+        let pid_vals_running = (
+            "Kp, Ki, Kd: RUNNING".to_owned(),
+            format!(
+                "{}, {}, {}",
+                self.kp_running(),
+                self.ki_running(),
+                self.kd_running()
+            ),
+        );
         vec![
-            ("Kp_initial".to_owned(), self.kp_initial().to_string()),
-            ("Ki_initial".to_owned(), self.ki_initial().to_string()),
-            ("Kd_initial".to_owned(), self.kd_initial().to_string()),
-            ("Kp_idle".to_owned(), self.kp_idle().to_string()),
-            ("Ki_idle".to_owned(), self.ki_idle().to_string()),
-            ("Kd_idle".to_owned(), self.kd_idle().to_string()),
-            ("Kp_standby".to_owned(), self.kp_standby().to_string()),
-            ("Ki_standby".to_owned(), self.ki_standby().to_string()),
-            ("Kd_standby".to_owned(), self.kd_standby().to_string()),
-            ("Kp_running".to_owned(), self.kp_running().to_string()),
-            ("Ki_running".to_owned(), self.ki_running().to_string()),
-            ("Kd_running".to_owned(), self.kd_running().to_string()),
+            pid_vals_initial,
+            pid_vals_idle,
+            pid_vals_standby,
+            pid_vals_running,
         ]
     }
 }
