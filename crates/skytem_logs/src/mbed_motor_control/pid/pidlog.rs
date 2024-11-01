@@ -90,7 +90,7 @@ impl Parseable for PidLog {
         let servo_duty_cycle_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| e.servo_duty_cycle as f64,
+            |e| (e.servo_duty_cycle as f64) * 10.0,
         );
         let rpm_error_count_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
