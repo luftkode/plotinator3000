@@ -434,9 +434,9 @@ dependencies = [
 
 [[package]]
 name = "axoupdater"
-version = "0.7.3"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fe17874ee40fb66fe1d2cb7871b14de4d298fbf77ea29a6cedb8027365e1a33"
+checksum = "7fb8d8889305a413a040f281197bb2f8982a1d25c9696707cab350e3cc780ba5"
 dependencies = [
  "axoasset",
  "axoprocess",
@@ -450,6 +450,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -2580,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "1.1.2"
+version = "1.2.0"
 dependencies = [
  "axoupdater",
  "chrono",

@@ -41,18 +41,21 @@ impl MbedConfig for MbedConfigV3 {
 #[repr(packed)]
 pub(crate) struct GeneralConfig {
     #[getset(get_copy = "pub")]
-    t_standby: u8,
-    #[getset(get_copy = "pub")]
     t_run: u8,
     #[getset(get_copy = "pub")]
     t_fan_on: u8,
     #[getset(get_copy = "pub")]
     t_fan_off: u8,
+
+    #[getset(get_copy = "pub")]
+    rpm_idle: u16,
     #[getset(get_copy = "pub")]
     rpm_standby: u16,
     #[getset(get_copy = "pub")]
     rpm_running: u16,
 
+    #[getset(get_copy = "pub")]
+    time_in_idle: u8,
     #[getset(get_copy = "pub")]
     time_shutdown: u16,
     #[getset(get_copy = "pub")]
@@ -72,24 +75,26 @@ impl MbedConfig for GeneralConfig {
     }
 
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self> {
-        let t_standby = reader.read_u8()?;
         let t_run = reader.read_u8()?;
         let t_fan_on = reader.read_u8()?;
         let t_fan_off = reader.read_u8()?;
+        let rpm_idle = reader.read_u16::<LittleEndian>()?;
         let rpm_standby = reader.read_u16::<LittleEndian>()?;
         let rpm_running = reader.read_u16::<LittleEndian>()?;
+        let time_in_idle = reader.read_u8()?;
         let time_shutdown = reader.read_u16::<LittleEndian>()?;
         let time_wait_for_cap = reader.read_u16::<LittleEndian>()?;
         let vbat_ready = reader.read_f32::<LittleEndian>()?;
         let servo_min = reader.read_u16::<LittleEndian>()?;
         let servo_max = reader.read_u16::<LittleEndian>()?;
         Ok(Self {
-            t_standby,
             t_run,
             t_fan_on,
             t_fan_off,
+            rpm_idle,
             rpm_standby,
             rpm_running,
+            time_in_idle,
             time_shutdown,
             time_wait_for_cap,
             vbat_ready,
@@ -100,12 +105,13 @@ impl MbedConfig for GeneralConfig {
 
     fn field_value_pairs(&self) -> Vec<(String, String)> {
         vec![
-            ("T_STANDBY".to_owned(), self.t_standby.to_string()),
             ("T_RUN".to_owned(), self.t_run.to_string()),
             ("T_FAN_On".to_owned(), self.t_fan_on.to_string()),
             ("T_FAN_Off".to_owned(), self.t_fan_off.to_string()),
+            ("RPM_IDLE".to_owned(), self.rpm_idle().to_string()),
             ("RPM_STANDBY".to_owned(), self.rpm_standby().to_string()),
             ("RPM_RUNNING".to_owned(), self.rpm_running().to_string()),
+            ("TIME_IN_IDLE".to_owned(), self.time_in_idle().to_string()),
             ("TIME_SHUTDOWN".to_owned(), self.time_shutdown().to_string()),
             (
                 "TIME_WAIT_FOR_CAP".to_owned(),
@@ -189,19 +195,42 @@ impl MbedConfig for PidConfig {
     }
 
     fn field_value_pairs(&self) -> Vec<(String, String)> {
+        let pid_vals_initial = (
+            "Kp, Ki, Kd: INITIAL".to_owned(),
+            format!(
+                "{}, {}, {}",
+                self.kp_initial(),
+                self.ki_initial(),
+                self.kd_initial()
+            ),
+        );
+        let pid_vals_idle = (
+            "Kp, Ki, Kd: IDLE".to_owned(),
+            format!("{}, {}, {}", self.kp_idle(), self.ki_idle(), self.kd_idle()),
+        );
+        let pid_vals_standby = (
+            "Kp, Ki, Kd: STANDBY".to_owned(),
+            format!(
+                "{}, {}, {}",
+                self.kp_standby(),
+                self.ki_standby(),
+                self.kd_standby()
+            ),
+        );
+        let pid_vals_running = (
+            "Kp, Ki, Kd: RUNNING".to_owned(),
+            format!(
+                "{}, {}, {}",
+                self.kp_running(),
+                self.ki_running(),
+                self.kd_running()
+            ),
+        );
         vec![
-            ("Kp_initial".to_owned(), self.kp_initial().to_string()),
-            ("Ki_initial".to_owned(), self.ki_initial().to_string()),
-            ("Kd_initial".to_owned(), self.kd_initial().to_string()),
-            ("Kp_idle".to_owned(), self.kp_idle().to_string()),
-            ("Ki_idle".to_owned(), self.ki_idle().to_string()),
-            ("Kd_idle".to_owned(), self.kd_idle().to_string()),
-            ("Kp_standby".to_owned(), self.kp_standby().to_string()),
-            ("Ki_standby".to_owned(), self.ki_standby().to_string()),
-            ("Kd_standby".to_owned(), self.kd_standby().to_string()),
-            ("Kp_running".to_owned(), self.kp_running().to_string()),
-            ("Ki_running".to_owned(), self.ki_running().to_string()),
-            ("Kd_running".to_owned(), self.kd_running().to_string()),
+            pid_vals_initial,
+            pid_vals_idle,
+            pid_vals_standby,
+            pid_vals_running,
         ]
     }
 }

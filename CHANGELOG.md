@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.2.0]
+
+### Changed
+
+- Re-enable installation of an updater executable
+- MBED logs now normalize `servo duty cycle` to 0-100%. The full range of the servo duty cycle is [0; 0.1].
+
+### Internal
+
+- Bump cargo-dist from 0.23.0 -> 0.25.1
+- Bump axoupdater from 0.7.3 -> 0.8.1
+
 ## [1.1.2]
 
 ### Changed

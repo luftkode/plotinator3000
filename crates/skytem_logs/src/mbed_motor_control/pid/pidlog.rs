@@ -90,7 +90,7 @@ impl Parseable for PidLog {
         let servo_duty_cycle_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
             |e| e.timestamp_ns() + startup_timestamp_ns,
-            |e| e.servo_duty_cycle as f64,
+            |e| (e.servo_duty_cycle as f64) * 10.0,
         );
         let rpm_error_count_plot_raw = plot_points_from_log_entry(
             &vec_of_entries,
@@ -277,6 +277,7 @@ mod tests {
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
         "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
+    const TEST_DATA_V4: &str = "../../test_data/mbed_motor_control/v4/pid_20241101_133749_00.bin";
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
@@ -344,6 +345,41 @@ mod tests {
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 293);
+        println!("{header}");
+        parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_v4() -> TestResult {
+        let data = fs::read(TEST_DATA_V4)?;
+        let full_data_len = data.len();
+        let (pidlog, bytes_read) = PidLog::from_reader(&mut data.as_slice())?;
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 41467);
+        let first_entry = pidlog.entries.first().expect("Empty entries");
+        assert_eq!(first_entry.rpm, 0.0);
+        assert_eq!(first_entry.pid_output, 0.0);
+        assert_eq!(first_entry.servo_duty_cycle, 0.0);
+        assert_eq!(first_entry.rpm_error_count, 0);
+        assert_eq!(first_entry.first_valid_rpm_count, 0);
+
+        let second_entry = &pidlog.entries[1];
+        assert_eq!(second_entry.rpm, 0.0);
+        assert_eq!(second_entry.pid_output, 0.0);
+        assert_eq!(second_entry.servo_duty_cycle, 0.0);
+        assert_eq!(second_entry.rpm_error_count, 0);
+        assert_eq!(second_entry.first_valid_rpm_count, 0);
+        //eprintln!("{pidlog}");
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_and_display_v4() -> TestResult {
+        let file = File::open(TEST_DATA_V4)?;
+        let mut reader = io::BufReader::new(file);
+        let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
+        assert_eq!(bytes_read, 331);
         println!("{header}");
         parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
         Ok(())
