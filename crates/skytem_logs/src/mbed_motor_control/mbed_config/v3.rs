@@ -48,6 +48,9 @@ pub(crate) struct GeneralConfig {
     t_fan_off: u8,
 
     #[getset(get_copy = "pub")]
+    initial_throttle_percent: f32,
+
+    #[getset(get_copy = "pub")]
     rpm_idle: u16,
     #[getset(get_copy = "pub")]
     rpm_standby: u16,
@@ -78,6 +81,7 @@ impl MbedConfig for GeneralConfig {
         let t_run = reader.read_u8()?;
         let t_fan_on = reader.read_u8()?;
         let t_fan_off = reader.read_u8()?;
+        let initial_throttle_percent = reader.read_f32::<LittleEndian>()?;
         let rpm_idle = reader.read_u16::<LittleEndian>()?;
         let rpm_standby = reader.read_u16::<LittleEndian>()?;
         let rpm_running = reader.read_u16::<LittleEndian>()?;
@@ -91,6 +95,7 @@ impl MbedConfig for GeneralConfig {
             t_run,
             t_fan_on,
             t_fan_off,
+            initial_throttle_percent,
             rpm_idle,
             rpm_standby,
             rpm_running,
@@ -108,6 +113,10 @@ impl MbedConfig for GeneralConfig {
             ("T_RUN".to_owned(), self.t_run.to_string()),
             ("T_FAN_On".to_owned(), self.t_fan_on.to_string()),
             ("T_FAN_Off".to_owned(), self.t_fan_off.to_string()),
+            (
+                "INITIAL_THROTTLE_PERCENT".to_owned(),
+                self.initial_throttle_percent().to_string(),
+            ),
             ("RPM_IDLE".to_owned(), self.rpm_idle().to_string()),
             ("RPM_STANDBY".to_owned(), self.rpm_standby().to_string()),
             ("RPM_RUNNING".to_owned(), self.rpm_running().to_string()),
@@ -127,13 +136,6 @@ impl MbedConfig for GeneralConfig {
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
 #[repr(packed)]
 pub(crate) struct PidConfig {
-    #[getset(get_copy = "pub")]
-    kp_initial: f32,
-    #[getset(get_copy = "pub")]
-    ki_initial: f32,
-    #[getset(get_copy = "pub")]
-    kd_initial: f32,
-
     #[getset(get_copy = "pub")]
     kp_idle: f32,
     #[getset(get_copy = "pub")]
@@ -162,10 +164,6 @@ impl MbedConfig for PidConfig {
     }
 
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<Self> {
-        let kp_initial = reader.read_f32::<LittleEndian>()?;
-        let ki_initial = reader.read_f32::<LittleEndian>()?;
-        let kd_initial = reader.read_f32::<LittleEndian>()?;
-
         let kp_idle = reader.read_f32::<LittleEndian>()?;
         let ki_idle = reader.read_f32::<LittleEndian>()?;
         let kd_idle = reader.read_f32::<LittleEndian>()?;
@@ -179,9 +177,6 @@ impl MbedConfig for PidConfig {
         let kd_running = reader.read_f32::<LittleEndian>()?;
 
         Ok(Self {
-            kp_initial,
-            ki_initial,
-            kd_initial,
             kp_idle,
             ki_idle,
             kd_idle,
@@ -195,15 +190,6 @@ impl MbedConfig for PidConfig {
     }
 
     fn field_value_pairs(&self) -> Vec<(String, String)> {
-        let pid_vals_initial = (
-            "Kp, Ki, Kd: INITIAL".to_owned(),
-            format!(
-                "{}, {}, {}",
-                self.kp_initial(),
-                self.ki_initial(),
-                self.kd_initial()
-            ),
-        );
         let pid_vals_idle = (
             "Kp, Ki, Kd: IDLE".to_owned(),
             format!("{}, {}, {}", self.kp_idle(), self.ki_idle(), self.kd_idle()),
@@ -226,11 +212,6 @@ impl MbedConfig for PidConfig {
                 self.kd_running()
             ),
         );
-        vec![
-            pid_vals_initial,
-            pid_vals_idle,
-            pid_vals_standby,
-            pid_vals_running,
-        ]
+        vec![pid_vals_idle, pid_vals_standby, pid_vals_running]
     }
 }
