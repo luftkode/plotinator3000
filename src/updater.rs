@@ -8,17 +8,22 @@ use std::{
     env,
     fs::{self, File},
     io,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::OnceLock,
 };
 
 pub static APP_INSTALL_DIR: OnceLock<PathBuf> = OnceLock::new();
+/// Returns the parent of the parent of the executable directory due to the installation being done at <target_dir>/bin/<new_plotinator_binary>
+/// so if we point at /bin/<current_exe> the axoupdater would install the update at /bin/bin/<new_exe>, therefor we go one level higher
 pub fn get_app_install_dir() -> &'static PathBuf {
     APP_INSTALL_DIR.get_or_init(|| {
         let exe_path = std::env::current_exe().expect("Could not find executable");
+        log::info!("Executable path: {}", exe_path.display());
         exe_path
             .parent()
             .expect("Could not find parent directory")
+            .parent()
+            .expect("Could not find parent's parent directory")
             .to_path_buf()
     })
 }
@@ -50,6 +55,15 @@ impl PlotinatorUpdater {
         updater.disable_installer_output();
 
         Ok(Self { updater })
+    }
+
+    #[allow(
+        dead_code,
+        reason = "We need to override this to test installation path behaviour"
+    )]
+    pub fn set_install_dir(&mut self, path: &Path) {
+        self.updater
+            .set_install_dir(path.to_string_lossy().into_owned());
     }
 
     pub fn is_update_needed(&mut self) -> axoupdater::AxoupdateResult<bool> {
@@ -182,10 +196,44 @@ fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempdir::TempDir;
+    use testresult::TestResult;
 
     #[test]
     fn test_is_update_available() {
         let check_update = is_update_available();
         assert!(check_update.is_ok());
+    }
+
+    #[test]
+    fn test_plotinator_updater() -> TestResult {
+        let dir = TempDir::new("tmp_plotinator_install_dir")?;
+        let updater = PlotinatorUpdater::new();
+        assert!(updater.is_ok());
+        let mut updater = updater.unwrap();
+        updater.set_install_dir(dir.path());
+
+        // Test update check functionality
+        let update_needed = updater.is_update_needed();
+        assert!(update_needed.is_ok());
+
+        // Test Updating
+        updater.always_update(true);
+        let update_result = updater.run();
+        assert!(update_result.is_ok());
+
+        //  The current behaviour is to install at <install_path>/bin/<new_binary>
+        //  these assertions serve to verify that this behaviour does not suddenly
+        //  change and break updates without notice.
+        let bin_path = dir.path().join("bin");
+        assert!(bin_path.exists());
+        let updated_bin = if cfg!(target_os = "windows") {
+            bin_path.join(format!("{APP_NAME}.exe"))
+        } else {
+            bin_path.join(APP_NAME)
+        };
+        assert!(updated_bin.exists());
+
+        Ok(())
     }
 }
