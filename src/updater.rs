@@ -196,7 +196,7 @@ fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
     use testresult::TestResult;
 
     #[test]
@@ -207,11 +207,11 @@ mod tests {
 
     #[test]
     fn test_plotinator_updater() -> TestResult {
-        let dir = TempDir::new("tmp_plotinator_install_dir")?;
+        let tmp_dir = tempdir()?;
         let updater = PlotinatorUpdater::new();
         assert!(updater.is_ok());
         let mut updater = updater.unwrap();
-        updater.set_install_dir(dir.path());
+        updater.set_install_dir(tmp_dir.path());
 
         // Test update check functionality
         let update_needed = updater.is_update_needed();
@@ -225,7 +225,7 @@ mod tests {
         //  The current behaviour is to install at <install_path>/bin/<new_binary>
         //  these assertions serve to verify that this behaviour does not suddenly
         //  change and break updates without notice.
-        let bin_path = dir.path().join("bin");
+        let bin_path = tmp_dir.path().join("bin");
         assert!(bin_path.exists());
         let updated_bin = if cfg!(target_os = "windows") {
             bin_path.join(format!("{APP_NAME}.exe"))
