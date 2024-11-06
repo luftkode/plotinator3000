@@ -220,8 +220,10 @@ mod tests {
         // Test Updating
         updater.always_update(true);
         let update_result = updater.run()?.unwrap();
-        assert_eq!(update_result.install_prefix.as_str(), tmp_dir.path().to_string_lossy());
-
+        assert_eq!(
+            update_result.install_prefix.as_str(),
+            tmp_dir.path().to_string_lossy()
+        );
 
         //  The current behaviour is to install at <install_path>/bin/<new_binary>
         //  these assertions serve to verify that this behaviour does not suddenly
