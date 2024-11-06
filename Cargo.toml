@@ -2,7 +2,7 @@
 name = "plotinator3000"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.2.1"
+version = "1.2.2"
 edition = "2021"
 repository = "https://github.com/luftkode/plotinator3000"
 homepage = "https://github.com/luftkode/plotinator3000"
@@ -38,6 +38,7 @@ semver = "1.0.23"
 # Dev dependencies
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
+tempfile = "3.13.0"
 
 [dependencies]
 skytem_logs = { version = "*", path = "crates/skytem_logs" }
@@ -64,9 +65,10 @@ egui-notify = "0.17.0"
 
 [dev-dependencies]
 testresult.workspace = true
+tempfile.workspace = true
 
 [features]
-default = []
+default = ["selfupdater"]
 hdf = []
 selfupdater = []
 

@@ -2581,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "axoupdater",
  "chrono",
@@ -2602,6 +2602,7 @@ dependencies = [
  "skytem_logs",
  "strum",
  "strum_macros",
+ "tempfile",
  "testresult",
  "wasm-bindgen-futures",
  "web-sys",
