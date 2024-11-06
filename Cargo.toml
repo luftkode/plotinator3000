@@ -68,7 +68,7 @@ testresult.workspace = true
 tempfile.workspace = true
 
 [features]
-default = ["selfupdater"]
+default = ["selfupdater", "hdf"]
 hdf = []
 selfupdater = []
 
