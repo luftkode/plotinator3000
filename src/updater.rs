@@ -219,8 +219,8 @@ mod tests {
 
         // Test Updating
         updater.always_update(true);
-        let update_result = updater.run();
-        assert!(update_result.is_ok());
+        let update_result = updater.run()?.unwrap();
+
 
         //  The current behaviour is to install at <install_path>/bin/<new_binary>
         //  these assertions serve to verify that this behaviour does not suddenly
