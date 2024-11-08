@@ -219,8 +219,7 @@ mod tests {
 
     #[test]
     fn test_is_update_available() {
-        let check_update = is_update_available();
-        assert!(check_update.is_ok());
+        let _check_update = is_update_available().unwrap();
     }
 
     #[test]
