@@ -9,6 +9,7 @@ name: CI
 env:
   RUSTFLAGS: -D warnings
   RUSTDOCFLAGS: -D warnings
+  RUST_BACKTRACE: 1
 
 jobs:
   check:
