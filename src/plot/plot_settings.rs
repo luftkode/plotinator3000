@@ -83,6 +83,33 @@ impl PlotSettings {
         }
     }
 
+    fn ui_show_or_hide_all_buttons(ui: &mut egui::Ui, loaded_files: &mut [LoadedLogSettings]) {
+        let mut hide_all = false;
+        let mut show_all = false;
+
+        if ui
+            .button(RichText::new("Hide all").strong().heading())
+            .clicked()
+        {
+            hide_all = true;
+        }
+        if ui
+            .button(RichText::new("Show all").strong().heading())
+            .clicked()
+        {
+            show_all = true;
+        }
+        if hide_all {
+            for f in loaded_files.iter_mut() {
+                *f.show_log_mut() = false;
+            }
+        } else if show_all {
+            for f in loaded_files.iter_mut() {
+                *f.show_log_mut() = true;
+            }
+        }
+    }
+
     fn show_loaded_files(&mut self, ui: &mut egui::Ui) {
         let loaded_files_count = self.log_start_date_settings.len();
         let visibility_icon = if self.ps_ui.show_loaded_logs {
@@ -107,6 +134,9 @@ impl PlotSettings {
             egui::Window::new(show_loaded_logs_text)
                 .open(&mut self.ps_ui.show_loaded_logs)
                 .show(ui.ctx(), |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        Self::ui_show_or_hide_all_buttons(ui, &mut self.log_start_date_settings);
+                    });
                     egui::Grid::new("log_settings_grid").show(ui, |ui| {
                         for settings in &mut self.log_start_date_settings {
                             loaded_logs::log_date_settings_ui(ui, settings);
