@@ -217,6 +217,41 @@ mod tests {
     use tempfile::tempdir;
     use testresult::TestResult;
 
+    /// This is added because the updater tests kept failing in CI on macos-latest, so this serves to be a sanity check if we can access the github api.
+    #[tokio::test]
+    async fn test_github_api_auth_ok() -> TestResult {
+        use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, USER_AGENT};
+        let mut headers = HeaderMap::new();
+
+        // Try to get token from environment
+        if let Ok(token) =
+            std::env::var("GITHUB_API_TOKEN").or_else(|_| std::env::var("GITHUB_TOKEN"))
+        {
+            headers.insert(
+                AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+            );
+        }
+
+        // Always set a user agent
+        headers.insert(
+            USER_AGENT,
+            HeaderValue::from_static("rust-github-api-client"),
+        );
+
+        let client = reqwest::Client::builder()
+            .default_headers(headers)
+            .build()?;
+        let response = client
+            .get("https://api.github.com/repos/luftkode/plotinator3000/releases")
+            .send()
+            .await?;
+
+        assert!(response.status().is_success());
+
+        Ok(())
+    }
+
     #[test]
     fn test_is_update_available() {
         let _check_update = is_update_available().unwrap();
@@ -231,7 +266,7 @@ mod tests {
         updater.set_install_dir(tmp_dir.path());
 
         // Test update check functionality
-        let update_needed = updater.is_update_needed().unwrap();
+        let _update_needed = updater.is_update_needed().unwrap();
 
         // Test Updating
         updater.always_update(true);
