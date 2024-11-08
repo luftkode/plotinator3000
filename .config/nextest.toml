@@ -1,0 +1,6 @@
+[profile.ci]
+retries = 1
+
+[[profile.ci.overrides]]
+retries = { backoff = "exponential", count = 2, delay = "5s", jitter = true }
+platform = { host = 'cfg(target_os = "macos")' }
