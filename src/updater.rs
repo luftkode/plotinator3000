@@ -67,7 +67,25 @@ impl PlotinatorUpdater {
     }
 
     pub fn is_update_needed(&mut self) -> axoupdater::AxoupdateResult<bool> {
-        self.updater.is_update_needed_sync()
+        let res = tokio::runtime::Builder::new_current_thread()
+            .worker_threads(1)
+            .max_blocking_threads(128)
+            .enable_all()
+            .build()
+            .expect("Initializing tokio runtime failed")
+            .block_on(self.updater.query_new_version())?;
+
+        match res {
+            Some(v) => {
+                if v > crate::get_app_version() {
+                    log::info!("New version available");
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            },
+            None => Ok(false),
+        }
     }
 
     pub fn always_update(&mut self, setting: bool) {
