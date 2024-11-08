@@ -231,8 +231,7 @@ mod tests {
         updater.set_install_dir(tmp_dir.path());
 
         // Test update check functionality
-        let update_needed = updater.is_update_needed();
-        assert!(update_needed.is_ok());
+        let update_needed = updater.is_update_needed().unwrap();
 
         // Test Updating
         updater.always_update(true);
