@@ -7,8 +7,10 @@ on:
 name: CI
 
 env:
+  CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
   RUSTDOCFLAGS: -D warnings
+  RUST_BACKTRACE: 1
 
 jobs:
   check:
@@ -53,8 +55,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace
+      - run: cargo nextest run --workspace --profile ci
 
   format:
     runs-on: ubuntu-latest

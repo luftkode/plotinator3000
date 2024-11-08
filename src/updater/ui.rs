@@ -106,9 +106,8 @@ fn perform_update(
         .send(UpdateStep::LoadMetadata)
         .expect("Failed sending update to gui");
 
-    if cfg!(debug_assertions) {
-        updater.always_update(super::FORCE_UPGRADE);
-    }
+    // At this point we force upgrade otherwise axoupdater will look for an install receipt and prevent us from updating (we don't use an install receipt.)
+    updater.always_update(true);
 
     // wait for countdown
     while countdown.load(Ordering::SeqCst) != 0
