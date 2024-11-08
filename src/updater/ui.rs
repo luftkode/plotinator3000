@@ -108,7 +108,6 @@ fn perform_update(
 
     // At this point we force upgrade otherwise axoupdater will look for an install receipt and prevent us from updating (we don't use an install receipt.)
     updater.always_update(true);
-    
 
     // wait for countdown
     while countdown.load(Ordering::SeqCst) != 0

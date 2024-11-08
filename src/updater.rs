@@ -83,7 +83,7 @@ impl PlotinatorUpdater {
                 } else {
                     Ok(false)
                 }
-            },
+            }
             None => Ok(false),
         }
     }
