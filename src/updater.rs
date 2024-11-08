@@ -53,6 +53,9 @@ impl PlotinatorUpdater {
             app_name: APP_NAME.to_owned(),
         });
         updater.disable_installer_output();
+        if let Ok(t) = env::var("GITHUB_TOKEN") {
+            updater.set_github_token(&t);
+        }
 
         Ok(Self { updater })
     }
@@ -218,15 +221,14 @@ mod tests {
     use testresult::TestResult;
 
     /// This is added because the updater tests kept failing in CI on macos-latest, so this serves to be a sanity check if we can access the github api.
+    /// EDIT: It seemed to be due to rate limiting and should be fixed by setting the github token on axoupdater
     #[tokio::test]
     async fn test_github_api_auth_ok() -> TestResult {
         use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, USER_AGENT};
         let mut headers = HeaderMap::new();
 
         // Try to get token from environment
-        if let Ok(token) =
-            std::env::var("GITHUB_API_TOKEN").or_else(|_| std::env::var("GITHUB_TOKEN"))
-        {
+        if let Ok(token) = env::var("GITHUB_TOKEN") {
             headers.insert(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
