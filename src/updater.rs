@@ -247,6 +247,7 @@ mod tests {
             .send()
             .await?;
 
+        eprintln!("{}", response.status());
         assert!(response.status().is_success());
 
         Ok(())
