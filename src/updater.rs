@@ -53,6 +53,9 @@ impl PlotinatorUpdater {
             app_name: APP_NAME.to_owned(),
         });
         updater.disable_installer_output();
+        if let Ok(t) = env::var("GITHUB_TOKEN") {
+            updater.set_github_token(&t);
+        }
 
         Ok(Self { updater })
     }
@@ -67,7 +70,25 @@ impl PlotinatorUpdater {
     }
 
     pub fn is_update_needed(&mut self) -> axoupdater::AxoupdateResult<bool> {
-        self.updater.is_update_needed_sync()
+        let res = tokio::runtime::Builder::new_current_thread()
+            .worker_threads(1)
+            .max_blocking_threads(128)
+            .enable_all()
+            .build()
+            .expect("Initializing tokio runtime failed")
+            .block_on(self.updater.query_new_version())?;
+
+        match res {
+            Some(v) => {
+                if v > crate::get_app_version() {
+                    log::info!("New version available");
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            None => Ok(false),
+        }
     }
 
     pub fn always_update(&mut self, setting: bool) {
@@ -199,10 +220,44 @@ mod tests {
     use tempfile::tempdir;
     use testresult::TestResult;
 
+    /// This is added because the updater tests kept failing in CI on macos-latest, so this serves to be a sanity check if we can access the github api.
+    /// EDIT: It seemed to be due to rate limiting and should be fixed by setting the github token on axoupdater
+    #[tokio::test]
+    async fn test_github_api_auth_ok() -> TestResult {
+        use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, USER_AGENT};
+        let mut headers = HeaderMap::new();
+
+        // Try to get token from environment
+        if let Ok(token) = env::var("GITHUB_TOKEN") {
+            headers.insert(
+                AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+            );
+        }
+
+        // Always set a user agent
+        headers.insert(
+            USER_AGENT,
+            HeaderValue::from_static("rust-github-api-client"),
+        );
+
+        let client = reqwest::Client::builder()
+            .default_headers(headers)
+            .build()?;
+        let response = client
+            .get("https://api.github.com/repos/luftkode/plotinator3000/releases")
+            .send()
+            .await?;
+
+        eprintln!("{}", response.status());
+        assert!(response.status().is_success());
+
+        Ok(())
+    }
+
     #[test]
     fn test_is_update_available() {
-        let check_update = is_update_available();
-        assert!(check_update.is_ok());
+        let _check_update = is_update_available().unwrap();
     }
 
     #[test]
@@ -214,8 +269,7 @@ mod tests {
         updater.set_install_dir(tmp_dir.path());
 
         // Test update check functionality
-        let update_needed = updater.is_update_needed();
-        assert!(update_needed.is_ok());
+        let _update_needed = updater.is_update_needed().unwrap();
 
         // Test Updating
         updater.always_update(true);

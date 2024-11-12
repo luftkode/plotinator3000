@@ -12,6 +12,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No longer statically link windows CRT
 - Enable HDF feature
 
+## [1.3.1]
+
+### Fix
+
+- Selfupdater failing to determine install receipt prevents it from doing an upgrade
+
+## [1.3.0]
+
+### Added
+
+- Show/hide all button for loaded files window
+
+### Changed
+
+- Bump `thiserror` to 2.0
+- Bump dependencies
+
 ## [1.2.2]
 
 ### Fixed
