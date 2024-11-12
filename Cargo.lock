@@ -2838,7 +2838,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "1.4.0"
+version = "1.3.2"
 dependencies = [
  "axoupdater",
  "chrono",
