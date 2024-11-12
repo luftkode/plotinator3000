@@ -9,12 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-## [1.4.0]
+## [1.3.2]
 
 ### Changed
 
-- No longer statically link windows CRT
-- Enable HDF feature
+- Bump Rust compiler from `1.81.0` to `1.82.0`
 - Bump dependencies
 
 ## [1.3.1]
