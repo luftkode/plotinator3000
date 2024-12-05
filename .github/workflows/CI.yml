@@ -2,7 +2,7 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
 
 name: CI
 
@@ -19,17 +19,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - TARGET: x86_64-unknown-linux-gnu
-          # If you add features to your crate, chances are you want to test for all features for native binaries,
-          # so that all features are checked and can be build by someone cloning your repository.
-          # If you build natively it will be a binary, the default binary will have the entrypoint "src/main.rs".
-          flags: "--all-features --bins"
-        - TARGET: wasm32-unknown-unknown
-          # With the current trunk setup, if you add features, the webpage will have the default features.
-          # You could test for all features too, however that might require a lot of conditional compilation annotations.
-          # Thus we only test for the default features by default.
-          # Since we build with trunk the entrypoint will also be the "src/main.rs" file.
-          flags: "--bin ${{ github.event.repository.name }}"
+          - TARGET: x86_64-unknown-linux-gnu
+            # If you add features to your crate, chances are you want to test for all features for native binaries,
+            # so that all features are checked and can be build by someone cloning your repository.
+            # If you build natively it will be a binary, the default binary will have the entrypoint "src/main.rs".
+            flags: "--all-features --bins"
+          - TARGET: wasm32-unknown-unknown
+            # With the current trunk setup, if you add features, the webpage will have the default features.
+            # You could test for all features too, however that might require a lot of conditional compilation annotations.
+            # Thus we only test for the default features by default.
+            # Since we build with trunk the entrypoint will also be the "src/main.rs" file.
+            flags: "--bin ${{ github.event.repository.name }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-          os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -107,82 +107,82 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: macos-latest
-          # macos-latest seems to already run on arm64(=aarch64):
-          # https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job#standard-github-hosted-runners-for-public-repositories
-          TARGET: aarch64-apple-darwin
+          - os: macos-latest
+            # macos-latest seems to already run on arm64(=aarch64):
+            # https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job#standard-github-hosted-runners-for-public-repositories
+            TARGET: aarch64-apple-darwin
 
-        - os: macos-13
-          TARGET: x86_64-apple-darwin
-          # even though the runner uses arm64, MacOS on arm64 seems to support building for amd64.
-          # which makes sense, would be bad for devs otherwise.
-          cross: false
+          - os: macos-13
+            TARGET: x86_64-apple-darwin
+            # even though the runner uses arm64, MacOS on arm64 seems to support building for amd64.
+            # which makes sense, would be bad for devs otherwise.
+            cross: false
 
-        - os: ubuntu-latest
-          TARGET: aarch64-unknown-linux-gnu
-          cross: true
+          - os: ubuntu-latest
+            TARGET: aarch64-unknown-linux-gnu
+            cross: true
 
-        - os: ubuntu-latest
-          TARGET: armv7-unknown-linux-gnueabihf
-          cross: true
+          - os: ubuntu-latest
+            TARGET: armv7-unknown-linux-gnueabihf
+            cross: true
 
-        - os: ubuntu-latest
-          TARGET: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            TARGET: x86_64-unknown-linux-gnu
 
-        - os: windows-latest
-          TARGET: x86_64-pc-windows-msvc
-          EXTENSION: .exe
+          - os: windows-latest
+            TARGET: x86_64-pc-windows-msvc
+            EXTENSION: .exe
 
     steps:
-    - name: Install cross
-      # Github doesnt have runners with exotic architectures (eg. arm64/aarch64 on anything but macos).
-      # Thus we use cross.
-      # It's necessary to use an up-to-date cross from the git repository to avoid glibc problems on linux
-      # Ref: https://github.com/cross-rs/cross/issues/1510
-      if: matrix.cross
-      run: |
-        cargo install cross --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
+      - name: Install cross
+        # Github doesnt have runners with exotic architectures (eg. arm64/aarch64 on anything but macos).
+        # Thus we use cross.
+        # It's necessary to use an up-to-date cross from the git repository to avoid glibc problems on linux
+        # Ref: https://github.com/cross-rs/cross/issues/1510
+        if: matrix.cross
+        run: |
+          echo "Resetting RUSTFLAGS as a temporary fix for: https://github.com/cross-rs/cross/issues/1561"
+          RUSTFLAGS="" cargo install cross --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
 
-    - name: Building ${{ matrix.TARGET }}
-      run: echo "${{ matrix.TARGET }}"
+      - name: Building ${{ matrix.TARGET }}
+        run: echo "${{ matrix.TARGET }}"
 
-    - uses: actions/checkout@master
+      - uses: actions/checkout@master
 
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.TARGET }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.TARGET }}
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        # this is required to avoid failures due to caching of artifacts for different architectures
-        # The reason is the potential usage of cross.
-        # The cache checks the rustc host which doesn't record us targeting
-        # different architectures (and native) with cross on the generic ubuntu-latest.
-        key: ${{ matrix.TARGET }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # this is required to avoid failures due to caching of artifacts for different architectures
+          # The reason is the potential usage of cross.
+          # The cache checks the rustc host which doesn't record us targeting
+          # different architectures (and native) with cross on the generic ubuntu-latest.
+          key: ${{ matrix.TARGET }}
 
-    - if: ${{ !matrix.cross }}
-      name: Cargo Build
-      run: cargo build --verbose --release --target=${{ matrix.TARGET }}
+      - if: ${{ !matrix.cross }}
+        name: Cargo Build
+        run: cargo build --verbose --release --target=${{ matrix.TARGET }}
 
-    - if: matrix.cross
-      name: Cross Build
-      run: cross build --verbose --release --target=${{ matrix.TARGET }}
+      - if: matrix.cross
+        name: Cross Build
+        run: cross build --verbose --release --target=${{ matrix.TARGET }}
 
-    - name: Rename
-      run: cp target/${{ matrix.TARGET }}/release/${{ github.event.repository.name }}${{ matrix.EXTENSION }} ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      - name: Rename
+        run: cp target/${{ matrix.TARGET }}/release/${{ github.event.repository.name }}${{ matrix.EXTENSION }} ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
-    - uses: actions/upload-artifact@master
-      with:
-        name: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        path: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-
+      - uses: actions/upload-artifact@master
+        with:
+          name: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          path: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
   tag-release:
     needs: [check, audit, test, format, lint, trunk, build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && success()
     permissions:
-      contents: write  # This is required to create and push tags
+      contents: write # This is required to create and push tags
 
     steps:
       - uses: actions/checkout@v4

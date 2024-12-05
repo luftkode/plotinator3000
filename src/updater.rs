@@ -231,7 +231,7 @@ mod tests {
         if let Ok(token) = env::var("GITHUB_TOKEN") {
             headers.insert(
                 AUTHORIZATION,
-                HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+                HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
             );
         }
 
