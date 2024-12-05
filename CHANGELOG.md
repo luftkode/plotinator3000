@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.3.4]
+
+### Changed
+
+- Only set font styles when it changes instead of at every frame (leftover tech-debt from starting to learn egui)
+
 ## [1.3.3]
 
 ### Changed
