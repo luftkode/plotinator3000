@@ -62,7 +62,7 @@ impl LogPlotUi {
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
-        logs: &[SupportedFormat],
+        loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
     ) -> Response {
         let Self {
@@ -87,10 +87,10 @@ impl LogPlotUi {
 
         plot_ui::show_settings_grid(ui, line_width, axis_config, plot_settings);
 
-        for log in logs {
+        for log in loaded_files {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);
         }
-        if !logs.is_empty() {
+        if !loaded_files.is_empty() {
             log::info!("Total data points: {}", plots.total_data_points());
             toasts
                 .info(format!(

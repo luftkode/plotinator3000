@@ -134,14 +134,19 @@ impl PlotSettings {
             egui::Window::new(show_loaded_logs_text)
                 .open(&mut self.ps_ui.show_loaded_logs)
                 .show(ui.ctx(), |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        Self::ui_show_or_hide_all_buttons(ui, &mut self.log_start_date_settings);
-                    });
-                    egui::Grid::new("log_settings_grid").show(ui, |ui| {
-                        for settings in &mut self.log_start_date_settings {
-                            loaded_logs::log_date_settings_ui(ui, settings);
-                            ui.end_row();
-                        }
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.horizontal_wrapped(|ui| {
+                            Self::ui_show_or_hide_all_buttons(
+                                ui,
+                                &mut self.log_start_date_settings,
+                            );
+                        });
+                        egui::Grid::new("log_settings_grid").show(ui, |ui| {
+                            for settings in &mut self.log_start_date_settings {
+                                loaded_logs::log_date_settings_ui(ui, settings);
+                                ui.end_row();
+                            }
+                        });
                     });
                 });
         }
@@ -223,12 +228,12 @@ impl PlotSettings {
             })
     }
 
-    /// Get the next ID for a log, used for when a new log is loaded and added to the collection of logs and log settings
+    /// Get the next ID for a loaded data format, used for when a new file is loaded and added to the collection of plot data and plot settings
     pub fn next_log_id(&self) -> usize {
-        (self.total_logs() + 1).into()
+        (self.total_loaded() + 1).into()
     }
 
-    pub fn total_logs(&self) -> u16 {
+    pub fn total_loaded(&self) -> u16 {
         self.log_start_date_settings.len() as u16
     }
 

@@ -80,7 +80,6 @@ impl App {
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
-
         Default::default()
     }
 
@@ -119,7 +118,6 @@ impl eframe::App for App {
             self.error_message = Some(e.to_string());
         }
 
-        Self::configure_text_styles(ctx, self.font_size.unwrap_or_default());
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 if ui
@@ -163,7 +161,9 @@ impl eframe::App for App {
                                 .suffix("px"),
                         )
                         .changed()
-                    {}
+                    {
+                        Self::configure_text_styles(ctx, self.font_size.unwrap_or_default());
+                    }
                 }
 
                 show_theme_toggle_buttons(ui);
