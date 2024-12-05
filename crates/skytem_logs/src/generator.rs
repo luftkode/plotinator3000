@@ -219,7 +219,7 @@ impl fmt::Display for GeneratorLog {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
-pub struct GeneratorLogEntry {
+pub(crate) struct GeneratorLogEntry {
     pub timestamp: NaiveDateTime,
     pub vout: f32,
     pub vbat: f32,
