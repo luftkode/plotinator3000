@@ -223,12 +223,12 @@ impl PlotSettings {
             })
     }
 
-    /// Get the next ID for a log, used for when a new log is loaded and added to the collection of logs and log settings
+    /// Get the next ID for a loaded data format, used for when a new file is loaded and added to the collection of plot data and plot settings
     pub fn next_log_id(&self) -> usize {
-        (self.total_logs() + 1).into()
+        (self.total_loaded() + 1).into()
     }
 
-    pub fn total_logs(&self) -> u16 {
+    pub fn total_loaded(&self) -> u16 {
         self.log_start_date_settings.len() as u16
     }
 
