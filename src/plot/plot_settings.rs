@@ -134,14 +134,19 @@ impl PlotSettings {
             egui::Window::new(show_loaded_logs_text)
                 .open(&mut self.ps_ui.show_loaded_logs)
                 .show(ui.ctx(), |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        Self::ui_show_or_hide_all_buttons(ui, &mut self.log_start_date_settings);
-                    });
-                    egui::Grid::new("log_settings_grid").show(ui, |ui| {
-                        for settings in &mut self.log_start_date_settings {
-                            loaded_logs::log_date_settings_ui(ui, settings);
-                            ui.end_row();
-                        }
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.horizontal_wrapped(|ui| {
+                            Self::ui_show_or_hide_all_buttons(
+                                ui,
+                                &mut self.log_start_date_settings,
+                            );
+                        });
+                        egui::Grid::new("log_settings_grid").show(ui, |ui| {
+                            for settings in &mut self.log_start_date_settings {
+                                loaded_logs::log_date_settings_ui(ui, settings);
+                                ui.end_row();
+                            }
+                        });
                     });
                 });
         }
