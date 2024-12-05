@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Only set font styles when it changes instead of at every frame (leftover tech-debt from starting to learn egui)
+- Make the loaded files window scrollable - resolves https://github.com/luftkode/plotinator3000/issues/118
 
 ## [1.3.3]
 
