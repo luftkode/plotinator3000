@@ -3,18 +3,18 @@
   "short_name": "skytem-plotinator3000",
   "icons": [
     {
-      "src": "./skytem-icon-256.png",
+      "src": "./assets/skytem-icon-256.png",
       "sizes": "256x256",
       "type": "image/png"
     },
     {
-      "src": "./skytem_maskable_icon_x512.png",
+      "src": "./assets/skytem_maskable_icon_x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./skytem-icon-1024.png",
+      "src": "./assets/skytem-icon-1024.png",
       "sizes": "1024x1024",
       "type": "image/png"
     }
