@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.3.5]
+
+### Changed
+
+- Update egui from `0.29.0` to `0.30.0`
+- Port fixes from `eframe_template`
+
 ## [1.3.4]
 
 ### Changed
