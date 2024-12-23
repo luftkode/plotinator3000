@@ -80,7 +80,7 @@ selfupdater = []
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 zip = "2.2.0"
-axoupdater = { version = "0.8.1", features = ["blocking"] }
+axoupdater = { version = "0.9.0", features = ["blocking"] }
 
 
 # web:
