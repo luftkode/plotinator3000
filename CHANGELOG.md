@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+- Bump `serde` from 1.0.215 to 1.0.216 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
+
+- Bump `chrono` from 0.4.38 to 0.4.39 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
+- Bump `semver` from 1.0.23 to 1.0.24 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
+- Bump `env_logger` from 0.11.5 to 0.11.6 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
+- Bump `zip` from 2.2.1 to 2.2.2 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
+- Bump `wasm-bindgen-futures` from 0.4.47 to 0.4.49 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
+- Bump `web-sys` from 0.3.74 to 0.3.76 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
+- Bump `thiserror` from 2.0.4 to 2.0.9 ([#143](https://github.com/luftkode/plotinator3000/pull/143))
 ## [1.3.5]
 
 ### Changed
