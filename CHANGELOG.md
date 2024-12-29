@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `serde`: 1.0.215 → 1.0.217
+- `chrono`: 0.4.38 → 0.4.39
+- `semver`: 1.0.23 → 1.0.24
+- `env_logger`: 0.11.5 → 0.11.6
+- `zip`: 2.2.1 → 2.2.2
+- `wasm-bindgen-futures`: 0.4.47 → 0.4.49
+- `web-sys`: 0.3.74 → 0.3.76
+- `reqwest`: 0.12.9 → 0.12.11
+- `thiserror`: 2.0.4 → 2.0.9
+
 ## [1.3.5]
 
 ### Changed
