@@ -41,6 +41,8 @@ jobs:
 
   audit:
     runs-on: ubuntu-latest
+    env:
+      RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
     steps:
       - uses: actions/checkout@v4
       - uses: rustsec/audit-check@v2
