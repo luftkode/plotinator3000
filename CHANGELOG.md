@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fix
+
+- CI: Cargo audit job changes to `rustsec/audit-check@v2` as `cargo-audit` is no longer installed on GitHub VMs by default
+
 ### Dependencies
 
 - `serde`: 1.0.215 → 1.0.217
