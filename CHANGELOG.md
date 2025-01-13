@@ -18,12 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `semver`: 1.0.23 → 1.0.24
 - `env_logger`: 0.11.5 → 0.11.6
 - `zip`: 2.2.1 → 2.2.2
-- `wasm-bindgen-futures`: 0.4.47 → 0.4.49
-- `web-sys`: 0.3.74 → 0.3.76
-- `thiserror`: 2.0.4 → 2.0.9
 - `rfd`: 0.15.1 → 0.15.2 ([#147](https://github.com/luftkode/plotinator3000/pull/147))
 - `tempfile`: 3.14.0 → 3.15.0 ([#147](https://github.com/luftkode/plotinator3000/pull/147))
 - `reqwest`: 0.12.9 → 0.12.12 ([#147](https://github.com/luftkode/plotinator3000/pull/147))
+- `tokio`: 1.42.0 → 1.43.0 ([#149](https://github.com/luftkode/plotinator3000/pull/149))
+- `wasm-bindgen-futures`: 0.4.47 → 0.4.50 ([#149](https://github.com/luftkode/plotinator3000/pull/149))
+- `web-sys`: 0.3.74 → 0.3.77 ([#149](https://github.com/luftkode/plotinator3000/pull/149))
+- `thiserror`: 2.0.4 → 2.0.11 ([#149](https://github.com/luftkode/plotinator3000/pull/149))
 
 ## [1.3.5]
 
