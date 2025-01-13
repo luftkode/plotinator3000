@@ -1,10 +1,15 @@
+name: CI
+
 on:
   workflow_dispatch:
   pull_request:
   push:
     branches: ["master"]
 
-name: CI
+# Ensure this workflow gets cancelled if a newer commit has been pushed on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -45,9 +50,12 @@ jobs:
       RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
     steps:
       - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.10.20
+      - name: Install Cargo audit
+        run: cargo binstall cargo-audit
+      - name: Run Audit
+        run: cargo audit
 
   test:
     name: Test Suite
