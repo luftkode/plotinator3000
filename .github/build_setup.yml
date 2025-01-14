@@ -1,3 +1,0 @@
-- name: Install MUSL Toolchain
-  if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
-  run: sudo apt-get update && sudo apt-get install musl-tools && musl-gcc --version
