@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fix
 
 - ci: Cargo audit job changed to manually install with `cargo binstall` as `cargo-audit` is no longer installed on GitHub VMs by default
+- fix: X11 support was accidentally removed when updating to egui `0.30`
 
 ### Dependencies
 
