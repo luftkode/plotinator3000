@@ -1,7 +1,3 @@
-- name: Install AArch64 Toolchain
-  if: ${{ matrix.runner == 'ubuntu-22.04' }}
-  run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu libc6-dev-i386
-
-- name: Install ARM Toolchain
-  if: ${{ matrix.runner == 'ubuntu-22.04' }}
-  run: sudo apt-get update && sudo apt-get install gcc-arm-linux-gnueabihf
+- name: Install MUSL Toolchain
+  if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+  run: sudo apt-get update && sudo apt-get install musl-tools && musl-gcc --version
