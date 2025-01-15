@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.3.7]
+
+### Fix
+
+- Fixed `vbat` in mbed status log was accidentally cast to `u8`, losing a lot of precision in the process.
+
+## [1.3.6]
+
 ### Fix
 
 - ci: Cargo audit job changed to manually install with `cargo binstall` as `cargo-audit` is no longer installed on GitHub VMs by default
+- fix: X11 support was accidentally removed when updating to egui `0.30`
 
 ### Dependencies
 
