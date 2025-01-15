@@ -73,7 +73,7 @@ tempfile.workspace = true
 reqwest.workspace = true
 
 [features]
-default = ["selfupdater"]
+default = ["selfupdater", "hdf"]
 hdf = []
 selfupdater = []
 
