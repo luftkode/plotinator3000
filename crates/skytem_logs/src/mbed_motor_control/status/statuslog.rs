@@ -193,14 +193,17 @@ impl Parseable for StatusLog {
             if header.version() < 3 {
                 let (v1_vec, entry_bytes_read) = parse_to_vec::<StatusLogEntryV1>(reader);
                 (convert_v1_to_status_log_entry(v1_vec), entry_bytes_read)
-            } else if header.version() == 4 {
+            } else if header.version() < 5 {
                 let (v2_vec, entry_bytes_read) = parse_to_vec::<StatusLogEntryV2>(reader);
                 (convert_v2_to_status_log_entry(v2_vec), entry_bytes_read)
             } else if header.version() == 5 {
                 let (v3_vec, entry_bytes_read) = parse_to_vec::<StatusLogEntryV3>(reader);
                 (convert_v3_to_status_log_entry(v3_vec), entry_bytes_read)
             } else {
-                panic!("Unsupported header version: {}", header.version())
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("Unsupported header version: {}", header.version()),
+                ));
             };
         total_bytes_read += entry_bytes_read;
         let startup_timestamp = match header {
