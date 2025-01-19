@@ -34,6 +34,7 @@ num-traits = "0.2.19"
 toml = "0.8.19"
 thiserror = "2.0"
 semver = "1.0.24"
+elevated-command = "1.1"
 
 # Dev dependencies
 testresult = "0.4.1"
@@ -88,6 +89,10 @@ axoupdater = { version = "0.9.0", features = ["blocking"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"
+
+# windows
+[target.'cfg(target_os = "windows")'.dependencies]
+elevated-command.workspace = true
 
 [profile.release]
 opt-level = 3

@@ -100,6 +100,43 @@ impl PlotinatorUpdater {
     }
 }
 
+/// Returns `Ok(true)` if process is running as admin
+/// else it launches it as admin and returns `Ok(false)` if the admin process ran with success otherwise returns an error.
+#[cfg(target_os = "windows")]
+fn is_admin_run_elevated() -> io::Result<bool> {
+    use elevated_command::Command as AdminCommand;
+    use std::process::Command as StdCommand;
+    use ui::pre_admin_window::pre_admin_window_user_clicked_update;
+    if AdminCommand::is_elevated() {
+        return Ok(true);
+    } else {
+        if !pre_admin_window_user_clicked_update().unwrap_or(false) {
+            return Ok(false);
+        }
+        let exe_abs_path = std::env::args()
+            .next()
+            .expect("Failed retrieving program path");
+        let cmd = StdCommand::new(exe_abs_path);
+        let elevated_cmd = AdminCommand::new(cmd);
+        let out = elevated_cmd
+            .output()
+            .expect("Failed executing elevated command");
+        // It succeeded if the return code is greater than 32
+        // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew#return-value
+        let exit_code = out.status.code().unwrap_or(100);
+        if exit_code > 32 {
+            log::info!("Update succeeded");
+            return Ok(false);
+        } else {
+            log::error!("Update failed!");
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Elevating permission failed with: {exit_code}"),
+            ));
+        }
+    }
+}
+
 /// Handles showning update related UI and all the logic involved in performing an upgrade.
 ///
 /// # Returns
@@ -125,6 +162,11 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
             match is_update_available() {
                 Ok(is_update_available) => {
                     if is_update_available {
+                        #[cfg(target_os = "windows")]
+                        if !is_admin_run_elevated().unwrap() {
+                            return Ok(true);
+                        }
+
                         // show update window and perform upgrade or cancel it
                         if let Ok(did_update) = ui::show_simple_update_window() {
                             if did_update {
