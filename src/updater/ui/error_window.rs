@@ -4,7 +4,7 @@ use crate::APP_NAME;
 
 #[allow(dead_code)]
 /// Display a simple window with the error that occurred
-pub(crate) fn show_error_occured(err_msg: &str) {
+pub(crate) fn show_error_occurred(err_msg: &str) {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_min_inner_size([300.0, 300.0])
