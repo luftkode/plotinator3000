@@ -7,7 +7,7 @@ use egui::{Color32, RichText};
 
 use crate::APP_NAME;
 
-/// Display a simple window with the error that occurred
+/// On windows, display an informative error that the app needs to be elevated to admin for the update process
 ///
 /// # Returns
 /// `true` if user clicked to update now

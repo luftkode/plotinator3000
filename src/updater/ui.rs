@@ -10,8 +10,9 @@ use std::{
 
 use egui::{mutex::Mutex, Color32, Context, RichText, ScrollArea};
 
-pub(super) mod error_window;
+#[cfg(target_os = "windows")]
 pub(super) mod pre_admin_window;
+pub(super) mod error_window;
 pub(super) mod updates_disabled;
 
 use crate::APP_NAME;
