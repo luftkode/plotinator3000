@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.3.8]
+
+### Fix
+
+- When the update process requires admin (on windows) it now shows a prompt and relaunches as admin if the users chooses to continue.
+
+### Changed
+
+- Shows error context if errors occur during update process.
+- No longer installs the updater binary (as the main binary handles the update process)
+
 ## [1.3.7]
 
 ### Fix
