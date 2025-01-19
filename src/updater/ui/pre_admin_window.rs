@@ -48,7 +48,7 @@ pub(crate) fn pre_admin_window_user_clicked_update() -> eframe::Result<bool> {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                         ui.label(
-                            RichText::new(format!("Note: runs the updater as administrator"))
+                            RichText::new("Note: runs the updater as administrator".to_owned())
                                 .size(15.),
                         );
                     });

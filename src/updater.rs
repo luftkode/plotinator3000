@@ -11,6 +11,7 @@ use std::{
     path::{Path, PathBuf},
     sync::OnceLock,
 };
+use ui::error_window::show_error_occurred;
 
 pub static APP_INSTALL_DIR: OnceLock<PathBuf> = OnceLock::new();
 /// Returns the parent of the parent of the executable directory due to the installation being done at <`target_dir`>/bin/<`new_plotinator_binary`>
@@ -107,8 +108,9 @@ fn is_admin_run_elevated() -> io::Result<bool> {
     use elevated_command::Command as AdminCommand;
     use std::process::Command as StdCommand;
     use ui::pre_admin_window::pre_admin_window_user_clicked_update;
+
     if AdminCommand::is_elevated() {
-        return Ok(true);
+        Ok(true)
     } else {
         if !pre_admin_window_user_clicked_update().unwrap_or(false) {
             return Ok(false);
@@ -126,13 +128,13 @@ fn is_admin_run_elevated() -> io::Result<bool> {
         let exit_code = out.status.code().unwrap_or(100);
         if exit_code > 32 {
             log::info!("Update succeeded");
-            return Ok(false);
+            Ok(false)
         } else {
             log::error!("Update failed!");
-            return Err(io::Error::new(
+            Err(io::Error::new(
                 io::ErrorKind::Other,
                 format!("Elevating permission failed with: {exit_code}"),
-            ));
+            ))
         }
     }
 }
@@ -163,8 +165,13 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
                 Ok(is_update_available) => {
                     if is_update_available {
                         #[cfg(target_os = "windows")]
-                        if !is_admin_run_elevated().unwrap() {
-                            return Ok(true);
+                        match is_admin_run_elevated() {
+                            Ok(is_admin) => {
+                                if !is_admin {
+                                    return Ok(true);
+                                }
+                            }
+                            Err(e) => show_error_occurred(&e.to_string()),
                         }
 
                         // show update window and perform upgrade or cancel it

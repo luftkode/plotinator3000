@@ -159,14 +159,14 @@ fn perform_update(
                 sender
                     .send(UpdateStep::Completed(msg))
                     .expect("Failed sending update to gui");
-                return true;
+                true
             } else {
                 sender
                     .send(UpdateStep::Completed(
                         "The newest version is already installed!\n".to_owned(),
                     ))
                     .expect("Failed sending update to gui");
-                return false;
+                false
             }
         }
         Err(e) => {
@@ -174,7 +174,7 @@ fn perform_update(
                 .send(UpdateStep::Error(e.to_string()))
                 .expect("Failed sending update to gui");
             *error_occurred.lock() = Some(e.to_string());
-            return false;
+            false
         }
     }
 }
@@ -259,6 +259,10 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     Ok(is_updated.load(Ordering::Relaxed))
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "No time and hopefully won't touch this code again for a long time. All these atomic variables etc. are really shared state between the updater GUI and the updater thread. They should be encapsulated in a struct"
+)]
 fn ui_show_update_window_central_panel(
     ctx: &Context,
     log_output: &Mutex<String>,
