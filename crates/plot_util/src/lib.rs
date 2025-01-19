@@ -91,6 +91,7 @@ fn plot_with_mipmapping(
                 (plot_points_min, plot_points_max),
                 line_width,
                 plot_vals.get_color(),
+                plot_vals.get_highlight(),
             );
         }
     }
@@ -134,14 +135,21 @@ fn plot_min_max_lines(
     (points_min, points_max): (Vec<[f64; 2]>, Vec<[f64; 2]>),
     line_width: f32,
     color: Color32,
+    highlight: bool,
 ) {
     let mut label_min = base_label.to_owned();
     label_min.push_str(" (min)");
     let mut label_max = base_label.to_owned();
     label_max.push_str(" (max)");
 
-    let line_min = Line::new(points_min).name(label_min).color(color);
-    let line_max = Line::new(points_max).name(label_max).color(color);
+    let line_min = Line::new(points_min)
+        .name(label_min)
+        .color(color)
+        .highlight(highlight);
+    let line_max = Line::new(points_max)
+        .name(label_max)
+        .color(color)
+        .highlight(highlight);
 
     plot_ui.line(line_min.width(line_width));
     plot_ui.line(line_max.width(line_width));
@@ -155,7 +163,10 @@ pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_fil
     {
         for label in plot_labels.labels() {
             let point = PlotPoint::new(label.point()[0], label.point()[1]);
-            let txt = egui::RichText::new(label.text()).size(10.0);
+            let mut txt = egui::RichText::new(label.text()).size(10.0);
+            if plot_labels.get_highlight() {
+                txt = txt.strong();
+            }
             let txt = egui_plot::Text::new(point, txt);
             plot_ui.text(txt);
         }
@@ -167,7 +178,8 @@ fn plot_raw(plot_ui: &mut egui_plot::PlotUi, plot_vals: &PlotValues, x_min_max_e
     let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
     let line = Line::new(filtered_points)
         .name(plot_vals.label())
-        .color(plot_vals.get_color());
+        .color(plot_vals.get_color())
+        .highlight(plot_vals.get_highlight());
     plot_ui.line(line);
 }
 

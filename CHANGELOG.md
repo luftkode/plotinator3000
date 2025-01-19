@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.4.0]
+
+### Added
+
+- Allow deleting individual loaded files without removing everything at once.
+- Hovering the cursor over a loaded log will highlight the plots and plot labels that came from that log.
+
 ## [1.3.8]
 
 ### Fix
