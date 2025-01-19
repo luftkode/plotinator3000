@@ -37,9 +37,9 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
     ui.label(format!("{}", loaded_log.start_date().naive_utc()));
 
     let remove_button_text = if loaded_log.marked_for_deletion() {
-        RichText::new(format!("{}", egui_phosphor::regular::TRASH)).color(Color32::RED)
+        RichText::new(egui_phosphor::regular::TRASH).color(Color32::RED)
     } else {
-        RichText::new(format!("{}", egui_phosphor::regular::TRASH)).color(Color32::YELLOW)
+        RichText::new(egui_phosphor::regular::TRASH).color(Color32::YELLOW)
     };
     let button_resp = ui.button(remove_button_text);
     if button_resp.clicked() {

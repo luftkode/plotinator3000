@@ -180,6 +180,7 @@ impl PlotSettings {
             self.remove_if_marked_for_deletion(plots);
             self.apply_deletions = false;
         }
+        self.set_highlighted(plots);
         self.update_plot_dates(plots);
         self.calc_plot_display_settings(plots);
         // If true then we set it to false such that it is only true for one frame
@@ -281,6 +282,27 @@ impl PlotSettings {
         for settings in &mut self.log_start_date_settings {
             date_settings::update_plot_dates(&mut self.invalidate_plot, plots, settings);
         }
+    }
+
+    fn set_highlighted(&self, plots: &mut Plots) {
+        let mut id_to_highlight = None;
+        for log_setting in &self.log_start_date_settings {
+            if log_setting.cursor_hovering_on() {
+                id_to_highlight = Some(log_setting.log_id());
+                break;
+            }
+        }
+        let set_plot_highlight = |plot_data: &mut plot_util::PlotData| {
+            for pd in plot_data.plots_as_mut() {
+                *pd.get_highlight_mut() = pd.log_id() == id_to_highlight.unwrap_or(usize::MAX);
+            }
+            for pl in plot_data.plot_labels_as_mut() {
+                *pl.get_highlight_mut() = pl.log_id() == id_to_highlight.unwrap_or(usize::MAX);
+            }
+        };
+        set_plot_highlight(plots.percentage_mut());
+        set_plot_highlight(plots.one_to_hundred_mut());
+        set_plot_highlight(plots.thousands_mut());
     }
 
     // Remove log settings and plots that match their ID if they are marked for deletion
