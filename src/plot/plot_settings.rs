@@ -55,6 +55,7 @@ pub struct PlotSettings {
     ps_ui: PlotSettingsUi,
     log_start_date_settings: Vec<LoadedLogSettings>,
     mipmap_settings: MipMapSettings,
+    apply_deletions: bool,
 }
 
 impl PlotSettings {
@@ -142,6 +143,26 @@ impl PlotSettings {
                             );
                         });
                         egui::Grid::new("log_settings_grid").show(ui, |ui| {
+                            ui.label("");
+                            ui.label("");
+                            ui.label("");
+                            let any_marked_for_deletion = self
+                                .log_start_date_settings
+                                .iter()
+                                .any(|s| s.marked_for_deletion());
+                            let apply_text = if any_marked_for_deletion {
+                                RichText::new("Apply").strong()
+                            } else {
+                                RichText::new("Apply")
+                            };
+                            if ui
+                                .add_enabled(any_marked_for_deletion, egui::Button::new(apply_text))
+                                .clicked()
+                            {
+                                self.apply_deletions = true;
+                            }
+
+                            ui.end_row();
                             for settings in &mut self.log_start_date_settings {
                                 loaded_logs::log_date_settings_ui(ui, settings);
                                 ui.end_row();
@@ -155,6 +176,10 @@ impl PlotSettings {
     /// Needs to be called once (and only once!) per frame before querying for plot ui settings, such as
     /// how many plots to paint and more.
     pub fn refresh(&mut self, plots: &mut Plots) {
+        if self.apply_deletions {
+            self.remove_if_marked_for_deletion(plots);
+            self.apply_deletions = false;
+        }
         self.update_plot_dates(plots);
         self.calc_plot_display_settings(plots);
         // If true then we set it to false such that it is only true for one frame
@@ -256,6 +281,47 @@ impl PlotSettings {
         for settings in &mut self.log_start_date_settings {
             date_settings::update_plot_dates(&mut self.invalidate_plot, plots, settings);
         }
+    }
+
+    // Remove log settings and plots that match their ID if they are marked for deletion
+    fn remove_if_marked_for_deletion(&mut self, plots: &mut Plots) {
+        // Get the log IDs for settings marked for deletion
+        let log_ids_to_remove: Vec<usize> = self
+            .log_start_date_settings
+            .iter()
+            .filter(|settings| settings.marked_for_deletion())
+            .map(|settings| settings.log_id())
+            .collect();
+
+        // Return early if nothing to remove
+        if log_ids_to_remove.is_empty() {
+            return;
+        }
+
+        // Remove plots with matching log IDs from all plot types
+        let remove_matching_plots = |plot_data: &mut plot_util::PlotData| {
+            // Remove from plot values
+            plot_data
+                .plots_as_mut()
+                .retain(|plot| !log_ids_to_remove.contains(&plot.log_id()));
+
+            // Remove from plot labels
+            plot_data
+                .plot_labels_as_mut()
+                .retain(|label| !log_ids_to_remove.contains(&label.log_id()));
+        };
+
+        // Apply removal to all plot types
+        remove_matching_plots(plots.percentage_mut());
+        remove_matching_plots(plots.one_to_hundred_mut());
+        remove_matching_plots(plots.thousands_mut());
+
+        // Remove the settings marked for deletion
+        self.log_start_date_settings
+            .retain(|settings| !settings.marked_for_deletion());
+
+        // Invalidate plot cache since we modified the data
+        self.invalidate_plot = true;
     }
 
     /// Returns true if changes in plot settings occurred such that various cached values

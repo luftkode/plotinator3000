@@ -9,36 +9,54 @@ use crate::{
 
 use super::date_settings::LoadedLogSettings;
 
-pub fn log_date_settings_ui(ui: &mut egui::Ui, settings: &mut LoadedLogSettings) {
-    let log_name_date = settings.log_label();
-    let check_box_text = RichText::new(if settings.show_log() {
+pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSettings) {
+    let log_name_date = loaded_log.log_label();
+    let check_box_text = RichText::new(if loaded_log.show_log() {
         regular::EYE
     } else {
         regular::EYE_SLASH
     });
-    ui.checkbox(settings.show_log_mut(), check_box_text);
+    ui.checkbox(loaded_log.show_log_mut(), check_box_text);
     let log_button_text = RichText::new(log_name_date.clone());
-    let log_button_text = if settings.show_log() {
+    let log_button_text = if loaded_log.show_log() {
         log_button_text.strong()
     } else {
         log_button_text
     };
     let button_resp = ui.button(log_button_text);
     if button_resp.clicked() {
-        settings.clicked = !settings.clicked;
+        loaded_log.clicked = !loaded_log.clicked;
     }
     if button_resp.hovered() {
         button_resp.on_hover_text("Click to modify log settings");
+        *loaded_log.cursor_hovering_on_mut() = true;
+    } else {
+        *loaded_log.cursor_hovering_on_mut() = false;
     }
 
-    if settings.tmp_date_buf.is_empty() {
-        settings.tmp_date_buf = settings
+    ui.label(format!("{}", loaded_log.start_date().naive_utc()));
+
+    let remove_button_text = if loaded_log.marked_for_deletion() {
+        RichText::new(format!("{}", egui_phosphor::regular::TRASH)).color(Color32::RED)
+    } else {
+        RichText::new(format!("{}", egui_phosphor::regular::TRASH)).color(Color32::YELLOW)
+    };
+    let button_resp = ui.button(remove_button_text);
+    if button_resp.clicked() {
+        *loaded_log.marked_for_deletion_mut() = !*loaded_log.marked_for_deletion_mut();
+    }
+    if button_resp.hovered() {
+        button_resp.on_hover_text("Remove from loaded files");
+    }
+
+    if loaded_log.tmp_date_buf.is_empty() {
+        loaded_log.tmp_date_buf = loaded_log
             .start_date()
             .format("%Y-%m-%d %H:%M:%S%.f")
             .to_string();
     }
-    if settings.clicked {
-        log_settings_window(ui, settings, &log_name_date);
+    if loaded_log.clicked {
+        log_settings_window(ui, loaded_log, &log_name_date);
     }
 }
 
