@@ -133,7 +133,14 @@ fn is_admin_run_elevated() -> io::Result<bool> {
             log::error!("Update failed!");
             Err(io::Error::new(
                 io::ErrorKind::Other,
-                format!("Elevating permission failed with: {exit_code}"),
+                format!(
+                    "Elevating permission failed with: {err_msg}",
+                    err_msg = if exit_code == 5 {
+                        "Permission not allowed".to_owned()
+                    } else {
+                        exit_code.to_string()
+                    }
+                ),
             ))
         }
     }
@@ -171,7 +178,10 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
                                     return Ok(true);
                                 }
                             }
-                            Err(e) => show_error_occurred(&e.to_string()),
+                            Err(e) => {
+                                show_error_occurred(&e.to_string());
+                                return Ok(false);
+                            }
                         }
 
                         // show update window and perform upgrade or cancel it
