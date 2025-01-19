@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use axis_config::AxisConfig;
 use egui::{Id, Response};
-use egui_plot::Legend;
+use egui_plot::{Legend, PlotPoints};
 
 use crate::app::supported_formats::SupportedFormat;
 mod axis_config;
@@ -23,6 +23,40 @@ pub enum PlotType {
     Thousands,
 }
 
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct ClickDelta {
+    first_click: Option<(f64, f64)>,
+    second_click: Option<(f64, f64)>,
+}
+
+impl ClickDelta {
+    pub fn new() -> Self {
+        Self {
+            first_click: None,
+            second_click: None,
+        }
+    }
+
+    pub fn delta(&self) -> Option<(f64, f64)> {
+        let (x1, y1) = self.first_click?;
+        let (x2, y2) = self.second_click?;
+        let delta_x = (x1 - x2).abs() / 1_000_000_000.0;
+        let delta_y = (y1 - y2).abs();
+        Some((delta_x, delta_y))
+    }
+
+    pub fn set_next_click(&mut self, click: (f64, f64)) {
+        if self.second_click.is_some() {
+            self.first_click = Some(click);
+            self.second_click = None;
+        } else if self.first_click.is_some() {
+            self.second_click = Some(click);
+        } else {
+            self.first_click = Some(click);
+        }
+    }
+}
+
 #[allow(
     missing_debug_implementations,
     reason = "Legend is from egui_plot and doesn't implement debug"
@@ -36,6 +70,7 @@ pub struct LogPlotUi {
     plot_settings: PlotSettings,
     x_min_max: Option<(f64, f64)>,
     link_group: Option<Id>,
+    click_delta: ClickDelta
 }
 
 impl Default for LogPlotUi {
@@ -48,6 +83,7 @@ impl Default for LogPlotUi {
             plot_settings: PlotSettings::default(),
             x_min_max: None,
             link_group: None,
+            click_delta: ClickDelta::new(),
         }
     }
 }
@@ -73,7 +109,11 @@ impl LogPlotUi {
             plot_settings,
             x_min_max,
             link_group,
+            click_delta,
         } = self;
+
+        
+
         if link_group.is_none() {
             link_group.replace(ui.id().with("linked_plots"));
         }
@@ -85,7 +125,7 @@ impl LogPlotUi {
 
         plots.calc_all_plot_x_min_max(x_min_max);
 
-        plot_ui::show_settings_grid(ui, line_width, axis_config, plot_settings);
+        plot_ui::show_settings_grid(ui, line_width, axis_config, plot_settings, click_delta);
 
         for log in loaded_files {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);
@@ -111,6 +151,7 @@ impl LogPlotUi {
                 axis_config,
                 link_group.expect("uninitialized link group id"),
                 *line_width,
+                click_delta
             );
         })
         .response
