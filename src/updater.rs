@@ -11,7 +11,6 @@ use std::{
     path::{Path, PathBuf},
     sync::OnceLock,
 };
-use ui::error_window::show_error_occurred;
 
 pub static APP_INSTALL_DIR: OnceLock<PathBuf> = OnceLock::new();
 /// Returns the parent of the parent of the executable directory due to the installation being done at <`target_dir`>/bin/<`new_plotinator_binary`>
@@ -179,7 +178,7 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
                                 }
                             }
                             Err(e) => {
-                                show_error_occurred(&e.to_string());
+                                ui::error_window::show_error_occurred(&e.to_string());
                                 return Ok(false);
                             }
                         }
