@@ -277,7 +277,7 @@ mod tests {
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =
         "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
-    const TEST_DATA_V4: &str = "../../test_data/mbed_motor_control/v4/pid_20241104_132254_00.bin";
+    const TEST_DATA_V4: &str = "../../test_data/mbed_motor_control/v4/pid_20250120_092446_00.bin";
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
@@ -356,7 +356,7 @@ mod tests {
         let full_data_len = data.len();
         let (pidlog, bytes_read) = PidLog::from_reader(&mut data.as_slice())?;
         assert!(bytes_read <= full_data_len);
-        assert_eq!(bytes_read, 175595);
+        assert_eq!(bytes_read, 834543);
         let first_entry = pidlog.entries.first().expect("Empty entries");
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.0);
@@ -379,7 +379,7 @@ mod tests {
         let file = File::open(TEST_DATA_V4)?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
-        assert_eq!(bytes_read, 323);
+        assert_eq!(bytes_read, 327);
         println!("{header}");
         parse_and_display_log_entries::<PidLogEntry>(&mut reader, Some(10));
         Ok(())

@@ -24,8 +24,6 @@ pub enum StatusLogHeader {
     V1(StatusLogHeaderV1),
     V2(StatusLogHeaderV2),
     V3(StatusLogHeaderV3),
-    /// 4 and 5 are identical except that they have different entries
-    V4(StatusLogHeaderV4),
     V5(StatusLogHeaderV4),
 }
 
@@ -35,7 +33,6 @@ impl fmt::Display for StatusLogHeader {
             Self::V1(h) => write!(f, "{h}"),
             Self::V2(h) => write!(f, "{h}"),
             Self::V3(h) => write!(f, "{h}"),
-            Self::V4(h) => write!(f, "{h}"),
             Self::V5(h) => write!(f, "{h}"),
         }
     }
@@ -47,7 +44,6 @@ impl StatusLogHeader {
             Self::V1(_) => 1,
             Self::V2(_) => 2,
             Self::V3(_) => 3,
-            Self::V4(_) => 4,
             Self::V5(_) => 5,
         }
     }
@@ -102,23 +98,21 @@ impl StatusLogHeader {
                 Self::V3(header)
             }
 
-            4 | 5 => {
+            4 => panic!("Unsupported version. This log version is a pre-release version for MBED v4. The log version for the MBED v4 is 5."),
+            5 => {
                 let (header, bytes_read) = StatusLogHeaderV4::from_reader_with_uniq_descr_version(
                     reader,
                     unique_description,
                     version,
                 )?;
                 total_bytes_read += bytes_read;
-                if matches!(version, 4) {
-                    Self::V4(header)
-                } else {
                     Self::V5(header)
-                }
+
             }
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
-                    "Unsupported version",
+                    format!("Unsupported version: {version}"),
                 ));
             }
         };
