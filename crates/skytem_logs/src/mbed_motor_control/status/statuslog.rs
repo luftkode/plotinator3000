@@ -50,7 +50,6 @@ impl StatusLog {
 
     // helper function build all the plots that can be made from a statuslog
     fn build_raw_plots(startup_timestamp_ns: f64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
-        let mut raw_plots = vec![];
         let entry_count = entries.len();
         let mut engine_temp_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut fan_on_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -123,50 +122,69 @@ impl StatusLog {
             }
         }
 
-        if !engine_temp_plot_raw.is_empty() {
+        Self::collect_raw_plots(
+            engine_temp_plot_raw,
+            fan_on_plot_raw,
+            vbat_plot_raw,
+            setpoint_plot_raw,
+            motor_state_plot_raw,
+            runtime_s_plot_raw,
+        )
+    }
+
+    // Simply takes all vectors with raw plot points and collects them into a vector of `RawPlot`
+    fn collect_raw_plots(
+        engine_temp: Vec<[f64; 2]>,
+        fan_on: Vec<[f64; 2]>,
+        vbat: Vec<[f64; 2]>,
+        setpoint: Vec<[f64; 2]>,
+        motor_state: Vec<[f64; 2]>,
+        runtime_s: Vec<[f64; 2]>,
+    ) -> Vec<RawPlot> {
+        let mut raw_plots = vec![];
+        if !engine_temp.is_empty() {
             raw_plots.push(RawPlot::new(
                 "Engine Temp °C".into(),
-                engine_temp_plot_raw,
+                engine_temp,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
-        if !fan_on_plot_raw.is_empty() {
+        if !fan_on.is_empty() {
             raw_plots.push(RawPlot::new(
                 "Fan On".into(),
-                fan_on_plot_raw,
+                fan_on,
                 ExpectedPlotRange::Percentage,
             ));
         }
-        if !vbat_plot_raw.is_empty() {
+        if !vbat.is_empty() {
             raw_plots.push(RawPlot::new(
                 "Vbat [V]".into(),
-                vbat_plot_raw,
+                vbat,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
-        if !setpoint_plot_raw.is_empty() {
+        if !setpoint.is_empty() {
             raw_plots.push(RawPlot::new(
                 "Setpoint".into(),
-                setpoint_plot_raw,
+                setpoint,
                 ExpectedPlotRange::Thousands,
             ));
         }
 
-        if !motor_state_plot_raw.is_empty() {
+        if !motor_state.is_empty() {
             raw_plots.push(RawPlot::new(
                 "Motor State".into(),
-                motor_state_plot_raw,
+                motor_state,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
-        if !runtime_s_plot_raw.is_empty() {
+        if !runtime_s.is_empty() {
             raw_plots.push(RawPlot::new(
                 "Runtime [s]".into(),
-                runtime_s_plot_raw,
+                runtime_s,
                 ExpectedPlotRange::Thousands,
             ));
         }
-
         raw_plots
     }
 }
