@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - To reduce clotter, grids are now off by default
 
+### Dependencies
+
+- Update all dependencies to latest
+
 ## [1.4.0]
 
 ### Added
