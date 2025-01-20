@@ -22,7 +22,7 @@ impl Default for AxisConfig {
             link_x: true,
             link_cursor_x: true,
             show_axes: true,
-            show_grid: true,
+            show_grid: false,
             y_axis_lock: YAxisLock::default(),
             ui_visible: false,
         }

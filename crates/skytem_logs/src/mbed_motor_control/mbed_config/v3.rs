@@ -49,6 +49,8 @@ pub(crate) struct GeneralConfig {
 
     #[getset(get_copy = "pub")]
     initial_throttle_percent: f32,
+    #[getset(get_copy = "pub")]
+    initial_throttle_step_size_percent: f32,
 
     #[getset(get_copy = "pub")]
     rpm_idle: u16,
@@ -82,6 +84,7 @@ impl MbedConfig for GeneralConfig {
         let t_fan_on = reader.read_u8()?;
         let t_fan_off = reader.read_u8()?;
         let initial_throttle_percent = reader.read_f32::<LittleEndian>()?;
+        let initial_throttle_step_size_percent = reader.read_f32::<LittleEndian>()?;
         let rpm_idle = reader.read_u16::<LittleEndian>()?;
         let rpm_standby = reader.read_u16::<LittleEndian>()?;
         let rpm_running = reader.read_u16::<LittleEndian>()?;
@@ -96,6 +99,7 @@ impl MbedConfig for GeneralConfig {
             t_fan_on,
             t_fan_off,
             initial_throttle_percent,
+            initial_throttle_step_size_percent,
             rpm_idle,
             rpm_standby,
             rpm_running,
@@ -115,6 +119,10 @@ impl MbedConfig for GeneralConfig {
             ("T_FAN_Off".to_owned(), self.t_fan_off.to_string()),
             (
                 "INITIAL_THROTTLE_PERCENT".to_owned(),
+                self.initial_throttle_percent().to_string(),
+            ),
+            (
+                "INITIAL_THROTTLE_STEP_SIZE_PERCENT".to_owned(),
                 self.initial_throttle_percent().to_string(),
             ),
             ("RPM_IDLE".to_owned(), self.rpm_idle().to_string()),
