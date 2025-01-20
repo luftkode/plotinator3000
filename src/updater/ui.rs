@@ -8,9 +8,11 @@ use std::{
     time::Duration,
 };
 
-use axoupdater::AxoupdateResult;
-use egui::{mutex::Mutex, Context, RichText, ScrollArea};
+use egui::{mutex::Mutex, Color32, Context, RichText, ScrollArea};
 
+pub(super) mod error_window;
+#[cfg(target_os = "windows")]
+pub(super) mod pre_admin_window;
 pub(super) mod updates_disabled;
 
 use crate::APP_NAME;
@@ -35,11 +37,13 @@ enum UpdateStep {
     InstallUpdate,
     Completed(String),
     Cancelled,
+    Error(String),
 }
+
 impl UpdateStep {
     fn update_progress(&self) -> f32 {
         match self {
-            Self::Cancelled | Self::UnInit | Self::Initial => 0.0,
+            Self::Cancelled | Self::UnInit | Self::Initial | Self::Error(_) => 0.0,
             Self::LoadMetadata => START_UPDATE_PROGRESS,
             Self::WaitingForCountdown(countdown) => {
                 LOAD_METADATA_PROGRESS + (COUNTDOWN_FOR_UPGRADE_SECS - countdown) as f32 * 2.
@@ -53,7 +57,7 @@ impl UpdateStep {
 
     fn next_progress(&self) -> f32 {
         match self {
-            Self::Cancelled | Self::UnInit => 0.0,
+            Self::Cancelled | Self::UnInit | Self::Error(_) => 0.0,
             Self::Initial => START_UPDATE_PROGRESS,
             Self::LoadMetadata => LOAD_METADATA_PROGRESS,
             Self::WaitingForCountdown(countdown) => {
@@ -81,6 +85,7 @@ impl UpdateStep {
             Self::InstallUpdate => "Retrieving update...\n".to_owned(),
             Self::Completed(description) => description.to_owned(),
             Self::Cancelled => "Update Cancelled!\n".to_owned(),
+            Self::Error(e) => e.to_owned(),
         }
     }
 }
@@ -95,12 +100,22 @@ fn perform_update(
     countdown: &AtomicU8,
     update_cancelled: &AtomicBool,
     update_now_clicked: &AtomicBool,
-) -> AxoupdateResult<bool> {
+    error_occurred: &Mutex<Option<String>>,
+) -> bool {
     sender
         .send(UpdateStep::Initial)
         .expect("Failed sending update to gui");
 
-    let mut updater = PlotinatorUpdater::new()?;
+    let mut updater = match PlotinatorUpdater::new() {
+        Ok(updater) => updater,
+        Err(e) => {
+            sender
+                .send(UpdateStep::Error(e.to_string()))
+                .expect("Failed sending update to gui");
+            *error_occurred.lock() = Some(e.to_string());
+            return false;
+        }
+    };
 
     sender
         .send(UpdateStep::LoadMetadata)
@@ -124,7 +139,7 @@ fn perform_update(
         sender
             .send(UpdateStep::Cancelled)
             .expect("Failed sending update to gui");
-        return Ok(false);
+        return false;
     }
     if update_now_clicked.load(Ordering::SeqCst) {
         sender
@@ -135,29 +150,43 @@ fn perform_update(
         .send(UpdateStep::InstallUpdate)
         .expect("Failed sending update to gui");
 
-    if let Some(result) = updater.run()? {
-        let msg = format!(
-            "Updated to: {APP_NAME} v{}\nInstalled at {}",
-            result.new_version, result.install_prefix
-        );
-        sender
-            .send(UpdateStep::Completed(msg))
-            .expect("Failed sending update to gui");
-        Ok(true)
-    } else {
-        sender
-            .send(UpdateStep::Completed(
-                "The newest version is already installed!\n".to_owned(),
-            ))
-            .expect("Failed sending update to gui");
-        Ok(false)
+    match updater.run() {
+        Ok(result) => {
+            if let Some(update_result) = result {
+                let msg = format!(
+                    "Updated to: {APP_NAME} v{}\nInstalled at {}",
+                    update_result.new_version, update_result.install_prefix
+                );
+                sender
+                    .send(UpdateStep::Completed(msg))
+                    .expect("Failed sending update to gui");
+                true
+            } else {
+                sender
+                    .send(UpdateStep::Completed(
+                        "The newest version is already installed!\n".to_owned(),
+                    ))
+                    .expect("Failed sending update to gui");
+                false
+            }
+        }
+        Err(e) => {
+            sender
+                .send(UpdateStep::Error(e.to_string()))
+                .expect("Failed sending update to gui");
+            *error_occurred.lock() = Some(e.to_string());
+            false
+        }
     }
 }
 
 pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([400.0, 300.0]),
-        //centered: true,
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([400.0, 300.0])
+            .with_icon(
+                eframe::icon_data::from_png_bytes(crate::APP_ICON).expect("Failed to load icon"),
+            ),
         ..Default::default()
     };
 
@@ -176,6 +205,8 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     let update_cancelled: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let update_now_clicked: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
+    let error_occurred: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+
     // Run the update in a separate thread
     let updater_thread = thread::Builder::new()
         .name("Updater thread".to_owned())
@@ -184,12 +215,17 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
             let countdown = countdown.clone();
             let update_cancelled = update_cancelled.clone();
             let update_now_clicked = update_now_clicked.clone();
+            let error_occurred = error_occurred.clone();
             move || {
-                if let Ok(did_update) =
-                    perform_update(&tx, &countdown, &update_cancelled, &update_now_clicked)
-                {
-                    update_clone.store(did_update, Ordering::Relaxed);
-                }
+                let did_update = perform_update(
+                    &tx,
+                    &countdown,
+                    &update_cancelled,
+                    &update_now_clicked,
+                    &error_occurred,
+                );
+
+                update_clone.store(did_update, Ordering::Relaxed);
             }
         })
         .expect("Failed spawning updater thread");
@@ -211,6 +247,7 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
             &countdown,
             &update_now_clicked,
             &is_updated_clone,
+            &error_occurred,
         );
         // Keep the UI updated with new log messages and progress
         ctx.request_repaint();
@@ -223,6 +260,10 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
     Ok(is_updated.load(Ordering::Relaxed))
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "No time and hopefully won't touch this code again for a long time. All these atomic variables etc. are really shared state between the updater GUI and the updater thread. They should be encapsulated in a struct"
+)]
 fn ui_show_update_window_central_panel(
     ctx: &Context,
     log_output: &Mutex<String>,
@@ -231,46 +272,72 @@ fn ui_show_update_window_central_panel(
     countdown: &AtomicU8,
     update_now_clicked: &AtomicBool,
     is_updated: &AtomicBool,
+    error_occurred: &Mutex<Option<String>>,
 ) {
     egui::CentralPanel::default().show(ctx, |ui| {
         ui.vertical_centered(|ui| {
-            ui.heading(RichText::new(format!("Updating {APP_NAME}")).size(24.0));
+            if is_updated.load(Ordering::Relaxed) {
+                ui.heading(
+                    RichText::new("Update complete!")
+                        .size(24.0)
+                        .color(Color32::GREEN),
+                );
+            } else {
+                ui.heading(RichText::new(format!("Updating {APP_NAME}")).size(24.0));
+            }
             ui.add_space(10.0);
 
-            // Show the progress bar
-            ui.add(egui::ProgressBar::new(*progress_value.lock() / 100.0));
-            ui.add_space(20.0);
-
-            if update_cancelled.load(Ordering::SeqCst) {
-                if ui
-                    .button(RichText::new("Continue...").strong().size(18.0))
-                    .clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::Enter))
-                {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                }
+            if let Some(err) = error_occurred.lock().as_deref() {
+                ui.label(
+                    RichText::new(format!("Error performing update: {err}"))
+                        .size(18.0)
+                        .strong()
+                        .color(Color32::RED),
+                );
+                ui.add_space(10.0);
+                ui.label("Please report this error at the link below");
+                ui.add(egui::Hyperlink::from_label_and_url(
+                    "Plotinator3000 issues",
+                    "https://github.com/luftkode/plotinator3000/issues",
+                ));
+                ui.add_space(20.0);
             } else {
-                // Show the countdown or disable updates button
-                let countdown_val = countdown.load(Ordering::SeqCst);
-                if countdown_val != 0 && !is_updated.load(Ordering::SeqCst) {
-                    if update_now_clicked.load(Ordering::SeqCst) {
-                        ui.label(RichText::new("Updating now!".to_owned()).strong());
-                    } else {
-                        ui.label(
-                            RichText::new(format!("Updating in {countdown_val}s...")).strong(),
-                        );
-                        ui.add_space(5.0);
-                        if ui.button(RichText::new("Update now!").strong()).clicked() {
-                            update_now_clicked.store(true, Ordering::SeqCst);
-                        }
-                        ui.add_space(10.0);
-                        if ui
-                            .button(RichText::new("Disable Updates (can be enabled later)"))
-                            .clicked()
-                        {
-                            update_cancelled.store(true, Ordering::SeqCst);
-                            // Create the disable updates file
-                            super::create_disable_update_file().expect("Failed to disable updates");
+                // Show the progress bar
+                ui.add(egui::ProgressBar::new(*progress_value.lock() / 100.0));
+                ui.add_space(20.0);
+
+                if update_cancelled.load(Ordering::SeqCst) {
+                    if ui
+                        .button(RichText::new("Continue...").strong().size(18.0))
+                        .clicked()
+                        || ui.input(|i| i.key_pressed(egui::Key::Enter))
+                    {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                } else {
+                    // Show the countdown or disable updates button
+                    let countdown_val = countdown.load(Ordering::SeqCst);
+                    if countdown_val != 0 && !is_updated.load(Ordering::SeqCst) {
+                        if update_now_clicked.load(Ordering::SeqCst) {
+                            ui.label(RichText::new("Updating now!".to_owned()).strong());
+                        } else {
+                            ui.label(
+                                RichText::new(format!("Updating in {countdown_val}s...")).strong(),
+                            );
+                            ui.add_space(5.0);
+                            if ui.button(RichText::new("Update now!").strong()).clicked() {
+                                update_now_clicked.store(true, Ordering::SeqCst);
+                            }
+                            ui.add_space(10.0);
+                            if ui
+                                .button(RichText::new("Disable Updates (can be enabled later)"))
+                                .clicked()
+                            {
+                                update_cancelled.store(true, Ordering::SeqCst);
+                                // Create the disable updates file
+                                super::create_disable_update_file()
+                                    .expect("Failed to disable updates");
+                            }
                         }
                     }
                 }

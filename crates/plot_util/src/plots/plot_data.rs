@@ -81,6 +81,7 @@ pub struct PlotValues {
     // Label = "<name> #<log_id>"
     label: String,
     color: Color32,
+    highlight: bool,
 }
 
 type PointList<'pl> = &'pl [[f64; 2]];
@@ -108,6 +109,7 @@ impl PlotValues {
             label,
             // Color32::TRANSPARENT means we auto assign one
             color: Color32::TRANSPARENT,
+            highlight: false,
         }
     }
 
@@ -198,6 +200,16 @@ impl PlotValues {
     pub fn label(&self) -> &str {
         &self.label
     }
+
+    /// Whether or not the line should be highlighted
+    pub fn get_highlight(&self) -> bool {
+        self.highlight
+    }
+
+    /// Mutable reference to whether or not the line should be highlighted
+    pub fn get_highlight_mut(&mut self) -> &mut bool {
+        &mut self.highlight
+    }
 }
 
 /// Represents all the plotlabels from a given log
@@ -205,6 +217,7 @@ impl PlotValues {
 pub struct StoredPlotLabels {
     pub log_id: usize,
     pub label_points: Vec<PlotLabel>,
+    pub highlight: bool,
 }
 
 impl StoredPlotLabels {
@@ -212,6 +225,7 @@ impl StoredPlotLabels {
         Self {
             label_points: label_points.into_iter().map(PlotLabel::from).collect(),
             log_id,
+            highlight: false,
         }
     }
 
@@ -231,6 +245,16 @@ impl StoredPlotLabels {
 
     pub fn log_id(&self) -> usize {
         self.log_id
+    }
+
+    /// Whether or not the labels should be highlighted
+    pub fn get_highlight(&self) -> bool {
+        self.highlight
+    }
+
+    /// Mutable reference to whether or not the labels should be highlighted
+    pub fn get_highlight_mut(&mut self) -> &mut bool {
+        &mut self.highlight
     }
 }
 

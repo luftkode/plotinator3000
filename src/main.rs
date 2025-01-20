@@ -27,10 +27,8 @@ fn main() -> eframe::Result {
             .with_min_inner_size([100.0, 80.0])
             .with_drag_and_drop(true)
             .with_icon(
-                eframe::icon_data::from_png_bytes(
-                    &include_bytes!("../assets/skytem-icon-256.png")[..],
-                )
-                .expect("Failed to load icon"),
+                eframe::icon_data::from_png_bytes(plotinator3000::APP_ICON)
+                    .expect("Failed to load icon"),
             ),
         ..Default::default()
     };
