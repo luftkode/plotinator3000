@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `cargo-bins/cargo-binstall`: 1.10.20 → 1.10.22 ([#161](https://github.com/luftkode/plotinator3000/pull/161))
+
 ## [1.4.0]
 
 ### Added
