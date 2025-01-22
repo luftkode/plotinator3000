@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.5.1]
+
+### Fixed
+
+- Fix bad `u8` cast for `vbat`. Mbed v4 status log had changes to the log entries and still contained the bad cast that led to `vbat` losing float precision.
+
 ## [1.5.0]
 
 ### Added
