@@ -105,10 +105,7 @@ impl StatusLog {
                         e.timestamp_ns() + startup_timestamp_ns,
                         (e.fan_on as u8) as f64,
                     ]);
-                    vbat_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.vbat as u8) as f64,
-                    ]);
+                    vbat_plot_raw.push([e.timestamp_ns() + startup_timestamp_ns, e.vbat as f64]);
                     setpoint_plot_raw
                         .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
 
