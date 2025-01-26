@@ -1,7 +1,7 @@
 use egui::{Key, RichText};
 use egui_phosphor::regular;
 
-use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta};
+use super::{axis_config::AxisConfig, plot_settings::PlotSettings};
 
 // filter settings should be refactored out to be a standalone thing, maybe together with loaded_logs_ui
 pub fn show_settings_grid(
@@ -9,7 +9,6 @@ pub fn show_settings_grid(
     line_width: &mut f32,
     axis_cfg: &mut AxisConfig,
     plot_settings: &mut PlotSettings,
-    click_delta: &mut ClickDelta
 ) {
     ui.horizontal_wrapped(|ui| {
         plot_settings.show(ui);
@@ -36,8 +35,5 @@ pub fn show_settings_grid(
                 .speed(0.02)
                 .range(0.5..=20.0),
         );
-        if let Some((click_delta_x, click_delta_y)) = click_delta.delta() {
-            ui.label(format!("Δx: {click_delta_x} Δy: {click_delta_y}"));
-        }
     });
 }

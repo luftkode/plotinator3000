@@ -1,5 +1,5 @@
-use egui::Vec2b;
-use egui_plot::{AxisHints, HPlacement, Legend, Plot};
+use egui::{Color32, Vec2b};
+use egui_plot::{AxisHints, HPlacement, Legend, Line, MarkerShape, Plot, PlotPoints};
 use plot_util::{PlotData, Plots};
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
@@ -15,6 +15,11 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, Pl
 /// * `axis_cfg` - For axis customization.
 /// * `link_group` - An [`egui::Id`] for linking plots.
 /// * `line_width` - The width of plot lines.
+/// * `click_delta` - State relating to pointer clicks on plots
+#[allow(
+    clippy::too_many_arguments,
+    reason = "They are needed. Maybe a refactor could group some of them."
+)]
 pub fn paint_plots(
     ui: &mut egui::Ui,
     plots: &mut Plots,
@@ -23,7 +28,7 @@ pub fn paint_plots(
     axis_cfg: &mut AxisConfig,
     link_group: egui::Id,
     line_width: f32,
-    click_delta: &mut ClickDelta
+    click_delta: &mut ClickDelta,
 ) {
     let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
@@ -101,16 +106,66 @@ fn fill_plots(
     axis_config: &mut AxisConfig,
     line_width: f32,
     plot_settings: &PlotSettings,
-    click_delta: &mut ClickDelta
+    click_delta: &mut ClickDelta,
 ) {
+    let theme = gui.ctx().theme();
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
             let resp = plot_ui.response();
             if resp.clicked() {
                 if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
-                    click_delta.set_next_click((pointer_coordinate.x, pointer_coordinate.y));
+                    click_delta.set_next_click(pointer_coordinate, ptype);
                 }
             }
+            if click_delta.plot_type().is_some_and(|pt| pt == ptype) {
+                if let Some(p) = click_delta.get_click_points() {
+                    let delta_color = match theme {
+                        egui::Theme::Dark => Color32::WHITE,
+                        egui::Theme::Light => Color32::BLACK,
+                    };
+                    plot_ui.add(
+                        p.shape(MarkerShape::Cross)
+                            .highlight(true)
+                            .radius(4.0)
+                            .color(delta_color),
+                    );
+                    match click_delta.get_click_coords() {
+                        (None, None) => (),
+                        (None, Some(_)) => unreachable!(),
+                        (Some(fpoint), None) => {
+                            //
+                            if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
+                                let pcoord = [pointer_coord.x, pointer_coord.y];
+                                let delta_line =
+                                    Line::new(PlotPoints::new([fpoint, pcoord].into()))
+                                        .color(delta_color);
+
+                                let delta_text = ClickDelta::get_delta_text(
+                                    fpoint,
+                                    pcoord,
+                                    plot_ui.plot_bounds(),
+                                );
+                                plot_ui.text(delta_text);
+
+                                plot_ui.add(delta_line);
+                            }
+                        }
+                        (Some(fpoint), Some(spoint)) => {
+                            let delta_line = Line::new(PlotPoints::new([fpoint, spoint].into()))
+                                .color(delta_color)
+                                .width(1.0)
+                                .name("Δ Click")
+                                .style(egui_plot::LineStyle::Dashed { length: 10.0 });
+
+                            plot_ui.add(delta_line);
+                            let delta_text =
+                                ClickDelta::get_delta_text(fpoint, spoint, plot_ui.plot_bounds());
+                            plot_ui.text(delta_text);
+                        }
+                    }
+                }
+            }
+
             fill_plot(
                 plot_ui,
                 (plot, ptype),
