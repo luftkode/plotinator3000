@@ -1,5 +1,5 @@
-use egui::{Color32, Vec2b};
-use egui_plot::{AxisHints, HPlacement, Legend, Line, MarkerShape, Plot, PlotPoints};
+use egui::Vec2b;
+use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use plot_util::{PlotData, Plots};
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
@@ -108,7 +108,6 @@ fn fill_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
 ) {
-    let theme = gui.ctx().theme();
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
             let resp = plot_ui.response();
@@ -117,54 +116,7 @@ fn fill_plots(
                     click_delta.set_next_click(pointer_coordinate, ptype);
                 }
             }
-            if click_delta.plot_type().is_some_and(|pt| pt == ptype) {
-                if let Some(p) = click_delta.get_click_points() {
-                    let delta_color = match theme {
-                        egui::Theme::Dark => Color32::WHITE,
-                        egui::Theme::Light => Color32::BLACK,
-                    };
-                    plot_ui.add(
-                        p.shape(MarkerShape::Cross)
-                            .highlight(true)
-                            .radius(4.0)
-                            .color(delta_color),
-                    );
-                    match click_delta.get_click_coords() {
-                        (None, None) => (),
-                        (None, Some(_)) => unreachable!(),
-                        (Some(fpoint), None) => {
-                            //
-                            if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
-                                let pcoord = [pointer_coord.x, pointer_coord.y];
-                                let delta_line =
-                                    Line::new(PlotPoints::new([fpoint, pcoord].into()))
-                                        .color(delta_color);
-
-                                let delta_text = ClickDelta::get_delta_text(
-                                    fpoint,
-                                    pcoord,
-                                    plot_ui.plot_bounds(),
-                                );
-                                plot_ui.text(delta_text);
-
-                                plot_ui.add(delta_line);
-                            }
-                        }
-                        (Some(fpoint), Some(spoint)) => {
-                            let delta_line = Line::new(PlotPoints::new([fpoint, spoint].into()))
-                                .color(delta_color)
-                                .width(1.0)
-                                .name("Δ Click")
-                                .style(egui_plot::LineStyle::Dashed { length: 10.0 });
-
-                            plot_ui.add(delta_line);
-                            let delta_text =
-                                ClickDelta::get_delta_text(fpoint, spoint, plot_ui.plot_bounds());
-                            plot_ui.text(delta_text);
-                        }
-                    }
-                }
-            }
+            click_delta.ui(plot_ui, ptype);
 
             fill_plot(
                 plot_ui,
