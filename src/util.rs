@@ -50,9 +50,49 @@ pub fn format_label_ns(plot_name: &str, val: &PlotPoint) -> String {
     )
 }
 
-pub fn format_delta_xy(delta_x_time_ns: f64, delta_y: f64) -> String {
-    let delta_x = Duration::from_secs_f64(delta_x_time_ns);
-    format!("Δt:{delta_x:.02?}\nΔy:{delta_y:.4}")
+pub fn format_delta_xy(delta_x_time_s: f64, delta_y: f64) -> String {
+    format!(
+        "Δt:{delta_x}\nΔy:{delta_y:.4}",
+        delta_x = format_time_s(delta_x_time_s)
+    )
+}
+
+/// Formats seconds to a human readable strings from milliseconds up to days.
+pub fn format_time_s(time_s: f64) -> String {
+    if time_s < 0.9 {
+        format!("{t_ms:.4}ms", t_ms = time_s * 1000.)
+    } else if time_s < 60. {
+        format!("{time_s:.3}s")
+    } else if time_s < 3600. {
+        let t_m = (time_s / 60.) as u8;
+        let t_s = time_s - (t_m as f64 * 60.);
+        format!("{t_m}m{t_s:.2}s")
+    } else if time_s < 86_400. {
+        let t_h = (time_s / 3600.) as u8;
+        let t_h_remainder = time_s - (t_h as f64 * 3600.);
+        let t_m = (t_h_remainder / 60.) as u16;
+        let t_m_remainder = t_h_remainder - (t_m as f64 * 60.);
+        let t_s = t_m_remainder;
+        format!("{t_h}h{t_m}m{t_s:.2}s")
+    } else if time_s < 604_800. {
+        let t_d = (time_s / 86_400.) as u8;
+        let t_d_remainder = time_s - (t_d as f64 * 86_400.);
+        let t_h = (t_d_remainder / 3600.) as u16;
+        let t_h_remainder = t_d_remainder - (t_h as f64 * 3600.);
+        let t_m = (t_h_remainder / 60.) as u16;
+        let t_m_remainder = t_h_remainder - (t_m as f64 * 60.);
+        let t_s = t_m_remainder;
+        format!("{t_d}d{t_h}h{t_m}m{t_s:.1}s")
+    } else {
+        let t_d = (time_s / 86_400.) as u16;
+        let t_d_remainder = time_s - (t_d as f64 * 86_400.);
+        let t_h = (t_d_remainder / 3600.) as u32;
+        let t_h_remainder = t_d_remainder - (t_h as f64 * 3600.);
+        let t_m = (t_h_remainder / 60.) as u32;
+        let t_m_remainder = t_h_remainder - (t_m as f64 * 60.);
+        let t_s = t_m_remainder;
+        format!("{t_d}d{t_h}h{t_m}m{t_s:.1}s")
+    }
 }
 
 /// Format a value to a human readable byte magnitude description
