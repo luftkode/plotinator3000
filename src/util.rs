@@ -59,41 +59,48 @@ pub fn format_delta_xy(delta_x_time_s: f64, delta_y: f64) -> String {
 
 /// Formats seconds to a human readable strings from milliseconds up to days.
 pub fn format_time_s(time_s: f64) -> String {
-    if time_s < 0.9 {
-        format!("{t_ms:.4}ms", t_ms = time_s * 1000.)
-    } else if time_s < 60. {
-        format!("{time_s:.3}s")
-    } else if time_s < 3600. {
-        let t_m = (time_s / 60.) as u8;
-        let t_s = time_s - (t_m as f64 * 60.);
-        format!("{t_m}m{t_s:.2}s")
-    } else if time_s < 86_400. {
-        let t_h = (time_s / 3600.) as u8;
-        let t_h_remainder = time_s - (t_h as f64 * 3600.);
-        let t_m = (t_h_remainder / 60.) as u16;
-        let t_m_remainder = t_h_remainder - (t_m as f64 * 60.);
-        let t_s = t_m_remainder;
-        format!("{t_h}h{t_m}m{t_s:.2}s")
-    } else if time_s < 604_800. {
-        let t_d = (time_s / 86_400.) as u8;
-        let t_d_remainder = time_s - (t_d as f64 * 86_400.);
-        let t_h = (t_d_remainder / 3600.) as u16;
-        let t_h_remainder = t_d_remainder - (t_h as f64 * 3600.);
-        let t_m = (t_h_remainder / 60.) as u16;
-        let t_m_remainder = t_h_remainder - (t_m as f64 * 60.);
-        let t_s = t_m_remainder;
-        format!("{t_d}d{t_h}h{t_m}m{t_s:.1}s")
-    } else {
-        let t_d = (time_s / 86_400.) as u16;
-        let t_d_remainder = time_s - (t_d as f64 * 86_400.);
-        let t_h = (t_d_remainder / 3600.) as u32;
-        let t_h_remainder = t_d_remainder - (t_h as f64 * 3600.);
-        let t_m = (t_h_remainder / 60.) as u32;
-        let t_m_remainder = t_h_remainder - (t_m as f64 * 60.);
-        let t_s = t_m_remainder;
-        format!("{t_d}d{t_h}h{t_m}m{t_s:.1}s")
+    const SECOND: f64 = 1.0;
+    const MINUTE: f64 = 60.0;
+    const HOUR: f64 = 3600.0;
+    const DAY: f64 = 86_400.0;
+    const WEEK: f64 = 604_800.0;
+
+    match time_s {
+        t if t < SECOND => format!("{:.4}ms", t * 1000.0),
+        t if t < MINUTE => format!("{:.3}s", t),
+        t if t < HOUR => {
+            let (m, s) = div_rem(t, MINUTE);
+            format!("{}m{:.2}s", m, s)
+        }
+        t if t < DAY => {
+            let (h, rem) = div_rem(t, HOUR);
+            let (m, s) = div_rem(rem, MINUTE);
+            format!("{}h{}m{:.2}s", h, m, s)
+        }
+        t if t < WEEK => {
+            let (d, rem) = div_rem(t, DAY);
+            let (h, rem) = div_rem(rem, HOUR);
+            let (m, s) = div_rem(rem, MINUTE);
+            format!("{}d{}h{}m{:.1}s", d, h, m, s)
+        }
+        t => {
+            let (d, rem) = div_rem(t, DAY);
+            let (h, rem) = div_rem(rem, HOUR);
+            let (m, s) = div_rem(rem, MINUTE);
+            format!("{}d{}h{}m{:.1}s", d, h, m, s)
+        }
     }
 }
+
+
+/// Helper function to perform division and get remainder in one step
+#[inline]
+fn div_rem(dividend: f64, divisor: f64) -> (u32, f64) {
+    let quotient = (dividend / divisor) as u32;
+    let remainder = dividend - (quotient as f64 * divisor);
+    (quotient, remainder)
+}
+
 
 /// Format a value to a human readable byte magnitude description
 #[must_use]
