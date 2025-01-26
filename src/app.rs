@@ -33,7 +33,8 @@ pub struct App {
     toasts: Toasts,
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
-    font_size: Option<f32>,
+    font_size: f32,
+    font_size_init: bool,
     error_message: Option<String>,
 
     #[cfg(target_arch = "wasm32")]
@@ -51,7 +52,8 @@ impl Default for App {
             toasts: Toasts::default(),
             loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
-            font_size: Some(Self::DEFAULT_FONT_SIZE),
+            font_size: Self::DEFAULT_FONT_SIZE,
+            font_size_init: false,
             error_message: None,
 
             #[cfg(target_arch = "wasm32")]
@@ -95,14 +97,12 @@ impl App {
 impl eframe::App for App {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.font_size_init = false;
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
-
         #[cfg(target_arch = "wasm32")]
         if let Err(e) = self
             .web_file_dialog
@@ -116,6 +116,10 @@ impl eframe::App for App {
             .parse_picked_files(&mut self.loaded_files)
         {
             self.error_message = Some(e.to_string());
+        }
+
+        if !self.font_size_init {
+            Self::configure_text_styles(ctx, self.font_size);
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -152,18 +156,16 @@ impl eframe::App for App {
                     self.native_file_dialog.open();
                 }
                 ui.label(RichText::new(regular::TEXT_T));
-                if let Some(ref mut font_size) = self.font_size {
-                    if ui
-                        .add(
-                            egui::DragValue::new(font_size)
-                                .speed(0.1)
-                                .range(8.0..=32.0)
-                                .suffix("px"),
-                        )
-                        .changed()
-                    {
-                        Self::configure_text_styles(ctx, self.font_size.unwrap_or_default());
-                    }
+                if ui
+                    .add(
+                        egui::DragValue::new(&mut self.font_size)
+                            .speed(0.1)
+                            .range(8.0..=32.0)
+                            .suffix("px"),
+                    )
+                    .changed()
+                {
+                    Self::configure_text_styles(ctx, self.font_size);
                 }
 
                 show_theme_toggle_buttons(ui);
