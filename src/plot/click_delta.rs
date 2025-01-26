@@ -33,13 +33,14 @@ impl ClickDelta {
 
     // Calculate the y offset for the text that describes the point delta
     fn calc_text_y_offset(y2: f64, range_y: RangeInclusive<f64>) -> f64 {
+        let offset_factor = 15.;
         let plot_bounds_delta_y = (range_y.start() - range_y.end()).abs();
 
         let y2_closest_top = (y2 - range_y.end()).abs() < (y2 - range_y.start()).abs();
         if y2_closest_top {
-            -plot_bounds_delta_y / 20.
+            -plot_bounds_delta_y / offset_factor
         } else {
-            plot_bounds_delta_y / 20.
+            plot_bounds_delta_y / offset_factor
         }
     }
 
