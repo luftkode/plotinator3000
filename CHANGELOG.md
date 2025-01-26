@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.6.0]
+
+### Added
+
+- View distance between specific points on the plot by clicking on them
+
+### Fixed
+
+- Font size now persists between sessions
+
 ## [1.5.1]
 
 ### Fixed
