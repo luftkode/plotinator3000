@@ -39,7 +39,7 @@ pub fn format_label_ns(plot_name: &str, val: &PlotPoint) -> String {
     let time_s = time_ns / NANOS_PER_SEC as f64;
     let remainder_ns = time_s.fract() * NANOS_PER_SEC as f64;
     let dt = DateTime::from_timestamp(time_s as i64, remainder_ns as u32)
-        .unwrap_or_else(|| panic!("Timestamp value out of range: {}", val.x));
+        .unwrap_or_else(|| panic!("Timestamp value out of range: {time_ns}"));
     format!(
         "{plot_name}\ny: {y:.4}\n{h:02}:{m:02}:{s:02}.{subsec_ms:03}",
         y = val.y,
@@ -48,6 +48,11 @@ pub fn format_label_ns(plot_name: &str, val: &PlotPoint) -> String {
         s = dt.second(),
         subsec_ms = dt.timestamp_subsec_millis()
     )
+}
+
+pub fn format_delta_xy(delta_x_time_ns: f64, delta_y: f64) -> String {
+    let delta_x = Duration::from_secs_f64(delta_x_time_ns);
+    format!("Δt:{delta_x:.02?}\nΔy:{delta_y:.4}")
 }
 
 /// Format a value to a human readable byte magnitude description
