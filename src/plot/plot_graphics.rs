@@ -2,7 +2,7 @@ use egui::Vec2b;
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use plot_util::{PlotData, Plots};
 
-use super::{axis_config::AxisConfig, plot_settings::PlotSettings, PlotType};
+use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
 
 /// Paints multiple plots based on the provided settings and configurations.
 ///
@@ -15,6 +15,11 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, PlotType};
 /// * `axis_cfg` - For axis customization.
 /// * `link_group` - An [`egui::Id`] for linking plots.
 /// * `line_width` - The width of plot lines.
+/// * `click_delta` - State relating to pointer clicks on plots
+#[allow(
+    clippy::too_many_arguments,
+    reason = "They are needed. Maybe a refactor could group some of them."
+)]
 pub fn paint_plots(
     ui: &mut egui::Ui,
     plots: &mut Plots,
@@ -23,6 +28,7 @@ pub fn paint_plots(
     axis_cfg: &mut AxisConfig,
     link_group: egui::Id,
     line_width: f32,
+    click_delta: &mut ClickDelta,
 ) {
     let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
@@ -81,6 +87,7 @@ pub fn paint_plots(
         axis_cfg,
         line_width,
         plot_settings,
+        click_delta,
     );
 }
 
@@ -99,9 +106,18 @@ fn fill_plots(
     axis_config: &mut AxisConfig,
     line_width: f32,
     plot_settings: &PlotSettings,
+    click_delta: &mut ClickDelta,
 ) {
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
+            let resp = plot_ui.response();
+            if resp.clicked() {
+                if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
+                    click_delta.set_next_click(pointer_coordinate, ptype);
+                }
+            }
+            click_delta.ui(plot_ui, ptype);
+
             fill_plot(
                 plot_ui,
                 (plot, ptype),

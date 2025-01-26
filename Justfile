@@ -12,6 +12,7 @@ alias t := test
 
 # Achieve higher verbosity in run command e.g. by running "RUST_LOG=debug just run --release"
 export RUST_LOG := env_var_or_default("RUST_LOG", "info")
+export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATES", "true")
 
 @_default:
     just --list --no-aliases

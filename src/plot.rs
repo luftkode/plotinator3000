@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use click_delta::ClickDelta;
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
 use plot_util::Plots;
@@ -11,12 +12,13 @@ use egui_plot::Legend;
 
 use crate::app::supported_formats::SupportedFormat;
 mod axis_config;
+mod click_delta;
 mod plot_graphics;
 mod plot_settings;
 mod plot_ui;
 mod util;
 
-#[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum PlotType {
     Percentage,
     Hundreds,
@@ -36,6 +38,7 @@ pub struct LogPlotUi {
     plot_settings: PlotSettings,
     x_min_max: Option<(f64, f64)>,
     link_group: Option<Id>,
+    click_delta: ClickDelta,
 }
 
 impl Default for LogPlotUi {
@@ -48,6 +51,7 @@ impl Default for LogPlotUi {
             plot_settings: PlotSettings::default(),
             x_min_max: None,
             link_group: None,
+            click_delta: ClickDelta::default(),
         }
     }
 }
@@ -73,7 +77,9 @@ impl LogPlotUi {
             plot_settings,
             x_min_max,
             link_group,
+            click_delta,
         } = self;
+
         if link_group.is_none() {
             link_group.replace(ui.id().with("linked_plots"));
         }
@@ -111,6 +117,7 @@ impl LogPlotUi {
                 axis_config,
                 link_group.expect("uninitialized link group id"),
                 *line_width,
+                click_delta,
             );
         })
         .response
