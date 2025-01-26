@@ -17,7 +17,6 @@ pub struct ClickDelta {
 }
 
 impl ClickDelta {
-
     pub fn set_next_click(&mut self, click: PlotPoint, plot_type: PlotType) {
         if self.plot_type.is_some_and(|pt| pt == plot_type) {
             if self.second_click.is_some() {
@@ -51,8 +50,6 @@ impl ClickDelta {
         egui_plot::Text::new(label_point, delta_formatted).highlight(true)
     }
 
-    
-
     pub fn plot_type(&self) -> Option<PlotType> {
         self.plot_type
     }
@@ -79,7 +76,7 @@ impl ClickDelta {
         let offset_factor = 50.;
         let plot_bounds_delta_x = (range_x.start() - range_x.end()).abs();
         let offset = plot_bounds_delta_x / offset_factor;
-        
+
         let x2_closest_right = (x2 - range_x.end()).abs() < (x2 - range_x.start()).abs();
         if x2_closest_right {
             -offset
