@@ -56,7 +56,7 @@ impl StatusLog {
         let mut vbat_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut setpoint_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut motor_state_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
-        let mut runtime_s_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
+        let mut runtime_h_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
 
         for e in entries {
             match e {
@@ -113,8 +113,10 @@ impl StatusLog {
                         e.timestamp_ns() + startup_timestamp_ns,
                         (e.motor_state as u8) as f64,
                     ]);
-                    runtime_s_plot_raw
-                        .push([e.timestamp_ns() + startup_timestamp_ns, e.runtime_s as f64]);
+                    runtime_h_plot_raw.push([
+                        e.timestamp_ns() + startup_timestamp_ns,
+                        (e.runtime_s as f64) / 3600., // Convert from seconds to hours
+                    ]);
                 }
             }
         }
@@ -125,7 +127,7 @@ impl StatusLog {
             vbat_plot_raw,
             setpoint_plot_raw,
             motor_state_plot_raw,
-            runtime_s_plot_raw,
+            runtime_h_plot_raw,
         )
     }
 
@@ -136,7 +138,7 @@ impl StatusLog {
         vbat: Vec<[f64; 2]>,
         setpoint: Vec<[f64; 2]>,
         motor_state: Vec<[f64; 2]>,
-        runtime_s: Vec<[f64; 2]>,
+        runtime_h: Vec<[f64; 2]>,
     ) -> Vec<RawPlot> {
         let mut raw_plots = vec![];
         if !engine_temp.is_empty() {
@@ -175,11 +177,11 @@ impl StatusLog {
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
-        if !runtime_s.is_empty() {
+        if !runtime_h.is_empty() {
             raw_plots.push(RawPlot::new(
-                "Runtime [s]".into(),
-                runtime_s,
-                ExpectedPlotRange::Thousands,
+                "Runtime [h]".into(),
+                runtime_h,
+                ExpectedPlotRange::OneToOneHundred,
             ));
         }
         raw_plots
