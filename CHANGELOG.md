@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Click delta now shows days/hours/minutes/seconds/milliseconds depending on the magnitude of the distance between the points
+- Click delta text offset increased slightly such that it is more likely to not intersect with the line
+
 ## [1.6.0]
 
 ### Added
