@@ -50,9 +50,54 @@ pub fn format_label_ns(plot_name: &str, val: &PlotPoint) -> String {
     )
 }
 
-pub fn format_delta_xy(delta_x_time_ns: f64, delta_y: f64) -> String {
-    let delta_x = Duration::from_secs_f64(delta_x_time_ns);
-    format!("Δt:{delta_x:.02?}\nΔy:{delta_y:.4}")
+pub fn format_delta_xy(delta_x_time_s: f64, delta_y: f64) -> String {
+    format!(
+        "Δt:{delta_x}\nΔy:{delta_y:.4}",
+        delta_x = format_time_s(delta_x_time_s)
+    )
+}
+
+/// Formats seconds to a human readable strings from milliseconds up to days.
+pub fn format_time_s(time_s: f64) -> String {
+    const SECOND: f64 = 1.0;
+    const MINUTE: f64 = 60.0;
+    const HOUR: f64 = 3600.0;
+    const DAY: f64 = 86_400.0;
+    const WEEK: f64 = 604_800.0;
+
+    match time_s {
+        t if t < SECOND => format!("{:.4}ms", t * 1000.0),
+        t if t < MINUTE => format!("{t:.3}s"),
+        t if t < HOUR => {
+            let (m, s) = div_rem(t, MINUTE);
+            format!("{m}m{s:.2}s")
+        }
+        t if t < DAY => {
+            let (h, rem) = div_rem(t, HOUR);
+            let (m, s) = div_rem(rem, MINUTE);
+            format!("{h}h{m}m{s:.2}s")
+        }
+        t if t < WEEK => {
+            let (d, rem) = div_rem(t, DAY);
+            let (h, rem) = div_rem(rem, HOUR);
+            let (m, s) = div_rem(rem, MINUTE);
+            format!("{d}d{h}h{m}m{s:.1}s")
+        }
+        t => {
+            let (d, rem) = div_rem(t, DAY);
+            let (h, rem) = div_rem(rem, HOUR);
+            let (m, s) = div_rem(rem, MINUTE);
+            format!("{d}d{h}h{m}m{s:.1}s")
+        }
+    }
+}
+
+/// Helper function to perform division and get remainder in one step
+#[inline]
+fn div_rem(dividend: f64, divisor: f64) -> (u32, f64) {
+    let quotient = (dividend / divisor) as u32;
+    let remainder = dividend - (quotient as f64 * divisor);
+    (quotient, remainder)
 }
 
 /// Format a value to a human readable byte magnitude description

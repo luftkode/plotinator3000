@@ -2,6 +2,7 @@
 
 export RUSTFLAGS := "-D warnings"
 export RUSTDOCFLAGS := "-D warnings"
+export RUST_LOG := "debug"
 
 ci: lint check fmt test trunk audit dist-plan
 
@@ -17,7 +18,7 @@ lint:
     typos
 
 test:
-    cargo test --workspace
+    cargo nextest run --workspace --profile ci
 
 audit:
     cargo audit
