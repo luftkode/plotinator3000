@@ -67,27 +67,27 @@ pub fn format_time_s(time_s: f64) -> String {
 
     match time_s {
         t if t < SECOND => format!("{:.4}ms", t * 1000.0),
-        t if t < MINUTE => format!("{:.3}s", t),
+        t if t < MINUTE => format!("{t:.3}s"),
         t if t < HOUR => {
             let (m, s) = div_rem(t, MINUTE);
-            format!("{}m{:.2}s", m, s)
+            format!("{m}m{s:.2}s")
         }
         t if t < DAY => {
             let (h, rem) = div_rem(t, HOUR);
             let (m, s) = div_rem(rem, MINUTE);
-            format!("{}h{}m{:.2}s", h, m, s)
+            format!("{h}h{m}m{s:.2}s")
         }
         t if t < WEEK => {
             let (d, rem) = div_rem(t, DAY);
             let (h, rem) = div_rem(rem, HOUR);
             let (m, s) = div_rem(rem, MINUTE);
-            format!("{}d{}h{}m{:.1}s", d, h, m, s)
+            format!("{d}d{h}h{m}m{s:.1}s")
         }
         t => {
             let (d, rem) = div_rem(t, DAY);
             let (h, rem) = div_rem(rem, HOUR);
             let (m, s) = div_rem(rem, MINUTE);
-            format!("{}d{}h{}m{:.1}s", d, h, m, s)
+            format!("{d}d{h}h{m}m{s:.1}s")
         }
     }
 }
