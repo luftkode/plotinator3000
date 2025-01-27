@@ -10,31 +10,40 @@ use crate::{
 use super::date_settings::LoadedLogSettings;
 
 pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSettings) {
+    // Reset the state the the cursor is hovering on a log. We then set it to true if
+    // we detect hover on any of the elements on the line for the given log
+    *loaded_log.cursor_hovering_on_mut() = false;
+
     let log_name_date = loaded_log.log_label();
     let check_box_text = RichText::new(if loaded_log.show_log() {
         regular::EYE
     } else {
         regular::EYE_SLASH
     });
-    ui.checkbox(loaded_log.show_log_mut(), check_box_text);
+    let ui_checkbox = ui.checkbox(loaded_log.show_log_mut(), check_box_text);
+    if ui_checkbox.hovered() {
+        *loaded_log.cursor_hovering_on_mut() = true;
+    }
+
     let log_button_text = RichText::new(log_name_date.clone());
     let log_button_text = if loaded_log.show_log() {
         log_button_text.strong()
     } else {
         log_button_text
     };
-    let button_resp = ui.button(log_button_text);
-    if button_resp.clicked() {
+    let ui_log_button = ui.button(log_button_text);
+    if ui_log_button.clicked() {
         loaded_log.clicked = !loaded_log.clicked;
     }
-    if button_resp.hovered() {
-        button_resp.on_hover_text("Click to modify log settings");
+    if ui_log_button.hovered() {
+        ui_log_button.on_hover_text("Click to modify log settings");
         *loaded_log.cursor_hovering_on_mut() = true;
-    } else {
-        *loaded_log.cursor_hovering_on_mut() = false;
     }
 
-    ui.label(format!("{}", loaded_log.start_date().naive_utc()));
+    let ui_date_label = ui.label(loaded_log.start_date().naive_utc().to_string());
+    if ui_date_label.hovered() {
+        *loaded_log.cursor_hovering_on_mut() = true;
+    }
 
     let remove_button_text = if loaded_log.marked_for_deletion() {
         RichText::new(egui_phosphor::regular::TRASH).color(Color32::RED)
@@ -47,6 +56,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
     }
     if button_resp.hovered() {
         button_resp.on_hover_text("Remove from loaded files");
+        *loaded_log.cursor_hovering_on_mut() = true;
     }
 
     if loaded_log.tmp_date_buf.is_empty() {
