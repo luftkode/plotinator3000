@@ -92,7 +92,6 @@ pub fn format_time_s(time_s: f64) -> String {
     }
 }
 
-
 /// Helper function to perform division and get remainder in one step
 #[inline]
 fn div_rem(dividend: f64, divisor: f64) -> (u32, f64) {
@@ -100,7 +99,6 @@ fn div_rem(dividend: f64, divisor: f64) -> (u32, f64) {
     let remainder = dividend - (quotient as f64 * divisor);
     (quotient, remainder)
 }
-
 
 /// Format a value to a human readable byte magnitude description
 #[must_use]
