@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.6.2]
+
+### Changed
+
+- MBED motor log `runtime` counter is displayed in hours instead of seconds
+
 ### Dependencies
 
 - `getset`: 0.1.3 → 0.1.4 ([#166](https://github.com/luftkode/plotinator3000/pull/166))
