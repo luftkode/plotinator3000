@@ -17,6 +17,7 @@ export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATE
 @_default:
     just --list --no-aliases
 
+[group("Init")]
 init: install-devtools
     echo "Run 'install-extra-devtools' for some adittional productivity tools that fit into the existent workflow"
 
@@ -27,11 +28,11 @@ check-all: check check-wasm
 check *ARGS:
     cargo {{check}} {{ ARGS }}
 
-[doc("Quickly check if the WASM target compiles without compiling"), no-exit-message]
+[group("Web"), doc("Quickly check if the WASM target compiles without compiling"), no-exit-message]
 check-wasm: (check "--target wasm32-unknown-unknown")
 
 # Get trunk: https://trunkrs.dev/guide/introduction.html
-[doc("serve as a local webserver with hot reloading and logging enabled (requires trunk)")]
+[group("Web"), doc("serve as a local webserver with hot reloading and logging enabled (requires trunk)")]
 serve *ARGS:
     trunk serve {{ARGS}}
 
@@ -53,7 +54,7 @@ lint: clippy-native clippy-wasm && fmt
 [doc("Clippy linting targeting native"), no-exit-message]
 clippy-native: (clippy "--workspace --tests -- -D warnings")
 
-[doc("Clippy linting targeting WASM"), no-exit-message]
+[group("Web"), doc("Clippy linting targeting WASM"), no-exit-message]
 clippy-wasm:
     CLIPPY_CONF_DIR="`pwd`/lint/wasm/clippy.toml" \
     just clippy "--workspace --tests --target wasm32-unknown-unknown -- -D warnings"
@@ -86,14 +87,23 @@ audit *ARGS:
 install-devtools:
     cargo install trunk --locked
     cargo install cargo-dist --locked
-    cargo install typos-cli
-    cargo install cargo-audit
+    cargo install typos-cli --locked
+    cargo install cargo-audit --locked
 
 # Install nice-to-have devtools
+[group("Init")]
 install-extra-devtools:
     cargo install cargo-nextest --locked
     cargo install cargo-limit --locked
     cargo install bacon --locked
 
+[group("Init")]
 apt-install-hdf5-header:
     sudo apt install libhdf5-dev
+
+# Requires firebase CLI and access to MKI firebase account
+[group("Web")]
+firebase-deploy:
+    trunk clean
+    trunk build --release
+    firebase deploy
