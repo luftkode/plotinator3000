@@ -44,12 +44,11 @@ impl LoadedLogMetadata {
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoadedLogSettings {
-    //
-    log_id: usize,
+    log_id: u16,
     log_descriptive_name: String,
     pub original_start_date: DateTime<Utc>,
     start_date: DateTime<Utc>,
-    pub clicked: bool,
+    clicked: bool,
     pub tmp_date_buf: String,
     pub err_msg: String,
     pub new_date_candidate: Option<NaiveDateTime>,
@@ -63,7 +62,7 @@ pub struct LoadedLogSettings {
 
 impl LoadedLogSettings {
     pub fn new(
-        log_id: usize,
+        log_id: u16,
         descriptive_name: String,
         start_date: DateTime<Utc>,
         log_metadata: Option<Vec<(String, String)>>,
@@ -110,7 +109,7 @@ impl LoadedLogSettings {
     }
 
     /// This is the ID that connects settings to plots
-    pub fn log_id(&self) -> usize {
+    pub fn log_id(&self) -> u16 {
         self.log_id
     }
 
@@ -136,6 +135,18 @@ impl LoadedLogSettings {
 
     pub fn marked_for_deletion_mut(&mut self) -> &mut bool {
         &mut self.marked_for_deletion
+    }
+
+    pub fn clicked(&self) -> bool {
+        self.clicked
+    }
+
+    pub fn clicked_mut(&mut self) -> &mut bool {
+        &mut self.clicked
+    }
+
+    pub fn toggle_clicked(&mut self) {
+        self.clicked = !self.clicked;
     }
 
     pub fn cursor_hovering_on(&self) -> bool {

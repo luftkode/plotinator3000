@@ -28,7 +28,9 @@ pub fn plot_lines<'pv>(
     let (x_lower, x_higher) = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
     for plot_vals in plots {
         match mipmap_cfg {
-            MipMapConfiguration::Disabled => plot_raw(plot_ui, plot_vals, (x_lower, x_higher)),
+            MipMapConfiguration::Disabled => {
+                plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
+            }
             MipMapConfiguration::Auto => {
                 let (level, idx_range) =
                     plot_vals.get_scaled_mipmap_levels(plots_width_pixels, (x_lower, x_higher));
@@ -68,12 +70,12 @@ fn plot_with_mipmapping(
     let (x_lower, x_higher) = x_range;
     // If the mipmap level is 0 or 1 plotting all data points is just as efficient.
     if mipmap_lvl < 2 {
-        plot_raw(plot_ui, plot_vals, (x_lower, x_higher));
+        plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
     } else {
         let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(mipmap_lvl);
         if plot_points_min.is_empty() {
             // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
-            plot_raw(plot_ui, plot_vals, (x_lower, x_higher));
+            plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
         } else {
             let (plot_points_min, plot_points_max) = match known_idx_range {
                 Some((start, end)) => {
@@ -155,7 +157,7 @@ fn plot_min_max_lines(
     plot_ui.line(line_max.width(line_width));
 }
 
-pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[usize]) {
+pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
     for plot_labels in plot_data
         .plot_labels()
         .iter()
@@ -173,10 +175,16 @@ pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_fil
     }
 }
 
-fn plot_raw(plot_ui: &mut egui_plot::PlotUi, plot_vals: &PlotValues, x_min_max_ext: (f64, f64)) {
+fn plot_raw(
+    plot_ui: &mut egui_plot::PlotUi,
+    plot_vals: &PlotValues,
+    line_width: f32,
+    x_min_max_ext: (f64, f64),
+) {
     let plot_points = plot_vals.get_raw();
     let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
     let line = Line::new(filtered_points)
+        .width(line_width)
         .name(plot_vals.label())
         .color(plot_vals.get_color())
         .highlight(plot_vals.get_highlight());

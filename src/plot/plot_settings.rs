@@ -43,6 +43,8 @@ impl PlotSettingsUi {
 
 #[derive(Default, PartialEq, Deserialize, Serialize)]
 pub struct PlotSettings {
+    // The ID to assign to the next loaded log
+    next_log_id: u16,
     /// Used for invalidating any cached values that determines plot layout etc.
     invalidate_plot: bool,
     visibility: PlotVisibilityConfig,
@@ -53,14 +55,14 @@ pub struct PlotSettings {
     // Plot names and whether or not they should be shown (painted)
     plot_name_filter: PlotNameFilter,
     ps_ui: PlotSettingsUi,
-    log_start_date_settings: Vec<LoadedLogSettings>,
+    loaded_log_settings: Vec<LoadedLogSettings>,
     mipmap_settings: MipMapSettings,
     apply_deletions: bool,
 }
 
 impl PlotSettings {
     pub fn show(&mut self, ui: &mut egui::Ui) {
-        if self.log_start_date_settings.is_empty() {
+        if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(Color32::RED));
         } else {
             self.show_loaded_files(ui);
@@ -112,7 +114,7 @@ impl PlotSettings {
     }
 
     fn show_loaded_files(&mut self, ui: &mut egui::Ui) {
-        let loaded_files_count = self.log_start_date_settings.len();
+        let loaded_files_count = self.loaded_log_settings.len();
         let visibility_icon = if self.ps_ui.show_loaded_logs {
             regular::EYE
         } else {
@@ -128,7 +130,7 @@ impl PlotSettings {
         if self.ps_ui.show_loaded_logs {
             // Only react on Escape input if no settings are currently open
             if ui.ctx().input(|i| i.key_pressed(Key::Escape))
-                && !self.log_start_date_settings.iter().any(|s| s.clicked)
+                && !self.loaded_log_settings.iter().any(|s| s.clicked())
             {
                 self.ps_ui.show_loaded_logs = false;
             }
@@ -137,17 +139,14 @@ impl PlotSettings {
                 .show(ui.ctx(), |ui| {
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         ui.horizontal_wrapped(|ui| {
-                            Self::ui_show_or_hide_all_buttons(
-                                ui,
-                                &mut self.log_start_date_settings,
-                            );
+                            Self::ui_show_or_hide_all_buttons(ui, &mut self.loaded_log_settings);
                         });
                         egui::Grid::new("log_settings_grid").show(ui, |ui| {
                             ui.label("");
                             ui.label("");
                             ui.label("");
                             let any_marked_for_deletion = self
-                                .log_start_date_settings
+                                .loaded_log_settings
                                 .iter()
                                 .any(|s| s.marked_for_deletion());
                             let apply_text = if any_marked_for_deletion {
@@ -163,7 +162,7 @@ impl PlotSettings {
                             }
 
                             ui.end_row();
-                            for settings in &mut self.log_start_date_settings {
+                            for settings in &mut self.loaded_log_settings {
                                 loaded_logs::log_date_settings_ui(ui, settings);
                                 ui.end_row();
                             }
@@ -255,22 +254,19 @@ impl PlotSettings {
     }
 
     /// Get the next ID for a loaded data format, used for when a new file is loaded and added to the collection of plot data and plot settings
-    pub fn next_log_id(&self) -> usize {
-        (self.total_loaded() + 1).into()
-    }
-
-    pub fn total_loaded(&self) -> u16 {
-        self.log_start_date_settings.len() as u16
+    pub fn next_log_id(&mut self) -> u16 {
+        self.next_log_id += 1;
+        self.next_log_id
     }
 
     pub fn add_log_setting(&mut self, log_settings: LoadedLogSettings) {
-        self.log_start_date_settings.push(log_settings);
+        self.loaded_log_settings.push(log_settings);
     }
 
     // The id filter specifies which plots belonging to which logs should not be painted on the plot ui.
-    pub fn log_id_filter(&self) -> Vec<usize> {
-        let mut log_id_filter: Vec<usize> = vec![];
-        for settings in &self.log_start_date_settings {
+    pub fn log_id_filter(&self) -> Vec<u16> {
+        let mut log_id_filter: Vec<u16> = vec![];
+        for settings in &self.loaded_log_settings {
             if !settings.show_log() {
                 log_id_filter.push(settings.log_id());
             }
@@ -279,25 +275,34 @@ impl PlotSettings {
     }
 
     fn update_plot_dates(&mut self, plots: &mut Plots) {
-        for settings in &mut self.log_start_date_settings {
+        for settings in &mut self.loaded_log_settings {
             date_settings::update_plot_dates(&mut self.invalidate_plot, plots, settings);
         }
     }
 
     fn set_highlighted(&self, plots: &mut Plots) {
-        let mut id_to_highlight = None;
-        for log_setting in &self.log_start_date_settings {
-            if log_setting.cursor_hovering_on() {
-                id_to_highlight = Some(log_setting.log_id());
+        // At most 2, since one can be open and another be hovered on but no more than that
+        // uses u16::MAX as a special value to signify `None` basically
+        let mut ids_to_highlight = [u16::MAX, u16::MAX];
+        for log_setting in &self.loaded_log_settings {
+            if ids_to_highlight[0] != u16::MAX && ids_to_highlight[1] != u16::MAX {
                 break;
+            }
+            if log_setting.cursor_hovering_on() || log_setting.clicked() {
+                // Could actually be made branchless but might compromise readability too much
+                if ids_to_highlight[0] == u16::MAX {
+                    ids_to_highlight[0] = log_setting.log_id();
+                } else {
+                    ids_to_highlight[1] = log_setting.log_id();
+                }
             }
         }
         let set_plot_highlight = |plot_data: &mut plot_util::PlotData| {
             for pd in plot_data.plots_as_mut() {
-                *pd.get_highlight_mut() = pd.log_id() == id_to_highlight.unwrap_or(usize::MAX);
+                *pd.get_highlight_mut() = ids_to_highlight.contains(&pd.log_id());
             }
             for pl in plot_data.plot_labels_as_mut() {
-                *pl.get_highlight_mut() = pl.log_id() == id_to_highlight.unwrap_or(usize::MAX);
+                *pl.get_highlight_mut() = ids_to_highlight.contains(&pl.log_id());
             }
         };
         set_plot_highlight(plots.percentage_mut());
@@ -308,8 +313,8 @@ impl PlotSettings {
     // Remove log settings and plots that match their ID if they are marked for deletion
     fn remove_if_marked_for_deletion(&mut self, plots: &mut Plots) {
         // Get the log IDs for settings marked for deletion
-        let log_ids_to_remove: Vec<usize> = self
-            .log_start_date_settings
+        let log_ids_to_remove: Vec<u16> = self
+            .loaded_log_settings
             .iter()
             .filter(|settings| settings.marked_for_deletion())
             .map(|settings| settings.log_id())
@@ -339,7 +344,7 @@ impl PlotSettings {
         remove_matching_plots(plots.thousands_mut());
 
         // Remove the settings marked for deletion
-        self.log_start_date_settings
+        self.loaded_log_settings
             .retain(|settings| !settings.marked_for_deletion());
 
         // Invalidate plot cache since we modified the data
