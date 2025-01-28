@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.6.4]
+
+### Added
+
+- Added product icon for windows
+
 ## [1.6.3]
 
 ### Changed
