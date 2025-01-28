@@ -13,6 +13,7 @@ upgrade-guid = "7063C05B-24FE-4CE5-A338-6D750F3F10CE"
 path-guid = "025605DB-83DB-4162-B505-26B36C02D0B9"
 license = false
 eula = false
+product-icon = "assets\favicon.ico"
 
 
 [workspace]
