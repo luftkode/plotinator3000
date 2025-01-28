@@ -33,7 +33,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
     };
     let ui_log_button = ui.button(log_button_text);
     if ui_log_button.clicked() {
-        loaded_log.clicked = !loaded_log.clicked;
+        loaded_log.toggle_clicked();
     }
     if ui_log_button.hovered() {
         ui_log_button.on_hover_text("Click to modify log settings");
@@ -65,7 +65,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
             .format("%Y-%m-%d %H:%M:%S%.f")
             .to_string();
     }
-    if loaded_log.clicked {
+    if loaded_log.clicked() {
         log_settings_window(ui, loaded_log, &log_name_date);
     }
 }
@@ -124,13 +124,13 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name
                     ui.label(settings.err_msg.clone());
                 }
                 if ui.button("Cancel").clicked() {
-                    settings.clicked = false;
+                    *settings.clicked_mut() = false;
                 }
             })
         });
 
     if !open || ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
-        settings.clicked = false;
+        *settings.clicked_mut() = false;
     }
 }
 

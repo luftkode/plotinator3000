@@ -130,7 +130,7 @@ impl PlotSettings {
         if self.ps_ui.show_loaded_logs {
             // Only react on Escape input if no settings are currently open
             if ui.ctx().input(|i| i.key_pressed(Key::Escape))
-                && !self.loaded_log_settings.iter().any(|s| s.clicked)
+                && !self.loaded_log_settings.iter().any(|s| s.clicked())
             {
                 self.ps_ui.show_loaded_logs = false;
             }
@@ -139,10 +139,7 @@ impl PlotSettings {
                 .show(ui.ctx(), |ui| {
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         ui.horizontal_wrapped(|ui| {
-                            Self::ui_show_or_hide_all_buttons(
-                                ui,
-                                &mut self.loaded_log_settings,
-                            );
+                            Self::ui_show_or_hide_all_buttons(ui, &mut self.loaded_log_settings);
                         });
                         egui::Grid::new("log_settings_grid").show(ui, |ui| {
                             ui.label("");
@@ -284,19 +281,28 @@ impl PlotSettings {
     }
 
     fn set_highlighted(&self, plots: &mut Plots) {
-        let mut id_to_highlight = None;
+        // At most 2, since one can be open and another be hovered on but no more than that
+        // uses u16::MAX as a special value to signify `None` basically
+        let mut ids_to_highlight = [u16::MAX, u16::MAX];
         for log_setting in &self.loaded_log_settings {
-            if log_setting.cursor_hovering_on() {
-                id_to_highlight = Some(log_setting.log_id());
+            if ids_to_highlight[0] != u16::MAX && ids_to_highlight[1] != u16::MAX {
                 break;
+            }
+            if log_setting.cursor_hovering_on() || log_setting.clicked() {
+                // Could actually be made branchless but might comprimise readability too much
+                if ids_to_highlight[0] == u16::MAX {
+                    ids_to_highlight[0] = log_setting.log_id();
+                } else {
+                    ids_to_highlight[1] = log_setting.log_id();
+                }
             }
         }
         let set_plot_highlight = |plot_data: &mut plot_util::PlotData| {
             for pd in plot_data.plots_as_mut() {
-                *pd.get_highlight_mut() = pd.log_id() == id_to_highlight.unwrap_or(u16::MAX);
+                *pd.get_highlight_mut() = ids_to_highlight.contains(&pd.log_id());
             }
             for pl in plot_data.plot_labels_as_mut() {
-                *pl.get_highlight_mut() = pl.log_id() == id_to_highlight.unwrap_or(u16::MAX);
+                *pl.get_highlight_mut() = ids_to_highlight.contains(&pl.log_id());
             }
         };
         set_plot_highlight(plots.percentage_mut());
