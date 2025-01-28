@@ -44,8 +44,7 @@ impl LoadedLogMetadata {
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoadedLogSettings {
-    //
-    log_id: usize,
+    log_id: u16,
     log_descriptive_name: String,
     pub original_start_date: DateTime<Utc>,
     start_date: DateTime<Utc>,
@@ -63,7 +62,7 @@ pub struct LoadedLogSettings {
 
 impl LoadedLogSettings {
     pub fn new(
-        log_id: usize,
+        log_id: u16,
         descriptive_name: String,
         start_date: DateTime<Utc>,
         log_metadata: Option<Vec<(String, String)>>,
@@ -110,7 +109,7 @@ impl LoadedLogSettings {
     }
 
     /// This is the ID that connects settings to plots
-    pub fn log_id(&self) -> usize {
+    pub fn log_id(&self) -> u16 {
         self.log_id
     }
 

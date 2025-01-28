@@ -155,7 +155,7 @@ fn plot_min_max_lines(
     plot_ui.line(line_max.width(line_width));
 }
 
-pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[usize]) {
+pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
     for plot_labels in plot_data
         .plot_labels()
         .iter()
