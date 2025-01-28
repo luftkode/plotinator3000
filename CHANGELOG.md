@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Click delta now needs the `shift` modifier to place a point for measuring distance between points
+- Loaded log IDs are now guaranteed to be unique
+- When a logs settings/metadata window is open, the plots from that log is highlighted
+- Allow highlighting of plots from 2 logs by having the settings/metadata from one log open and hovering on another ones name
+
+### Fixed
+
+- Line width would not apply when displaying plots where down sampling was manually disabled
 
 ## [1.6.2]
 
