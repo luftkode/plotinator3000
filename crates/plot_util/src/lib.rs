@@ -29,7 +29,7 @@ pub fn plot_lines<'pv>(
     for plot_vals in plots {
         match mipmap_cfg {
             MipMapConfiguration::Disabled => {
-                plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher))
+                plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
             }
             MipMapConfiguration::Auto => {
                 let (level, idx_range) =

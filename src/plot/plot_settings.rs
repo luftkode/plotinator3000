@@ -289,7 +289,7 @@ impl PlotSettings {
                 break;
             }
             if log_setting.cursor_hovering_on() || log_setting.clicked() {
-                // Could actually be made branchless but might comprimise readability too much
+                // Could actually be made branchless but might compromise readability too much
                 if ids_to_highlight[0] == u16::MAX {
                     ids_to_highlight[0] = log_setting.log_id();
                 } else {
