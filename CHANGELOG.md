@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Click delta now needs the `shift` modifier to place a point for measuring distance between points
+
 ## [1.6.2]
 
 ### Changed

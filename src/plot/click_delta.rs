@@ -21,7 +21,6 @@ impl ClickDelta {
         if self.plot_type.is_some_and(|pt| pt == plot_type) {
             if self.second_click.is_some() {
                 self.replace_first_click([click.x, click.y]);
-                self.first_click = None;
                 self.second_click = None;
             } else if self.first_click.is_some() {
                 self.replace_second_click([click.x, click.y]);
@@ -33,6 +32,12 @@ impl ClickDelta {
             self.second_click = None;
             self.replace_first_click([click.x, click.y]);
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.plot_type = None;
+        self.first_click = None;
+        self.second_click = None;
     }
 
     pub fn get_delta_text(a: [f64; 2], b: [f64; 2], plot_bounds: PlotBounds) -> egui_plot::Text {

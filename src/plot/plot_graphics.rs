@@ -112,8 +112,12 @@ fn fill_plots(
         ui.show(gui, |plot_ui| {
             let resp = plot_ui.response();
             if resp.clicked() {
-                if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
-                    click_delta.set_next_click(pointer_coordinate, ptype);
+                if plot_ui.ctx().input(|i| i.modifiers.shift) {
+                    if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
+                        click_delta.set_next_click(pointer_coordinate, ptype);
+                    }
+                } else {
+                    click_delta.reset();
                 }
             }
             click_delta.ui(plot_ui, ptype);
