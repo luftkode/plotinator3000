@@ -76,7 +76,7 @@ jobs:
 
       - name: Install HDF5
         shell: bash
-        run: just install-hdf5-headers
+        run: just init::install-hdf5-headers
       - name: Run tests
         run: cargo nextest run --workspace --profile ci
 
