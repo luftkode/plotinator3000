@@ -30,6 +30,7 @@ msi-install-hdf5-headers:
     unzip hdf5.zip
     # Find and install MSI
     MSI_PATH=$(find . -name "HDF5-${VERSION}-win64.msi" | head -n 1)
+    MSI_PATH=$(realpath "${MSI_PATH}")
     if [[ "${GITHUB_ACTIONS}" == "true" ]]; then
         just init::set-github-hdf5-env-vars "${VERSION}" "${MSI_PATH}"
     fi
