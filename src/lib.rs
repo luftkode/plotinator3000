@@ -1,10 +1,9 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 use std::sync::OnceLock;
-use eframe::App;
-pub use app::App;
 use semver::Version;
 mod app;
+use crate::app::App;
 
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 pub const APP_OWNER: &str = "luftkode";
@@ -73,7 +72,7 @@ pub fn run_app() -> eframe::Result {
 
 // When compiling to web using trunk:
 #[cfg(target_arch = "wasm32")]
-pub fn run_app() {
+pub fn run_app() -> eframe::Result {
     use eframe::wasm_bindgen::JsCast as _;
     // Redirect `log` message to `console.log` and friends:
     _ = eframe::WebLogger::init(log::LevelFilter::Debug).ok();
@@ -115,4 +114,5 @@ pub fn run_app() {
             }
         }
     });
+    Ok(())
 }
