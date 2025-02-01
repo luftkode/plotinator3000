@@ -83,14 +83,8 @@ jobs:
       - name: Run MSI installer (windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ls .\just\hdf
-
-      - name: Run MSI installer (windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        working-directory: just\hdf
         run: |
-          ls
+          cd just\hdf
           msiexec /i HDF5-1.14.0-win64.msi /quiet /qn /norestart
 
       - name: Run tests
