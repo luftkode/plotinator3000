@@ -176,12 +176,12 @@ jobs:
       - name: Building ${{ matrix.TARGET }}
         run: echo "${{ matrix.TARGET }}"
 
-      - uses: actions/checkout@master
-
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.TARGET }}
 
+      - uses: extractions/setup-just@v2
       - uses: Swatinem/rust-cache@v2
         with:
           # this is required to avoid failures due to caching of artifacts for different architectures
@@ -189,6 +189,17 @@ jobs:
           # The cache checks the rustc host which doesn't record us targeting
           # different architectures (and native) with cross on the generic ubuntu-latest.
           key: ${{ matrix.TARGET }}
+
+      - name: Install HDF5
+        shell: bash
+        run: just init::install-hdf5-headers
+
+      - name: Run MSI installer (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd just\hdf
+          msiexec /i HDF5-1.14.0-win64.msi /quiet /qn /norestart
 
       - if: ${{ !matrix.cross }}
         name: Cargo Build

@@ -33,7 +33,7 @@ msi-install-hdf5-headers:
     fi
 
 [windows]
-set-github-hdf5-env-vars VERSION HDF5_MSI_INSTALLER_PATH:
+set-github-hdf5-env-vars VERSION:
     echo "HDF5_DIR=C:\\Program Files\\HDF_Group\\HDF5\\{{VERSION}}" >> $GITHUB_ENV
     echo "C:\\Program Files\\HDF_Group\\HDF5\\{{VERSION}}\\bin" >> $GITHUB_PATH
 
