@@ -1,7 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
-use std::sync::OnceLock;
 use semver::Version;
+use std::sync::OnceLock;
 mod app;
 use crate::app::App;
 
@@ -58,8 +58,7 @@ pub fn run_app() -> eframe::Result {
             .with_min_inner_size([100.0, 80.0])
             .with_drag_and_drop(true)
             .with_icon(
-                eframe::icon_data::from_png_bytes(crate::APP_ICON)
-                    .expect("Failed to load icon"),
+                eframe::icon_data::from_png_bytes(crate::APP_ICON).expect("Failed to load icon"),
             ),
         ..Default::default()
     };
