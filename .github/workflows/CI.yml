@@ -83,12 +83,23 @@ jobs:
 
       - name: Install HDF5 (Windows)
         if: ${{ runner.os == 'Windows' }}
+        shell: bash
         run: |
-          git clone https://github.com/microsoft/vcpkg.git
-          cd vcpkg
-          ./bootstrap-vcpkg.bat -disableMetrics
-          ./vcpkg install hdf5:x64-windows
-          echo "VCPKG_ROOT=$(pwd)" >> $GITHUB_ENV
+          set -euo pipefail
+          VERSION="1.14.0"
+          DL_URL="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.14/hdf5-${VERSION}/bin/windows/hdf5-${VERSION}-Std-win10_64-vs16.zip"
+
+          # Download and extract HDF5
+          wget -q -O hdf5.zip "${DL_URL}"
+          7z x hdf5.zip -y
+
+          # Find and install MSI
+          MSI_PATH=$(find . -name "HDF5-${VERSION}-win64.msi" | head -n 1)
+          msiexec /i "${MSI_PATH}" /quiet /qn /norestart
+
+          # Set environment variables
+          echo "HDF5_DIR=C:\\Program Files\\HDF_Group\\HDF5\\${VERSION}" >> $GITHUB_ENV
+          echo "C:\\Program Files\\HDF_Group\\HDF5\\${VERSION}\\bin" >> $GITHUB_PATH
       - name: Run tests
         run: cargo nextest run --workspace --profile ci
 
