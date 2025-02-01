@@ -71,35 +71,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@nextest
+      - uses: extractions/setup-just@v2
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install HDF5 (Linux)
-        if: ${{ runner.os == 'Linux' }}
-        run: sudo apt-get update && sudo apt-get install -y libhdf5-dev
-
-      - name: Install HDF5 (macOS)
-        if: ${{ runner.os == 'macOS' }}
-        run: brew install hdf5
-
-      - name: Install HDF5 (Windows)
-        if: ${{ runner.os == 'Windows' }}
+      - name: Install HDF5
         shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="1.14.0"
-          DL_URL="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.14/hdf5-${VERSION}/bin/windows/hdf5-${VERSION}-Std-win10_64-vs16.zip"
-
-          # Download and extract HDF5
-          wget -q -O hdf5.zip "${DL_URL}"
-          7z x hdf5.zip -y
-
-          # Find and install MSI
-          MSI_PATH=$(find . -name "HDF5-${VERSION}-win64.msi" | head -n 1)
-          msiexec /i "${MSI_PATH}" /quiet /qn /norestart
-
-          # Set environment variables
-          echo "HDF5_DIR=C:\\Program Files\\HDF_Group\\HDF5\\${VERSION}" >> $GITHUB_ENV
-          echo "C:\\Program Files\\HDF_Group\\HDF5\\${VERSION}\\bin" >> $GITHUB_PATH
+        run: just install-hdf5-headers
       - name: Run tests
         run: cargo nextest run --workspace --profile ci
 
