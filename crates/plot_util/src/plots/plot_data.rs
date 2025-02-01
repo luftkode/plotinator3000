@@ -43,7 +43,7 @@ impl PlotData {
     }
 
     /// Adds a plot to the [`PlotData`] collection if another plot with the same label doesn't already exist
-    pub fn add_plot_if_not_exists(&mut self, raw_plot: &RawPlot, log_id: usize) {
+    pub fn add_plot_if_not_exists(&mut self, raw_plot: &RawPlot, log_id: u16) {
         let mut plot_label = String::with_capacity(30); // Approx. enough to not reallocate
         plot_label.push('#');
         plot_label.push_str(&log_id.to_string());
@@ -77,10 +77,11 @@ pub struct PlotValues {
     mipmap_max: MipMap2D<f64>,
     mipmap_min: MipMap2D<f64>,
     name: String,
-    log_id: usize,
+    log_id: u16,
     // Label = "<name> #<log_id>"
     label: String,
     color: Color32,
+    highlight: bool,
 }
 
 type PointList<'pl> = &'pl [[f64; 2]];
@@ -89,7 +90,7 @@ impl PlotValues {
     // Don't mipmap/downsample to more than this amount of elements
     const MIPMAP_MIN_ELEMENTS: usize = 512;
 
-    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: usize) -> Self {
+    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: u16) -> Self {
         let label = format!("{name} #{log_id}");
         Self {
             mipmap_max: MipMap2D::without_base(
@@ -108,6 +109,7 @@ impl PlotValues {
             label,
             // Color32::TRANSPARENT means we auto assign one
             color: Color32::TRANSPARENT,
+            highlight: false,
         }
     }
 
@@ -190,7 +192,7 @@ impl PlotValues {
     }
 
     /// The ID of the log that the plot belongs to
-    pub fn log_id(&self) -> usize {
+    pub fn log_id(&self) -> u16 {
         self.log_id
     }
 
@@ -198,20 +200,32 @@ impl PlotValues {
     pub fn label(&self) -> &str {
         &self.label
     }
+
+    /// Whether or not the line should be highlighted
+    pub fn get_highlight(&self) -> bool {
+        self.highlight
+    }
+
+    /// Mutable reference to whether or not the line should be highlighted
+    pub fn get_highlight_mut(&mut self) -> &mut bool {
+        &mut self.highlight
+    }
 }
 
 /// Represents all the plotlabels from a given log
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct StoredPlotLabels {
-    pub log_id: usize,
+    pub log_id: u16,
     pub label_points: Vec<PlotLabel>,
+    pub highlight: bool,
 }
 
 impl StoredPlotLabels {
-    pub fn new(label_points: Vec<([f64; 2], String)>, log_id: usize) -> Self {
+    pub fn new(label_points: Vec<([f64; 2], String)>, log_id: u16) -> Self {
         Self {
             label_points: label_points.into_iter().map(PlotLabel::from).collect(),
             log_id,
+            highlight: false,
         }
     }
 
@@ -229,8 +243,18 @@ impl StoredPlotLabels {
         self.label_points.iter_mut().map(|label| &mut label.point)
     }
 
-    pub fn log_id(&self) -> usize {
+    pub fn log_id(&self) -> u16 {
         self.log_id
+    }
+
+    /// Whether or not the labels should be highlighted
+    pub fn get_highlight(&self) -> bool {
+        self.highlight
+    }
+
+    /// Mutable reference to whether or not the labels should be highlighted
+    pub fn get_highlight_mut(&mut self) -> &mut bool {
+        &mut self.highlight
     }
 }
 

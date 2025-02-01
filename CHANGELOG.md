@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.6.4]
+
+### Added
+
+- Added product icon for windows
+
+## [1.6.3]
+
+### Changed
+
+- Click delta now needs the `shift` modifier to place a point for measuring distance between points
+- Loaded log IDs are now guaranteed to be unique
+- When a logs settings/metadata window is open, the plots from that log is highlighted
+- Allow highlighting of plots from 2 logs by having the settings/metadata from one log open and hovering on another ones name
+
+### Fixed
+
+- Line width would not apply when displaying plots where down sampling was manually disabled
+
+## [1.6.2]
+
+### Changed
+
+- MBED motor log `runtime` counter is displayed in hours instead of seconds
+
+### Dependencies
+
+- `getset`: 0.1.3 → 0.1.4 ([#166](https://github.com/luftkode/plotinator3000/pull/166))
+
+## [1.6.1]
+
+### Changed
+
+- Click delta now shows days/hours/minutes/seconds/milliseconds depending on the magnitude of the distance between the points
+- Click delta text offset increased slightly such that it is more likely to not intersect with the line
+- Highlighting plot lines from a given log now also applies if other elements on the line with the given loaded log is hovered
+
+## [1.6.0]
+
+### Added
+
+- View distance between specific points on the plot by clicking on them
+
+### Fixed
+
+- Font size now persists between sessions
+
+## [1.5.1]
+
+### Fixed
+
+- Fix bad `u8` cast for `vbat`. Mbed v4 status log had changes to the log entries and still contained the bad cast that led to `vbat` losing float precision.
+
+## [1.5.0]
+
+### Added
+
+- Support for MBED v4 logs
+
+### Changed
+
+- To reduce clotter, grids are now off by default
+
+### Dependencies
+
+- Update all dependencies to latest
+- `cargo-bins/cargo-binstall`: 1.10.20 → 1.10.22 ([#161](https://github.com/luftkode/plotinator3000/pull/161))
+
+## [1.4.0]
+
+### Added
+
+- Allow deleting individual loaded files without removing everything at once.
+- Hovering the cursor over a loaded log will highlight the plots and plot labels that came from that log.
+
+## [1.3.8]
+
+### Fix
+
+- When the update process requires admin (on windows) it now shows a prompt and relaunches as admin if the users chooses to continue.
+
+### Changed
+
+- Shows error context if errors occur during update process.
+- No longer installs the updater binary (as the main binary handles the update process)
+
 ## [1.3.7]
 
 ### Fix

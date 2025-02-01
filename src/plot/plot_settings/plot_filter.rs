@@ -29,7 +29,7 @@ impl PlotNameFilter {
         fn_show_id: IF,
     ) -> impl Iterator<Item = &'pv PlotValues>
     where
-        IF: Fn(usize) -> bool,
+        IF: Fn(u16) -> bool,
     {
         plot_data.iter().filter(move |pv| {
             self.plots

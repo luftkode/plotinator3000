@@ -15,8 +15,11 @@ use crate::{updater::remove_disable_update_file, APP_NAME};
 /// `false` if they are not (user clicked `continue`)
 pub(crate) fn show_simple_updates_are_disabled_window() -> eframe::Result<bool> {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([400.0, 300.0]),
-        //centered: true,
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([400.0, 300.0])
+            .with_icon(
+                eframe::icon_data::from_png_bytes(crate::APP_ICON).expect("Failed to load icon"),
+            ),
         ..Default::default()
     };
 

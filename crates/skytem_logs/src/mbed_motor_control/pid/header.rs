@@ -98,7 +98,7 @@ impl PidLogHeader {
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
-                    "Unsupported version",
+                    format!("Unsupported version: {version}"),
                 ));
             }
         };

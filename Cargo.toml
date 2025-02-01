@@ -2,7 +2,7 @@
 name = "plotinator3000"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.3.7"
+version = "1.6.4"
 edition = "2021"
 repository = "https://github.com/luftkode/plotinator3000"
 homepage = "https://github.com/luftkode/plotinator3000"
@@ -13,6 +13,7 @@ upgrade-guid = "7063C05B-24FE-4CE5-A338-6D750F3F10CE"
 path-guid = "025605DB-83DB-4162-B505-26B36C02D0B9"
 license = false
 eula = false
+product-icon = "assets/favicon.ico"
 
 
 [workspace]
@@ -28,12 +29,13 @@ strum = "0.26.3"
 strum_macros = "0.26.3"
 byteorder = "1.5.0"
 chrono = { version = "0.4.39", features = ["serde"] }
-getset = "0.1.3"
+getset = "0.1.4"
 derive_more = { version = "1", features = ["full"] }
 num-traits = "0.2.19"
 toml = "0.8.19"
 thiserror = "2.0"
 semver = "1.0.24"
+elevated-command = "1.1"
 
 # Dev dependencies
 testresult = "0.4.1"
@@ -60,7 +62,7 @@ eframe = { version = "0.30", default-features = false, features = [
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
     "wayland",
-    "x11",
+    "x11"
 ] }
 rfd = "0.15"
 egui-phosphor = "0.8.0"
@@ -88,6 +90,10 @@ axoupdater = { version = "0.9.0", features = ["blocking"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"
+
+# windows
+[target.'cfg(target_os = "windows")'.dependencies]
+elevated-command.workspace = true
 
 [profile.release]
 opt-level = 3
