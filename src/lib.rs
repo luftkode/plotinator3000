@@ -1,7 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 use std::sync::OnceLock;
-
+use eframe::App;
 pub use app::App;
 use semver::Version;
 mod app;
@@ -40,7 +40,7 @@ pub fn run_app() -> eframe::Result {
     env_logger::init();
 
     #[cfg(feature = "selfupdater")]
-    match plotinator3000::updater::update_if_applicable() {
+    match crate::updater::update_if_applicable() {
         Ok(needs_restart) => {
             if needs_restart {
                 return Ok(());
@@ -59,7 +59,7 @@ pub fn run_app() -> eframe::Result {
             .with_min_inner_size([100.0, 80.0])
             .with_drag_and_drop(true)
             .with_icon(
-                eframe::icon_data::from_png_bytes(plotinator3000::APP_ICON)
+                eframe::icon_data::from_png_bytes(crate::APP_ICON)
                     .expect("Failed to load icon"),
             ),
         ..Default::default()
@@ -67,7 +67,7 @@ pub fn run_app() -> eframe::Result {
     eframe::run_native(
         &format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")),
         native_options,
-        Box::new(|cc| Ok(Box::new(plotinator3000::App::new(cc)))),
+        Box::new(|cc| Ok(Box::new(App::new(cc)))),
     )
 }
 
@@ -96,7 +96,7 @@ pub fn run_app() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(plotinator3000::App::new(cc)))),
+                Box::new(|cc| Ok(Box::new(App::new(cc)))),
             )
             .await;
 
