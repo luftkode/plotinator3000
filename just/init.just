@@ -20,9 +20,9 @@ apt-install-hdf5-headers:
     sudo apt install libhdf5-dev
 
 [windows]
-msi-install-hdf5-headers RUNS_ON="native":
+msi-install-hdf5-headers:
     #!/usr/bin/env bash
-    set -euo pipefail
+    set -eo pipefail
     VERSION="1.14.0"
     DL_URL="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.14/hdf5-${VERSION}/bin/windows/hdf5-${VERSION}-Std-win10_64-vs16.zip"
     # Download and extract HDF5
@@ -31,7 +31,7 @@ msi-install-hdf5-headers RUNS_ON="native":
     # Find and install MSI
     MSI_PATH=$(find . -name "HDF5-${VERSION}-win64.msi" | head -n 1)
     msiexec /i "${MSI_PATH}" /quiet /qn /norestart
-    if [[ {{RUNS_ON}} == "GITHUB" ]]; then
+    if [[ "${GITHUB_ACTIONS}" == "true" ]]; then
         just set-github-hdf5-env-vars ${VERSION} 
     fi
 
