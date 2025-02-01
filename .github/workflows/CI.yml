@@ -83,7 +83,7 @@ jobs:
       - name: Run MSI installer (windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: just run-msi-installer "${HDF5_MSI_INSTALLER_PATH}"
+        run: just init::run-msi-installer "${HDF5_MSI_INSTALLER_PATH}"
 
       - name: Run tests
         run: cargo nextest run --workspace --profile ci
