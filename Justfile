@@ -1,5 +1,6 @@
 import 'just/default_cmd.just'
 mod ci 'just/ci.just'
+mod init 'just/init.just'
 
 PROJECT_NAME := "plotinator3000"
 
@@ -16,10 +17,6 @@ export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATE
 
 @_default:
     just --list --no-aliases
-
-[group("Init")]
-init: install-devtools
-    echo "Run 'install-extra-devtools' for some adittional productivity tools that fit into the existent workflow"
 
 [doc("Checks both native and wasm"), no-exit-message]
 check-all: check check-wasm
@@ -81,25 +78,6 @@ update:
 [group("Dependencies"), no-exit-message]
 audit *ARGS:
     cargo audit {{ ARGS }}
-
-# Trunk is used to serve the app with a webserver, cargo-dist is used to generate and update workflows for distributing installers for various platforms
-[doc("Install the required tools for performing all dev tasks for the project")]
-install-devtools:
-    cargo install trunk --locked
-    cargo install cargo-dist --locked
-    cargo install typos-cli --locked
-    cargo install cargo-audit --locked
-
-# Install nice-to-have devtools
-[group("Init")]
-install-extra-devtools:
-    cargo install cargo-nextest --locked
-    cargo install cargo-limit --locked
-    cargo install bacon --locked
-
-[group("Init")]
-apt-install-hdf5-header:
-    sudo apt install libhdf5-dev
 
 # Requires firebase CLI and access to MKI firebase account
 [group("Web")]
