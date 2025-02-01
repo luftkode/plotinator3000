@@ -17,6 +17,8 @@ env:
   RUSTDOCFLAGS: -D warnings
   RUST_BACKTRACE: 1
   RUST_LOG: debug
+  JUST_VERBOSE: 1
+  JUST_COLOR: always
 
 jobs:
   check:
@@ -77,6 +79,12 @@ jobs:
       - name: Install HDF5
         shell: bash
         run: just init::install-hdf5-headers
+
+      - name: Run MSI installer (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: just run-msi-installer "${HDF5_MSI_INSTALLER_PATH}"
+
       - name: Run tests
         run: cargo nextest run --workspace --profile ci
 
