@@ -121,6 +121,7 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install libhdf5-dev
       - name: Lint native
         run: cargo clippy --workspace --all-features -- -D warnings -W clippy::all
       - name: Lint WASM
