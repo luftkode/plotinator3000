@@ -27,7 +27,7 @@ msi-install-hdf5-headers:
     DL_URL="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.14/hdf5-${VERSION}/bin/windows/hdf5-${VERSION}-Std-win10_64-vs16.zip"
     # Download and extract HDF5
     curl -L -o hdf5.zip "${DL_URL}"
-    7z x hdf5.zip -y
+    unzip hdf5.zip
     # Find and install MSI
     MSI_PATH=$(find . -name "HDF5-${VERSION}-win64.msi" | head -n 1)
     msiexec /i "${MSI_PATH}" /quiet /qn /norestart
