@@ -83,7 +83,11 @@ jobs:
       - name: Run MSI installer (windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: msiexec /i .\just\hdf\HDF5-1.14.0-win64.msi /quiet /qn /norestart
+        run: |
+          ls
+          ls just
+          ls .\just\hdf
+          msiexec /i .\just\hdf\HDF5-1.14.0-win64.msi /quiet /qn /norestart
 
       - name: Run tests
         run: cargo nextest run --workspace --profile ci
