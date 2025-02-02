@@ -273,6 +273,7 @@ mod tests {
     use std::fs::{self, File};
     use testresult::TestResult;
 
+    use crate::test_util::example_mbed_logs::MBED_MOTOR_CONTROL_PID_V1;
     const TEST_DATA_V1: &str =
         "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
     const TEST_DATA_V2: &str =

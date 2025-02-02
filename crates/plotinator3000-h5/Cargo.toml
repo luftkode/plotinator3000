@@ -1,0 +1,22 @@
+[package]
+name = "plotinator3000-h5"
+description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
+authors = ["SkyTEM Surveys", "Marc Beck König"]
+version = "1.6.4"
+edition = "2021"
+repository = "https://github.com/luftkode/plotinator3000"
+homepage = "https://github.com/luftkode/plotinator3000"
+license = "MIT OR Apache-2.0"
+
+[package.metadata.wix]
+upgrade-guid = "F0BD0082-87A7-43DA-930A-6CFC1B3BCC52"
+path-guid = "04977CE9-B016-4331-8DA5-FCD7DC6D9BE0"
+license = false
+eula = false
+
+
+[dependencies]
+plotinator-lib = { workspace = true, features = ["selfupdater", "hdf"] }
+
+[lints]
+workspace = true

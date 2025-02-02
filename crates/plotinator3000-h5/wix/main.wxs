@@ -60,8 +60,8 @@
 
     <Product
         Id='*'
-        Name='plotinator3000'
-        UpgradeCode='7063C05B-24FE-4CE5-A338-6D750F3F10CE'
+        Name='plotinator3000-h5'
+        UpgradeCode='F0BD0082-87A7-43DA-930A-6CFC1B3BCC52'
         Manufacturer='SkyTEM Surveys; Marc Beck König'
         Language='1033'
         Codepage='1252'
@@ -83,11 +83,11 @@
             DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.'/>
 
         <Media Id='1' Cabinet='media1.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1'/>
-        <Property Id='DiskPrompt' Value='plotinator3000 Installation'/>
+        <Property Id='DiskPrompt' Value='plotinator3000-h5 Installation'/>
 
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
-                <Directory Id='APPLICATIONFOLDER' Name='plotinator3000'>
+                <Directory Id='APPLICATIONFOLDER' Name='plotinator3000-h5'>
                     
                     <!--
                       Enabling the license sidecar file in the installer is a four step process:
@@ -110,7 +110,7 @@
                     -->
 
                     <Directory Id='Bin' Name='bin'>
-                        <Component Id='Path' Guid='025605DB-83DB-4162-B505-26B36C02D0B9' KeyPath='yes'>
+                        <Component Id='Path' Guid='04977CE9-B016-4331-8DA5-FCD7DC6D9BE0' KeyPath='yes'>
                             <Environment
                                 Id='PATH'
                                 Name='PATH'
@@ -123,14 +123,6 @@
                         <Component Id='binary0' Guid='*'>
                             <File
                                 Id='exe0'
-                                Name='plotinator3000.exe'
-                                DiskId='1'
-                                Source='$(var.CargoTargetBinDir)\plotinator3000.exe'
-                                KeyPath='yes'/>
-                        </Component>
-                        <Component Id='binary1' Guid='*'>
-                            <File
-                                Id='exe1'
                                 Name='plotinator3000-h5.exe'
                                 DiskId='1'
                                 Source='$(var.CargoTargetBinDir)\plotinator3000-h5.exe'
@@ -158,7 +150,6 @@
             <!--<ComponentRef Id='License'/>-->
 
             <ComponentRef Id='binary0'/>
-            <ComponentRef Id='binary1'/>
 
             <Feature
                 Id='Environment'
@@ -172,14 +163,16 @@
 
         <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize'/>
 
-        <!--
-          Disabling the custom product icon for the application in the
-          Add/Remove Programs control panel requires commenting out or
-          removing the following `Icon` and `Property` tags.
-        -->
-        <Icon Id='ProductICO' SourceFile='assets/favicon.ico'/>
-        <Property Id='ARPPRODUCTICON' Value='ProductICO' />
         
+        <!--
+          Uncomment the following `Icon` and `Property` tags to change the product icon.
+
+          The product icon is the graphic that appears in the Add/Remove
+          Programs control panel for the application.
+        -->
+        <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
+        <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
+
         <Property Id='ARPHELPLINK' Value='https://github.com/luftkode/plotinator3000'/>
         
         <UI>
