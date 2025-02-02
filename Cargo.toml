@@ -1,41 +1,35 @@
-[package]
-name = "plotinator3000"
-description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
-authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.6.4"
-edition = "2021"
-repository = "https://github.com/luftkode/plotinator3000"
-homepage = "https://github.com/luftkode/plotinator3000"
-license = "MIT OR Apache-2.0"
-
-[[bin]]
-name = "plotinator3000"
-path = "src/main.rs"
-required-features = ["selfupdater"]
-
-[[bin]]
-name = "plotinator3000-h5"
-path = "src/main_h5.rs"
-required-features = ["hdf"]
-
-[features]
-default = ["selfupdater"]
-hdf = ["skytem_hdf"]
-selfupdater = []
-
-[package.metadata.wix]
-upgrade-guid = "7063C05B-24FE-4CE5-A338-6D750F3F10CE"
-path-guid = "025605DB-83DB-4162-B505-26B36C02D0B9"
-license = false
-eula = false
-product-icon = "assets/favicon.ico"
-
 [workspace]
 members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "1.6.4"
+authors = ["SkyTEM Surveys", "Marc Beck König"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
+homepage = "https://github.com/luftkode/plotinator3000"
+repository = "https://github.com/luftkode/plotinator3000"
 
 [workspace.dependencies]
+plotinator-lib = { version = "*", path = "crates/plotinator-lib" }
+skytem_logs = { version = "*", path = "crates/skytem_logs" }
+log_if = { version = "*", path = "crates/log_if" }
+plot_util = { version = "*", path = "crates/plot_util" }
+skytem_hdf = { version = "*", path = "crates/skytem_hdf" }
+eframe = { version = "0.30", default-features = false, features = [
+    "default_fonts", # Embed the default egui fonts.
+    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+    "persistence",   # Enable restoring app state when restarting the app.
+    "wayland",
+    "x11"
+] }
 egui = { version = "0.30", features = ["rayon"] }
 egui_plot = { version = "0.30", features = ["serde"] }
+rfd = "0.15"
+egui-phosphor = "0.8.0"
+egui-notify = "0.18.0"
+tokio = "1.43.0"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde-big-array = "0.5.1"
@@ -57,54 +51,6 @@ pretty_assertions = "1.4.1"
 tempfile = "3.15.0"
 reqwest = "0.12.12"
 
-[dependencies]
-skytem_logs = { version = "*", path = "crates/skytem_logs" }
-log_if = { version = "*", path = "crates/log_if" }
-plot_util = { version = "*", path = "crates/plot_util" }
-skytem_hdf = { version = "*", path = "crates/skytem_hdf", optional = true }
-egui_plot.workspace = true
-log.workspace = true
-serde.workspace = true
-strum.workspace = true
-strum_macros.workspace = true
-chrono.workspace = true
-getset.workspace = true
-semver.workspace = true
-egui.workspace = true
-eframe = { version = "0.30", default-features = false, features = [
-    "default_fonts", # Embed the default egui fonts.
-    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
-    "persistence",   # Enable restoring app state when restarting the app.
-    "wayland",
-    "x11"
-] }
-rfd = "0.15"
-egui-phosphor = "0.8.0"
-egui-notify = "0.18.0"
-tokio = "1.43.0"
-
-[dev-dependencies]
-testresult.workspace = true
-tempfile.workspace = true
-reqwest.workspace = true
-
-
-# native:
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.11"
-zip = "2.2.2"
-axoupdater = { version = "0.9.0", features = ["blocking"] }
-
-
-# web:
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures = "0.4"
-web-sys = "0.3.70"
-
-# windows
-[target.'cfg(target_os = "windows")'.dependencies]
-elevated-command.workspace = true
-
 [profile.release]
 opt-level = 3
 debug = false
@@ -120,9 +66,6 @@ opt-level = 2
 # The profile that 'cargo dist' will build with
 [profile.dist]
 inherits = "release"
-
-[lints]
-workspace = true
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"

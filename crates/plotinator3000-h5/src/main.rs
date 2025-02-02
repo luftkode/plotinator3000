@@ -1,6 +1,6 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-fn main() -> eframe::Result {
-    plotinator3000::run_app()
+fn main() {
+    plotinator_lib::run_app().expect("Plotinator3000 failed");
 }

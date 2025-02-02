@@ -3053,7 +3053,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "plotinator3000"
+name = "plotinator-lib"
 version = "1.6.4"
 dependencies = [
  "axoupdater",
@@ -3083,6 +3083,20 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "zip",
+]
+
+[[package]]
+name = "plotinator3000"
+version = "1.6.4"
+dependencies = [
+ "plotinator-lib",
+]
+
+[[package]]
+name = "plotinator3000-h5"
+version = "1.6.4"
+dependencies = [
+ "plotinator-lib",
 ]
 
 [[package]]

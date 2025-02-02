@@ -9,7 +9,7 @@ pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 pub const APP_OWNER: &str = "luftkode";
 
 #[cfg(not(target_arch = "wasm32"))]
-pub const APP_ICON: &[u8] = include_bytes!("../assets/skytem-icon-256.png");
+pub const APP_ICON: &[u8] = include_bytes!("../../../assets/skytem-icon-256.png");
 
 pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
 pub const APP_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
