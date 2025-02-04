@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `eframe`: 0.30.0 → 0.31.0 ([#179](https://github.com/luftkode/plotinator3000/pull/179))
+- `tempfile`: 3.15.0 → 3.16.0 ([#179](https://github.com/luftkode/plotinator3000/pull/179))
+
 ## [1.6.4]
 
 ### Added
