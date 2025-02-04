@@ -1,0 +1,12 @@
+- name: Install Just
+  uses: extractions/setup-just@v2
+- name: Install HDF5
+  shell: bash
+  run: just init::install-hdf5-headers
+
+- name: Run MSI installer (windows)
+  if: runner.os == 'Windows'
+  shell: pwsh
+  run: |
+    cd just\hdf
+    msiexec /i HDF5-1.14.0-win64.msi /quiet /qn /norestart
