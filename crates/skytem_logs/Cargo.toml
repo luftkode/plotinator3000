@@ -20,7 +20,5 @@ getset.workspace = true
 derive_more.workspace = true
 log.workspace = true
 thiserror.workspace = true
-
-
-[dev-dependencies]
+paste.workspace = true
 testresult.workspace = true

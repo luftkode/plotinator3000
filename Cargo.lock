@@ -3839,6 +3839,7 @@ dependencies = [
  "getset",
  "log",
  "log_if",
+ "paste",
  "plot_util",
  "serde",
  "serde-big-array",

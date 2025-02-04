@@ -7,6 +7,8 @@ pub mod mbed_motor_control;
 pub mod navsys;
 pub mod util;
 
+pub mod test_util;
+
 /// Parse the unique description string from a 128-byte array
 ///
 /// A log header has a unique description, e.g. `MBED-MOTOR-CONTROL-STATUS-LOG`

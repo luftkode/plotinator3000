@@ -163,19 +163,13 @@ impl fmt::Display for StatusLogHeaderV3 {
 
 #[cfg(test)]
 mod tests {
-    use crate::mbed_motor_control::mbed_config::MbedConfig;
-
     use super::*;
-    use std::fs::{self};
-    use testresult::TestResult;
-
-    const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/v3/short_start/status_20241029_133931_00.bin";
+    use crate::{mbed_motor_control::mbed_config::MbedConfig, test_util::*};
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let data = fs::read(TEST_DATA)?;
-        let (status_log_header, bytes_read) = StatusLogHeaderV3::from_reader(&mut data.as_slice())?;
+        let mut data = MBED_STATUS_V3_BYTES;
+        let (status_log_header, bytes_read) = StatusLogHeaderV3::from_reader(&mut data)?;
         eprintln!("{status_log_header}");
         assert_eq!(bytes_read, 293);
         assert_eq!(

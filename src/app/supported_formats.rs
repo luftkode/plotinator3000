@@ -333,22 +333,19 @@ fn is_zip_file(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const TEST_DATA_STATUS: &str =
-        "test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
-
-    const TEST_DATA_PID: &str =
-        "test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
+    use skytem_logs::test_util::*;
 
     #[test]
-    fn test_supported_logs_dyn_vec() {
-        let data = fs::read(TEST_DATA_STATUS).unwrap();
-        let (status_log, _status_log_bytes_read) =
-            StatusLog::from_reader(&mut data.as_slice()).unwrap();
+    fn test_supported_logs_dyn_vec() -> TestResult {
+        let mut data = MBED_STATUS_V1_BYTES;
+        let (status_log, _status_log_bytes_read) = StatusLog::from_reader(&mut data)?;
 
-        let data = fs::read(TEST_DATA_PID).unwrap();
-        let (pidlog, _pid_log_bytes_read) = PidLog::from_reader(&mut data.as_slice()).unwrap();
+        let mut data = MBED_PID_V1_BYTES;
+        let (pidlog, _pid_log_bytes_read) = PidLog::from_reader(&mut data)?;
 
         let v: Vec<Box<dyn Plotable>> = vec![Box::new(status_log), Box::new(pidlog)];
         assert_eq!(v.len(), 2);
+
+        Ok(())
     }
 }

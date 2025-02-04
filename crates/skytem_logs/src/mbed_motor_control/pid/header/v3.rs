@@ -167,19 +167,14 @@ impl fmt::Display for PidLogHeaderV3 {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
-    const TEST_DATA: &str =
-        "../../test_data/mbed_motor_control/v3/short_start/pid_20241029_133931_00.bin";
-
-    use io::Read;
-    use testresult::TestResult;
-
     use super::*;
+    use crate::test_util::*;
+    use io::Read;
+    use std::fs;
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let mut file = fs::File::open(TEST_DATA)?;
+        let mut file = fs::File::open(mbed_pid_v3())?;
         let mut buffer = vec![0; 500];
         file.read_exact(&mut buffer)?;
         let (pid_log_header, bytes_read) = PidLogHeaderV3::from_reader(&mut buffer.as_slice())?;
