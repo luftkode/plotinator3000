@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- Update all dependencies with `cargo update`
+
 ## [1.6.4]
 
 ### Added
