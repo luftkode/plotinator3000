@@ -40,7 +40,7 @@ elevated-command = "1.1"
 # Dev dependencies
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
-tempfile = "3.15.0"
+tempfile = "3.16.0"
 reqwest = "0.12.12"
 
 [dependencies]
@@ -57,7 +57,7 @@ chrono.workspace = true
 getset.workspace = true
 semver.workspace = true
 egui.workspace = true
-eframe = { version = "0.30", default-features = false, features = [
+eframe = { version = "0.31", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
