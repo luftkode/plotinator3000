@@ -158,7 +158,7 @@ impl fmt::Display for StatusLogHeaderV1 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::*;
+    use test_util::*;
 
     #[test]
     fn test_deserialize() -> TestResult {

@@ -333,7 +333,7 @@ fn is_zip_file(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use skytem_logs::test_util::*;
+    use test_util::*;
 
     #[test]
     fn test_supported_logs_dyn_vec() -> TestResult {

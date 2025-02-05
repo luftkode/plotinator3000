@@ -269,10 +269,9 @@ impl fmt::Display for PidLog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_util::*;
+
     use crate::parse_and_display_log_entries;
-    use crate::test_util::*;
-    use std::fs::File;
-    use testresult::TestResult;
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
@@ -301,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v1() -> TestResult {
-        let file = File::open(mbed_pid_v1())?;
+        let file = fs::File::open(mbed_pid_v1())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 261);
@@ -336,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v2() -> TestResult {
-        let file = File::open(mbed_pid_v2())?;
+        let file = fs::File::open(mbed_pid_v2())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 293);
@@ -371,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v4() -> TestResult {
-        let file = File::open(mbed_pid_v4())?;
+        let file = fs::File::open(mbed_pid_v4())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 327);

@@ -164,7 +164,9 @@ impl fmt::Display for StatusLogHeaderV3 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{mbed_motor_control::mbed_config::MbedConfig, test_util::*};
+    use test_util::*;
+
+    use crate::mbed_motor_control::mbed_config::MbedConfig;
 
     #[test]
     fn test_deserialize() -> TestResult {

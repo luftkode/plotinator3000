@@ -420,16 +420,11 @@ fn parse_timestamps_with_state_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
-    use testresult::TestResult;
+    use test_util::*;
 
     use crate::{
         mbed_motor_control::status::entry::{v1::MotorState, v2},
         parse_and_display_log_entries,
-        test_util::{
-            mbed_status_v1, mbed_status_v2, MBED_STATUS_V1_BYTES, MBED_STATUS_V2_BYTES,
-            MBED_STATUS_V3_BYTES, MBED_STATUS_V5_BYTES,
-        },
     };
 
     #[test]
@@ -484,7 +479,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v1() -> TestResult {
-        let file = File::open(mbed_status_v1())?;
+        let file = fs::File::open(mbed_status_v1())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 261);
@@ -541,7 +536,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v2() -> TestResult {
-        let file = File::open(mbed_status_v2())?;
+        let file = fs::File::open(mbed_status_v2())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
 

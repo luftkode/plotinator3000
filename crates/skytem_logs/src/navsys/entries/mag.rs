@@ -78,7 +78,7 @@ impl FromStr for MagSensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use testresult::TestResult;
+    use test_util::*;
 
     const TEST_ENTRY_MA1: &str = "MA1 2024 10 03 15 00 18 491 49750.1573";
     const TEST_ENTRY_MA2: &str = "MA2 2024 10 03 15 00 18 592 49751.2684";

@@ -372,8 +372,8 @@ impl FromStr for GeneratorLogEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::*;
     use chrono::NaiveDate;
+    use test_util::*;
 
     #[test]
     fn test_deserialize() -> TestResult {

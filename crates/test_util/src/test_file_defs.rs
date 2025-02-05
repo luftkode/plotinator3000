@@ -51,8 +51,3 @@ macro_rules! define_utf8_test_file {
 pub mod hdf5;
 pub mod legacy_generator;
 pub mod mbed_motor_control;
-
-pub use {
-    legacy_generator::*, mbed_motor_control::*, paste::paste, std::fs, std::io,
-    testresult::TestResult,
-};

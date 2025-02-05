@@ -20,6 +20,7 @@ product-icon = "assets/favicon.ico"
 members = ["crates/*"]
 
 [workspace.dependencies]
+test_util.path = "crates/test_util"
 egui = { version = "0.30", features = ["rayon"] }
 egui_plot = { version = "0.30", features = ["serde"] }
 log = "0.4"
@@ -49,6 +50,7 @@ skytem_logs = { version = "*", path = "crates/skytem_logs" }
 log_if = { version = "*", path = "crates/log_if" }
 plot_util = { version = "*", path = "crates/plot_util" }
 skytem_hdf = { version = "*", path = "crates/skytem_hdf" }
+test_util.workspace = true
 egui_plot.workspace = true
 log.workspace = true
 serde.workspace = true

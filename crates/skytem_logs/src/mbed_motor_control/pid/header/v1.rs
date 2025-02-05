@@ -157,9 +157,7 @@ impl fmt::Display for PidLogHeaderV1 {
 mod tests {
     use super::*;
     use io::Read;
-    use std::fs;
-
-    use crate::test_util::*;
+    use test_util::*;
 
     #[test]
     fn test_deserialize() -> TestResult {
