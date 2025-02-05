@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Add support for upcoming log version in Swiss auto FW v4.2
+
 ### Changed
 
 - Organize test data files etc. in the new `test_util` crate with utilities for generating basic test boiler plate

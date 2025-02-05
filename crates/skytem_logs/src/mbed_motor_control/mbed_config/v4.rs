@@ -8,14 +8,14 @@ use super::MbedConfig;
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
 #[repr(packed)]
-pub(crate) struct MbedConfigV3 {
+pub(crate) struct MbedConfigV4 {
     #[getset(get_copy = "pub")]
     pid_cfg: PidConfig,
     #[getset(get_copy = "pub")]
     general_cfg: GeneralConfig,
 }
 
-impl MbedConfig for MbedConfigV3 {
+impl MbedConfig for MbedConfigV4 {
     fn raw_size() -> usize {
         size_of::<Self>()
     }
@@ -72,6 +72,12 @@ pub(crate) struct GeneralConfig {
     servo_min: u16,
     #[getset(get_copy = "pub")]
     servo_max: u16,
+
+    #[getset(get_copy = "pub")]
+    high_res_sample_period_ms: u16,
+
+    #[getset(get_copy = "pub")]
+    low_res_sample_period_ms: u16,
 }
 
 impl MbedConfig for GeneralConfig {
@@ -94,6 +100,8 @@ impl MbedConfig for GeneralConfig {
         let vbat_ready = reader.read_f32::<LittleEndian>()?;
         let servo_min = reader.read_u16::<LittleEndian>()?;
         let servo_max = reader.read_u16::<LittleEndian>()?;
+        let high_res_sample_period_ms = reader.read_u16::<LittleEndian>()?;
+        let low_res_sample_period_ms = reader.read_u16::<LittleEndian>()?;
         Ok(Self {
             t_run,
             t_fan_on,
@@ -109,6 +117,8 @@ impl MbedConfig for GeneralConfig {
             vbat_ready,
             servo_min,
             servo_max,
+            high_res_sample_period_ms,
+            low_res_sample_period_ms,
         })
     }
 
@@ -137,6 +147,14 @@ impl MbedConfig for GeneralConfig {
             ("VBAT_READY".to_owned(), self.vbat_ready().to_string()),
             ("SERVO_MIN".to_owned(), self.servo_min().to_string()),
             ("SERVO_MAX".to_owned(), self.servo_max().to_string()),
+            (
+                "HIGH_RES_SAMPLE_PERIOD_MS".to_owned(),
+                self.high_res_sample_period_ms().to_string(),
+            ),
+            (
+                "LOW_RES_SAMPLE_PERIOD_MS".to_owned(),
+                self.low_res_sample_period_ms().to_string(),
+            ),
         ]
     }
 }
