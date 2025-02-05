@@ -48,6 +48,7 @@ macro_rules! define_utf8_test_file {
     };
 }
 
+pub mod hdf5;
 pub mod legacy_generator;
 pub mod mbed_motor_control;
 
