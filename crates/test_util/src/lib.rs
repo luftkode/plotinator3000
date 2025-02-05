@@ -1,3 +1,7 @@
+#![allow(
+    clippy::disallowed_types,
+    reason = "This is test utilities so things like PathBuf is fine, we won't deploy this code anywhere"
+)]
 pub mod test_file_defs;
 
 pub use {
