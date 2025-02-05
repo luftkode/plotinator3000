@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Organize test data files etc. in the new `test_util` crate with utilities for generating basic test boiler plate
 
+### Dependencies
+
+- Bump `openssl` from `0.10.68` -> `0.10.70` to fix RUSTSEC
+
 ## [1.6.4]
 
 ### Added
