@@ -7,8 +7,8 @@ edition = "2021"
 workspace = true
 
 [dependencies]
-plot_util = { version = "*", path = "../plot_util" }
-log_if = { version = "*", path = "../log_if" }
+plot_util.workspace = true
+log_if.workspace = true
 egui_plot.workspace = true
 serde.workspace = true
 serde-big-array.workspace = true
