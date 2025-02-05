@@ -31,7 +31,11 @@ macro_rules! define_utf8_test_file {
                 test_file!($path),
             );
 
-            pub const [<$name:upper _STR>]: &[str] = include_str!(concat!(
+            pub const [<$name:upper _BYTES>]: &[u8] = include_bytes!(concat!(
+                test_file!($path),
+            ));
+
+            pub const [<$name:upper _STR>]: &str = include_str!(concat!(
                 test_file!($path),
             ));
 
@@ -44,6 +48,10 @@ macro_rules! define_utf8_test_file {
     };
 }
 
+pub mod legacy_generator;
 pub mod mbed_motor_control;
 
-pub use {mbed_motor_control::*, std::fs, std::io, testresult::TestResult};
+pub use {
+    legacy_generator::*, mbed_motor_control::*, paste::paste, std::fs, std::io,
+    testresult::TestResult,
+};
