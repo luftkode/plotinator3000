@@ -372,18 +372,14 @@ impl FromStr for GeneratorLogEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-
     use chrono::NaiveDate;
-    use testresult::TestResult;
-
-    const TEST_DATA: &str = "../../test_data/generator/20230124_134738_Gen.log";
+    use test_util::*;
 
     #[test]
     fn test_deserialize() -> TestResult {
-        let data = fs::read(TEST_DATA)?;
+        let mut data = LEGACY_GENERATOR_LOG_BYTES;
         let full_data_len = data.len();
-        let (log, bytes_read) = GeneratorLog::from_reader(&mut data.as_slice())?;
+        let (log, bytes_read) = GeneratorLog::from_reader(&mut data)?;
 
         assert_eq!(bytes_read, full_data_len);
         let first_entry = log.entries.first().expect("Empty entries");

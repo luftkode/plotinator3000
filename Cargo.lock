@@ -3097,6 +3097,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "tempfile",
+ "test_util",
  "testresult",
  "tokio",
  "wasm-bindgen-futures",
@@ -3844,7 +3845,7 @@ dependencies = [
  "serde-big-array",
  "strum",
  "strum_macros",
- "testresult",
+ "test_util",
  "thiserror 2.0.11",
 ]
 
@@ -4052,6 +4053,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "test_util"
+version = "0.1.0"
+dependencies = [
+ "paste",
+ "testresult",
 ]
 
 [[package]]

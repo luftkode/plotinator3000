@@ -21,6 +21,5 @@ derive_more.workspace = true
 log.workspace = true
 thiserror.workspace = true
 
-
 [dev-dependencies]
-testresult.workspace = true
+test_util.workspace = true

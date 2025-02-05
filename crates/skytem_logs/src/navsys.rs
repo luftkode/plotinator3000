@@ -358,6 +358,7 @@ impl GitMetadata for NavSysSps {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_util::*;
 
     // Example Navsys.sps data with a header and some data taken from the middle of an actual Navsys.sps log
     // these logs are very long so we don't want to add a real file to the repo test data
@@ -474,7 +475,7 @@ HE1 2024 10 03 13 33 47 595 214.53
 ";
 
     #[test]
-    fn test_parse_navsys_log() -> testresult::TestResult {
+    fn test_parse_navsys_log() -> TestResult {
         let mut cursor = io::Cursor::new(TEST_DATA);
         let (navsys, bytes_read) = NavSysSps::from_reader(&mut cursor)?;
 

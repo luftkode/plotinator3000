@@ -178,9 +178,8 @@ impl NavSysSpsHeader {
 
 #[cfg(test)]
 mod tests {
-    use testresult::TestResult;
-
     use super::*;
+    use test_util::*;
 
     const TEST_HEADER_STR: &str = "VER 3
 MRK 2024 10 03 12 52 42 401 Navsys software rev: Build: 2.0.0.6

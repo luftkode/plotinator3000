@@ -2,7 +2,6 @@ name: Dependabot Changelog Entry
 
 on:
   pull_request:
-    types: [opened, reopened]
     branches: [main, master]
 
 jobs:

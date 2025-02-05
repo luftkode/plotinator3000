@@ -420,17 +420,7 @@ fn parse_timestamps_with_state_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::{self, File};
-    use testresult::TestResult;
-
-    const TEST_DATA_V1: &str =
-        "../../test_data/mbed_motor_control/v1/20240926_121708/status_20240926_121708_00.bin";
-    const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20241014_080729/status_20241014_080729_00.bin";
-    const TEST_DATA_V3: &str =
-        "../../test_data/mbed_motor_control/v3/short_start/status_20241029_133931_00.bin";
-    const TEST_DATA_V5: &str =
-        "../../test_data/mbed_motor_control/v5/status_20250120_092446_00.bin";
+    use test_util::*;
 
     use crate::{
         mbed_motor_control::status::entry::{v1::MotorState, v2},
@@ -439,9 +429,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
-        let data = fs::read(TEST_DATA_V1)?;
+        let mut data = MBED_STATUS_V1_BYTES;
         let full_data_len = data.len();
-        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data)?;
 
         eprintln!("{}", status_log.header);
         assert!(bytes_read <= full_data_len);
@@ -489,7 +479,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v1() -> TestResult {
-        let file = File::open(TEST_DATA_V1)?;
+        let file = fs::File::open(mbed_status_v1())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 261);
@@ -500,9 +490,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_v2() -> TestResult {
-        let data = fs::read(TEST_DATA_V2)?;
+        let mut data = MBED_STATUS_V2_BYTES;
         let full_data_len = data.len();
-        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data)?;
 
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 12281);
@@ -546,7 +536,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v2() -> TestResult {
-        let file = File::open(TEST_DATA_V2)?;
+        let file = fs::File::open(mbed_status_v2())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = StatusLogHeader::from_reader(&mut reader)?;
 
@@ -558,9 +548,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_v3() -> TestResult {
-        let data = fs::read(TEST_DATA_V3)?;
+        let mut data = MBED_STATUS_V3_BYTES;
         let full_data_len = data.len();
-        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data)?;
 
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 509);
@@ -604,9 +594,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_v5() -> TestResult {
-        let data = fs::read(TEST_DATA_V5)?;
+        let mut data = MBED_STATUS_V5_BYTES;
         let full_data_len = data.len();
-        let (status_log, bytes_read) = StatusLog::from_reader(&mut data.as_slice())?;
+        let (status_log, bytes_read) = StatusLog::from_reader(&mut data)?;
 
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 157165);

@@ -269,21 +269,15 @@ impl fmt::Display for PidLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse_and_display_log_entries;
-    use std::fs::{self, File};
-    use testresult::TestResult;
+    use test_util::*;
 
-    const TEST_DATA_V1: &str =
-        "../../test_data/mbed_motor_control/v1/20240926_121708/pid_20240926_121708_00.bin";
-    const TEST_DATA_V2: &str =
-        "../../test_data/mbed_motor_control/v2/20241014_080729/pid_20241014_080729_00.bin";
-    const TEST_DATA_V4: &str = "../../test_data/mbed_motor_control/v4/pid_20250120_092446_00.bin";
+    use crate::parse_and_display_log_entries;
 
     #[test]
     fn test_deserialize_v1() -> TestResult {
-        let data = fs::read(TEST_DATA_V1)?;
+        let mut data = MBED_PID_V1_BYTES;
         let full_data_len = data.len();
-        let (pidlog, bytes_read) = PidLog::from_reader(&mut data.as_slice())?;
+        let (pidlog, bytes_read) = PidLog::from_reader(&mut data)?;
 
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 873981);
@@ -306,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v1() -> TestResult {
-        let file = File::open(TEST_DATA_V1)?;
+        let file = fs::File::open(mbed_pid_v1())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 261);
@@ -317,9 +311,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_v2() -> TestResult {
-        let data = fs::read(TEST_DATA_V2)?;
+        let mut data = MBED_PID_V2_BYTES;
         let full_data_len = data.len();
-        let (pidlog, bytes_read) = PidLog::from_reader(&mut data.as_slice())?;
+        let (pidlog, bytes_read) = PidLog::from_reader(&mut data)?;
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 722429);
         let first_entry = pidlog.entries.first().expect("Empty entries");
@@ -341,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v2() -> TestResult {
-        let file = File::open(TEST_DATA_V2)?;
+        let file = fs::File::open(mbed_pid_v2())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 293);
@@ -352,9 +346,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_v4() -> TestResult {
-        let data = fs::read(TEST_DATA_V4)?;
+        let mut data = MBED_PID_V4_BYTES;
         let full_data_len = data.len();
-        let (pidlog, bytes_read) = PidLog::from_reader(&mut data.as_slice())?;
+        let (pidlog, bytes_read) = PidLog::from_reader(&mut data)?;
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 834543);
         let first_entry = pidlog.entries.first().expect("Empty entries");
@@ -376,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_display_v4() -> TestResult {
-        let file = File::open(TEST_DATA_V4)?;
+        let file = fs::File::open(mbed_pid_v4())?;
         let mut reader = io::BufReader::new(file);
         let (header, bytes_read) = PidLogHeader::from_reader(&mut reader)?;
         assert_eq!(bytes_read, 327);
