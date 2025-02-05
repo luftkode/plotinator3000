@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Organize test data files etc. in the new `test_util` crate with utilities for generating basic test boiler plate
+
 ## [1.6.4]
 
 ### Added
