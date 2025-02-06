@@ -15,12 +15,15 @@ license = false
 eula = false
 product-icon = "assets/favicon.ico"
 
-
 [workspace]
 members = ["crates/*"]
 
 [workspace.dependencies]
 test_util.path = "crates/test_util"
+skytem_logs.path = "crates/skytem_logs"
+log_if.path = "crates/log_if"
+plot_util.path = "crates/plot_util"
+skytem_hdf.path = "crates/skytem_hdf"
 egui = { version = "0.30", features = ["rayon"] }
 egui_plot = { version = "0.30", features = ["serde"] }
 log = "0.4"
@@ -31,7 +34,7 @@ strum_macros = "0.26.3"
 byteorder = "1.5.0"
 chrono = { version = "0.4.39", features = ["serde"] }
 getset = "0.1.4"
-derive_more = { version = "1", features = ["full"] }
+derive_more = { version = "2", features = ["full"] }
 num-traits = "0.2.19"
 toml = "0.8.19"
 thiserror = "2.0"
@@ -46,10 +49,10 @@ tempfile = "3.15.0"
 reqwest = "0.12.12"
 
 [dependencies]
-skytem_logs = { version = "*", path = "crates/skytem_logs" }
-log_if = { version = "*", path = "crates/log_if" }
-plot_util = { version = "*", path = "crates/plot_util" }
-skytem_hdf = { version = "*", path = "crates/skytem_hdf" }
+skytem_logs.workspace = true
+log_if.workspace = true
+plot_util.workspace = true
+skytem_hdf.workspace = true
 test_util.workspace = true
 egui_plot.workspace = true
 log.workspace = true

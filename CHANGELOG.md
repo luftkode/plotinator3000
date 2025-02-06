@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Organize test data files etc. in the new `test_util` crate with utilities for generating basic test boiler plate
+- Set `CROSS_NO_WARNINGS=0` due to cross configuration conflict
+
+### Dependencies
+
+- Bump `openssl` from `0.10.68` -> `0.10.70` to fix RUSTSEC
+- Bump all dependencies with `cargo update`
 
 ## [1.6.4]
 

@@ -7,7 +7,7 @@ edition = "2021"
 workspace = true
 
 [dependencies]
-log_if = { version = "*", path = "../log_if" }
+log_if.workspace = true
 egui_plot.workspace = true
 egui.workspace = true
 serde.workspace = true
