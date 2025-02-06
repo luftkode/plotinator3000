@@ -71,7 +71,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
-      - run: cargo nextest run --workspace --profile ci
+      - run: cargo nextest run --workspace --profile ci --run-ignored=all
 
   format:
     runs-on: ubuntu-latest
