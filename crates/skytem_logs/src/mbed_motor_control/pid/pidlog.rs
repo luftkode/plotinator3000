@@ -173,19 +173,23 @@ impl Parseable for PidLog {
         let (header, bytes_read) = PidLogHeader::from_reader(reader)?;
         total_bytes_read += bytes_read;
 
-        let (vec_of_entries, entry_bytes_read): (Vec<PidLogEntry>, usize) = if header.version() < 5
-        {
-            let (v1_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV1>(reader);
-            (convert_v1_to_pid_log_entry(v1_vec), entry_bytes_read)
-        } else if header.version() == 5 {
-            let (v2_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV2>(reader);
-            (convert_v2_to_pid_log_entry(v2_vec), entry_bytes_read)
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Unsupported header version: {}", header.version()),
-            ));
+        let (vec_of_entries, entry_bytes_read): (Vec<PidLogEntry>, usize) = match header.version() {
+            ..=4 => {
+                let (v1_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV1>(reader);
+                (convert_v1_to_pid_log_entry(v1_vec), entry_bytes_read)
+            }
+            5 => {
+                let (v2_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV2>(reader);
+                (convert_v2_to_pid_log_entry(v2_vec), entry_bytes_read)
+            }
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("Unsupported header version: {}", header.version()),
+                ))
+            }
         };
+
         total_bytes_read += entry_bytes_read;
 
         let startup_timestamp = match &header {
@@ -503,7 +507,7 @@ mod tests {
         assert_eq!(first_entry.servo_duty_cycle, 0.0);
         assert_eq!(first_entry.rpm_error_count, 23);
         assert_eq!(first_entry.first_valid_rpm_count, 2);
-        assert_eq!(first_entry.fan_on, false);
+        assert!(!first_entry.fan_on);
         assert_eq!(first_entry.vbat, 0.);
 
         let second_entry = match &pidlog.entries[1] {
@@ -515,7 +519,7 @@ mod tests {
         assert_eq!(second_entry.servo_duty_cycle, 0.0);
         assert_eq!(second_entry.rpm_error_count, 23);
         assert_eq!(second_entry.first_valid_rpm_count, 2);
-        assert_eq!(second_entry.fan_on, false);
+        assert!(!second_entry.fan_on);
         assert_eq!(second_entry.vbat, 0.);
         //eprintln!("{pidlog}");
         Ok(())

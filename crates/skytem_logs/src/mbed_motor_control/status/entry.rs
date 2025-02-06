@@ -12,7 +12,7 @@ pub(crate) mod v1;
 pub(crate) mod v2;
 /// Now entries include the runtime counter
 pub(crate) mod v3;
-/// Now the vbat and fan_on entry is moved to the high res (pid) log
+/// Now the `vbat` and `fan_on` entry is moved to the high res (pid) log
 pub(crate) mod v4;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

@@ -43,11 +43,11 @@ impl fmt::Display for PidLogHeader {
 impl PidLogHeader {
     pub(super) fn version(&self) -> u16 {
         match self {
-            PidLogHeader::V1(_) => 1,
-            PidLogHeader::V2(_) => 2,
-            PidLogHeader::V3(_) => 3,
-            PidLogHeader::V4(_) => 4,
-            PidLogHeader::V5(_) => 5,
+            Self::V1(_) => 1,
+            Self::V2(_) => 2,
+            Self::V3(_) => 3,
+            Self::V4(_) => 4,
+            Self::V5(_) => 5,
         }
     }
 
