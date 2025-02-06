@@ -1,8 +1,5 @@
 [profile.ci]
 retries = 1
-# Extra arguments to pass in to the test binary at runtime. Intended primarily for
-# communication with custom test harnesses -- use with caution!
-run-extra-args = ["--include--ignored"]
 
 [[profile.ci.overrides]]
 retries = { backoff = "exponential", count = 1, delay = "5s", jitter = true }

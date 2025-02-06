@@ -18,7 +18,7 @@ lint:
     typos
 
 test:
-    cargo nextest run --workspace --profile ci
+    cargo nextest run --workspace --profile ci --run-ignored=all
 
 audit:
     cargo audit
