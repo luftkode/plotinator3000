@@ -24,8 +24,8 @@ skytem_logs.path = "crates/skytem_logs"
 log_if.path = "crates/log_if"
 plot_util.path = "crates/plot_util"
 skytem_hdf.path = "crates/skytem_hdf"
-egui = { version = "0.30", features = ["rayon"] }
-egui_plot = { version = "0.30", features = ["serde"] }
+egui = { version = "0.31", features = ["rayon"] }
+egui_plot = { version = "0.31", features = ["serde"] }
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde-big-array = "0.5.1"
@@ -63,7 +63,7 @@ chrono.workspace = true
 getset.workspace = true
 semver.workspace = true
 egui.workspace = true
-eframe = { version = "0.30", default-features = false, features = [
+eframe = { version = "0.31", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
@@ -71,8 +71,8 @@ eframe = { version = "0.30", default-features = false, features = [
     "x11"
 ] }
 rfd = "0.15"
-egui-phosphor = "0.8.0"
-egui-notify = "0.18.0"
+egui-phosphor = "0.9.0"
+egui-notify = "0.19.0"
 tokio = "1.43.0"
 
 [dev-dependencies]

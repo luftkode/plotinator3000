@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bump `openssl` from `0.10.68` -> `0.10.70` to fix RUSTSEC
 - Bump all dependencies with `cargo update`
+- Update egui from `0.30.0` to `0.31.0`
 
 ## [1.6.4]
 

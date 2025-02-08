@@ -48,11 +48,11 @@ impl AxisConfig {
 
     pub fn handle_y_axis_lock<F>(
         &mut self,
-        plot_ui: &mut egui_plot::PlotUi,
+        plot_ui: &mut egui_plot::PlotUi<'_>,
         plot_type: PlotType,
         between_bounds_update_fn: F,
     ) where
-        F: FnOnce(&mut egui_plot::PlotUi),
+        F: FnOnce(&mut egui_plot::PlotUi<'_>),
     {
         self.y_axis_lock
             .handle(plot_ui, plot_type, between_bounds_update_fn);

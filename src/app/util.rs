@@ -7,7 +7,7 @@ pub fn draw_empty_state(gui: &mut egui::Ui) {
         arg_ui.add_space(40.0);
 
         let table_width = arg_ui.available_width() * 0.8;
-        egui::Frame::none()
+        egui::Frame::new()
             .fill(arg_ui.style().visuals.extreme_bg_color)
             .stroke(Stroke::new(1.0, arg_ui.style().visuals.widgets.active.bg_fill))
             .inner_margin(10.0)
