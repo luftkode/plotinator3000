@@ -74,8 +74,7 @@ impl PlotData {
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct PlotValues {
     raw_plot: Vec<[f64; 2]>,
-    mipmap_max: MipMap2D<f64>,
-    mipmap_min: MipMap2D<f64>,
+    mipmap_minmax: MipMap2D<f64>,
     name: String,
     log_id: u16,
     // Label = "<name> #<log_id>"
@@ -92,17 +91,13 @@ impl PlotValues {
 
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: u16) -> Self {
         let label = format!("{name} #{log_id}");
+        let mipmap_max =
+            MipMap2D::without_base(&raw_plot, MipMapStrategy::Max, Self::MIPMAP_MIN_ELEMENTS);
+        let mut mipmap_min =
+            MipMap2D::without_base(&raw_plot, MipMapStrategy::Min, Self::MIPMAP_MIN_ELEMENTS);
+        mipmap_min.join(&mipmap_max);
         Self {
-            mipmap_max: MipMap2D::without_base(
-                &raw_plot,
-                MipMapStrategy::Max,
-                Self::MIPMAP_MIN_ELEMENTS,
-            ),
-            mipmap_min: MipMap2D::without_base(
-                &raw_plot,
-                MipMapStrategy::Min,
-                Self::MIPMAP_MIN_ELEMENTS,
-            ),
+            mipmap_minmax: mipmap_min,
             raw_plot,
             name,
             log_id,
@@ -130,28 +125,20 @@ impl PlotValues {
         &self.raw_plot
     }
 
-    pub fn get_level(&self, level: usize) -> Option<(PointList, PointList)> {
-        let mipmap_min = self.mipmap_min.get_level(level)?;
-        let mipmap_max = self.mipmap_max.get_level(level)?;
-        Some((mipmap_min, mipmap_max))
+    pub fn get_level(&self, level: usize) -> Option<PointList> {
+        self.mipmap_minmax.get_level(level)
     }
 
-    pub fn get_level_or_max(&self, level: usize) -> (PointList, PointList) {
-        (
-            self.mipmap_min.get_level_or_max(level),
-            self.mipmap_max.get_level_or_max(level),
-        )
+    pub fn get_level_or_max(&self, level: usize) -> PointList {
+        self.mipmap_minmax.get_level_or_max(level)
     }
 
-    pub fn get_max_level(&self) -> (PointList, PointList) {
-        (
-            self.mipmap_min.get_max_level(),
-            self.mipmap_max.get_max_level(),
-        )
+    pub fn get_max_level(&self) -> PointList {
+        self.mipmap_minmax.get_max_level()
     }
 
     pub fn mipmap_levels(&self) -> usize {
-        self.mipmap_min.num_levels()
+        self.mipmap_minmax.num_levels()
     }
 
     pub fn get_scaled_mipmap_levels(
@@ -159,7 +146,7 @@ impl PlotValues {
         pixel_width: usize,
         x_bounds: (f64, f64),
     ) -> (usize, Option<(usize, usize)>) {
-        self.mipmap_min.get_level_match(pixel_width, x_bounds)
+        self.mipmap_minmax.get_level_match(pixel_width, x_bounds)
     }
 
     /// Apply an offset to the plot based on the difference to the supplied [`DateTime<Utc>`]
@@ -169,16 +156,18 @@ impl PlotValues {
     }
 
     fn recalc_mipmaps(&mut self) {
-        self.mipmap_min = MipMap2D::without_base(
-            &self.raw_plot,
-            MipMapStrategy::Min,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        self.mipmap_max = MipMap2D::without_base(
+        let mipmap_max = MipMap2D::without_base(
             &self.raw_plot,
             MipMapStrategy::Max,
             Self::MIPMAP_MIN_ELEMENTS,
         );
+        let mut mipmap_min = MipMap2D::without_base(
+            &self.raw_plot,
+            MipMapStrategy::Min,
+            Self::MIPMAP_MIN_ELEMENTS,
+        );
+        mipmap_min.join(&mipmap_max);
+        self.mipmap_minmax = mipmap_min;
     }
 
     /// Returns a borrowed list of all plot points
