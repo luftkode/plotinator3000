@@ -1,6 +1,8 @@
 pub mod mipmap;
 
-use egui_plot::{Line, PlotBounds, PlotPoint};
+use std::slice;
+
+use egui_plot::{Line, PlotBounds, PlotPoint, PlotPoints};
 
 pub mod plots;
 
@@ -18,7 +20,7 @@ pub enum MipMapConfiguration {
 }
 
 pub fn plot_lines<'pv>(
-    plot_ui: &mut egui_plot::PlotUi,
+    plot_ui: &mut egui_plot::PlotUi<'pv>,
     plots: impl Iterator<Item = &'pv PlotValues>,
     line_width: f32,
     mipmap_cfg: MipMapConfiguration,
@@ -57,9 +59,9 @@ pub fn plot_lines<'pv>(
     }
 }
 
-fn plot_with_mipmapping(
-    plot_ui: &mut egui_plot::PlotUi,
-    plot_vals: &PlotValues,
+fn plot_with_mipmapping<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot_vals: &'p PlotValues,
     line_width: f32,
     mipmap_lvl: usize,
     x_range: (f64, f64),
@@ -77,8 +79,8 @@ fn plot_with_mipmapping(
             plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
         } else {
             let plot_points_minmax = match known_idx_range {
-                Some((start, end)) => extract_range_points(plot_points_minmax, start, end),
-                None => filter_plot_points(plot_points_minmax, (x_lower, x_higher)),
+                Some((start, end)) => extract_range_points_alt(plot_points_minmax, start, end),
+                None => filter_plot_points_alt(plot_points_minmax, (x_lower, x_higher)),
             };
 
             let line = Line::new(plot_points_minmax)
@@ -108,6 +110,27 @@ fn extract_range_points(points: &[[f64; 2]], start: usize, end: usize) -> Vec<[f
     final_points
 }
 
+#[inline(always)]
+fn extract_range_points_alt<'a>(
+    points: &'a [PlotPoint],
+    start: usize,
+    end: usize,
+) -> PlotPoints<'a> {
+    let element_count = end - start + 2;
+    let mut final_points = Vec::with_capacity(element_count);
+    final_points.push(points[0]);
+
+    final_points.extend_from_slice(&points[start..end]);
+
+    if let Some(last_point) = points.last() {
+        if points.last().is_some_and(|lp| lp != last_point) {
+            final_points.push(*last_point);
+        }
+    }
+
+    PlotPoints::Owned(final_points)
+}
+
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
     for plot_labels in plot_data
         .plot_labels()
@@ -126,14 +149,15 @@ pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_fil
     }
 }
 
-fn plot_raw(
-    plot_ui: &mut egui_plot::PlotUi,
-    plot_vals: &PlotValues,
+fn plot_raw<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot_vals: &'p PlotValues,
     line_width: f32,
     x_min_max_ext: (f64, f64),
 ) {
-    let plot_points = plot_vals.get_raw();
-    let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
+    let plot_points = plot_vals.raw_plot_points();
+
+    let filtered_points = filter_plot_points_alt(plot_points, x_min_max_ext);
     let line = Line::new(filtered_points)
         .width(line_width)
         .name(plot_vals.label())
@@ -161,6 +185,49 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
     let extended_x_bound_max = x_bound_max + x_extension;
 
     (extended_x_bound_min, extended_x_bound_max)
+}
+
+/// Filter plot points based on the x plot bounds. Always includes the first and last plot point
+/// such that resetting zooms works well even when the plot bounds are outside the data range.
+pub fn filter_plot_points_alt<'a>(points: &'a [PlotPoint], x_range: (f64, f64)) -> PlotPoints<'a> {
+    let points_len = points.len();
+
+    // Don't bother filtering if there's less than 1024 points
+    if points_len < 1024 {
+        return PlotPoints::Borrowed(points); // Borrow if no filtering is needed
+    }
+
+    let start_idx = points.partition_point(|point| point.x < x_range.0);
+    let end_idx = points.partition_point(|point| point.x < x_range.1);
+
+    let points_within = end_idx - start_idx;
+
+    // If all the points are within the bound, return all the points
+    if points_within == points_len {
+        return PlotPoints::Borrowed(points); // Borrow if no filtering is needed
+    }
+
+    // In this case none of the points are within the bounds so just return the first and last
+    if start_idx == end_idx {
+        return PlotPoints::Owned(vec![points[0], points[points_len - 1]]); // Copy only first/last
+    }
+
+    // allocate enough for the points within + 2 for the first and last points.
+    let mut filtered = Vec::with_capacity(points_within + 2);
+
+    // add the first points if it is not within the points that are within the bounds
+    if start_idx != 0 {
+        filtered.push(points[0]);
+    }
+    // Add all the points within the bounds
+    filtered.extend_from_slice(&points[start_idx..end_idx]);
+
+    // add the last points if it is not included in the points that are within the bounds
+    if end_idx != points_len {
+        filtered.push(points[points_len - 1]);
+    }
+
+    PlotPoints::Owned(filtered) // Copy the filtered data
 }
 
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point

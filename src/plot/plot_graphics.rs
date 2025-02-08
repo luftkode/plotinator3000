@@ -142,14 +142,21 @@ fn fill_plots(
 /// * `axis_config` - For axis customization.
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
-fn fill_plot(
-    plot_ui: &mut egui_plot::PlotUi<'_>,
-    plot: (&mut PlotData, PlotType),
+fn fill_plot<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot: (&'p mut PlotData, PlotType),
     axis_config: &mut AxisConfig,
     line_width: f32,
-    plot_settings: &PlotSettings,
+    plot_settings: &'p PlotSettings,
 ) {
     let (plot_data, plot_type) = plot;
+    // necessary because the raw plot points are not serializable
+    // so they are skipped and initialized as None. So this
+    // generates them from the raw_points (only needed once per session)
+    plot_data
+        .plots_as_mut()
+        .iter_mut()
+        .for_each(|p| p.build_raw_plot_points());
 
     plot_util::plot_lines(
         plot_ui,
