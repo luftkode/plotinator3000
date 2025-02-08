@@ -269,6 +269,21 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd + Default> MipMap2
         }
         (0, None)
     }
+
+    pub fn join(&mut self, other: &Self) {
+        // For each level, combine, sort by timestamp, and deduplicate
+        for level in 0..self.num_levels() {
+            let mut merged = self.data[level].clone();
+            merged.extend_from_slice(other.get_level_or_max(level));
+            merged.sort_unstable_by(|a, b| a[0].partial_cmp(&b[0]).expect("Invalid timestamp"));
+            merged.dedup_by(|a, b| a[0] == b[0]); // Remove consecutive elements with same timestamp
+            self.data[level] = merged;
+        }
+
+        // Reset the lookup cache since we've modified the data
+        self.most_recent_lookup
+            .replace(LevelLookupCached::default());
+    }
 }
 
 #[cfg(test)]

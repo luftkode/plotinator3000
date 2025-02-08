@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Organize test data files etc. in the new `test_util` crate with utilities for generating basic test boiler plate
 - Set `CROSS_NO_WARNINGS=0` due to cross configuration conflict
+- Combine min & max MipMaps instead of showing each as a separate line
 
 ### Dependencies
 

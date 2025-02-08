@@ -1,6 +1,5 @@
 pub mod mipmap;
 
-use egui::Color32;
 use egui_plot::{Line, PlotBounds, PlotPoint};
 
 pub mod plots;
@@ -72,89 +71,41 @@ fn plot_with_mipmapping(
     if mipmap_lvl < 2 {
         plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
     } else {
-        let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(mipmap_lvl);
-        if plot_points_min.is_empty() {
+        let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
+        if plot_points_minmax.is_empty() {
             // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
             plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
         } else {
-            let (plot_points_min, plot_points_max) = match known_idx_range {
-                Some((start, end)) => {
-                    extract_range_points(plot_points_min, plot_points_max, start, end)
-                }
-                None => (
-                    filter_plot_points(plot_points_min, (x_lower, x_higher)),
-                    filter_plot_points(plot_points_max, (x_lower, x_higher)),
-                ),
+            let plot_points_minmax = match known_idx_range {
+                Some((start, end)) => extract_range_points(plot_points_minmax, start, end),
+                None => filter_plot_points(plot_points_minmax, (x_lower, x_higher)),
             };
 
-            plot_min_max_lines(
-                plot_ui,
-                plot_vals.label(),
-                (plot_points_min, plot_points_max),
-                line_width,
-                plot_vals.get_color(),
-                plot_vals.get_highlight(),
-            );
+            let line = Line::new(plot_points_minmax)
+                .name(plot_vals.label())
+                .color(plot_vals.get_color())
+                .highlight(plot_vals.get_highlight());
+
+            plot_ui.line(line.width(line_width));
         }
     }
 }
 
 #[inline(always)]
-fn extract_range_points(
-    points_min: &[[f64; 2]],
-    points_max: &[[f64; 2]],
-    start: usize,
-    end: usize,
-) -> (Vec<[f64; 2]>, Vec<[f64; 2]>) {
+fn extract_range_points(points: &[[f64; 2]], start: usize, end: usize) -> Vec<[f64; 2]> {
     let element_count = end - start + 2;
-    let mut min_points = Vec::with_capacity(element_count);
-    let mut max_points = Vec::with_capacity(element_count);
+    let mut final_points = Vec::with_capacity(element_count);
+    final_points.push(points[0]);
 
-    min_points.push(points_min[0]);
-    max_points.push(points_max[0]);
+    final_points.extend_from_slice(&points[start..end]);
 
-    min_points.extend_from_slice(&points_min[start..end]);
-    max_points.extend_from_slice(&points_max[start..end]);
-
-    if let Some(last_point) = points_min.last() {
-        if min_points.last().is_some_and(|lp| lp != last_point) {
-            min_points.push(*last_point);
-        }
-    }
-    if let Some(last_point) = points_max.last() {
-        if max_points.last().is_some_and(|lp| lp != last_point) {
-            max_points.push(*last_point);
+    if let Some(last_point) = points.last() {
+        if points.last().is_some_and(|lp| lp != last_point) {
+            final_points.push(*last_point);
         }
     }
 
-    (min_points, max_points)
-}
-
-#[inline]
-fn plot_min_max_lines(
-    plot_ui: &mut egui_plot::PlotUi,
-    base_label: &str,
-    (points_min, points_max): (Vec<[f64; 2]>, Vec<[f64; 2]>),
-    line_width: f32,
-    color: Color32,
-    highlight: bool,
-) {
-    let mut label_min = base_label.to_owned();
-    label_min.push_str(" (min)");
-    let mut label_max = base_label.to_owned();
-    label_max.push_str(" (max)");
-
-    let line_min = Line::new(points_min)
-        .name(label_min)
-        .color(color)
-        .highlight(highlight);
-    let line_max = Line::new(points_max)
-        .name(label_max)
-        .color(color)
-        .highlight(highlight);
-
-    plot_ui.line(line_min.width(line_width));
-    plot_ui.line(line_max.width(line_width));
+    final_points
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
