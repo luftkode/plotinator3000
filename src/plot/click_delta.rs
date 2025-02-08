@@ -59,7 +59,7 @@ impl ClickDelta {
         self.plot_type
     }
 
-    pub fn get_click_points(&self) -> Option<Points> {
+    pub fn get_click_points(&self) -> Option<Points<'_>> {
         match (self.first_click, self.second_click) {
             (None, None) => None,
             (None, Some(_)) => unreachable!("Second click populated when first is empty"),
@@ -119,7 +119,7 @@ impl ClickDelta {
         }
     }
 
-    pub fn ui(&self, plot_ui: &mut PlotUi, plot_type: PlotType) {
+    pub fn ui<'a>(&'a self, plot_ui: &mut PlotUi<'a>, plot_type: PlotType) {
         // We only paint the click delta graphics on the plot type that matches the one that was clicked
         if self.plot_type().is_some_and(|pt| pt == plot_type) {
             if let Some(p) = self.get_click_points() {
@@ -151,13 +151,13 @@ impl ClickDelta {
         }
     }
 
-    fn ui_delta_line(plot_ui: &mut PlotUi, delta_line: Line, a: [f64; 2], b: [f64; 2]) {
+    fn ui_delta_line<'a>(plot_ui: &mut PlotUi<'a>, delta_line: Line<'a>, a: [f64; 2], b: [f64; 2]) {
         let delta_text = Self::get_delta_text(a, b, plot_ui.plot_bounds());
         plot_ui.text(delta_text);
         plot_ui.add(delta_line);
     }
 
-    fn ui_click_markers(plot_ui: &mut PlotUi, points: Points, color: Color32) {
+    fn ui_click_markers<'a>(plot_ui: &mut PlotUi<'a>, points: Points<'a>, color: Color32) {
         plot_ui.add(
             points
                 .shape(MarkerShape::Cross)

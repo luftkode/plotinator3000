@@ -143,7 +143,7 @@ fn fill_plots(
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
 fn fill_plot(
-    plot_ui: &mut egui_plot::PlotUi,
+    plot_ui: &mut egui_plot::PlotUi<'_>,
     plot: (&mut PlotData, PlotType),
     axis_config: &mut AxisConfig,
     line_width: f32,
@@ -196,6 +196,6 @@ fn build_plot_ui<'a>(
         .custom_x_axes(x_axes)
         .label_formatter(crate::util::format_label_ns)
         .link_axis(link_group, Vec2b::new(axis_config.link_x(), false))
-        .link_cursor(link_group, [axis_config.link_cursor_x(), false].into())
+        .link_cursor(link_group, [axis_config.link_cursor_x(), false])
         .y_axis_min_width(50.0) // Adds enough margin for 5-digits
 }
