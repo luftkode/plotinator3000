@@ -7,7 +7,7 @@ fn main() -> eframe::Result {
     // Log to stderr (if run with `RUST_LOG=debug`).
     env_logger::init();
 
-    #[cfg(feature = "profiling")]
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     plotinator3000::profiling::start_puffin_server();
 
     #[cfg(feature = "selfupdater")]

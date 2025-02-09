@@ -77,26 +77,20 @@ rfd = "0.15"
 egui-phosphor = "0.9.0"
 egui-notify = "0.19.0"
 tokio = "1.43.0"
-profiling = { workspace = true, optional = true}
-puffin = { workspace = true, optional = true}
-puffin_http = { workspace = true, optional = true}
 
 [dev-dependencies]
 testresult.workspace = true
 tempfile.workspace = true
 reqwest.workspace = true
 
-[features]
-default = ["selfupdater"]
-hdf = []
-selfupdater = []
-profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
-
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 zip = "2.2.2"
 axoupdater = { version = "0.9.0", features = ["blocking"] }
+profiling = { workspace = true, optional = true}
+puffin = { workspace = true, optional = true}
+puffin_http = { workspace = true, optional = true}
 
 
 # web:
@@ -107,6 +101,12 @@ web-sys = "0.3.70"
 # windows
 [target.'cfg(target_os = "windows")'.dependencies]
 elevated-command.workspace = true
+
+[features]
+default = ["selfupdater"]
+hdf = []
+selfupdater = []
+profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
 
 [profile.release]
 opt-level = 3

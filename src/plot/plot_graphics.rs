@@ -30,7 +30,7 @@ pub fn paint_plots(
     line_width: f32,
     click_delta: &mut ClickDelta,
 ) {
-    #[cfg(feature = "profiling")]
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
@@ -110,7 +110,7 @@ fn fill_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
 ) {
-    #[cfg(feature = "profiling")]
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
@@ -153,7 +153,7 @@ fn fill_plot(
     line_width: f32,
     plot_settings: &PlotSettings,
 ) {
-    #[cfg(feature = "profiling")]
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let (plot_data, plot_type) = plot;
 

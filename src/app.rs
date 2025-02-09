@@ -41,7 +41,7 @@ pub struct App {
     #[serde(skip)]
     native_file_dialog: fd::native::NativeFileDialog,
 
-    #[cfg(feature = "profiling")]
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     keep_repainting: bool,
 }
 
@@ -61,7 +61,7 @@ impl Default for App {
             #[cfg(not(target_arch = "wasm32"))]
             native_file_dialog: fd::native::NativeFileDialog::default(),
 
-            #[cfg(feature = "profiling")]
+            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
             keep_repainting: true,
         }
     }
@@ -243,7 +243,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 "https://github.com/luftkode/plotinator3000",
             ));
 
-            #[cfg(feature = "profiling")]
+            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
             crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut app.keep_repainting);
 
             if cfg!(target_arch = "wasm32") {

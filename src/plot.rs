@@ -65,7 +65,7 @@ impl LogPlotUi {
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
     ) -> Response {
-        #[cfg(feature = "profiling")]
+        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
 
         let Self {
