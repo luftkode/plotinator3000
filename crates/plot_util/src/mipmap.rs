@@ -83,12 +83,7 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> LevelLookupCached
     }
 }
 
-#[allow(
-    missing_debug_implementations,
-    reason = "PlotPoints exists in egui_plot and does not implement debug"
-)]
 pub struct MipMap2DPlotPoints {
-    strategy: MipMapStrategy,
     data: Vec<Vec<PlotPoint>>,
     most_recent_lookup: RefCell<LevelLookupCached<f64>>,
 }
@@ -99,20 +94,19 @@ impl MipMap2DPlotPoints {
         let mut data: Vec<Vec<PlotPoint>> = vec![current.clone()];
 
         while current.len() > min_elements {
-            let mipmap: Vec<PlotPoint> = Self::downsample(current.clone(), strategy);
+            let mipmap: Vec<PlotPoint> = Self::downsample(&current, strategy);
             current = mipmap.clone();
             data.push(mipmap);
         }
 
         Self {
             data,
-            strategy,
             most_recent_lookup: RefCell::new(LevelLookupCached::default()),
         }
     }
 
     /// Downsamples a vector to `ceil(len / 2)` elements with the chosen [`MipMapStrategy`]
-    fn downsample(source: Vec<PlotPoint>, strategy: MipMapStrategy) -> Vec<PlotPoint> {
+    fn downsample(source: &[PlotPoint], strategy: MipMapStrategy) -> Vec<PlotPoint> {
         let strategy = match strategy {
             MipMapStrategy::Min => |pairs: &[PlotPoint]| {
                 // Branchless way of selecting the point with the smallest X-value
@@ -147,16 +141,15 @@ impl MipMap2DPlotPoints {
         let mut data: Vec<Vec<PlotPoint>> = vec![Vec::<PlotPoint>::default()];
 
         let mut current: Vec<PlotPoint> = source.iter().map(|p| PlotPoint::from(*p)).collect();
-        current = Self::downsample(current, strategy);
+        current = Self::downsample(&current, strategy);
         while current.len() > min_elements {
-            let mipmap: Vec<PlotPoint> = Self::downsample(current.clone(), strategy);
+            let mipmap: Vec<PlotPoint> = Self::downsample(&current, strategy);
             current = mipmap.clone();
             data.push(mipmap);
         }
 
         Self {
             data,
-            strategy,
             most_recent_lookup: RefCell::new(LevelLookupCached::default()),
         }
     }

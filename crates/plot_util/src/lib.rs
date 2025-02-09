@@ -78,8 +78,8 @@ fn plot_with_mipmapping<'p>(
         plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
     } else {
         let plot_points_minmax = match known_idx_range {
-            Some((start, end)) => extract_range_points_alt(plot_points_minmax, start, end),
-            None => filter_plot_points_alt(plot_points_minmax, (x_lower, x_higher)),
+            Some((start, end)) => extract_range_points(plot_points_minmax, start, end),
+            None => filter_plot_points(plot_points_minmax, (x_lower, x_higher)),
         };
 
         let line = Line::new(plot_points_minmax)
@@ -92,30 +92,13 @@ fn plot_with_mipmapping<'p>(
 }
 
 #[inline(always)]
-fn extract_range_points(points: &[[f64; 2]], start: usize, end: usize) -> Vec<[f64; 2]> {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
-    let element_count = end - start + 2;
-    let mut final_points = Vec::with_capacity(element_count);
-    final_points.push(points[0]);
-
-    final_points.extend_from_slice(&points[start..end]);
-
-    if let Some(last_point) = points.last() {
-        if points.last().is_some_and(|lp| lp != last_point) {
-            final_points.push(*last_point);
-        }
-    }
-
-    final_points
-}
-
-#[inline(always)]
-fn extract_range_points_alt<'a>(
+fn extract_range_points<'a>(
     points: &'a [PlotPoint],
     start: usize,
     end: usize,
 ) -> PlotPoints<'a> {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let element_count = end - start + 2;
     let mut final_points = Vec::with_capacity(element_count);
     final_points.push(points[0]);
@@ -160,7 +143,7 @@ fn plot_raw<'p>(
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let plot_points = plot_vals.raw_plot_points();
-    let filtered_points = filter_plot_points_alt(plot_points, x_min_max_ext);
+    let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
 
     let line = Line::new(filtered_points)
         .width(line_width)
@@ -193,7 +176,9 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
 
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point
 /// such that resetting zooms works well even when the plot bounds are outside the data range.
-pub fn filter_plot_points_alt<'a>(points: &'a [PlotPoint], x_range: (f64, f64)) -> PlotPoints<'a> {
+pub fn filter_plot_points<'a>(points: &'a [PlotPoint], x_range: (f64, f64)) -> PlotPoints<'a> {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let points_len = points.len();
 
     // Don't bother filtering if there's less than 1024 points
@@ -234,97 +219,55 @@ pub fn filter_plot_points_alt<'a>(points: &'a [PlotPoint], x_range: (f64, f64)) 
     PlotPoints::Owned(filtered) // Copy the filtered data
 }
 
-/// Filter plot points based on the x plot bounds. Always includes the first and last plot point
-/// such that resetting zooms works well even when the plot bounds are outside the data range.
-pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
-    let points_len = points.len();
-    // Don't bother filtering if there's less than 1024 points
-    if points_len < 1024 {
-        return points.to_vec();
-    }
-
-    let start_idx = points.partition_point(|point| point[0] < x_range.0);
-    let end_idx = points.partition_point(|point| point[0] < x_range.1);
-
-    let points_within = end_idx - start_idx;
-    // If all the points are within the bound, return all the points
-    if points_within == points_len {
-        return points.to_vec();
-    }
-    // In this case none of the points are within the bounds so just return the first and last
-    if start_idx == end_idx {
-        return vec![points[0], points[points_len - 1]];
-    }
-
-    // allocate enough for the points within + 2 for the first and last points.
-    // we might not end up including the first and last points if they are included in the points within
-    // but this way we are sure to only allocate once
-    let mut filtered = Vec::with_capacity(points_within + 2);
-
-    // add the first points if it is not within the points that are within the bounds
-    if start_idx != 0 {
-        filtered.push(points[0]);
-    }
-    // Add all the points within the bounds
-    filtered.extend_from_slice(&points[start_idx..end_idx]);
-
-    // add the last points if it is not included in the points that are within the bounds
-    if end_idx != points_len {
-        filtered.push(points[points_len - 1]);
-    }
-
-    filtered
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_less_than_1024_points_no_filtering() {
-        let points: Vec<[f64; 2]> = (0..500).map(|i| [i as f64, i as f64 + 1.0]).collect();
+        let points: Vec<PlotPoint> = (0..500).map(|i| [i as f64, i as f64 + 1.0].into()).collect();
         let x_range = (100.0, 300.0);
 
         // Since points are less than 1024, no filtering should be done
         let result = filter_plot_points(&points, x_range);
 
         // Result should be identical to input
-        assert_eq!(result, points);
+        assert_eq!(result.points(), &points);
     }
 
     #[test]
     fn test_more_than_1024_points_with_filtering() {
-        let points: Vec<[f64; 2]> = (0..1500).map(|i| [i as f64, i as f64 + 1.0]).collect();
+        let points: Vec<PlotPoint> = (0..1500).map(|i| [i as f64, i as f64 + 1.0].into()).collect();
         let x_range = (100.0, 500.0);
 
         // Since the points are more than 1024, filtering should happen
         let result = filter_plot_points(&points, x_range);
 
         // First point, range of points between start and end range, last point should be included
-        let mut expected: Vec<[f64; 2]> = vec![
+        let mut expected: Vec<PlotPoint> = vec![
             // First point
-            [0.0, 1.0],
+            [0.0, 1.0].into(),
         ];
         // Points within the range (100..500)
         expected.extend_from_slice(&points[100..500]);
         // Last point
-        expected.push([1499.0, 1500.0]);
+        expected.push([1499.0, 1500.0].into());
 
-        assert_eq!(result, expected);
+        let expected_points: Vec<PlotPoint> = expected.into_iter().map(|p| p.into()).collect();
+
+        assert_eq!(result.points(), expected_points);
     }
 
     #[test]
     fn test_range_outside_bounds_with_large_data() {
-        let points: Vec<[f64; 2]> = (0..1500).map(|i| [i as f64, i as f64 + 1.0]).collect();
+        let points: Vec<PlotPoint> = (0..1500).map(|i| [i as f64, i as f64 + 1.0].into()).collect();
         let x_range = (2000.0, 3000.0);
 
         // Since range is outside the data points, we should get first and last points
         let result = filter_plot_points(&points, x_range);
 
-        let expected = vec![[0.0, 1.0], [1499.0, 1500.0]];
+        let expected:  Vec<PlotPoint> = vec![[0.0, 1.0].into(), [1499.0, 1500.0].into()];
 
-        assert_eq!(result, expected);
+        assert_eq!(result.points(), expected);
     }
 }
