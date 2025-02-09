@@ -69,6 +69,9 @@ impl LogPlotUi {
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
     ) -> Response {
+        #[cfg(feature = "profiling")]
+        puffin::profile_scope!("Plot_UI");
+
         let Self {
             legend_cfg,
             line_width,

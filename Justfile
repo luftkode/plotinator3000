@@ -82,6 +82,11 @@ update:
 audit *ARGS:
     cargo audit {{ ARGS }}
 
+[group("Profiling")]
+run-profiling *ARGS:
+    cargo install puffin_viewer --locked
+    cargo {{run}} --features profiling -- {{ARGS}}
+
 # Trunk is used to serve the app with a webserver, cargo-dist is used to generate and update workflows for distributing installers for various platforms
 [doc("Install the required tools for performing all dev tasks for the project")]
 install-devtools:

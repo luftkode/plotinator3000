@@ -30,6 +30,8 @@ pub fn paint_plots(
     line_width: f32,
     click_delta: &mut ClickDelta,
 ) {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
     let x_axes = vec![AxisHints::new_x().formatter(crate::util::format_time)];
@@ -108,6 +110,8 @@ fn fill_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
 ) {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
             let resp = plot_ui.response();
@@ -149,6 +153,8 @@ fn fill_plot(
     line_width: f32,
     plot_settings: &PlotSettings,
 ) {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     let (plot_data, plot_type) = plot;
 
     plot_util::plot_lines(

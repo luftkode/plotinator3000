@@ -24,6 +24,8 @@ pub fn plot_lines<'pv>(
     mipmap_cfg: MipMapConfiguration,
     plots_width_pixels: usize,
 ) {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     let (x_lower, x_higher) = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
     for plot_vals in plots {
         match mipmap_cfg {
@@ -66,6 +68,8 @@ fn plot_with_mipmapping(
     // if the range is already known then we can skip filtering
     known_idx_range: Option<(usize, usize)>,
 ) {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     let (x_lower, x_higher) = x_range;
     // If the mipmap level is 0 or 1 plotting all data points is just as efficient.
     if mipmap_lvl < 2 {
@@ -93,6 +97,8 @@ fn plot_with_mipmapping(
 
 #[inline(always)]
 fn extract_range_points(points: &[[f64; 2]], start: usize, end: usize) -> Vec<[f64; 2]> {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     let element_count = end - start + 2;
     let mut final_points = Vec::with_capacity(element_count);
     final_points.push(points[0]);
@@ -109,6 +115,8 @@ fn extract_range_points(points: &[[f64; 2]], start: usize, end: usize) -> Vec<[f
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     for plot_labels in plot_data
         .plot_labels()
         .iter()
@@ -132,6 +140,8 @@ fn plot_raw(
     line_width: f32,
     x_min_max_ext: (f64, f64),
 ) {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     let plot_points = plot_vals.get_raw();
     let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
     let line = Line::new(filtered_points)
@@ -166,6 +176,8 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point
 /// such that resetting zooms works well even when the plot bounds are outside the data range.
 pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
+    #[cfg(feature = "profiling")]
+    puffin::profile_function!();
     let points_len = points.len();
     // Don't bother filtering if there's less than 1024 points
     if points_len < 1024 {

@@ -7,6 +7,9 @@ fn main() -> eframe::Result {
     // Log to stderr (if run with `RUST_LOG=debug`).
     env_logger::init();
 
+    #[cfg(feature = "profiling")]
+    plotinator3000::profiling::start_puffin_server();
+
     #[cfg(feature = "selfupdater")]
     match plotinator3000::updater::update_if_applicable() {
         Ok(needs_restart) => {

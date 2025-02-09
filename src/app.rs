@@ -44,6 +44,9 @@ pub struct App {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     native_file_dialog: fd::native::NativeFileDialog,
+
+    #[cfg(feature = "profiling")]
+    keep_repainting: bool,
 }
 
 impl Default for App {
@@ -61,6 +64,9 @@ impl Default for App {
 
             #[cfg(not(target_arch = "wasm32"))]
             native_file_dialog: fd::native::NativeFileDialog::default(),
+
+            #[cfg(feature = "profiling")]
+            keep_repainting: true,
         }
     }
 }
@@ -173,6 +179,9 @@ impl eframe::App for App {
                     "Homepage",
                     "https://github.com/luftkode/plotinator3000",
                 ));
+
+                #[cfg(feature = "profiling")]
+                crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut self.keep_repainting);
 
                 if cfg!(target_arch = "wasm32") {
                     ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
