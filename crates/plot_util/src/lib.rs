@@ -71,27 +71,23 @@ fn plot_with_mipmapping<'p>(
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let (x_lower, x_higher) = x_range;
-    // If the mipmap level is 0 or 1 plotting all data points is just as efficient.
-    if mipmap_lvl < 2 {
+
+    let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
+    if plot_points_minmax.is_empty() {
+        // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
         plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
     } else {
-        let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
-        if plot_points_minmax.is_empty() {
-            // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
-            plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
-        } else {
-            let plot_points_minmax = match known_idx_range {
-                Some((start, end)) => extract_range_points_alt(plot_points_minmax, start, end),
-                None => filter_plot_points_alt(plot_points_minmax, (x_lower, x_higher)),
-            };
+        let plot_points_minmax = match known_idx_range {
+            Some((start, end)) => extract_range_points_alt(plot_points_minmax, start, end),
+            None => filter_plot_points_alt(plot_points_minmax, (x_lower, x_higher)),
+        };
 
-            let line = Line::new(plot_points_minmax)
-                .name(plot_vals.label())
-                .color(plot_vals.get_color())
-                .highlight(plot_vals.get_highlight());
+        let line = Line::new(plot_points_minmax)
+            .name(plot_vals.label())
+            .color(plot_vals.get_color())
+            .highlight(plot_vals.get_highlight());
 
-            plot_ui.line(line.width(line_width));
-        }
+        plot_ui.line(line.width(line_width));
     }
 }
 
@@ -165,7 +161,7 @@ fn plot_raw<'p>(
     puffin::profile_function!();
     let plot_points = plot_vals.raw_plot_points();
     let filtered_points = filter_plot_points_alt(plot_points, x_min_max_ext);
-    
+
     let line = Line::new(filtered_points)
         .width(line_width)
         .name(plot_vals.label())
