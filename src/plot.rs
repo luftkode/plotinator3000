@@ -25,10 +25,6 @@ pub enum PlotType {
     Thousands,
 }
 
-#[allow(
-    missing_debug_implementations,
-    reason = "Legend is from egui_plot and doesn't implement debug"
-)]
 #[derive(PartialEq, Deserialize, Serialize)]
 pub struct LogPlotUi {
     legend_cfg: Legend,
