@@ -92,11 +92,7 @@ fn plot_with_mipmapping<'p>(
 }
 
 #[inline(always)]
-fn extract_range_points(
-    points: & [PlotPoint],
-    start: usize,
-    end: usize,
-) -> PlotPoints<'_> {
+fn extract_range_points(points: &[PlotPoint], start: usize, end: usize) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let element_count = end - start + 2;
@@ -176,7 +172,7 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
 
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point
 /// such that resetting zooms works well even when the plot bounds are outside the data range.
-pub fn filter_plot_points(points: & [PlotPoint], x_range: (f64, f64)) -> PlotPoints<'_> {
+pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let points_len = points.len();
@@ -225,7 +221,9 @@ mod tests {
 
     #[test]
     fn test_less_than_1024_points_no_filtering() {
-        let points: Vec<PlotPoint> = (0..500).map(|i| [i as f64, i as f64 + 1.0].into()).collect();
+        let points: Vec<PlotPoint> = (0..500)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
         let x_range = (100.0, 300.0);
 
         // Since points are less than 1024, no filtering should be done
@@ -237,7 +235,9 @@ mod tests {
 
     #[test]
     fn test_more_than_1024_points_with_filtering() {
-        let points: Vec<PlotPoint> = (0..1500).map(|i| [i as f64, i as f64 + 1.0].into()).collect();
+        let points: Vec<PlotPoint> = (0..1500)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
         let x_range = (100.0, 500.0);
 
         // Since the points are more than 1024, filtering should happen
@@ -260,13 +260,15 @@ mod tests {
 
     #[test]
     fn test_range_outside_bounds_with_large_data() {
-        let points: Vec<PlotPoint> = (0..1500).map(|i| [i as f64, i as f64 + 1.0].into()).collect();
+        let points: Vec<PlotPoint> = (0..1500)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
         let x_range = (2000.0, 3000.0);
 
         // Since range is outside the data points, we should get first and last points
         let result = filter_plot_points(&points, x_range);
 
-        let expected:  Vec<PlotPoint> = vec![[0.0, 1.0].into(), [1499.0, 1500.0].into()];
+        let expected: Vec<PlotPoint> = vec![[0.0, 1.0].into(), [1499.0, 1500.0].into()];
 
         assert_eq!(result.points(), expected);
     }
