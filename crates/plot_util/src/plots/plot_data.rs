@@ -241,7 +241,7 @@ impl PlotValues {
             .expect("Empty dataset")
     }
 
-    /// Generates the raw plot points from the raw_points (only needed once per session)
+    /// Generates the raw plot points from the `raw_points` (only needed once per session)
     ///
     /// necessary because the raw plot points are not serializable
     /// so they are skipped and initialized as None at start up.

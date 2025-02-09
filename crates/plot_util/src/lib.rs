@@ -92,11 +92,11 @@ fn plot_with_mipmapping<'p>(
 }
 
 #[inline(always)]
-fn extract_range_points<'a>(
-    points: &'a [PlotPoint],
+fn extract_range_points(
+    points: & [PlotPoint],
     start: usize,
     end: usize,
-) -> PlotPoints<'a> {
+) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let element_count = end - start + 2;
@@ -176,7 +176,7 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
 
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point
 /// such that resetting zooms works well even when the plot bounds are outside the data range.
-pub fn filter_plot_points<'a>(points: &'a [PlotPoint], x_range: (f64, f64)) -> PlotPoints<'a> {
+pub fn filter_plot_points(points: & [PlotPoint], x_range: (f64, f64)) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let points_len = points.len();
