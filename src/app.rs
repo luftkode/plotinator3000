@@ -244,7 +244,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             ));
 
             #[cfg(feature = "profiling")]
-            crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut self.keep_repainting);
+            crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut app.keep_repainting);
 
             if cfg!(target_arch = "wasm32") {
                 ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
