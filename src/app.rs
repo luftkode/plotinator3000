@@ -22,10 +22,6 @@ mod util;
 pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[allow(
-    missing_debug_implementations,
-    reason = "Some of the nested types are from egui or egui_plot and we cannot implement Debug for them"
-)]
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
@@ -44,6 +40,9 @@ pub struct App {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     native_file_dialog: fd::native::NativeFileDialog,
+
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    keep_repainting: bool,
 }
 
 impl Default for App {
@@ -61,6 +60,9 @@ impl Default for App {
 
             #[cfg(not(target_arch = "wasm32"))]
             native_file_dialog: fd::native::NativeFileDialog::default(),
+
+            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+            keep_repainting: true,
         }
     }
 }
@@ -83,14 +85,6 @@ impl App {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
         Default::default()
-    }
-
-    fn configure_text_styles(ctx: &egui::Context, font_size: f32) {
-        let mut style = (*ctx.style()).clone();
-        for font_id in style.text_styles.values_mut() {
-            font_id.size = font_size;
-        }
-        ctx.set_style(style);
     }
 }
 
@@ -119,67 +113,10 @@ impl eframe::App for App {
         }
 
         if !self.font_size_init {
-            Self::configure_text_styles(ctx, self.font_size);
+            configure_text_styles(ctx, self.font_size);
         }
 
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                if ui
-                    .button(RichText::new(format!(
-                        "{} Reset",
-                        egui_phosphor::regular::TRASH
-                    )))
-                    .clicked()
-                {
-                    if self.plot.plot_count() == 0 {
-                        self.toasts
-                            .warning("No loaded plots...")
-                            .duration(Some(std::time::Duration::from_secs(3)));
-                    } else {
-                        self.toasts
-                            .info("All loaded logs removed...")
-                            .duration(Some(std::time::Duration::from_secs(3)));
-                    }
-                    self.loaded_files = LoadedFiles::default();
-                    self.plot = LogPlotUi::default();
-                }
-                if ui
-                    .button(RichText::new(format!(
-                        "{} Open File",
-                        egui_phosphor::regular::FOLDER_OPEN
-                    )))
-                    .clicked()
-                {
-                    #[cfg(target_arch = "wasm32")]
-                    self.web_file_dialog.open(ctx.clone());
-                    #[cfg(not(target_arch = "wasm32"))]
-                    self.native_file_dialog.open();
-                }
-                ui.label(RichText::new(regular::TEXT_T));
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut self.font_size)
-                            .speed(0.1)
-                            .range(8.0..=32.0)
-                            .suffix("px"),
-                    )
-                    .changed()
-                {
-                    Self::configure_text_styles(ctx, self.font_size);
-                }
-
-                show_theme_toggle_buttons(ui);
-                ui.add(Hyperlink::from_label_and_url(
-                    "Homepage",
-                    "https://github.com/luftkode/plotinator3000",
-                ));
-
-                if cfg!(target_arch = "wasm32") {
-                    ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
-                }
-                collapsible_instructions(ui);
-            });
-        });
+        show_top_panel(self, ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
@@ -251,6 +188,78 @@ fn collapsible_instructions(ui: &mut egui::Ui) {
         }
         ui.label("Reset view with double-click.");
     });
+}
+
+fn show_top_panel(app: &mut App, ctx: &egui::Context) {
+    egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+        egui::menu::bar(ui, |ui| {
+            if ui
+                .button(RichText::new(format!(
+                    "{} Reset",
+                    egui_phosphor::regular::TRASH
+                )))
+                .clicked()
+            {
+                if app.plot.plot_count() == 0 {
+                    app.toasts
+                        .warning("No loaded plots...")
+                        .duration(Some(std::time::Duration::from_secs(3)));
+                } else {
+                    app.toasts
+                        .info("All loaded logs removed...")
+                        .duration(Some(std::time::Duration::from_secs(3)));
+                }
+                app.loaded_files = LoadedFiles::default();
+                app.plot = LogPlotUi::default();
+            }
+            if ui
+                .button(RichText::new(format!(
+                    "{} Open File",
+                    egui_phosphor::regular::FOLDER_OPEN
+                )))
+                .clicked()
+            {
+                #[cfg(target_arch = "wasm32")]
+                app.web_file_dialog.open(ctx.clone());
+                #[cfg(not(target_arch = "wasm32"))]
+                app.native_file_dialog.open();
+            }
+            ui.label(RichText::new(regular::TEXT_T));
+            if ui
+                .add(
+                    egui::DragValue::new(&mut app.font_size)
+                        .speed(0.1)
+                        .range(8.0..=32.0)
+                        .suffix("px"),
+                )
+                .changed()
+            {
+                configure_text_styles(ctx, app.font_size);
+            }
+
+            show_theme_toggle_buttons(ui);
+            ui.add(Hyperlink::from_label_and_url(
+                "Homepage",
+                "https://github.com/luftkode/plotinator3000",
+            ));
+
+            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+            crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut app.keep_repainting);
+
+            if cfg!(target_arch = "wasm32") {
+                ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
+            }
+            collapsible_instructions(ui);
+        });
+    });
+}
+
+fn configure_text_styles(ctx: &egui::Context, font_size: f32) {
+    let mut style = (*ctx.style()).clone();
+    for font_id in style.text_styles.values_mut() {
+        font_id.size = font_size;
+    }
+    ctx.set_style(style);
 }
 
 /// Displays a toasts notification if logs are added with the names of all added logs
