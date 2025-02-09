@@ -9,13 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `profiling` feature with code to ease the ability for developers to profile `plotinator3000`. 
+- Add `profiling` feature with code to ease the ability for developers to profile `plotinator3000`.
 
 ### Changed
 
 - Organize test data files etc. in the new `test_util` crate with utilities for generating basic test boiler plate
 - Set `CROSS_NO_WARNINGS=0` due to cross configuration conflict
 - Combine min & max MipMaps instead of showing each as a separate line
+- Performance: Reduce copying by utilizing the new `egui_plot` feature of borrowing `PlotPoints`.
 
 ### Dependencies
 

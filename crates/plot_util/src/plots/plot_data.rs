@@ -1,13 +1,14 @@
 use chrono::{DateTime, Utc};
 use egui::Color32;
+use egui_plot::PlotPoint;
 use log_if::prelude::RawPlot;
 use serde::{Deserialize, Serialize};
 
-use crate::mipmap::{MipMap2D, MipMapStrategy};
+use crate::mipmap::{MipMap2DPlotPoints, MipMapStrategy};
 
 use super::util;
 
-#[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct PlotData {
     plots: Vec<PlotValues>,
     plot_labels: Vec<StoredPlotLabels>,
@@ -71,10 +72,13 @@ impl PlotData {
     }
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct PlotValues {
     raw_plot: Vec<[f64; 2]>,
-    mipmap_minmax: MipMap2D<f64>,
+    #[serde(skip)]
+    raw_plot_points: Option<Vec<PlotPoint>>,
+    #[serde(skip)]
+    mipmap_minmax_plot_points: Option<MipMap2DPlotPoints>,
     name: String,
     log_id: u16,
     // Label = "<name> #<log_id>"
@@ -91,14 +95,24 @@ impl PlotValues {
 
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: u16) -> Self {
         let label = format!("{name} #{log_id}");
-        let mipmap_max =
-            MipMap2D::without_base(&raw_plot, MipMapStrategy::Max, Self::MIPMAP_MIN_ELEMENTS);
-        let mut mipmap_min =
-            MipMap2D::without_base(&raw_plot, MipMapStrategy::Min, Self::MIPMAP_MIN_ELEMENTS);
-        mipmap_min.join(&mipmap_max);
+        let raw_plot_points = Some(raw_plot.iter().map(|p| (*p).into()).collect());
+
+        let mipmap_max_pp = MipMap2DPlotPoints::without_base(
+            &raw_plot,
+            MipMapStrategy::Max,
+            Self::MIPMAP_MIN_ELEMENTS,
+        );
+        let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
+            &raw_plot,
+            MipMapStrategy::Min,
+            Self::MIPMAP_MIN_ELEMENTS,
+        );
+        mipmap_min_pp.join(&mipmap_max_pp);
+
         Self {
-            mipmap_minmax: mipmap_min,
             raw_plot,
+            raw_plot_points,
+            mipmap_minmax_plot_points: Some(mipmap_min_pp),
             name,
             log_id,
             label,
@@ -125,20 +139,32 @@ impl PlotValues {
         &self.raw_plot
     }
 
-    pub fn get_level(&self, level: usize) -> Option<PointList> {
-        self.mipmap_minmax.get_level(level)
+    pub fn get_level(&self, level: usize) -> Option<&[PlotPoint]> {
+        self.mipmap_minmax_plot_points
+            .as_ref()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
+            .get_level(level)
     }
 
-    pub fn get_level_or_max(&self, level: usize) -> PointList {
-        self.mipmap_minmax.get_level_or_max(level)
+    pub fn get_level_or_max(&self, level: usize) -> &[PlotPoint] {
+        self.mipmap_minmax_plot_points
+            .as_ref()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
+            .get_level_or_max(level)
     }
 
-    pub fn get_max_level(&self) -> PointList {
-        self.mipmap_minmax.get_max_level()
+    pub fn get_max_level(&self) -> &[PlotPoint] {
+        self.mipmap_minmax_plot_points
+            .as_ref()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
+            .get_max_level()
     }
 
     pub fn mipmap_levels(&self) -> usize {
-        self.mipmap_minmax.num_levels()
+        self.mipmap_minmax_plot_points
+            .as_ref()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
+            .num_levels()
     }
 
     pub fn get_scaled_mipmap_levels(
@@ -146,33 +172,69 @@ impl PlotValues {
         pixel_width: usize,
         x_bounds: (f64, f64),
     ) -> (usize, Option<(usize, usize)>) {
-        self.mipmap_minmax.get_level_match(pixel_width, x_bounds)
+        self.mipmap_minmax_plot_points
+            .as_ref()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
+            .get_level_match(pixel_width, x_bounds)
     }
 
     /// Apply an offset to the plot based on the difference to the supplied [`DateTime<Utc>`]
     pub fn offset_plot(&mut self, new_start_date: DateTime<Utc>) {
         util::offset_data_iter(self.raw_plot.iter_mut(), new_start_date);
-        self.recalc_mipmaps();
+        self.raw_plot_points = Some(self.raw_plot.iter().map(|p| (*p).into()).collect());
+        self.recalc_mipmaps_plot_points();
     }
 
-    fn recalc_mipmaps(&mut self) {
-        let mipmap_max = MipMap2D::without_base(
+    fn recalc_mipmaps_plot_points(&mut self) {
+        let mipmap_max_pp = MipMap2DPlotPoints::without_base(
             &self.raw_plot,
             MipMapStrategy::Max,
             Self::MIPMAP_MIN_ELEMENTS,
         );
-        let mut mipmap_min = MipMap2D::without_base(
+        let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
             &self.raw_plot,
             MipMapStrategy::Min,
             Self::MIPMAP_MIN_ELEMENTS,
         );
-        mipmap_min.join(&mipmap_max);
-        self.mipmap_minmax = mipmap_min;
+        mipmap_min_pp.join(&mipmap_max_pp);
+        self.mipmap_minmax_plot_points = Some(mipmap_min_pp);
     }
 
-    /// Returns a borrowed list of all plot points
-    pub fn raw_plot(&self) -> PointList {
-        &self.raw_plot
+    pub fn total_data_points(&self) -> usize {
+        self.raw_plot.len()
+    }
+
+    pub fn first_timestamp(&self) -> f64 {
+        *self
+            .raw_plot
+            .first()
+            .and_then(|f| f.first())
+            .expect("Empty dataset")
+    }
+
+    pub fn last_timestamp(&self) -> f64 {
+        *self
+            .raw_plot
+            .last()
+            .and_then(|f| f.first())
+            .expect("Empty dataset")
+    }
+
+    /// Generates the raw plot points from the `raw_points` (only needed once per session)
+    ///
+    /// necessary because the raw plot points are not serializable
+    /// so they are skipped and initialized as None at start up.
+    pub fn build_raw_plot_points(&mut self) {
+        if self.raw_plot_points.is_none() {
+            self.raw_plot_points = Some(self.raw_plot.iter().map(|p| (*p).into()).collect());
+            self.recalc_mipmaps_plot_points();
+        }
+    }
+
+    pub fn raw_plot_points(&self) -> &[PlotPoint] {
+        self.raw_plot_points
+            .as_deref()
+            .expect("Attempted to retrieve raw plot points without first generating it")
     }
 
     /// Name of Plot, e.g. `RPM` or `Pid err`

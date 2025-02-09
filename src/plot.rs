@@ -25,7 +25,7 @@ pub enum PlotType {
     Thousands,
 }
 
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LogPlotUi {
     legend_cfg: Legend,
     line_width: f32,
