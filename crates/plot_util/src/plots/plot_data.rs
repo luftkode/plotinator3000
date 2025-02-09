@@ -4,7 +4,7 @@ use egui_plot::PlotPoint;
 use log_if::prelude::RawPlot;
 use serde::{Deserialize, Serialize};
 
-use crate::mipmap::{MipMap2D, MipMap2DPlotPoints, MipMapStrategy};
+use crate::mipmap::{MipMap2DPlotPoints, MipMapStrategy};
 
 use super::util;
 
@@ -77,7 +77,6 @@ pub struct PlotValues {
     raw_plot: Vec<[f64; 2]>,
     #[serde(skip)]
     raw_plot_points: Option<Vec<PlotPoint>>,
-    mipmap_minmax: MipMap2D<f64>,
     #[serde(skip)]
     mipmap_minmax_plot_points: Option<MipMap2DPlotPoints>,
     name: String,
@@ -96,11 +95,6 @@ impl PlotValues {
 
     pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: u16) -> Self {
         let label = format!("{name} #{log_id}");
-        let mipmap_max =
-            MipMap2D::without_base(&raw_plot, MipMapStrategy::Max, Self::MIPMAP_MIN_ELEMENTS);
-        let mut mipmap_min =
-            MipMap2D::without_base(&raw_plot, MipMapStrategy::Min, Self::MIPMAP_MIN_ELEMENTS);
-        mipmap_min.join(&mipmap_max);
         let raw_plot_points = Some(raw_plot.iter().map(|p| (*p).into()).collect());
 
         let mipmap_max_pp = MipMap2DPlotPoints::without_base(
@@ -118,7 +112,6 @@ impl PlotValues {
         Self {
             raw_plot,
             raw_plot_points,
-            mipmap_minmax: mipmap_min,
             mipmap_minmax_plot_points: Some(mipmap_min_pp),
             name,
             log_id,
@@ -149,28 +142,28 @@ impl PlotValues {
     pub fn get_level(&self, level: usize) -> Option<&[PlotPoint]> {
         self.mipmap_minmax_plot_points
             .as_ref()
-            .unwrap()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
             .get_level(level)
     }
 
     pub fn get_level_or_max(&self, level: usize) -> &[PlotPoint] {
         self.mipmap_minmax_plot_points
             .as_ref()
-            .unwrap()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
             .get_level_or_max(level)
     }
 
     pub fn get_max_level(&self) -> &[PlotPoint] {
         self.mipmap_minmax_plot_points
             .as_ref()
-            .unwrap()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
             .get_max_level()
     }
 
     pub fn mipmap_levels(&self) -> usize {
         self.mipmap_minmax_plot_points
             .as_ref()
-            .unwrap()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
             .num_levels()
     }
 
@@ -181,29 +174,14 @@ impl PlotValues {
     ) -> (usize, Option<(usize, usize)>) {
         self.mipmap_minmax_plot_points
             .as_ref()
-            .unwrap()
+            .expect("Accessed mipmaps before they were populated (missing call to 'build_raw_plot_points'?)")
             .get_level_match(pixel_width, x_bounds)
     }
 
     /// Apply an offset to the plot based on the difference to the supplied [`DateTime<Utc>`]
     pub fn offset_plot(&mut self, new_start_date: DateTime<Utc>) {
         util::offset_data_iter(self.raw_plot.iter_mut(), new_start_date);
-        self.recalc_mipmaps();
-    }
-
-    fn recalc_mipmaps(&mut self) {
-        let mipmap_max = MipMap2D::without_base(
-            &self.raw_plot,
-            MipMapStrategy::Max,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        let mut mipmap_min = MipMap2D::without_base(
-            &self.raw_plot,
-            MipMapStrategy::Min,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        mipmap_min.join(&mipmap_max);
-        self.mipmap_minmax = mipmap_min;
+        self.recalc_mipmaps_plot_points();
     }
 
     fn recalc_mipmaps_plot_points(&mut self) {
