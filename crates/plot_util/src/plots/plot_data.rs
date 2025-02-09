@@ -181,6 +181,7 @@ impl PlotValues {
     /// Apply an offset to the plot based on the difference to the supplied [`DateTime<Utc>`]
     pub fn offset_plot(&mut self, new_start_date: DateTime<Utc>) {
         util::offset_data_iter(self.raw_plot.iter_mut(), new_start_date);
+        self.raw_plot_points = Some(self.raw_plot.iter().map(|p| (*p).into()).collect());
         self.recalc_mipmaps_plot_points();
     }
 
