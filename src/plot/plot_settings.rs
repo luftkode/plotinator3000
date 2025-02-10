@@ -175,6 +175,8 @@ impl PlotSettings {
     /// Needs to be called once (and only once!) per frame before querying for plot ui settings, such as
     /// how many plots to paint and more.
     pub fn refresh(&mut self, plots: &mut Plots) {
+        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        puffin::profile_scope!("plot_settings.refresh");
         if self.apply_deletions {
             self.remove_if_marked_for_deletion(plots);
             self.apply_deletions = false;
@@ -241,6 +243,8 @@ impl PlotSettings {
         &'pv self,
         plot_vals: &'pv [PlotValues],
     ) -> impl Iterator<Item = &'pv PlotValues> {
+        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        puffin::profile_function!();
         let id_filter = self.log_id_filter();
         self.plot_name_filter
             .filter_plot_values(plot_vals, move |id| {

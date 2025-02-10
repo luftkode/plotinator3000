@@ -14,11 +14,11 @@ pub struct YAxisLock {
 impl YAxisLock {
     pub fn handle<F>(
         &mut self,
-        plot_ui: &mut egui_plot::PlotUi,
+        plot_ui: &mut egui_plot::PlotUi<'_>,
         plot_type: PlotType,
         between_bounds_update_fn: F,
     ) where
-        F: FnOnce(&mut egui_plot::PlotUi),
+        F: FnOnce(&mut egui_plot::PlotUi<'_>),
     {
         // Note to developer: This function might look needlessly complicated but remember that `plot_bounds()` returns the bounds from the previous frame
         // so we basically need to keep the state of the previous 2 frames to make sure we enforce the y-axis lock but stay compatible with

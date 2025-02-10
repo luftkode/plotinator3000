@@ -30,6 +30,8 @@ pub fn paint_plots(
     line_width: f32,
     click_delta: &mut ClickDelta,
 ) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
     let x_axes = vec![AxisHints::new_x().formatter(crate::util::format_time)];
@@ -108,6 +110,8 @@ fn fill_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
 ) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
             let resp = plot_ui.response();
@@ -142,14 +146,23 @@ fn fill_plots(
 /// * `axis_config` - For axis customization.
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
-fn fill_plot(
-    plot_ui: &mut egui_plot::PlotUi,
-    plot: (&mut PlotData, PlotType),
+fn fill_plot<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot: (&'p mut PlotData, PlotType),
     axis_config: &mut AxisConfig,
     line_width: f32,
-    plot_settings: &PlotSettings,
+    plot_settings: &'p PlotSettings,
 ) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let (plot_data, plot_type) = plot;
+    // necessary because the raw plot points are not serializable
+    // so they are skipped and initialized as None. So this
+    // generates them from the raw_points (only needed once per session)
+    plot_data
+        .plots_as_mut()
+        .iter_mut()
+        .for_each(|p| p.build_raw_plot_points());
 
     plot_util::plot_lines(
         plot_ui,
@@ -196,6 +209,6 @@ fn build_plot_ui<'a>(
         .custom_x_axes(x_axes)
         .label_formatter(crate::util::format_label_ns)
         .link_axis(link_group, Vec2b::new(axis_config.link_x(), false))
-        .link_cursor(link_group, [axis_config.link_cursor_x(), false].into())
+        .link_cursor(link_group, [axis_config.link_cursor_x(), false])
         .y_axis_min_width(50.0) // Adds enough margin for 5-digits
 }

@@ -9,17 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `profiling` feature with code to ease the ability for developers to profile `plotinator3000`.
 - Add support for upcoming log version in Swiss auto FW v4.2
 
 ### Changed
 
 - Organize test data files etc. in the new `test_util` crate with utilities for generating basic test boiler plate
 - Set `CROSS_NO_WARNINGS=0` due to cross configuration conflict
+- Combine min & max MipMaps instead of showing each as a separate line
+- Performance: Reduce copying by utilizing the new `egui_plot` feature of borrowing `PlotPoints`.
 
 ### Dependencies
 
 - Bump `openssl` from `0.10.68` -> `0.10.70` to fix RUSTSEC
 - Bump all dependencies with `cargo update`
+- Update egui from `0.30.0` to `0.31.0`
 
 ## [1.6.4]
 

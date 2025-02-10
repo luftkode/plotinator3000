@@ -25,11 +25,7 @@ pub enum PlotType {
     Thousands,
 }
 
-#[allow(
-    missing_debug_implementations,
-    reason = "Legend is from egui_plot and doesn't implement debug"
-)]
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LogPlotUi {
     legend_cfg: Legend,
     line_width: f32,
@@ -69,6 +65,9 @@ impl LogPlotUi {
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
     ) -> Response {
+        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        puffin::profile_scope!("Plot_UI");
+
         let Self {
             legend_cfg,
             line_width,

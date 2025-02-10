@@ -1,7 +1,6 @@
 pub mod mipmap;
 
-use egui::Color32;
-use egui_plot::{Line, PlotBounds, PlotPoint};
+use egui_plot::{Line, PlotBounds, PlotPoint, PlotPoints};
 
 pub mod plots;
 
@@ -19,12 +18,14 @@ pub enum MipMapConfiguration {
 }
 
 pub fn plot_lines<'pv>(
-    plot_ui: &mut egui_plot::PlotUi,
+    plot_ui: &mut egui_plot::PlotUi<'pv>,
     plots: impl Iterator<Item = &'pv PlotValues>,
     line_width: f32,
     mipmap_cfg: MipMapConfiguration,
     plots_width_pixels: usize,
 ) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let (x_lower, x_higher) = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
     for plot_vals in plots {
         match mipmap_cfg {
@@ -58,106 +59,60 @@ pub fn plot_lines<'pv>(
     }
 }
 
-fn plot_with_mipmapping(
-    plot_ui: &mut egui_plot::PlotUi,
-    plot_vals: &PlotValues,
+fn plot_with_mipmapping<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot_vals: &'p PlotValues,
     line_width: f32,
     mipmap_lvl: usize,
     x_range: (f64, f64),
     // if the range is already known then we can skip filtering
     known_idx_range: Option<(usize, usize)>,
 ) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let (x_lower, x_higher) = x_range;
-    // If the mipmap level is 0 or 1 plotting all data points is just as efficient.
-    if mipmap_lvl < 2 {
+
+    let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
+    if plot_points_minmax.is_empty() {
+        // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
         plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
     } else {
-        let (plot_points_min, plot_points_max) = plot_vals.get_level_or_max(mipmap_lvl);
-        if plot_points_min.is_empty() {
-            // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
-            plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
-        } else {
-            let (plot_points_min, plot_points_max) = match known_idx_range {
-                Some((start, end)) => {
-                    extract_range_points(plot_points_min, plot_points_max, start, end)
-                }
-                None => (
-                    filter_plot_points(plot_points_min, (x_lower, x_higher)),
-                    filter_plot_points(plot_points_max, (x_lower, x_higher)),
-                ),
-            };
+        let plot_points_minmax = match known_idx_range {
+            Some((start, end)) => extract_range_points(plot_points_minmax, start, end),
+            None => filter_plot_points(plot_points_minmax, (x_lower, x_higher)),
+        };
 
-            plot_min_max_lines(
-                plot_ui,
-                plot_vals.label(),
-                (plot_points_min, plot_points_max),
-                line_width,
-                plot_vals.get_color(),
-                plot_vals.get_highlight(),
-            );
-        }
+        let line = Line::new(plot_points_minmax)
+            .name(plot_vals.label())
+            .color(plot_vals.get_color())
+            .highlight(plot_vals.get_highlight());
+
+        plot_ui.line(line.width(line_width));
     }
 }
 
 #[inline(always)]
-fn extract_range_points(
-    points_min: &[[f64; 2]],
-    points_max: &[[f64; 2]],
-    start: usize,
-    end: usize,
-) -> (Vec<[f64; 2]>, Vec<[f64; 2]>) {
+fn extract_range_points(points: &[PlotPoint], start: usize, end: usize) -> PlotPoints<'_> {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let element_count = end - start + 2;
-    let mut min_points = Vec::with_capacity(element_count);
-    let mut max_points = Vec::with_capacity(element_count);
+    let mut final_points = Vec::with_capacity(element_count);
+    final_points.push(points[0]);
 
-    min_points.push(points_min[0]);
-    max_points.push(points_max[0]);
+    final_points.extend_from_slice(&points[start..end]);
 
-    min_points.extend_from_slice(&points_min[start..end]);
-    max_points.extend_from_slice(&points_max[start..end]);
-
-    if let Some(last_point) = points_min.last() {
-        if min_points.last().is_some_and(|lp| lp != last_point) {
-            min_points.push(*last_point);
-        }
-    }
-    if let Some(last_point) = points_max.last() {
-        if max_points.last().is_some_and(|lp| lp != last_point) {
-            max_points.push(*last_point);
+    if let Some(last_point) = points.last() {
+        if points.last().is_some_and(|lp| lp != last_point) {
+            final_points.push(*last_point);
         }
     }
 
-    (min_points, max_points)
-}
-
-#[inline]
-fn plot_min_max_lines(
-    plot_ui: &mut egui_plot::PlotUi,
-    base_label: &str,
-    (points_min, points_max): (Vec<[f64; 2]>, Vec<[f64; 2]>),
-    line_width: f32,
-    color: Color32,
-    highlight: bool,
-) {
-    let mut label_min = base_label.to_owned();
-    label_min.push_str(" (min)");
-    let mut label_max = base_label.to_owned();
-    label_max.push_str(" (max)");
-
-    let line_min = Line::new(points_min)
-        .name(label_min)
-        .color(color)
-        .highlight(highlight);
-    let line_max = Line::new(points_max)
-        .name(label_max)
-        .color(color)
-        .highlight(highlight);
-
-    plot_ui.line(line_min.width(line_width));
-    plot_ui.line(line_max.width(line_width));
+    PlotPoints::Owned(final_points)
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     for plot_labels in plot_data
         .plot_labels()
         .iter()
@@ -175,14 +130,17 @@ pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_fil
     }
 }
 
-fn plot_raw(
-    plot_ui: &mut egui_plot::PlotUi,
-    plot_vals: &PlotValues,
+fn plot_raw<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot_vals: &'p PlotValues,
     line_width: f32,
     x_min_max_ext: (f64, f64),
 ) {
-    let plot_points = plot_vals.get_raw();
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
+    let plot_points = plot_vals.raw_plot_points();
     let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
+
     let line = Line::new(filtered_points)
         .width(line_width)
         .name(plot_vals.label())
@@ -214,29 +172,32 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
 
 /// Filter plot points based on the x plot bounds. Always includes the first and last plot point
 /// such that resetting zooms works well even when the plot bounds are outside the data range.
-pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64; 2]> {
+pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoints<'_> {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
     let points_len = points.len();
+
     // Don't bother filtering if there's less than 1024 points
     if points_len < 1024 {
-        return points.to_vec();
+        return PlotPoints::Borrowed(points); // Borrow if no filtering is needed
     }
 
-    let start_idx = points.partition_point(|point| point[0] < x_range.0);
-    let end_idx = points.partition_point(|point| point[0] < x_range.1);
+    let start_idx = points.partition_point(|point| point.x < x_range.0);
+    let end_idx = points.partition_point(|point| point.x < x_range.1);
 
     let points_within = end_idx - start_idx;
+
     // If all the points are within the bound, return all the points
     if points_within == points_len {
-        return points.to_vec();
+        return PlotPoints::Borrowed(points); // Borrow if no filtering is needed
     }
+
     // In this case none of the points are within the bounds so just return the first and last
     if start_idx == end_idx {
-        return vec![points[0], points[points_len - 1]];
+        return PlotPoints::Owned(vec![points[0], points[points_len - 1]]); // Copy only first/last
     }
 
     // allocate enough for the points within + 2 for the first and last points.
-    // we might not end up including the first and last points if they are included in the points within
-    // but this way we are sure to only allocate once
     let mut filtered = Vec::with_capacity(points_within + 2);
 
     // add the first points if it is not within the points that are within the bounds
@@ -251,7 +212,7 @@ pub fn filter_plot_points(points: &[[f64; 2]], x_range: (f64, f64)) -> Vec<[f64;
         filtered.push(points[points_len - 1]);
     }
 
-    filtered
+    PlotPoints::Owned(filtered) // Copy the filtered data
 }
 
 #[cfg(test)]
@@ -260,47 +221,55 @@ mod tests {
 
     #[test]
     fn test_less_than_1024_points_no_filtering() {
-        let points: Vec<[f64; 2]> = (0..500).map(|i| [i as f64, i as f64 + 1.0]).collect();
+        let points: Vec<PlotPoint> = (0..500)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
         let x_range = (100.0, 300.0);
 
         // Since points are less than 1024, no filtering should be done
         let result = filter_plot_points(&points, x_range);
 
         // Result should be identical to input
-        assert_eq!(result, points);
+        assert_eq!(result.points(), &points);
     }
 
     #[test]
     fn test_more_than_1024_points_with_filtering() {
-        let points: Vec<[f64; 2]> = (0..1500).map(|i| [i as f64, i as f64 + 1.0]).collect();
+        let points: Vec<PlotPoint> = (0..1500)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
         let x_range = (100.0, 500.0);
 
         // Since the points are more than 1024, filtering should happen
         let result = filter_plot_points(&points, x_range);
 
         // First point, range of points between start and end range, last point should be included
-        let mut expected: Vec<[f64; 2]> = vec![
+        let mut expected: Vec<PlotPoint> = vec![
             // First point
-            [0.0, 1.0],
+            [0.0, 1.0].into(),
         ];
         // Points within the range (100..500)
         expected.extend_from_slice(&points[100..500]);
         // Last point
-        expected.push([1499.0, 1500.0]);
+        expected.push([1499.0, 1500.0].into());
 
-        assert_eq!(result, expected);
+        let expected_points: Vec<PlotPoint> = expected.into_iter().map(|p| p.into()).collect();
+
+        assert_eq!(result.points(), expected_points);
     }
 
     #[test]
     fn test_range_outside_bounds_with_large_data() {
-        let points: Vec<[f64; 2]> = (0..1500).map(|i| [i as f64, i as f64 + 1.0]).collect();
+        let points: Vec<PlotPoint> = (0..1500)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
         let x_range = (2000.0, 3000.0);
 
         // Since range is outside the data points, we should get first and last points
         let result = filter_plot_points(&points, x_range);
 
-        let expected = vec![[0.0, 1.0], [1499.0, 1500.0]];
+        let expected: Vec<PlotPoint> = vec![[0.0, 1.0].into(), [1499.0, 1500.0].into()];
 
-        assert_eq!(result, expected);
+        assert_eq!(result.points(), expected);
     }
 }
