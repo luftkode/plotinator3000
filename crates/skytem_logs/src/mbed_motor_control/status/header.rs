@@ -6,6 +6,7 @@ use v1::StatusLogHeaderV1;
 use v2::StatusLogHeaderV2;
 use v3::StatusLogHeaderV3;
 use v4::StatusLogHeaderV4;
+use v6::StatusLogHeaderV6;
 
 use crate::{
     mbed_motor_control::mbed_header::{
@@ -18,6 +19,7 @@ mod v1;
 mod v2;
 mod v3;
 mod v4;
+mod v6;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum StatusLogHeader {
@@ -25,6 +27,7 @@ pub enum StatusLogHeader {
     V2(StatusLogHeaderV2),
     V3(StatusLogHeaderV3),
     V5(StatusLogHeaderV4),
+    V6(StatusLogHeaderV6),
 }
 
 impl fmt::Display for StatusLogHeader {
@@ -34,6 +37,7 @@ impl fmt::Display for StatusLogHeader {
             Self::V2(h) => write!(f, "{h}"),
             Self::V3(h) => write!(f, "{h}"),
             Self::V5(h) => write!(f, "{h}"),
+            Self::V6(h) => write!(f, "{h}"),
         }
     }
 }
@@ -45,6 +49,7 @@ impl StatusLogHeader {
             Self::V2(_) => 2,
             Self::V3(_) => 3,
             Self::V5(_) => 5,
+            Self::V6(_) => 6,
         }
     }
 
@@ -107,6 +112,16 @@ impl StatusLogHeader {
                 )?;
                 total_bytes_read += bytes_read;
                     Self::V5(header)
+
+            }
+            6 => {
+                let (header, bytes_read) = StatusLogHeaderV6::from_reader_with_uniq_descr_version(
+                    reader,
+                    unique_description,
+                    version,
+                )?;
+                total_bytes_read += bytes_read;
+                Self::V6(header)
 
             }
             _ => {

@@ -6,6 +6,8 @@ pub(crate) mod v2;
 pub(crate) use v2::MbedConfigV2;
 pub(crate) mod v3;
 pub(crate) use v3::MbedConfigV3;
+pub(crate) mod v4;
+pub(crate) use v4::MbedConfigV4;
 
 pub(crate) trait MbedConfig: Sized {
     /// As long as implementors are packed structs, this can just return `size_of::<Self>()`, otherwise it should return

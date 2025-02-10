@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.7.0]
+
 ### Added
 
 - Add `profiling` feature with code to ease the ability for developers to profile `plotinator3000`.
+- Add support for upcoming log version in Swiss auto FW v4.2
 
 ### Changed
 

@@ -11,11 +11,13 @@ use v1::PidLogHeaderV1;
 use v2::PidLogHeaderV2;
 use v3::PidLogHeaderV3;
 use v4::PidLogHeaderV4;
+use v5::PidLogHeaderV5;
 
 mod v1;
 mod v2;
 mod v3;
 mod v4;
+mod v5;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub(crate) enum PidLogHeader {
@@ -23,6 +25,7 @@ pub(crate) enum PidLogHeader {
     V2(PidLogHeaderV2),
     V3(PidLogHeaderV3),
     V4(PidLogHeaderV4),
+    V5(PidLogHeaderV5),
 }
 
 impl fmt::Display for PidLogHeader {
@@ -32,11 +35,22 @@ impl fmt::Display for PidLogHeader {
             Self::V2(h) => write!(f, "{h}"),
             Self::V3(h) => write!(f, "{h}"),
             Self::V4(h) => write!(f, "{h}"),
+            Self::V5(h) => write!(f, "{h}"),
         }
     }
 }
 
 impl PidLogHeader {
+    pub(super) fn version(&self) -> u16 {
+        match self {
+            Self::V1(_) => 1,
+            Self::V2(_) => 2,
+            Self::V3(_) => 3,
+            Self::V4(_) => 4,
+            Self::V5(_) => 5,
+        }
+    }
+
     pub(super) fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
 
@@ -94,6 +108,15 @@ impl PidLogHeader {
                 )?;
                 total_bytes_read += bytes_read;
                 Self::V4(header)
+            }
+            5 => {
+                let (header, bytes_read) = PidLogHeaderV5::from_reader_with_uniq_descr_version(
+                    reader,
+                    unique_description,
+                    version,
+                )?;
+                total_bytes_read += bytes_read;
+                Self::V5(header)
             }
             _ => {
                 return Err(io::Error::new(

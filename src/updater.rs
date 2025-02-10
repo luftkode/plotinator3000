@@ -319,6 +319,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = r#"Ruins your ~/.profile and ~/.bashrc or ~/.zshrc (or whatever you use)
+    during the installation process by placing e.g. '. "/tmp/.tmp5gCyCy/env"' in it
+    every time you run the test. So it is only run in CI by default (in the nextest 'ci' profile."#]
     fn test_plotinator_updater() -> TestResult {
         let tmp_dir = tempdir()?;
         let updater = PlotinatorUpdater::new();

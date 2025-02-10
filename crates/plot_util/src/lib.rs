@@ -253,9 +253,7 @@ mod tests {
         // Last point
         expected.push([1499.0, 1500.0].into());
 
-        let expected_points: Vec<PlotPoint> = expected.into_iter().map(|p| p.into()).collect();
-
-        assert_eq!(result.points(), expected_points);
+        assert_eq!(result.points(), expected);
     }
 
     #[test]
