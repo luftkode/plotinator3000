@@ -709,7 +709,7 @@ mod tests {
             }
             StatusLogEntry::V4(status_log_entry_v4) => status_log_entry_v4,
         };
-        assert_eq!(first_entry.engine_temp, 22.793594);
+        assert_eq!(first_entry.engine_temp, 24.448399);
         assert_eq!(first_entry.setpoint, 1234.0);
         assert_eq!(first_entry.motor_state, v4::MotorState::ECU_ON_WAIT_PUMP);
         let second_entry = &status_log.entries[1];
@@ -719,7 +719,7 @@ mod tests {
             }
             StatusLogEntry::V4(status_log_entry_v4) => status_log_entry_v4,
         };
-        assert_eq!(second_entry.engine_temp, 22.758007);
+        assert_eq!(second_entry.engine_temp, 24.50178);
         assert_eq!(second_entry.setpoint, 1234.0);
         assert_eq!(second_entry.motor_state, v4::MotorState::ECU_ON_WAIT_PUMP);
 
@@ -730,10 +730,10 @@ mod tests {
             }
             StatusLogEntry::V4(status_log_entry_v4) => status_log_entry_v4,
         };
-        assert_eq!(last_entry.timestamp_ns(), 82156000000.0);
-        assert_eq!(last_entry.engine_temp, 22.989325);
+        assert_eq!(last_entry.timestamp_ns(), 79568000000.0);
+        assert_eq!(last_entry.engine_temp, 64.07643);
         assert_eq!(last_entry.setpoint, 2500.0);
-        assert_eq!(last_entry.motor_state, v4::MotorState::IDLE);
+        assert_eq!(last_entry.motor_state, v4::MotorState::WAIT_TIME_SHUTDOWN);
         //eprintln!("{status_log}");
         Ok(())
     }

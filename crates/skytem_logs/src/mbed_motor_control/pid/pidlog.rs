@@ -497,30 +497,30 @@ mod tests {
         let full_data_len = data.len();
         let (pidlog, bytes_read) = PidLog::from_reader(&mut data)?;
         assert!(bytes_read <= full_data_len);
-        assert_eq!(bytes_read, 190948);
+        assert_eq!(bytes_read, 170996);
         let first_entry = match pidlog.entries.first().expect("Empty entries") {
             PidLogEntry::V1(_) => panic!("Expected pid log entry v2"),
             PidLogEntry::V2(pid_log_entry_v2) => pid_log_entry_v2,
         };
-        assert_eq!(first_entry.rpm, 6003.602);
+        assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.0);
         assert_eq!(first_entry.servo_duty_cycle, 0.0);
-        assert_eq!(first_entry.rpm_error_count, 23);
-        assert_eq!(first_entry.first_valid_rpm_count, 2);
+        assert_eq!(first_entry.rpm_error_count, 0);
+        assert_eq!(first_entry.first_valid_rpm_count, 0);
         assert!(!first_entry.fan_on);
         assert_eq!(first_entry.vbat, 0.);
 
-        let second_entry = match &pidlog.entries[1] {
+        let last_entry = match &pidlog.entries.last().unwrap() {
             PidLogEntry::V1(_) => panic!("Expected pid log entry v2"),
             PidLogEntry::V2(e) => e,
         };
-        assert_eq!(second_entry.rpm, 6003.9023);
-        assert_eq!(second_entry.pid_output, 0.0);
-        assert_eq!(second_entry.servo_duty_cycle, 0.0);
-        assert_eq!(second_entry.rpm_error_count, 23);
-        assert_eq!(second_entry.first_valid_rpm_count, 2);
-        assert!(!second_entry.fan_on);
-        assert_eq!(second_entry.vbat, 0.);
+        assert_eq!(last_entry.rpm, 2499.4272);
+        assert_eq!(last_entry.pid_output, 0.034495242);
+        assert_eq!(last_entry.servo_duty_cycle, 0.04055);
+        assert_eq!(last_entry.rpm_error_count, 7);
+        assert_eq!(last_entry.first_valid_rpm_count, 2);
+        assert!(!last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 0.);
         //eprintln!("{pidlog}");
         Ok(())
     }

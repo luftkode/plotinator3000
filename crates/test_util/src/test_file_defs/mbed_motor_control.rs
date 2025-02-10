@@ -23,7 +23,7 @@ define_mbed_log!(
     "v3/short_start/status_20241029_133931_00.bin"
 );
 define_mbed_log!(mbed_pid_v4, "v4/pid_20250120_092446_00.bin");
-define_mbed_log!(mbed_pid_v5_regular, "v5/regular/pid_20250205_121406_00.bin");
+define_mbed_log!(mbed_pid_v5_regular, "v5/regular/pid_20250210_085126_00.bin");
 define_mbed_log!(
     mbed_pid_v5_configuring,
     "v5/configuring/pid_20250205_121547_00.bin"
@@ -31,7 +31,7 @@ define_mbed_log!(
 define_mbed_log!(mbed_status_v5, "v5/status_20250120_092446_00.bin");
 define_mbed_log!(
     mbed_status_v6_regular,
-    "v6/regular/status_20250205_121406_00.bin"
+    "v6/regular/status_20250210_085126_00.bin"
 );
 define_mbed_log!(
     mbed_status_v6_configuring,
