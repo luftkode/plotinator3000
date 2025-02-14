@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Remove all generic and unused mipmap implementations.
+
 ## [1.7.0]
 
 ### Added
