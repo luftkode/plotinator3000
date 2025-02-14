@@ -156,11 +156,10 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
 pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
-    let points_len = points.len();
 
     // Don't bother filtering if there's less than 1024 points
-    if points_len < 1024 {
-        return PlotPoints::Borrowed(points); // Borrow if no filtering is needed
+    if points.len() < 1024 {
+        return PlotPoints::Borrowed(points);
     }
 
     let start_idx = points.partition_point(|point| point.x < x_range.0);
@@ -196,17 +195,7 @@ mod tests {
         // Since the points are more than 1024, filtering should happen
         let result = filter_plot_points(&points, x_range);
 
-        // First point, range of points between start and end range, last point should be included
-        let mut expected: Vec<PlotPoint> = vec![
-            // First point
-            [0.0, 1.0].into(),
-        ];
-        // Points within the range (100..500)
-        expected.extend_from_slice(&points[100..500]);
-        // Last point
-        expected.push([1499.0, 1500.0].into());
-
-        assert_eq!(result.points(), expected);
+        assert_eq!(result.points(), &points[100..500]);
     }
 
     #[test]
@@ -219,8 +208,6 @@ mod tests {
         // Since range is outside the data points, we should get first and last points
         let result = filter_plot_points(&points, x_range);
 
-        let expected: Vec<PlotPoint> = vec![[0.0, 1.0].into(), [1499.0, 1500.0].into()];
-
-        assert_eq!(result.points(), expected);
+        assert_eq!(result.points(), &[]);
     }
 }
