@@ -151,8 +151,7 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
     (extended_x_bound_min, extended_x_bound_max)
 }
 
-/// Filter plot points based on the x plot bounds. Always includes the first and last plot point
-/// such that resetting zooms works well even when the plot bounds are outside the data range.
+/// Filter plot points based on the x plot bounds.
 pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();

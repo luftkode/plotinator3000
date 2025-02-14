@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Remove all generic and unused mipmap implementations.
+- No longer include first and last points unconditionally (no longer required for zoom reset), and avoid copying plots by always borrowing.
 
 ## [1.7.0]
 
