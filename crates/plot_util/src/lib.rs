@@ -78,7 +78,7 @@ fn plot_with_mipmapping<'p>(
         plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
     } else {
         let plot_points_minmax = match known_idx_range {
-            Some((start, end)) => extract_range_points(plot_points_minmax, start, end),
+            Some((start, end)) => PlotPoints::Borrowed(&plot_points_minmax[start..end]),
             None => filter_plot_points(plot_points_minmax, (x_lower, x_higher)),
         };
 
@@ -89,25 +89,6 @@ fn plot_with_mipmapping<'p>(
 
         plot_ui.line(line.width(line_width));
     }
-}
-
-#[inline(always)]
-fn extract_range_points(points: &[PlotPoint], start: usize, end: usize) -> PlotPoints<'_> {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
-    let element_count = end - start + 2;
-    let mut final_points = Vec::with_capacity(element_count);
-    final_points.push(points[0]);
-
-    final_points.extend_from_slice(&points[start..end]);
-
-    if let Some(last_point) = points.last() {
-        if points.last().is_some_and(|lp| lp != last_point) {
-            final_points.push(*last_point);
-        }
-    }
-
-    PlotPoints::Owned(final_points)
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
@@ -184,35 +165,7 @@ pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoin
 
     let start_idx = points.partition_point(|point| point.x < x_range.0);
     let end_idx = points.partition_point(|point| point.x < x_range.1);
-
-    let points_within = end_idx - start_idx;
-
-    // If all the points are within the bound, return all the points
-    if points_within == points_len {
-        return PlotPoints::Borrowed(points); // Borrow if no filtering is needed
-    }
-
-    // In this case none of the points are within the bounds so just return the first and last
-    if start_idx == end_idx {
-        return PlotPoints::Owned(vec![points[0], points[points_len - 1]]); // Copy only first/last
-    }
-
-    // allocate enough for the points within + 2 for the first and last points.
-    let mut filtered = Vec::with_capacity(points_within + 2);
-
-    // add the first points if it is not within the points that are within the bounds
-    if start_idx != 0 {
-        filtered.push(points[0]);
-    }
-    // Add all the points within the bounds
-    filtered.extend_from_slice(&points[start_idx..end_idx]);
-
-    // add the last points if it is not included in the points that are within the bounds
-    if end_idx != points_len {
-        filtered.push(points[points_len - 1]);
-    }
-
-    PlotPoints::Owned(filtered) // Copy the filtered data
+    PlotPoints::Borrowed(&points[start_idx..end_idx])
 }
 
 #[cfg(test)]
