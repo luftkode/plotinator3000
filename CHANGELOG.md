@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove all generic and unused mipmap implementations.
 - No longer include first and last points unconditionally (no longer required for zoom reset), and avoid copying plots by always borrowing.
 
+### Dependencies
+
+- `cargo-bins/cargo-binstall`: 1.10.22 → 1.11.0 ([#194](https://github.com/luftkode/plotinator3000/pull/194))
+- `crambl/dependabot-changelog-writer`: 1.0.0 → 1.0.2 ([#194](https://github.com/luftkode/plotinator3000/pull/194))
+
 ## [1.7.0]
 
 ### Added
