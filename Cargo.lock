@@ -1134,6 +1134,7 @@ checksum = "7d2768eaa6d5c80a6e2a008da1f0e062dff3c83eb2b28605ea2d0732d46e74d6"
 dependencies = [
  "accesskit",
  "ahash",
+ "backtrace",
  "bitflags 2.8.0",
  "emath",
  "epaint",
