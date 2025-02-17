@@ -1,6 +1,10 @@
 use std::time::Duration;
 
-use crate::{plot::LogPlotUi, util::format_data_size};
+use crate::{
+    mqtt::{MqttData, MqttPoint},
+    plot::LogPlotUi,
+    util::format_data_size,
+};
 use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
 use egui_notify::Toasts;
@@ -27,6 +31,10 @@ pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 pub struct App {
     #[serde(skip)]
     toasts: Toasts,
+    #[serde(skip)]
+    mqtt_plots: Vec<MqttData>,
+    #[serde(skip)]
+    mqtt_channel: Option<std::sync::mpsc::Receiver<MqttPoint>>,
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
@@ -49,6 +57,8 @@ impl Default for App {
     fn default() -> Self {
         Self {
             toasts: Toasts::default(),
+            mqtt_plots: Vec::new(),
+            mqtt_channel: None,
             loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
@@ -120,8 +130,12 @@ impl eframe::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
-            self.plot
-                .ui(ui, &self.loaded_files.take_loaded_files(), &mut self.toasts);
+            self.plot.ui(
+                ui,
+                &self.loaded_files.take_loaded_files(),
+                &mut self.toasts,
+                &self.mqtt_plots,
+            );
             if self.plot.plot_count() == 0 {
                 // Display the message when plots are shown
                 util::draw_empty_state(ui);
@@ -250,6 +264,38 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
             }
             collapsible_instructions(ui);
+            if ui.button("MQTT").clicked() {
+                if app.mqtt_channel.is_none() {
+                    let (tx, rx) = std::sync::mpsc::channel::<MqttPoint>();
+                    app.mqtt_channel = Some(rx);
+                    std::thread::spawn(|| {
+                        crate::mqtt::mqtt_receiver(tx);
+                    });
+                }
+            }
+
+            if app.mqtt_channel.is_some() {
+                ctx.request_repaint_after(Duration::from_millis(700));
+            }
+            if let Some(rx) = app.mqtt_channel.as_ref() {
+                let mut received_any_packets = false;
+                while let Ok(mqtt_point) = rx.try_recv() {
+                    received_any_packets = true;
+                    log::info!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
+                    if let Some(mp) = app
+                        .mqtt_plots
+                        .iter_mut()
+                        .find(|mp| mp.topic == mqtt_point.topic)
+                    {
+                        mp.data.push(mqtt_point.point);
+                    } else {
+                        app.mqtt_plots.push(MqttData {
+                            topic: mqtt_point.topic,
+                            data: vec![mqtt_point.point],
+                        });
+                    }
+                }
+            }
         });
     });
 }
