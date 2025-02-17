@@ -177,16 +177,16 @@ impl App {
 
 fn collapsible_instructions(ui: &mut egui::Ui) {
     ui.collapsing("Instructions", |ui| {
-        ui.label("Pan by dragging, or scroll (+ shift = horizontal).");
-        ui.label("Box zooming: Right click to zoom in and zoom out using a selection.");
-        if cfg!(target_arch = "wasm32") {
-            ui.label("Zoom with ctrl / ⌘ + pointer wheel, or with pinch gesture.");
-        } else if cfg!(target_os = "macos") {
-            ui.label("Zoom with ctrl / ⌘ + scroll.");
+        ui.label("Pan: Drag, or scroll (+ shift = horizontal).");
+        ui.label("Box zooming: Right click + drag.");
+        if cfg!(target_os = "macos") {
+            ui.label("X-axis zoom: CTRL/⌘ + scroll.");
+            ui.label("Y-axis zoom: CTRL/⌘ + ALT + scroll.");
         } else {
-            ui.label("Zoom with ctrl + scroll.");
+            ui.label("X-axis zoom: CTRL + scroll.");
+            ui.label("Y-axis zoom: CTRL + ALT + scroll.");
         }
-        ui.label("Reset view with double-click.");
+        ui.label("Reset view: double-click.");
     });
 }
 
