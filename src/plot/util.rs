@@ -101,7 +101,7 @@ pub fn set_zoom_factor(scroll: Vec2, modifiers: Modifiers) -> Option<Vec2> {
     }
 
     log::info!("zoom_factor={zoom_factor}");
-    if modifiers.ctrl {
+    if ctrl {
         Some(zoom_factor)
     } else {
         None
