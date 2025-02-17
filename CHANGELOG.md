@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- X-axis zoom: CTRL/⌘ + scroll.
+- Y-axis zoom: CTRL/⌘ + ALT + scroll.
+
 ### Changed
 
 - Remove all generic and unused mipmap implementations.
 - No longer include first and last points unconditionally (no longer required for zoom reset), and avoid copying plots by always borrowing.
 - Specify some optional dependencies as such
 - Refactor and document just recipes to align with ADR on standard just recipes
+- Remove Y-axis locking feature that is made obsolete with the new scroll modifiers
 
 ### Dependencies
 
