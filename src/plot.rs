@@ -10,7 +10,7 @@ use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
 
-use crate::app::supported_formats::SupportedFormat;
+use crate::{app::supported_formats::SupportedFormat, mqtt::MqttData};
 mod axis_config;
 mod click_delta;
 mod plot_graphics;
@@ -64,6 +64,7 @@ impl LogPlotUi {
         ui: &mut egui::Ui,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
+        mqtt_plots: &[MqttData],
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -117,6 +118,7 @@ impl LogPlotUi {
                 link_group.expect("uninitialized link group id"),
                 *line_width,
                 click_delta,
+                mqtt_plots,
             );
         })
         .response

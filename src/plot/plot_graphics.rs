@@ -2,7 +2,7 @@ use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use plot_util::{PlotData, Plots};
 
-use crate::plot::util;
+use crate::{mqtt::MqttData, plot::util};
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
 
@@ -31,6 +31,7 @@ pub fn paint_plots(
     link_group: egui::Id,
     line_width: f32,
     click_delta: &mut ClickDelta,
+    mqtt_plots: &[MqttData],
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
@@ -62,7 +63,7 @@ pub fn paint_plots(
         plot_height,
         legend_cfg.clone(),
         axis_cfg,
-        x_axes,
+        x_axes.clone(),
         link_group,
     );
     let mut plot_components_list = Vec::with_capacity(plot_settings.total_plot_count().into());
@@ -85,12 +86,27 @@ pub fn paint_plots(
         plot_components_list.push((thousands_plot, thousands, PlotType::Thousands));
     }
 
+    let mqtt_plot_area: Option<Plot<'_>> = if mqtt_plots.is_empty() {
+        None
+    } else {
+        Some(build_plot_ui(
+            "mqtt",
+            ui.available_height(),
+            legend_cfg.clone(),
+            axis_cfg,
+            x_axes,
+            link_group,
+        ))
+    };
+
     fill_plots(
         ui,
         plot_components_list,
         line_width,
         plot_settings,
         click_delta,
+        mqtt_plot_area,
+        mqtt_plots,
     );
 }
 
@@ -109,6 +125,8 @@ fn fill_plots(
     line_width: f32,
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
+    mqtt_plot_area: Option<Plot<'_>>,
+    mqtt_plots: &[MqttData],
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
@@ -136,6 +154,43 @@ fn fill_plots(
             click_delta.ui(plot_ui, ptype);
 
             fill_plot(plot_ui, plot, line_width, plot_settings);
+        });
+    }
+    if let Some(mqtt_plot_area) = mqtt_plot_area {
+        mqtt_plot_area.show(gui, |plot_ui| {
+            if plot_ui.response().hovered() {
+                if let Some(final_zoom_factor) = final_zoom_factor {
+                    plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
+                }
+            }
+            let resp = plot_ui.response();
+            if resp.clicked() {
+                if plot_ui.ctx().input(|i| i.modifiers.shift) {
+                    if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
+                        click_delta.set_next_click(pointer_coordinate, PlotType::Hundreds);
+                    }
+                } else {
+                    click_delta.reset();
+                }
+            }
+            click_delta.ui(plot_ui, PlotType::Hundreds);
+            let (x_lower, x_higher) = plot_util::extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
+            for mp in mqtt_plots {
+                if mp.data.len() < 2 {
+                    // We don't plot less than two points. It's mostly because when the
+                    // plotting starts, the auto-bounds causes a crash due to auto sizing
+                    // a plot to 1 point and triggering an assert in egui_plot that the
+                    // height and width of the bounds is greater than 0.0
+                    continue;
+                }
+                plot_util::plot_raw_mqtt(
+                    plot_ui,
+                    &mp.topic,
+                    &mp.data,
+                    line_width,
+                    (x_lower, x_higher),
+                );
+            }
         });
     }
 }
