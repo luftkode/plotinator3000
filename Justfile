@@ -46,7 +46,7 @@ serve *ARGS:
 
 # Run as a native app with logging enabled
 [group("Run"), no-exit-message]
-run *ARGS="--features development":
+run *ARGS:
     cargo {{run}} {{ARGS}}
 
 # Run tests
