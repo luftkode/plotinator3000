@@ -1,6 +1,8 @@
-use egui::Vec2b;
+use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use plot_util::{PlotData, Plots};
+
+use crate::plot::util;
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
 
@@ -112,8 +114,17 @@ fn fill_plots(
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
+
+    let (scroll, modifiers) = util::get_cursor_scroll_input(gui);
+    let final_zoom_factor: Option<Vec2> = scroll.and_then(|s| util::set_zoom_factor(s, modifiers));
+
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
+            if plot_ui.response().hovered() {
+                if let Some(final_zoom_factor) = final_zoom_factor {
+                    plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
+                }
+            }
             let resp = plot_ui.response();
             if resp.clicked() {
                 if plot_ui.ctx().input(|i| i.modifiers.shift) {
@@ -211,4 +222,7 @@ fn build_plot_ui<'a>(
         .link_axis(link_group, Vec2b::new(axis_config.link_x(), false))
         .link_cursor(link_group, [axis_config.link_cursor_x(), false])
         .y_axis_min_width(50.0) // Adds enough margin for 5-digits
+        .allow_boxed_zoom(true)
+        .allow_zoom(false) // Manually implemented
+        .allow_scroll(true)
 }
