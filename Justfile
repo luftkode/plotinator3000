@@ -1,17 +1,24 @@
-import 'just/default_cmd.just'
+import 'just/mod.just'
+# CI only recipes, `just -l ci` to list them
 mod ci 'just/ci.just'
 
 PROJECT_NAME := "plotinator3000"
 
-alias r := run
+alias i := init
+alias t := test
 alias l := lint
+alias fmt := format
+alias f := format
+alias d := doc
+alias r := run
+alias start := run
+alias s := run
 alias c := check
 alias ca := check-all
-alias f := fmt
-alias t := test
 
 # Achieve higher verbosity in run command e.g. by running "RUST_LOG=debug just run --release"
 export RUST_LOG := env_var_or_default("RUST_LOG", "info")
+# Ensure it doesn't run the updating process during development
 export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATES", "true")
 
 @_default:
@@ -19,16 +26,17 @@ export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATE
 
 [group("Init")]
 init: install-devtools
-    echo "Run 'install-extra-devtools' for some adittional productivity tools that fit into the existent workflow"
+    @echo "Run {{BOLD + YELLOW}}install-extra-devtools{{NORMAL}} for some adittional productivity tools that fit into the existent workflow"
+    @echo "Run {{BOLD + YELLOW}}apt-install-hdf5-header{{NORMAL}} to get HDF5 headers for developing HDF5 features on linux"
 
-[doc("Checks both native and wasm"), no-exit-message]
+[doc("Checks both native and wasm"), group("Check"), no-exit-message]
 check-all: check check-wasm
 
-[doc("Quickly check if it compiles without compiling (native target)"), no-exit-message]
+[doc("Quickly check if it compiles without compiling (native target)"), group("Check"), no-exit-message]
 check *ARGS:
     cargo {{check}} {{ ARGS }}
 
-[group("Web"), doc("Quickly check if the WASM target compiles without compiling"), no-exit-message]
+[group("Web"), group("Check"), doc("Quickly check if the WASM target compiles without compiling"), no-exit-message]
 check-wasm: (check "--target wasm32-unknown-unknown")
 
 # Get trunk: https://trunkrs.dev/guide/introduction.html
@@ -37,24 +45,24 @@ serve *ARGS:
     trunk serve {{ARGS}}
 
 # Run as a native app with logging enabled
-[no-exit-message]
-run *ARGS:
+[group("Run"), no-exit-message]
+run *ARGS="--features development":
     cargo {{run}} {{ARGS}}
 
 # Run tests
-[no-exit-message]
+[group("Check"), no-exit-message]
 test *ARGS="--workspace":
     cargo {{test}} {{ARGS}}
 
-# Lint
-[no-exit-message]
-lint: clippy-native clippy-wasm && fmt
+# Lint native & web, check typos and format
+[group("Check"), no-exit-message]
+lint: clippy-native clippy-wasm && format
     typos
 
-[doc("Clippy linting targeting native"), no-exit-message]
+[doc("Clippy linting targeting native"), group("Check"), no-exit-message]
 clippy-native: (clippy "--workspace --tests -- -D warnings")
 
-[group("Web"), doc("Clippy linting targeting WASM"), no-exit-message]
+[group("Web"), group("Check"), doc("Clippy linting targeting WASM"), no-exit-message]
 clippy-wasm:
     CLIPPY_CONF_DIR="`pwd`/lint/wasm/clippy.toml" \
     just clippy "--workspace --tests --target wasm32-unknown-unknown -- -D warnings"
@@ -63,12 +71,17 @@ clippy-wasm:
 clippy *ARGS:
     cargo {{clippy}} {{ARGS}}
 
-[no-exit-message]
-fmt *ARGS:
+[group("Misc"), no-exit-message]
+build *ARGS:
+    cargo {{build}} {{ARGS}}
+
+# Format code
+[group("Misc"), no-exit-message]
+format *ARGS:
     cargo fmt --all -- {{ARGS}}
 
 # Build the documentation (use `--open` to open in the browser)
-[no-exit-message]
+[group("Misc"), no-exit-message]
 doc *ARGS:
     cargo {{doc}} {{ ARGS }}
 
@@ -86,25 +99,6 @@ audit *ARGS:
 run-profiling *ARGS:
     cargo install puffin_viewer --locked
     cargo {{run}} --features profiling -- {{ARGS}}
-
-# Trunk is used to serve the app with a webserver, cargo-dist is used to generate and update workflows for distributing installers for various platforms
-[doc("Install the required tools for performing all dev tasks for the project")]
-install-devtools:
-    cargo install trunk --locked
-    cargo install cargo-dist --locked
-    cargo install typos-cli --locked
-    cargo install cargo-audit --locked
-
-# Install nice-to-have devtools
-[group("Init")]
-install-extra-devtools:
-    cargo install cargo-nextest --locked
-    cargo install cargo-limit --locked
-    cargo install bacon --locked
-
-[group("Init")]
-apt-install-hdf5-header:
-    sudo apt install libhdf5-dev
 
 # Requires firebase CLI and access to MKI firebase account
 [group("Web")]

@@ -14,7 +14,7 @@
 
 ## Purpose
 
-Inspect logs from the [Swiss Auto motor control](https://github.com/luftkode/mbed-motor-control) and generator. More log support will be added as needed.
+Inspect logs from SkyTEM systems.
 
 ## Why is this repository public?
 
@@ -23,8 +23,6 @@ For inspiration/educational purposes. Anyone developing `egui`/`eframe` apps may
 ## Installation
 
 See the [latest release](https://github.com/luftkode/plotinator3000/releases/latest) and choose the installation method you prefer.
-
-Installing with the shell script (unix) or powershell script (windows) will also install an updater which can be used to fetch the latest version.
 
 ## Use in browser: https://plotinator3000.web.app/
 
@@ -62,6 +60,8 @@ All the boilerplate and workflows etc. is pulled from [this eframe template](htt
 
 ### Infrastructure (CI, releases)
 
+#### Prebuilt binaries
+
 [cargo-dist](https://github.com/axodotdev/cargo-dist) handles the complexities of setting up build/releases for various platforms.
 
 Read their documentation!!
@@ -83,3 +83,7 @@ pr-run-mode = "upload"
 ```
 
 Will run the release pipeline on pull request, then you can open a PR and develop/fix/test the release pipeline.
+
+#### Web app deployment
+
+Currently done on Firebase because it is easy and free for static websites which is what this app compiles to. Long term deployment is undecided and the web app is more of an after thought, `Plotinator3000` works best as a native app.

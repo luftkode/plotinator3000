@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Remove all generic and unused mipmap implementations.
 - No longer include first and last points unconditionally (no longer required for zoom reset), and avoid copying plots by always borrowing.
+- Specify some optional dependencies as such
+- Refactor and document just recipes to align with ADR on standard just recipes
 
 ### Dependencies
 
