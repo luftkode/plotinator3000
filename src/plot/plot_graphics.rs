@@ -1,6 +1,8 @@
-use egui::Vec2b;
+use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
 use plot_util::{PlotData, Plots};
+
+use crate::plot::util;
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
 
@@ -25,7 +27,7 @@ pub fn paint_plots(
     plots: &mut Plots,
     plot_settings: &PlotSettings,
     legend_cfg: &Legend,
-    axis_cfg: &mut AxisConfig,
+    axis_cfg: &AxisConfig,
     link_group: egui::Id,
     line_width: f32,
     click_delta: &mut ClickDelta,
@@ -86,7 +88,6 @@ pub fn paint_plots(
     fill_plots(
         ui,
         plot_components_list,
-        axis_cfg,
         line_width,
         plot_settings,
         click_delta,
@@ -105,15 +106,23 @@ pub fn paint_plots(
 fn fill_plots(
     gui: &mut egui::Ui,
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
-    axis_config: &mut AxisConfig,
     line_width: f32,
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
+
+    let (scroll, modifiers) = util::get_cursor_scroll_input(gui);
+    let final_zoom_factor: Option<Vec2> = scroll.and_then(|s| util::set_zoom_factor(s, modifiers));
+
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
+            if plot_ui.response().hovered() {
+                if let Some(final_zoom_factor) = final_zoom_factor {
+                    plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
+                }
+            }
             let resp = plot_ui.response();
             if resp.clicked() {
                 if plot_ui.ctx().input(|i| i.modifiers.shift) {
@@ -126,13 +135,7 @@ fn fill_plots(
             }
             click_delta.ui(plot_ui, ptype);
 
-            fill_plot(
-                plot_ui,
-                (plot, ptype),
-                axis_config,
-                line_width,
-                plot_settings,
-            );
+            fill_plot(plot_ui, plot, line_width, plot_settings);
         });
     }
 }
@@ -148,14 +151,12 @@ fn fill_plots(
 /// * `plot_settings` - Controls which plots to display.
 fn fill_plot<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot: (&'p mut PlotData, PlotType),
-    axis_config: &mut AxisConfig,
+    plot_data: &'p mut PlotData,
     line_width: f32,
     plot_settings: &'p PlotSettings,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
-    let (plot_data, plot_type) = plot;
     // necessary because the raw plot points are not serializable
     // so they are skipped and initialized as None. So this
     // generates them from the raw_points (only needed once per session)
@@ -173,8 +174,6 @@ fn fill_plot<'p>(
     );
 
     plot_util::plot_labels(plot_ui, plot_data, &plot_settings.log_id_filter());
-
-    axis_config.handle_y_axis_lock(plot_ui, plot_type, |_| {});
 }
 
 /// Builds and configures a Plot UI (layout) with the specified settings.
@@ -211,4 +210,7 @@ fn build_plot_ui<'a>(
         .link_axis(link_group, Vec2b::new(axis_config.link_x(), false))
         .link_cursor(link_group, [axis_config.link_cursor_x(), false])
         .y_axis_min_width(50.0) // Adds enough margin for 5-digits
+        .allow_boxed_zoom(true)
+        .allow_zoom(false) // Manually implemented
+        .allow_scroll(true)
 }
