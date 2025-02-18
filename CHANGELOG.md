@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Account for bug in Swiss FW 4.2.0 that mixes up `vbat` and `is_fan_on` during logging
+- Rework how zoom reset. Now resets on startup and when loading new files.
+
+### Fixed
+
+- fix mipmap without base not including first mipmap level
 
 ## [1.8.0]
 
