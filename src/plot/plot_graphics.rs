@@ -1,6 +1,6 @@
 use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot};
-use plot_util::{PlotData, Plots};
+use plot_util::{plots::MaxPlotBounds, PlotData, Plots};
 
 use crate::plot::util;
 
@@ -11,7 +11,9 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, Pl
 /// # Arguments
 ///
 /// * `ui` - The egui UI to paint on.
+/// * `reset_plot_bounds` - whether plot bounds should be reset.
 /// * `plots` - The [`Plots`] struct containing plot data.
+/// * `max_bounds` The max plot bounds of each plot area
 /// * `plot_settings` - Controls plot display.
 /// * `legend_cfg` - Legend configuration.
 /// * `axis_cfg` - For axis customization.
@@ -24,7 +26,9 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, Pl
 )]
 pub fn paint_plots(
     ui: &mut egui::Ui,
+    reset_plot_bounds: bool,
     plots: &mut Plots,
+    max_bounds: &MaxPlotBounds,
     plot_settings: &PlotSettings,
     legend_cfg: &Legend,
     axis_cfg: &AxisConfig,
@@ -87,6 +91,8 @@ pub fn paint_plots(
 
     fill_plots(
         ui,
+        reset_plot_bounds,
+        max_bounds,
         plot_components_list,
         line_width,
         plot_settings,
@@ -99,12 +105,16 @@ pub fn paint_plots(
 /// # Arguments
 ///
 /// * `gui` - The egui UI to paint on.
+/// * `reset_plot_bounds` - whether plot bounds should be reset.
+/// * `max_bounds` The max plot bounds of each plot area
 /// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`PlotType`].
-/// * `axis_config` - For axis customization.
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
+/// * `click_delta` - State relating to pointer clicks on plots
 fn fill_plots(
     gui: &mut egui::Ui,
+    reset_plot_bounds: bool,
+    max_bounds: &MaxPlotBounds,
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
     line_width: f32,
     plot_settings: &PlotSettings,
@@ -123,8 +133,18 @@ fn fill_plots(
                     plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
                 }
             }
-            let resp = plot_ui.response();
-            if resp.clicked() {
+
+            if plot_ui.response().double_clicked() || reset_plot_bounds {
+                if match ptype {
+                    PlotType::Percentage => {
+                        max_bounds.percentage.map(|b| plot_ui.set_plot_bounds(b))
+                    }
+                    PlotType::Hundreds => max_bounds.hundreds.map(|b| plot_ui.set_plot_bounds(b)),
+                    PlotType::Thousands => max_bounds.thousands.map(|b| plot_ui.set_plot_bounds(b)),
+                }
+                .is_some()
+                {}
+            } else if plot_ui.response().clicked() {
                 if plot_ui.ctx().input(|i| i.modifiers.shift) {
                     if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
                         click_delta.set_next_click(pointer_coordinate, ptype);
@@ -145,25 +165,17 @@ fn fill_plots(
 /// # Arguments
 ///
 /// * `plot_ui` - The plot UI to paint on.
-/// * `plot` - A tuple containing [`PlotData`] and [`PlotType`].
-/// * `axis_config` - For axis customization.
+/// * `plot_data` - [`PlotData`].
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
 fn fill_plot<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot_data: &'p mut PlotData,
+    plot_data: &'p PlotData,
     line_width: f32,
     plot_settings: &'p PlotSettings,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
-    // necessary because the raw plot points are not serializable
-    // so they are skipped and initialized as None. So this
-    // generates them from the raw_points (only needed once per session)
-    plot_data
-        .plots_as_mut()
-        .iter_mut()
-        .for_each(|p| p.build_raw_plot_points());
 
     plot_util::plot_lines(
         plot_ui,
@@ -213,4 +225,5 @@ fn build_plot_ui<'a>(
         .allow_boxed_zoom(true)
         .allow_zoom(false) // Manually implemented
         .allow_scroll(true)
+        .allow_double_click_reset(false) // Manually implemented
 }

@@ -1,9 +1,17 @@
+use egui_plot::PlotBounds;
 use serde::{Deserialize, Serialize};
 
 pub mod plot_data;
 mod util;
 
-use plot_data::{PlotData, PlotValues};
+use plot_data::PlotData;
+
+#[derive(Default, Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
+pub struct MaxPlotBounds {
+    pub percentage: Option<PlotBounds>,
+    pub hundreds: Option<PlotBounds>,
+    pub thousands: Option<PlotBounds>,
+}
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct Plots {
@@ -13,6 +21,24 @@ pub struct Plots {
 }
 
 impl Plots {
+    /// necessary because the raw plot points are not serializable
+    /// so they are skipped and initialized as None. So this
+    /// generates them from the `raw_points` (only needed once per session)
+    pub fn build_plots(&mut self) {
+        self.percentage
+            .plots_as_mut()
+            .iter_mut()
+            .for_each(|p| p.build_raw_plot_points());
+        self.one_to_hundred
+            .plots_as_mut()
+            .iter_mut()
+            .for_each(|p| p.build_raw_plot_points());
+        self.thousands
+            .plots_as_mut()
+            .iter_mut()
+            .for_each(|p| p.build_raw_plot_points());
+    }
+
     pub fn total_data_points(&self) -> u64 {
         let mut total_points: u64 = 0;
         for p in self.percentage().plots() {
@@ -51,31 +77,12 @@ impl Plots {
         &mut self.thousands
     }
 
-    pub fn calc_all_plot_x_min_max(&self, x_min_max: &mut Option<(f64, f64)>) {
-        calc_plot_x_min_max(self.percentage().plots(), x_min_max);
-        calc_plot_x_min_max(self.one_to_hundred().plots(), x_min_max);
-        calc_plot_x_min_max(self.thousands().plots(), x_min_max);
-    }
-}
-
-// Go through each plot and find the minimum and maximum x-value (timestamp) and save it in `x_min_max`
-fn calc_plot_x_min_max(plots: &[PlotValues], x_min_max: &mut Option<(f64, f64)>) {
-    for plot in plots {
-        if plot.total_data_points() < 2 {
-            continue;
-        }
-        let first_x = plot.first_timestamp();
-        let last_x = plot.last_timestamp();
-
-        if let Some((current_x_min, current_x_max)) = x_min_max {
-            if first_x < *current_x_min {
-                *current_x_min = first_x;
-            }
-            if last_x > *current_x_max {
-                *current_x_max = last_x;
-            }
-        } else {
-            x_min_max.replace((first_x, last_x));
-        }
+    pub fn calc_all_plot_max_bounds(&mut self, max_bounds: &mut MaxPlotBounds) {
+        self.percentage.calc_max_bounds();
+        max_bounds.percentage = self.percentage.get_max_bounds();
+        self.one_to_hundred.calc_max_bounds();
+        max_bounds.hundreds = self.one_to_hundred.get_max_bounds();
+        self.thousands.calc_max_bounds();
+        max_bounds.thousands = self.thousands.get_max_bounds();
     }
 }

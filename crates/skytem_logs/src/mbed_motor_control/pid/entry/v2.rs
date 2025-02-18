@@ -44,12 +44,13 @@ impl LogEntry for PidLogEntryV2 {
         let first_valid_rpm_count = reader.read_u32::<LittleEndian>()?;
         total_bytes_read += size_of_val(&first_valid_rpm_count);
 
-        let fan_on_byte = reader.read_u8()?;
-        let fan_on = fan_on_byte == 1;
-        total_bytes_read += size_of_val(&fan_on_byte);
-
-        let vbat = reader.read_f32::<LittleEndian>()?;
-        total_bytes_read += size_of_val(&vbat);
+        // This looks wrong because it accounts for fan_on and vbat being mixed up
+        // in Swiss FW 4.2.0
+        let vbat_byte = reader.read_u8()?;
+        total_bytes_read += size_of_val(&vbat_byte);
+        let fan_on_f32 = reader.read_f32::<LittleEndian>()?;
+        total_bytes_read += size_of_val(&fan_on_f32);
+        let fan_on = (fan_on_f32 as u8) == 1;
 
         // Return the instance and the total bytes read
         Ok((
@@ -62,7 +63,7 @@ impl LogEntry for PidLogEntryV2 {
                 rpm_error_count,
                 first_valid_rpm_count,
                 fan_on,
-                vbat,
+                vbat: vbat_byte.into(),
             },
             total_bytes_read,
         ))
@@ -122,8 +123,8 @@ mod tests {
         assert_eq!(entry.rpm_error_count, 0);
         assert_eq!(entry.first_valid_rpm_count, 1);
         assert_eq!(entry.timestamp_ms_str, "00:00:00.001"); // assuming the parse_timestamp converts 1 ms to this string
-        assert!(entry.fan_on);
-        assert_eq!(entry.vbat, 0.);
+        assert!(!entry.fan_on);
+        assert_eq!(entry.vbat, 1.);
         Ok(())
     }
 

@@ -508,7 +508,7 @@ mod tests {
         assert_eq!(first_entry.rpm_error_count, 0);
         assert_eq!(first_entry.first_valid_rpm_count, 0);
         assert!(!first_entry.fan_on);
-        assert_eq!(first_entry.vbat, 0.);
+        assert_eq!(first_entry.vbat, 12.);
 
         let last_entry = match &pidlog.entries.last().unwrap() {
             PidLogEntry::V1(_) => panic!("Expected pid log entry v2"),
@@ -520,7 +520,7 @@ mod tests {
         assert_eq!(last_entry.rpm_error_count, 7);
         assert_eq!(last_entry.first_valid_rpm_count, 2);
         assert!(!last_entry.fan_on);
-        assert_eq!(last_entry.vbat, 0.);
+        assert_eq!(last_entry.vbat, 12.);
         //eprintln!("{pidlog}");
         Ok(())
     }

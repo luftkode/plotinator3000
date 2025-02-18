@@ -83,6 +83,7 @@ impl MipMap2DPlotPoints {
 
         let mut current: Vec<PlotPoint> = source.iter().map(|p| PlotPoint::from(*p)).collect();
         current = Self::downsample(&current, strategy);
+        data.push(current.clone());
         while current.len() > min_elements {
             let mipmap: Vec<PlotPoint> = Self::downsample(&current, strategy);
             current = mipmap.clone();
