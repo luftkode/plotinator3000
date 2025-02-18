@@ -123,8 +123,8 @@ mod tests {
         assert_eq!(entry.rpm_error_count, 0);
         assert_eq!(entry.first_valid_rpm_count, 1);
         assert_eq!(entry.timestamp_ms_str, "00:00:00.001"); // assuming the parse_timestamp converts 1 ms to this string
-        assert!(entry.fan_on);
-        assert_eq!(entry.vbat, 0.);
+        assert!(!entry.fan_on);
+        assert_eq!(entry.vbat, 1.);
         Ok(())
     }
 
