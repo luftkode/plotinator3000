@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Account for bug in Swiss FW 4.2.0 that mixes up `vbat` and `is_fan_on` during logging
+
 ## [1.8.0]
 
 ### Added
