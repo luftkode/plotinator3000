@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.9.1]
+
+### Fixed
+
+- Fix zoom reset would reset to the max plot bounds of every loaded data point even if it wasn't actively being shown in a plot area ([#200](https://github.com/luftkode/plotinator3000/issues/200))
+
+## [1.9.0]
+
 ### Changed
 
 - Account for bug in Swiss FW 4.2.0 that mixes up `vbat` and `is_fan_on` during logging

@@ -1,6 +1,6 @@
 use egui::{Vec2, Vec2b};
-use egui_plot::{AxisHints, HPlacement, Legend, Plot};
-use plot_util::{plots::MaxPlotBounds, PlotData, Plots};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
+use plot_util::{PlotData, Plots};
 
 use crate::plot::util;
 
@@ -13,7 +13,6 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, Pl
 /// * `ui` - The egui UI to paint on.
 /// * `reset_plot_bounds` - whether plot bounds should be reset.
 /// * `plots` - The [`Plots`] struct containing plot data.
-/// * `max_bounds` The max plot bounds of each plot area
 /// * `plot_settings` - Controls plot display.
 /// * `legend_cfg` - Legend configuration.
 /// * `axis_cfg` - For axis customization.
@@ -28,7 +27,6 @@ pub fn paint_plots(
     ui: &mut egui::Ui,
     reset_plot_bounds: bool,
     plots: &mut Plots,
-    max_bounds: &MaxPlotBounds,
     plot_settings: &PlotSettings,
     legend_cfg: &Legend,
     axis_cfg: &AxisConfig,
@@ -92,7 +90,6 @@ pub fn paint_plots(
     fill_plots(
         ui,
         reset_plot_bounds,
-        max_bounds,
         plot_components_list,
         line_width,
         plot_settings,
@@ -106,7 +103,6 @@ pub fn paint_plots(
 ///
 /// * `gui` - The egui UI to paint on.
 /// * `reset_plot_bounds` - whether plot bounds should be reset.
-/// * `max_bounds` The max plot bounds of each plot area
 /// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`PlotType`].
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
@@ -114,7 +110,6 @@ pub fn paint_plots(
 fn fill_plots(
     gui: &mut egui::Ui,
     reset_plot_bounds: bool,
-    max_bounds: &MaxPlotBounds,
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
     line_width: f32,
     plot_settings: &PlotSettings,
@@ -135,15 +130,23 @@ fn fill_plots(
             }
 
             if plot_ui.response().double_clicked() || reset_plot_bounds {
-                if match ptype {
-                    PlotType::Percentage => {
-                        max_bounds.percentage.map(|b| plot_ui.set_plot_bounds(b))
+                let filter_plots = plot_settings.apply_filters(plot.plots());
+                let mut max_bounds: Option<PlotBounds> = None;
+                for fp in filter_plots {
+                    let fp_max_bounds = fp.get_max_bounds();
+                    if let Some(max_bounds) = &mut max_bounds {
+                        max_bounds.merge(&fp_max_bounds);
+                    } else {
+                        max_bounds = Some(fp_max_bounds);
                     }
-                    PlotType::Hundreds => max_bounds.hundreds.map(|b| plot_ui.set_plot_bounds(b)),
-                    PlotType::Thousands => max_bounds.thousands.map(|b| plot_ui.set_plot_bounds(b)),
                 }
-                .is_some()
-                {}
+                if let Some(mut max_bounds) = max_bounds {
+                    // finally extend each bound by 10%
+                    let margin_fraction = egui::Vec2::splat(0.1);
+                    max_bounds.add_relative_margin_x(margin_fraction);
+                    max_bounds.add_relative_margin_y(margin_fraction);
+                    plot_ui.set_plot_bounds(max_bounds);
+                }
             } else if plot_ui.response().clicked() {
                 if plot_ui.ctx().input(|i| i.modifiers.shift) {
                     if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
