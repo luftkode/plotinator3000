@@ -73,6 +73,7 @@ impl Plots {
     pub fn thousands(&self) -> &PlotData {
         &self.thousands
     }
+
     pub fn thousands_mut(&mut self) -> &mut PlotData {
         &mut self.thousands
     }

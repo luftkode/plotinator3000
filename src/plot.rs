@@ -123,7 +123,6 @@ impl LogPlotUi {
                     ui,
                     reset_plot_bounds,
                     plots,
-                    max_bounds,
                     plot_settings,
                     legend_cfg,
                     axis_config,
