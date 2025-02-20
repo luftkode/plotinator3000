@@ -18,7 +18,7 @@ use crate::{
 use super::{
     entry::{
         convert_v1_to_pid_log_entry, convert_v2_to_pid_log_entry, convert_v3_to_pid_log_entry,
-        v1::PidLogEntryV1, v2::PidLogEntryV2, PidLogEntry,
+        v1::PidLogEntryV1, v2::PidLogEntryV2, v3::PidLogEntryV3, PidLogEntry,
     },
     header::PidLogHeader,
 };
@@ -193,7 +193,7 @@ impl Parseable for PidLog {
                 (convert_v2_to_pid_log_entry(v2_vec), entry_bytes_read)
             }
             6 => {
-                let (v3_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV2>(reader);
+                let (v3_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV3>(reader);
                 (convert_v3_to_pid_log_entry(v3_vec), entry_bytes_read)
             }
             _ => {
@@ -212,6 +212,7 @@ impl Parseable for PidLog {
             PidLogHeader::V3(h) => h.startup_timestamp(),
             PidLogHeader::V4(h) => h.startup_timestamp(),
             PidLogHeader::V5(h) => h.startup_timestamp(),
+            PidLogHeader::V6(h) => h.startup_timestamp(),
         }
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
         .and_utc();
@@ -257,6 +258,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V3(h) => h.project_version(),
             PidLogHeader::V4(h) => h.project_version(),
             PidLogHeader::V5(h) => h.project_version(),
+            PidLogHeader::V6(h) => h.project_version(),
         }
     }
 
@@ -267,6 +269,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V3(h) => h.git_short_sha(),
             PidLogHeader::V4(h) => h.git_short_sha(),
             PidLogHeader::V5(h) => h.git_short_sha(),
+            PidLogHeader::V6(h) => h.git_short_sha(),
         }
     }
 
@@ -277,6 +280,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V3(h) => h.git_branch(),
             PidLogHeader::V4(h) => h.git_branch(),
             PidLogHeader::V5(h) => h.git_branch(),
+            PidLogHeader::V6(h) => h.git_branch(),
         }
     }
 
@@ -287,6 +291,7 @@ impl GitMetadata for PidLog {
             PidLogHeader::V3(h) => h.git_repo_status(),
             PidLogHeader::V4(h) => h.git_repo_status(),
             PidLogHeader::V5(h) => h.git_repo_status(),
+            PidLogHeader::V6(h) => h.git_repo_status(),
         }
     }
 }
@@ -307,6 +312,7 @@ impl Plotable for PidLog {
             PidLogHeader::V3(_) => "Mbed PID v3",
             PidLogHeader::V4(_) => "Mbed PID v4",
             PidLogHeader::V5(_) => "Mbed PID v5",
+            PidLogHeader::V6(_) => "Mbed PID v6",
         }
     }
 
@@ -355,6 +361,10 @@ impl Plotable for PidLog {
                 metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
             }
             PidLogHeader::V5(h) => {
+                metadata.push(("Config values".to_owned(), String::new()));
+                metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
+            }
+            PidLogHeader::V6(h) => {
                 metadata.push(("Config values".to_owned(), String::new()));
                 metadata.extend_from_slice(&h.mbed_config().field_value_pairs());
             }
@@ -541,14 +551,14 @@ mod tests {
 
     #[test]
     fn test_deserialize_v6_regular() -> TestResult {
-        let mut data = MBED_PID_V5_REGULAR_BYTES;
+        let mut data = MBED_PID_V6_REGULAR_BYTES;
         let full_data_len = data.len();
         let (pidlog, bytes_read) = PidLog::from_reader(&mut data)?;
         assert!(bytes_read <= full_data_len);
-        assert_eq!(bytes_read, 170996);
+        assert_eq!(bytes_read, 676843);
         let first_entry = match pidlog.entries.first().expect("Empty entries") {
-            PidLogEntry::V1(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v2"),
-            PidLogEntry::V2(pid_log_entry_v2) => pid_log_entry_v2,
+            PidLogEntry::V1(_) | PidLogEntry::V2(_) => panic!("Expected pid log entry v3"),
+            PidLogEntry::V3(pid_log_entry_v3) => pid_log_entry_v3,
         };
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.0);
@@ -556,19 +566,19 @@ mod tests {
         assert_eq!(first_entry.rpm_error_count, 0);
         assert_eq!(first_entry.first_valid_rpm_count, 0);
         assert!(!first_entry.fan_on);
-        assert_eq!(first_entry.vbat, 12.);
+        assert_eq!(first_entry.vbat, 12.55983);
 
         let last_entry = match &pidlog.entries.last().unwrap() {
-            PidLogEntry::V1(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v2"),
-            PidLogEntry::V2(e) => e,
+            PidLogEntry::V1(_) | PidLogEntry::V2(_) => panic!("Expected pid log entry v3"),
+            PidLogEntry::V3(e) => e,
         };
-        assert_eq!(last_entry.rpm, 2499.4272);
-        assert_eq!(last_entry.pid_output, 0.034495242);
-        assert_eq!(last_entry.servo_duty_cycle, 0.04055);
-        assert_eq!(last_entry.rpm_error_count, 7);
-        assert_eq!(last_entry.first_valid_rpm_count, 2);
-        assert!(!last_entry.fan_on);
-        assert_eq!(last_entry.vbat, 12.);
+        assert_eq!(last_entry.rpm, 2552.2683);
+        assert_eq!(last_entry.pid_output, 0.0404026);
+        assert_eq!(last_entry.servo_duty_cycle, 0.03575);
+        assert_eq!(last_entry.rpm_error_count, 11);
+        assert_eq!(last_entry.first_valid_rpm_count, 4);
+        assert!(last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 12.191283);
         //eprintln!("{pidlog}");
         Ok(())
     }

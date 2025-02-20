@@ -43,6 +43,6 @@ pub(super) fn convert_v1_to_pid_log_entry(v1: Vec<PidLogEntryV1>) -> Vec<PidLogE
 pub(super) fn convert_v2_to_pid_log_entry(v2: Vec<PidLogEntryV2>) -> Vec<PidLogEntry> {
     v2.into_iter().map(PidLogEntry::V2).collect()
 }
-pub(super) fn convert_v3_to_pid_log_entry(v3: Vec<PidLogEntryV2>) -> Vec<PidLogEntry> {
-    v3.into_iter().map(PidLogEntry::V2).collect()
+pub(super) fn convert_v3_to_pid_log_entry(v3: Vec<PidLogEntryV3>) -> Vec<PidLogEntry> {
+    v3.into_iter().map(PidLogEntry::V3).collect()
 }
