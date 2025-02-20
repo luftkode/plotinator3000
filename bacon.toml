@@ -7,6 +7,9 @@
 
 default_job = "check"
 
+env.RUST_LOG = "info"
+env.PLOTINATOR_BYPASS_UPDATES = "true"
+
 [jobs.check]
 command = ["cargo", "check", "--color", "always"]
 need_stdout = false
