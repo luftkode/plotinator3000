@@ -17,8 +17,8 @@ use crate::{
 
 use super::{
     entry::{
-        convert_v1_to_pid_log_entry, convert_v2_to_pid_log_entry, v1::PidLogEntryV1,
-        v2::PidLogEntryV2, PidLogEntry,
+        convert_v1_to_pid_log_entry, convert_v2_to_pid_log_entry, convert_v3_to_pid_log_entry,
+        v1::PidLogEntryV1, v2::PidLogEntryV2, PidLogEntry,
     },
     header::PidLogHeader,
 };
@@ -68,6 +68,16 @@ impl PidLog {
                     first_valid_rpm_count_plot_raw.push([ts, e.first_valid_rpm_count as f64]);
                 }
                 PidLogEntry::V2(e) => {
+                    let ts: f64 = e.timestamp_ns() + startup_timestamp_ns;
+                    rpm_plot_raw.push([ts, e.rpm.into()]);
+                    pid_output_plot_raw.push([ts, e.pid_output.into()]);
+                    servo_duty_cycle_plot_raw.push([ts, e.servo_duty_cycle.into()]);
+                    rpm_error_count_plot_raw.push([ts, e.rpm_error_count as f64]);
+                    first_valid_rpm_count_plot_raw.push([ts, e.first_valid_rpm_count as f64]);
+                    fan_on_plot_raw.push([ts, (e.fan_on as u8) as f64]);
+                    vbat_plot_raw.push([ts, e.vbat as f64]);
+                }
+                PidLogEntry::V3(e) => {
                     let ts: f64 = e.timestamp_ns() + startup_timestamp_ns;
                     rpm_plot_raw.push([ts, e.rpm.into()]);
                     pid_output_plot_raw.push([ts, e.pid_output.into()]);
@@ -181,6 +191,10 @@ impl Parseable for PidLog {
             5 => {
                 let (v2_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV2>(reader);
                 (convert_v2_to_pid_log_entry(v2_vec), entry_bytes_read)
+            }
+            6 => {
+                let (v3_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV2>(reader);
+                (convert_v3_to_pid_log_entry(v3_vec), entry_bytes_read)
             }
             _ => {
                 return Err(io::Error::new(
@@ -377,7 +391,7 @@ mod tests {
         assert_eq!(bytes_read, 873981);
         let first_entry = match pidlog.entries.first().expect("Empty entries") {
             PidLogEntry::V1(pid_log_entry_v1) => pid_log_entry_v1,
-            PidLogEntry::V2(_) => panic!("Expected pid log entry v1"),
+            PidLogEntry::V2(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v1"),
         };
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.17777778);
@@ -387,7 +401,7 @@ mod tests {
 
         let second_entry = match &pidlog.entries[1] {
             PidLogEntry::V1(pid_log_entry_v1) => pid_log_entry_v1,
-            PidLogEntry::V2(_) => panic!("Expected pid log entry v1"),
+            PidLogEntry::V2(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v1"),
         };
         assert_eq!(second_entry.rpm, 0.0);
         assert_eq!(second_entry.pid_output, 0.17777778);
@@ -418,7 +432,7 @@ mod tests {
         assert_eq!(bytes_read, 722429);
         let first_entry = match pidlog.entries.first().expect("Empty entries") {
             PidLogEntry::V1(pid_log_entry_v1) => pid_log_entry_v1,
-            PidLogEntry::V2(_) => panic!("Expected pid log entry v1"),
+            PidLogEntry::V2(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v1"),
         };
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.0);
@@ -428,7 +442,7 @@ mod tests {
 
         let second_entry = match &pidlog.entries[1] {
             PidLogEntry::V1(pid_log_entry_v1) => pid_log_entry_v1,
-            PidLogEntry::V2(_) => panic!("Expected pid log entry v1"),
+            PidLogEntry::V2(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v1"),
         };
         assert_eq!(second_entry.rpm, 0.0);
         assert_eq!(second_entry.pid_output, 0.0);
@@ -459,7 +473,7 @@ mod tests {
         assert_eq!(bytes_read, 834543);
         let first_entry = match pidlog.entries.first().expect("Empty entries") {
             PidLogEntry::V1(pid_log_entry_v1) => pid_log_entry_v1,
-            PidLogEntry::V2(_) => panic!("Expected pid log entry v1"),
+            PidLogEntry::V2(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v1"),
         };
         assert_eq!(first_entry.rpm, 0.0);
         assert_eq!(first_entry.pid_output, 0.0);
@@ -469,7 +483,7 @@ mod tests {
 
         let second_entry = match &pidlog.entries[1] {
             PidLogEntry::V1(pid_log_entry_v1) => pid_log_entry_v1,
-            PidLogEntry::V2(_) => panic!("Expected pid log entry v1"),
+            PidLogEntry::V2(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v1"),
         };
         assert_eq!(second_entry.rpm, 0.0);
         assert_eq!(second_entry.pid_output, 0.0);
@@ -499,7 +513,7 @@ mod tests {
         assert!(bytes_read <= full_data_len);
         assert_eq!(bytes_read, 170996);
         let first_entry = match pidlog.entries.first().expect("Empty entries") {
-            PidLogEntry::V1(_) => panic!("Expected pid log entry v2"),
+            PidLogEntry::V1(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v2"),
             PidLogEntry::V2(pid_log_entry_v2) => pid_log_entry_v2,
         };
         assert_eq!(first_entry.rpm, 0.0);
@@ -511,7 +525,41 @@ mod tests {
         assert_eq!(first_entry.vbat, 12.);
 
         let last_entry = match &pidlog.entries.last().unwrap() {
-            PidLogEntry::V1(_) => panic!("Expected pid log entry v2"),
+            PidLogEntry::V1(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v2"),
+            PidLogEntry::V2(e) => e,
+        };
+        assert_eq!(last_entry.rpm, 2499.4272);
+        assert_eq!(last_entry.pid_output, 0.034495242);
+        assert_eq!(last_entry.servo_duty_cycle, 0.04055);
+        assert_eq!(last_entry.rpm_error_count, 7);
+        assert_eq!(last_entry.first_valid_rpm_count, 2);
+        assert!(!last_entry.fan_on);
+        assert_eq!(last_entry.vbat, 12.);
+        //eprintln!("{pidlog}");
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_v6_regular() -> TestResult {
+        let mut data = MBED_PID_V5_REGULAR_BYTES;
+        let full_data_len = data.len();
+        let (pidlog, bytes_read) = PidLog::from_reader(&mut data)?;
+        assert!(bytes_read <= full_data_len);
+        assert_eq!(bytes_read, 170996);
+        let first_entry = match pidlog.entries.first().expect("Empty entries") {
+            PidLogEntry::V1(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v2"),
+            PidLogEntry::V2(pid_log_entry_v2) => pid_log_entry_v2,
+        };
+        assert_eq!(first_entry.rpm, 0.0);
+        assert_eq!(first_entry.pid_output, 0.0);
+        assert_eq!(first_entry.servo_duty_cycle, 0.0);
+        assert_eq!(first_entry.rpm_error_count, 0);
+        assert_eq!(first_entry.first_valid_rpm_count, 0);
+        assert!(!first_entry.fan_on);
+        assert_eq!(first_entry.vbat, 12.);
+
+        let last_entry = match &pidlog.entries.last().unwrap() {
+            PidLogEntry::V1(_) | PidLogEntry::V3(_) => panic!("Expected pid log entry v2"),
             PidLogEntry::V2(e) => e,
         };
         assert_eq!(last_entry.rpm, 2499.4272);

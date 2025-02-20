@@ -37,3 +37,5 @@ define_mbed_log!(
     mbed_status_v6_configuring,
     "v6/configuring/status_20250205_121547_00.bin"
 );
+
+define_mbed_log!(mbed_pid_v6_regular, "v6/regular/pid_20250210_085126_00.bin");
