@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `log`: 0.4.25 → 0.4.26 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
+- `serde`: 1.0.217 → 1.0.218 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
+- `tempfile`: 3.17.0 → 3.17.1 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
+
 ## [1.10.0]
 
 ### Added
