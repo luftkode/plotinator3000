@@ -49,7 +49,7 @@ puffin_http = "0.16"
 # Dev dependencies
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
-tempfile = "3.17.0"
+tempfile = "3.17.1"
 reqwest = "0.12.12"
 
 [dependencies]
