@@ -75,13 +75,18 @@ fn list_supported_hdf_formats(ui: &mut egui::Ui) {
     ui.label(RichText::new("⚠ No HDF support on web ⚠"));
     #[cfg(not(target_arch = "wasm32"))]
     {
-        ui.label(RichText::new("⚠ Coming soon: Bifrost TX Loop Current ⚠"));
-        ui.label("Loop Current measurements");
+        if cfg!(feature = "hdf") {
+            {
+                ui.label("Loop Current measurements");
 
-        ui.add(Hyperlink::from_label_and_url(
-            "https://github.com/luftkode/bifrost-app",
-            "https://github.com/luftkode/bifrost-app",
-        ));
+                ui.add(Hyperlink::from_label_and_url(
+                    "https://github.com/luftkode/bifrost-app",
+                    "https://github.com/luftkode/bifrost-app",
+                ));
+            }
+        } else {
+            ui.label(RichText::new("⚠ Coming soon: Bifrost TX Loop Current ⚠"));
+        }
         ui.end_row();
     }
 }
