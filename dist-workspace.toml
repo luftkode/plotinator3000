@@ -17,5 +17,5 @@ install-path = "CARGO_HOME"
 install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "upload"
-# If we link MSVC CRT statically then it conflicts with HDF5's MSVC CRT
+# Whether +crt-static should be used on msvc
 msvc-crt-static = false
