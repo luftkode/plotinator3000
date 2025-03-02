@@ -17,4 +17,5 @@ install-path = "CARGO_HOME"
 install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "upload"
-github-build-setup = "windows-build-workaround.yml"
+# If we link MSVC CRT statically then it conflicts with HDF5's MSVC CRT
+msvc-crt-static = false
