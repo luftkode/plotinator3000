@@ -24,7 +24,7 @@ toml.workspace = true
 ndarray = "0.16.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-hdf5 = { package = "hdf5-metno", version = "0.9", features = ["static"] }
+hdf5 = { package = "hdf5-metno", version = "0.10", features = ["static"] }
 
 [dev-dependencies]
 testresult.workspace = true
