@@ -32,8 +32,8 @@ serde-big-array = "0.5.1"
 strum = "0.26.3"
 strum_macros = "0.26.3"
 byteorder = "1.5.0"
-chrono = { version = "0.4.39", features = ["serde"] }
-getset = "0.1.4"
+chrono = { version = "0.4.40", features = ["serde"] }
+getset = "0.1.5"
 derive_more = { version = "2", features = ["full"] }
 num-traits = "0.2.19"
 toml = "0.8.19"
@@ -87,7 +87,7 @@ reqwest.workspace = true
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
-zip = "2.2.2"
+zip = "2.2.3"
 axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
 profiling = { workspace = true, optional = true}
 puffin = { workspace = true, optional = true}
