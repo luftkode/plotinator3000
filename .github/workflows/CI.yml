@@ -198,7 +198,15 @@ jobs:
       - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
 
   tag-release:
-    needs: [check, audit, test, format, lint, trunk, build]
+    needs:
+      - check
+      - audit
+      - test
+      - format
+      - lint
+      - trunk
+      - build
+      - msrv
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && success()
     permissions:
