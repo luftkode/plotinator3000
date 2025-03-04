@@ -1,13 +1,13 @@
 [package]
 name = "plotinator3000"
 description = "Log viewer app for viewing plots of data from projects such as motor and generator control"
-authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.10.0"
-edition = "2021"
-repository = "https://github.com/luftkode/plotinator3000"
-homepage = "https://github.com/luftkode/plotinator3000"
-license = "MIT OR Apache-2.0"
-rust-version = "1.81.0"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+rust-version.workspace = true
 
 [package.metadata.wix]
 upgrade-guid = "7063C05B-24FE-4CE5-A338-6D750F3F10CE"
@@ -18,6 +18,15 @@ product-icon = "assets/favicon.ico"
 
 [workspace]
 members = ["crates/*"]
+
+[workspace.package]
+authors = ["SkyTEM Surveys", "Marc Beck König"]
+version = "1.10.0"
+edition = "2021"
+rust-version = "1.81.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/luftkode/plotinator3000"
+homepage = "https://github.com/luftkode/plotinator3000"
 
 [workspace.dependencies]
 test_util.path = "crates/test_util"

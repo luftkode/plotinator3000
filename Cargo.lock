@@ -1801,9 +1801,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-metno"
-version = "0.9.4"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c9b4d0d095403ced0b9d8b727c55212f1d09526944d84b8d3dca02ee3c0a82"
+checksum = "72f8592329337a96c802cccdbd11fe5f9476cb940d5a88dcca729a2ecf82e1c9"
 dependencies = [
  "bitflags 2.8.0",
  "cfg-if",
@@ -2400,7 +2400,7 @@ checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
 
 [[package]]
 name = "log_if"
-version = "0.1.0"
+version = "1.10.0"
 dependencies = [
  "chrono",
  "log",
@@ -3107,7 +3107,7 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 
 [[package]]
 name = "plot_util"
-version = "0.1.0"
+version = "1.10.0"
 dependencies = [
  "chrono",
  "egui",
@@ -3906,7 +3906,7 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 
 [[package]]
 name = "skytem_hdf"
-version = "0.1.0"
+version = "1.10.0"
 dependencies = [
  "byteorder",
  "chrono",
@@ -3929,7 +3929,7 @@ dependencies = [
 
 [[package]]
 name = "skytem_logs"
-version = "0.1.0"
+version = "1.10.0"
 dependencies = [
  "byteorder",
  "chrono",
@@ -4177,7 +4177,7 @@ dependencies = [
 
 [[package]]
 name = "test_util"
-version = "0.1.0"
+version = "1.10.0"
 dependencies = [
  "paste",
  "testresult",

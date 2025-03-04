@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cargo-bins/cargo-binstall`: 1.11.0 → 1.11.2 ([#207](https://github.com/luftkode/plotinator3000/pull/207))
 - `strum`: 0.26.3 -> 0.27.1
 - `strum_macros`: 0.26.3 -> 0.27.1
+- `hdf5`: 0.9.4 -> 0.10.1
 
 ## [1.10.0]
 
