@@ -12,11 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `log`: 0.4.25 → 0.4.26 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
 - `serde`: 1.0.217 → 1.0.218 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
 - `tempfile`: 3.17.0 → 3.17.1 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
-- `cargo-bins/cargo-binstall`: 1.11.0 → 1.11.1 ([#203](https://github.com/luftkode/plotinator3000/pull/203))
 - `chrono`: 0.4.39 → 0.4.40 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `getset`: 0.1.4 → 0.1.5 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `zip`: 2.2.2 → 2.2.3 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `thiserror`: 2.0.11 → 2.0.12 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
+- `cargo-bins/cargo-binstall`: 1.11.0 → 1.11.2 ([#207](https://github.com/luftkode/plotinator3000/pull/207))
 
 ## [1.10.0]
 
