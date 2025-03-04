@@ -104,7 +104,7 @@ web-sys = "0.3.70"
 elevated-command.workspace = true
 
 [features]
-default = ["selfupdater"]
+default = ["selfupdater", "hdf"]
 hdf = ["dep:skytem_hdf"]
 selfupdater = ["dep:axoupdater"]
 profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
