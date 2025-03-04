@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Set minimum support rust version (MSRV) and add CI check
+
 ### Dependencies
 
 - `log`: 0.4.25 → 0.4.26 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
@@ -17,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `zip`: 2.2.2 → 2.2.3 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `thiserror`: 2.0.11 → 2.0.12 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `cargo-bins/cargo-binstall`: 1.11.0 → 1.11.2 ([#207](https://github.com/luftkode/plotinator3000/pull/207))
+- `strum`: 0.26.3 -> 0.27.1
+- `strum_macros`: 0.26.3 -> 0.27.1
 
 ## [1.10.0]
 
