@@ -190,8 +190,23 @@ jobs:
           name: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
           path: ${{ github.event.repository.name }}-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@cargo-hack
+      - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
+
   tag-release:
-    needs: [check, audit, test, format, lint, trunk, build]
+    needs:
+      - check
+      - audit
+      - test
+      - format
+      - lint
+      - trunk
+      - build
+      - msrv
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && success()
     permissions:
