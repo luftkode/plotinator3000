@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Fix RUSTSEC-2025-0009 by updating ring
+
 ### Changed
 
 - Set minimum support rust version (MSRV) and add CI check
