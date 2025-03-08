@@ -315,6 +315,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             // Show MQTT configuration window if needed
             if app.mqtt_channel.is_none() {
                 if let Some(config) = &mut app.mqtt_config_window {
+                    let mut connect_clicked = false;
                     egui::Window::new("MQTT Configuration")
                         .open(&mut config.open)
                         .show(ctx, |ui| {
@@ -513,8 +514,10 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                             config.topics.retain(|s| !s.is_empty());
 
                             if ui.button("Connect").clicked() {
+                                connect_clicked = true;
                                 app.mqtt_stop_flag
                                     .store(false, std::sync::atomic::Ordering::SeqCst);
+
                                 let broker = config.broker_ip.clone();
                                 let topics = config.topics.clone();
                                 let (tx, rx) = std::sync::mpsc::channel();
@@ -531,7 +534,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                             }
                         });
                     // 4. Cleanup when window closes
-                    if !config.open && config.discovery_active {
+                    if (!config.open || connect_clicked) && config.discovery_active {
                         config.discovery_stop.store(true, Ordering::SeqCst);
                         config.discovery_active = false;
                     }
