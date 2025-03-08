@@ -1,6 +1,9 @@
 use std::{
-    sync::{atomic::AtomicBool, Arc},
-    time::Duration,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc,
+    },
+    time::{Duration, Instant},
 };
 
 use crate::{
@@ -9,7 +12,7 @@ use crate::{
     util::format_data_size,
 };
 use dropped_files::handle_dropped_files;
-use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
+use egui::{Color32, Hyperlink, RichText, ScrollArea, TextStyle, ThemePreference};
 use egui_notify::Toasts;
 use egui_phosphor::regular;
 use log_if::prelude::Plotable;
@@ -40,6 +43,11 @@ pub struct App {
     mqtt_channel: Option<std::sync::mpsc::Receiver<MqttPoint>>,
     #[serde(skip)]
     mqtt_stop_flag: Arc<AtomicBool>,
+    #[serde(skip)]
+    broker_validation_receiver: Option<std::sync::mpsc::Receiver<Result<(), String>>>,
+    #[serde(skip)]
+    discovery_handle: Option<std::thread::JoinHandle<()>>,
+
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
@@ -74,6 +82,8 @@ impl Default for App {
             error_message: None,
             mqtt_config_window: None,
             mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
+            broker_validation_receiver: None,
+            discovery_handle: None,
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),
@@ -286,9 +296,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 ctx.request_repaint_after(Duration::from_millis(100));
             }
             if let Some(rx) = app.mqtt_channel.as_ref() {
-                let mut received_any_packets = false;
                 while let Ok(mqtt_point) = rx.try_recv() {
-                    received_any_packets = true;
                     log::info!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
                     if let Some(mp) = app
                         .mqtt_plots
@@ -304,31 +312,195 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                     }
                 }
             }
-            // Show MQTT configuration window if needed\
+            // Show MQTT configuration window if needed
             if app.mqtt_channel.is_none() {
                 if let Some(config) = &mut app.mqtt_config_window {
-                    let mut open = true;
                     egui::Window::new("MQTT Configuration")
-                        .open(&mut open)
+                        .open(&mut config.open)
                         .show(ctx, |ui| {
-                            ui.label("Broker Address:");
-                            ui.text_edit_singleline(&mut config.broker);
-                            ui.label("Topics:");
-                            ui.horizontal(|ui| {
-                                ui.text_edit_singleline(&mut config.new_topic);
-                                if ui.button("Add").clicked() && !config.new_topic.is_empty() {
-                                    config.topics.push(config.new_topic.clone());
-                                    config.new_topic.clear();
+                            ui.group(|ui| {
+                                ui.label("MQTT Broker Address");
+                                ui.horizontal(|ui| {
+                                    ui.text_edit_singleline(&mut config.broker_ip)
+                                        .on_hover_text("IP address, hostname, or mDNS (.local)");
+                                    ui.label(":");
+                                    ui.text_edit_singleline(&mut config.broker_port)
+                                        .on_hover_text("1883 is the default MQTT broker port");
+                                });
+                                if let Some(status) = &config.broker_status {
+                                    match status {
+                                        Ok(()) => {
+                                            ui.colored_label(
+                                                egui::Color32::GREEN,
+                                                RichText::new(format!(
+                                                    "{} Broker reachable",
+                                                    egui_phosphor::regular::CHECK
+                                                )),
+                                            );
+                                        }
+                                        Err(err) => {
+                                            ui.colored_label(
+                                                egui::Color32::RED,
+                                                RichText::new(format!(
+                                                    "{} {err}",
+                                                    egui_phosphor::regular::WARNING_OCTAGON
+                                                )),
+                                            );
+                                        }
+                                    }
+                                } else if config.validation_in_progress {
+                                    ui.spinner();
+                                    ui.label("Checking broker...");
+                                }
+
+                                let current_broker_input =
+                                    format!("{}:{}", config.broker_ip, config.broker_port);
+
+                                // Detect input changes
+                                if current_broker_input != config.previous_broker_input {
+                                    config.previous_broker_input = current_broker_input.clone();
+                                    config.last_input_change = Some(Instant::now());
+                                    config.broker_status = None;
+                                }
+
+                                // Debounce and validate after 500ms
+                                if let Some(last_change) = config.last_input_change {
+                                    if last_change.elapsed() >= Duration::from_millis(500)
+                                        && !config.validation_in_progress
+                                    {
+                                        let (tx, rx) = std::sync::mpsc::channel();
+                                        app.broker_validation_receiver = Some(rx);
+                                        config.validation_in_progress = true;
+                                        config.last_input_change = None;
+
+                                        // Spawn validation thread
+                                        let (host, port) =
+                                            (config.broker_ip.clone(), config.broker_port.clone());
+                                        std::thread::spawn(move || {
+                                            let result = crate::mqtt::validate_broker(&host, &port);
+                                            tx.send(result).ok();
+                                        });
+                                    }
+                                }
+
+                                // Check for validation results
+                                if let Some(receiver) = &mut app.broker_validation_receiver {
+                                    if let Ok(result) = receiver.try_recv() {
+                                        config.broker_status = Some(result);
+                                        config.validation_in_progress = false;
+                                        app.broker_validation_receiver = None;
+                                    }
+                                }
+                                ui.label("Topics:");
+                                ui.horizontal(|ui| {
+                                    ui.text_edit_singleline(&mut config.new_topic);
+                                    if ui.button("Add").clicked() && !config.new_topic.is_empty() {
+                                        config.topics.push(config.new_topic.clone());
+                                        config.new_topic.clear();
+                                    }
+                                });
+                                if !config.topics.is_empty() {
+                                    ui.label("Subscribed Topics:");
+                                }
+                                for topic in &mut config.topics {
+                                    ui.horizontal(|ui| {
+                                        if ui
+                                            .button(RichText::new(egui_phosphor::regular::TRASH))
+                                            .clicked()
+                                        {
+                                            topic.clear();
+                                        } else {
+                                            ui.label(topic.clone());
+                                        }
+                                    });
+                                }
+                                config.topics.retain(|s| !s.is_empty());
+
+                                let discover_enabled = matches!(config.broker_status, Some(Ok(())))
+                                    && !config.discovery_active;
+
+                                if let Ok(port_u16) = config.broker_port.parse::<u16>() {
+                                    if ui
+                                        .add_enabled(
+                                            discover_enabled,
+                                            egui::Button::new("Discover Topics"),
+                                        )
+                                        .on_hover_text("Continuously find topics (subscribes to #)")
+                                        .clicked()
+                                    {
+                                        config.discovery_active = true;
+                                        config.discovered_topics.clear();
+                                        config
+                                            .discovery_stop
+                                            .store(false, std::sync::atomic::Ordering::SeqCst);
+
+                                        let host = config.broker_ip.clone();
+                                        let (tx, rx) = mpsc::channel();
+
+                                        config.discovery_rx = Some(rx);
+                                        app.discovery_handle = Some(crate::mqtt::start_discovery(
+                                            host,
+                                            port_u16,
+                                            Arc::clone(&config.discovery_stop),
+                                            tx,
+                                        ));
+                                    }
+                                }
+
+                                if config.discovery_active && ui.button("Stop Discovery").clicked()
+                                {
+                                    config.discovery_stop.store(true, Ordering::SeqCst);
+                                }
+                                // Show discovery status
+                                if config.discovery_active {
+                                    ui.horizontal(|ui| {
+                                        ui.spinner();
+                                        ui.label("Discovering topics...");
+                                    });
+                                }
+
+                                // Process incoming topics
+                                if let Some(rx) = &mut config.discovery_rx {
+                                    while let Ok(topic) = rx.try_recv() {
+                                        if topic.starts_with("!ERROR: ") {
+                                            config.discovery_active = false;
+                                            ui.colored_label(Color32::RED, &topic[8..]);
+                                        } else {
+                                            config.discovered_topics.insert(topic);
+                                        }
+                                    }
+                                }
+
+                                // Display discovered topics
+                                if !config.discovered_topics.is_empty() {
+                                    ui.separator();
+                                    ui.label(format!(
+                                        "Discovered Topics ({})",
+                                        config.discovered_topics.len()
+                                    ));
+
+                                    ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                                        let mut topics: Vec<_> =
+                                            config.discovered_topics.iter().collect();
+                                        topics.sort();
+
+                                        for topic in topics {
+                                            ui.horizontal(|ui| {
+                                                if ui.selectable_label(false, topic).clicked() {
+                                                    if !config.topics.contains(topic) {
+                                                        config.topics.push(topic.to_string());
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    });
                                 }
                             });
-                            ui.label("Subscribed Topics:");
-                            for topic in &config.topics {
-                                ui.label(topic);
-                            }
+
                             if ui.button("Connect").clicked() {
                                 app.mqtt_stop_flag
                                     .store(false, std::sync::atomic::Ordering::SeqCst);
-                                let broker = config.broker.clone();
+                                let broker = config.broker_ip.clone();
                                 let topics = config.topics.clone();
                                 let (tx, rx) = std::sync::mpsc::channel();
                                 app.mqtt_channel = Some(rx);
@@ -343,6 +515,11 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                 });
                             }
                         });
+                    // 4. Cleanup when window closes
+                    if !config.open && config.discovery_active {
+                        config.discovery_stop.store(true, Ordering::SeqCst);
+                        config.discovery_active = false;
+                    }
                 }
             }
         });
