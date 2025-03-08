@@ -187,7 +187,51 @@ fn fill_plots(
                 }
             }
             let resp = plot_ui.response();
-            if resp.clicked() {
+            if plot_ui.response().double_clicked() || reset_plot_bounds {
+                let mut max_bounds: Option<PlotBounds> = None;
+                for mp in mqtt_plots {
+                    let mp_first_point = mp
+                        .data
+                        .first()
+                        .expect("Invalid empty MQTT plot data vector");
+                    let tmp_bounds = if mp.data.len() < 2 {
+                        PlotBounds::from_min_max(
+                            [mp_first_point.x, mp_first_point.y],
+                            [mp_first_point.x, mp_first_point.y],
+                        )
+                    } else {
+                        let min_x = mp_first_point.x;
+                        let max_x = mp
+                            .data
+                            .last()
+                            .expect("Should be unreachable: Invalid empty MQTT plot data vector")
+                            .x;
+                        let mut min_y = mp_first_point.y;
+                        let mut max_y = mp_first_point.y;
+                        for p in &mp.data {
+                            if p.y < min_y {
+                                min_y = p.y;
+                            }
+                            if p.y > max_y {
+                                max_y = p.y;
+                            }
+                        }
+                        PlotBounds::from_min_max([min_x, min_y], [max_x, max_y])
+                    };
+                    if let Some(max_bounds) = &mut max_bounds {
+                        max_bounds.merge(&tmp_bounds);
+                    } else {
+                        max_bounds = Some(tmp_bounds);
+                    }
+                }
+                if let Some(mut max_bounds) = max_bounds {
+                    // finally extend each bound by 10%
+                    let margin_fraction = egui::Vec2::splat(0.1);
+                    max_bounds.add_relative_margin_x(margin_fraction);
+                    max_bounds.add_relative_margin_y(margin_fraction);
+                    plot_ui.set_plot_bounds(max_bounds);
+                }
+            } else if resp.clicked() {
                 if plot_ui.ctx().input(|i| i.modifiers.shift) {
                     if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
                         click_delta.set_next_click(pointer_coordinate, PlotType::Hundreds);
