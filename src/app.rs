@@ -48,6 +48,9 @@ pub struct App {
     #[serde(skip)]
     discovery_handle: Option<std::thread::JoinHandle<()>>,
 
+    // auto scale plot bounds
+    auto_scale: bool,
+
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
@@ -84,6 +87,7 @@ impl Default for App {
             mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
             broker_validation_receiver: None,
             discovery_handle: None,
+            auto_scale: false,
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),
@@ -155,6 +159,7 @@ impl eframe::App for App {
                 &self.loaded_files.take_loaded_files(),
                 &mut self.toasts,
                 &self.mqtt_plots,
+                &mut self.auto_scale,
             );
             if self.plot.plot_count() == 0 {
                 // Display the message when plots are shown
@@ -514,6 +519,8 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                             config.topics.retain(|s| !s.is_empty());
 
                             if ui.button("Connect").clicked() {
+                                app.auto_scale = true;
+                                log::info!("Auto scaling enabled");
                                 connect_clicked = true;
                                 app.mqtt_stop_flag
                                     .store(false, std::sync::atomic::Ordering::SeqCst);

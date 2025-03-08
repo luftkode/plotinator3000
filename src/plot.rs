@@ -68,6 +68,7 @@ impl LogPlotUi {
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
         mqtt_plots: &[MqttData],
+        auto_scale: &mut bool,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -131,6 +132,7 @@ impl LogPlotUi {
                     *line_width,
                     click_delta,
                     mqtt_plots,
+                    auto_scale,
                 );
             })
             .response;
