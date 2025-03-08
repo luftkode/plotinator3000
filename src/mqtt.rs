@@ -1,6 +1,13 @@
 use chrono::NaiveDateTime;
 use egui_plot::PlotPoint;
 
+#[derive(Default)]
+pub struct MqttConfigWindow {
+    pub broker: String,
+    pub topics: Vec<String>,
+    pub new_topic: String,
+}
+
 #[derive(Debug)]
 pub struct MqttData {
     pub topic: String,
@@ -13,27 +20,45 @@ pub struct MqttPoint {
     pub point: PlotPoint,
 }
 
-use rumqttc::{Client, MqttOptions, QoS};
-use std::thread;
-use std::time::Duration;
+use rumqttc::{Client, Event, MqttOptions, Packet, QoS};
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc,
+    },
+    time::Duration,
+};
 
-pub fn mqtt_receiver(tx: std::sync::mpsc::Sender<MqttPoint>) {
-    let mut mqttoptions = MqttOptions::new("plotinator3000", "192.168.0.200", 1883);
+pub fn mqtt_receiver(
+    tx: mpsc::Sender<MqttPoint>,
+    broker: String,
+    topics: Vec<String>,
+    stop_flag: Arc<AtomicBool>,
+) {
+    let mut mqttoptions = MqttOptions::new("plotinator3000", broker, 1883);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
     let (client, mut connection) = Client::new(mqttoptions, 10);
-    client.subscribe("system/pi0/#", QoS::AtMostOnce).unwrap();
+    for t in topics {
+        if let Err(e) = client.subscribe(t, QoS::AtMostOnce) {
+            log::error!("Subscribe error: {e}");
+        }
+    }
 
-    loop {
-        // Iterate to poll the eventloop for connection progress
-        for notification in connection.iter() {
-            match notification {
-                Ok(event) => {
-                    if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(publish)) = event {
-                        let topic = publish.topic;
-                        let payload = String::from_utf8_lossy(&publish.payload);
-                        log::info!("Received on topic={topic}, payload={payload}");
-                        if let Ok(num) = payload.parse::<f64>() {
+    // Iterate to poll the eventloop for connection progress
+    for notification in connection.iter() {
+        if stop_flag.load(Ordering::Relaxed) {
+            log::info!("Stopping!");
+            break;
+        }
+        match notification {
+            Ok(event) => {
+                if let Event::Incoming(Packet::Publish(publish)) = event {
+                    let topic = publish.topic;
+                    let payload = String::from_utf8_lossy(&publish.payload);
+                    log::info!("Received on topic={topic}, payload={payload}");
+                    match payload.parse::<f64>() {
+                        Ok(num) => {
                             let now = std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)
                                 .unwrap()
@@ -45,11 +70,13 @@ pub fn mqtt_receiver(tx: std::sync::mpsc::Sender<MqttPoint>) {
                                 log::error!("Send err={e}");
                             }
                         }
+                        Err(e) => log::error!("Payload parse error: {e}"),
                     }
                 }
-
-                Err(e) => log::error!("{e}"),
             }
+
+            Err(e) => log::error!("{e}"),
         }
     }
+    client.disconnect().unwrap();
 }

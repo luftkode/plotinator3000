@@ -1,7 +1,10 @@
-use std::time::Duration;
+use std::{
+    sync::{atomic::AtomicBool, Arc},
+    time::Duration,
+};
 
 use crate::{
-    mqtt::{MqttData, MqttPoint},
+    mqtt::{MqttConfigWindow, MqttData, MqttPoint},
     plot::LogPlotUi,
     util::format_data_size,
 };
@@ -35,11 +38,16 @@ pub struct App {
     mqtt_plots: Vec<MqttData>,
     #[serde(skip)]
     mqtt_channel: Option<std::sync::mpsc::Receiver<MqttPoint>>,
+    #[serde(skip)]
+    mqtt_stop_flag: Arc<AtomicBool>,
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
     font_size_init: bool,
     error_message: Option<String>,
+
+    #[serde(skip)]
+    mqtt_config_window: Option<MqttConfigWindow>,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -64,6 +72,8 @@ impl Default for App {
             font_size: Self::DEFAULT_FONT_SIZE,
             font_size_init: false,
             error_message: None,
+            mqtt_config_window: None,
+            mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),
@@ -225,6 +235,10 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 }
                 app.loaded_files = LoadedFiles::default();
                 app.plot = LogPlotUi::default();
+                app.mqtt_stop_flag
+                    .store(true, std::sync::atomic::Ordering::SeqCst);
+                app.mqtt_channel = None;
+                app.mqtt_plots.clear();
             }
             if ui
                 .button(RichText::new(format!(
@@ -265,17 +279,11 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             }
             collapsible_instructions(ui);
             if ui.button("MQTT").clicked() {
-                if app.mqtt_channel.is_none() {
-                    let (tx, rx) = std::sync::mpsc::channel::<MqttPoint>();
-                    app.mqtt_channel = Some(rx);
-                    std::thread::spawn(|| {
-                        crate::mqtt::mqtt_receiver(tx);
-                    });
-                }
+                app.mqtt_config_window = Some(MqttConfigWindow::default());
             }
 
             if app.mqtt_channel.is_some() {
-                ctx.request_repaint_after(Duration::from_millis(700));
+                ctx.request_repaint_after(Duration::from_millis(100));
             }
             if let Some(rx) = app.mqtt_channel.as_ref() {
                 let mut received_any_packets = false;
@@ -294,6 +302,47 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                             data: vec![mqtt_point.point],
                         });
                     }
+                }
+            }
+            // Show MQTT configuration window if needed\
+            if app.mqtt_channel.is_none() {
+                if let Some(config) = &mut app.mqtt_config_window {
+                    let mut open = true;
+                    egui::Window::new("MQTT Configuration")
+                        .open(&mut open)
+                        .show(ctx, |ui| {
+                            ui.label("Broker Address:");
+                            ui.text_edit_singleline(&mut config.broker);
+                            ui.label("Topics:");
+                            ui.horizontal(|ui| {
+                                ui.text_edit_singleline(&mut config.new_topic);
+                                if ui.button("Add").clicked() && !config.new_topic.is_empty() {
+                                    config.topics.push(config.new_topic.clone());
+                                    config.new_topic.clear();
+                                }
+                            });
+                            ui.label("Subscribed Topics:");
+                            for topic in &config.topics {
+                                ui.label(topic);
+                            }
+                            if ui.button("Connect").clicked() {
+                                app.mqtt_stop_flag
+                                    .store(false, std::sync::atomic::Ordering::SeqCst);
+                                let broker = config.broker.clone();
+                                let topics = config.topics.clone();
+                                let (tx, rx) = std::sync::mpsc::channel();
+                                app.mqtt_channel = Some(rx);
+                                let thread_stop_flag = Arc::clone(&app.mqtt_stop_flag);
+                                std::thread::spawn(move || {
+                                    crate::mqtt::mqtt_receiver(
+                                        tx,
+                                        broker,
+                                        topics,
+                                        thread_stop_flag,
+                                    );
+                                });
+                            }
+                        });
                 }
             }
         });
