@@ -349,8 +349,10 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                         }
                                     }
                                 } else if config.validation_in_progress {
-                                    ui.spinner();
-                                    ui.label("Checking broker...");
+                                    ui.horizontal(|ui| {
+                                        ui.spinner();
+                                        ui.label("Checking broker...");
+                                    });
                                 }
 
                                 let current_broker_input =
@@ -399,34 +401,24 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                         config.new_topic.clear();
                                     }
                                 });
-                                if !config.topics.is_empty() {
-                                    ui.label("Subscribed Topics:");
-                                }
-                                for topic in &mut config.topics {
-                                    ui.horizontal(|ui| {
-                                        if ui
-                                            .button(RichText::new(egui_phosphor::regular::TRASH))
-                                            .clicked()
-                                        {
-                                            topic.clear();
-                                        } else {
-                                            ui.label(topic.clone());
-                                        }
-                                    });
-                                }
-                                config.topics.retain(|s| !s.is_empty());
 
                                 let discover_enabled = matches!(config.broker_status, Some(Ok(())))
                                     && !config.discovery_active;
 
                                 if let Ok(port_u16) = config.broker_port.parse::<u16>() {
-                                    if ui
-                                        .add_enabled(
-                                            discover_enabled,
-                                            egui::Button::new("Discover Topics"),
-                                        )
-                                        .on_hover_text("Continuously find topics (subscribes to #)")
-                                        .clicked()
+                                    if !config.discovery_active
+                                        && ui
+                                            .add_enabled(
+                                                discover_enabled,
+                                                egui::Button::new(format!(
+                                                    "{} Discover Topics",
+                                                    egui_phosphor::regular::CELL_TOWER
+                                                )),
+                                            )
+                                            .on_hover_text(
+                                                "Continuously find topics (subscribes to #)",
+                                            )
+                                            .clicked()
                                     {
                                         config.discovery_active = true;
                                         config.discovered_topics.clear();
@@ -447,15 +439,22 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                     }
                                 }
 
-                                if config.discovery_active && ui.button("Stop Discovery").clicked()
+                                if config.discovery_active
+                                    && ui
+                                        .button(format!(
+                                            "{} Stop Discovery",
+                                            egui_phosphor::regular::CELL_TOWER
+                                        ))
+                                        .clicked()
                                 {
                                     config.discovery_stop.store(true, Ordering::SeqCst);
+                                    config.discovery_active = false;
                                 }
                                 // Show discovery status
                                 if config.discovery_active {
                                     ui.horizontal(|ui| {
                                         ui.spinner();
-                                        ui.label("Discovering topics...");
+                                        ui.colored_label(Color32::BLUE, "Discovering topics...");
                                     });
                                 }
 
@@ -496,6 +495,22 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                     });
                                 }
                             });
+                            if !config.topics.is_empty() {
+                                ui.label("Subscribed Topics:");
+                            }
+                            for topic in &mut config.topics {
+                                ui.horizontal(|ui| {
+                                    if ui
+                                        .button(RichText::new(egui_phosphor::regular::TRASH))
+                                        .clicked()
+                                    {
+                                        topic.clear();
+                                    } else {
+                                        ui.label(topic.clone());
+                                    }
+                                });
+                            }
+                            config.topics.retain(|s| !s.is_empty());
 
                             if ui.button("Connect").clicked() {
                                 app.mqtt_stop_flag
