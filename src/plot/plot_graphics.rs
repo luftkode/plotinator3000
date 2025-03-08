@@ -1,5 +1,5 @@
 use egui::{Vec2, Vec2b};
-use egui_plot::{AxisHints, HPlacement, Legend, Plot};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plot_util::{PlotData, Plots};
 
 use crate::{mqtt::MqttData, plot::util};
@@ -11,6 +11,7 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, Pl
 /// # Arguments
 ///
 /// * `ui` - The egui UI to paint on.
+/// * `reset_plot_bounds` - whether plot bounds should be reset.
 /// * `plots` - The [`Plots`] struct containing plot data.
 /// * `plot_settings` - Controls plot display.
 /// * `legend_cfg` - Legend configuration.
@@ -24,6 +25,7 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, Pl
 )]
 pub fn paint_plots(
     ui: &mut egui::Ui,
+    reset_plot_bounds: bool,
     plots: &mut Plots,
     plot_settings: &PlotSettings,
     legend_cfg: &Legend,
@@ -101,6 +103,7 @@ pub fn paint_plots(
 
     fill_plots(
         ui,
+        reset_plot_bounds,
         plot_components_list,
         line_width,
         plot_settings,
@@ -115,12 +118,14 @@ pub fn paint_plots(
 /// # Arguments
 ///
 /// * `gui` - The egui UI to paint on.
+/// * `reset_plot_bounds` - whether plot bounds should be reset.
 /// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`PlotType`].
-/// * `axis_config` - For axis customization.
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
+/// * `click_delta` - State relating to pointer clicks on plots
 fn fill_plots(
     gui: &mut egui::Ui,
+    reset_plot_bounds: bool,
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
     line_width: f32,
     plot_settings: &PlotSettings,
@@ -141,8 +146,26 @@ fn fill_plots(
                     plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
                 }
             }
-            let resp = plot_ui.response();
-            if resp.clicked() {
+
+            if plot_ui.response().double_clicked() || reset_plot_bounds {
+                let filter_plots = plot_settings.apply_filters(plot.plots());
+                let mut max_bounds: Option<PlotBounds> = None;
+                for fp in filter_plots {
+                    let fp_max_bounds = fp.get_max_bounds();
+                    if let Some(max_bounds) = &mut max_bounds {
+                        max_bounds.merge(&fp_max_bounds);
+                    } else {
+                        max_bounds = Some(fp_max_bounds);
+                    }
+                }
+                if let Some(mut max_bounds) = max_bounds {
+                    // finally extend each bound by 10%
+                    let margin_fraction = egui::Vec2::splat(0.1);
+                    max_bounds.add_relative_margin_x(margin_fraction);
+                    max_bounds.add_relative_margin_y(margin_fraction);
+                    plot_ui.set_plot_bounds(max_bounds);
+                }
+            } else if plot_ui.response().clicked() {
                 if plot_ui.ctx().input(|i| i.modifiers.shift) {
                     if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
                         click_delta.set_next_click(pointer_coordinate, ptype);
@@ -200,25 +223,17 @@ fn fill_plots(
 /// # Arguments
 ///
 /// * `plot_ui` - The plot UI to paint on.
-/// * `plot` - A tuple containing [`PlotData`] and [`PlotType`].
-/// * `axis_config` - For axis customization.
+/// * `plot_data` - [`PlotData`].
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
 fn fill_plot<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot_data: &'p mut PlotData,
+    plot_data: &'p PlotData,
     line_width: f32,
     plot_settings: &'p PlotSettings,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
-    // necessary because the raw plot points are not serializable
-    // so they are skipped and initialized as None. So this
-    // generates them from the raw_points (only needed once per session)
-    plot_data
-        .plots_as_mut()
-        .iter_mut()
-        .for_each(|p| p.build_raw_plot_points());
 
     plot_util::plot_lines(
         plot_ui,
@@ -268,4 +283,5 @@ fn build_plot_ui<'a>(
         .allow_boxed_zoom(true)
         .allow_zoom(false) // Manually implemented
         .allow_scroll(true)
+        .allow_double_click_reset(false) // Manually implemented
 }

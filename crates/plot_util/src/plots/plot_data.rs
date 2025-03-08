@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use egui::Color32;
-use egui_plot::PlotPoint;
+use egui_plot::{PlotBounds, PlotPoint};
 use log_if::prelude::RawPlot;
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +10,7 @@ use super::util;
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct PlotData {
+    max_bounds: Option<PlotBounds>,
     plots: Vec<PlotValues>,
     plot_labels: Vec<StoredPlotLabels>,
     next_auto_color_idx: usize,
@@ -58,6 +59,7 @@ impl PlotData {
             )
             .color(self.auto_color());
             self.plots.push(new_plot);
+            self.calc_max_bounds();
         }
     }
 
@@ -70,6 +72,28 @@ impl PlotData {
         let h = i as f32 * golden_ratio;
         egui::epaint::Hsva::new(h, 0.85, 0.5, 1.0).into() // TODO(emilk): OkLab or some other perspective color space
     }
+
+    pub fn calc_max_bounds(&mut self) {
+        let mut max_bounds: Option<PlotBounds> = None;
+        for p in &self.plots {
+            if let Some(max_bounds) = &mut max_bounds {
+                max_bounds.merge(&p.get_max_bounds());
+            } else {
+                max_bounds = Some(p.get_max_bounds());
+            }
+        }
+        if let Some(max_bounds) = &mut max_bounds {
+            // finally extend each bound by 10%
+            let margin_fraction = egui::Vec2::splat(0.1);
+            max_bounds.add_relative_margin_x(margin_fraction);
+            max_bounds.add_relative_margin_y(margin_fraction);
+        }
+        self.max_bounds = max_bounds;
+    }
+
+    pub fn get_max_bounds(&self) -> Option<PlotBounds> {
+        self.max_bounds
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -79,6 +103,8 @@ pub struct PlotValues {
     raw_plot_points: Option<Vec<PlotPoint>>,
     #[serde(skip)]
     mipmap_minmax_plot_points: Option<MipMap2DPlotPoints>,
+    #[serde(skip)]
+    max_bounds: Option<PlotBounds>,
     name: String,
     log_id: u16,
     // Label = "<name> #<log_id>"
@@ -108,11 +134,13 @@ impl PlotValues {
             Self::MIPMAP_MIN_ELEMENTS,
         );
         mipmap_min_pp.join(&mipmap_max_pp);
+        let max_bounds = Self::calc_max_bounds(&raw_plot, mipmap_min_pp.get_max_level());
 
         Self {
             raw_plot,
             raw_plot_points,
             mipmap_minmax_plot_points: Some(mipmap_min_pp),
+            max_bounds: Some(max_bounds),
             name,
             log_id,
             label,
@@ -197,7 +225,35 @@ impl PlotValues {
             Self::MIPMAP_MIN_ELEMENTS,
         );
         mipmap_min_pp.join(&mipmap_max_pp);
+        self.max_bounds = Some(Self::calc_max_bounds(
+            &self.raw_plot,
+            mipmap_min_pp.get_max_level(),
+        ));
         self.mipmap_minmax_plot_points = Some(mipmap_min_pp);
+    }
+
+    fn calc_max_bounds(raw_plot: &[[f64; 2]], mipmap_joined_max_lvl: &[PlotPoint]) -> PlotBounds {
+        let first_x = raw_plot
+            .first()
+            .and_then(|f| f.first())
+            .expect("Empty dataset");
+        let last_x = raw_plot
+            .last()
+            .and_then(|f| f.first())
+            .expect("Empty dataset");
+
+        // We unwrap the partial_cmp in such a way that any number beats NaN in the comparison.
+        let min_y = mipmap_joined_max_lvl
+            .iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Less))
+            .expect("Empty slice, we should've checked that earlier")
+            .y;
+        let max_y = mipmap_joined_max_lvl
+            .iter()
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Greater))
+            .expect("Empty slice, we should've checked that earlier")
+            .y;
+        PlotBounds::from_min_max([*first_x, min_y], [*last_x, max_y])
     }
 
     pub fn total_data_points(&self) -> usize {
@@ -260,6 +316,10 @@ impl PlotValues {
     /// Mutable reference to whether or not the line should be highlighted
     pub fn get_highlight_mut(&mut self) -> &mut bool {
         &mut self.highlight
+    }
+
+    pub fn get_max_bounds(&self) -> PlotBounds {
+        self.max_bounds.expect("Accessed max_bounds before it was populated (missing call to 'build_raw_plot_points'?)")
     }
 }
 

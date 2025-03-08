@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Fix RUSTSEC-2025-0009 by updating ring
+
+### Changed
+
+- Set minimum support rust version (MSRV) and add CI check
+
+### Dependencies
+
+- `log`: 0.4.25 → 0.4.26 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
+- `serde`: 1.0.217 → 1.0.218 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
+- `tempfile`: 3.17.0 → 3.17.1 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
+- `chrono`: 0.4.39 → 0.4.40 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
+- `getset`: 0.1.4 → 0.1.5 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
+- `zip`: 2.2.2 → 2.2.3 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
+- `thiserror`: 2.0.11 → 2.0.12 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
+- `cargo-bins/cargo-binstall`: 1.11.0 → 1.11.2 ([#207](https://github.com/luftkode/plotinator3000/pull/207))
+- `strum`: 0.26.3 -> 0.27.1
+- `strum_macros`: 0.26.3 -> 0.27.1
+- `hdf5`: 0.9.4 -> 0.10.1
+
+## [1.10.0]
+
+### Added
+
+- Support for mbed PID log v6
+
+## [1.9.1]
+
+### Fixed
+
+- Fix zoom reset would reset to the max plot bounds of every loaded data point even if it wasn't actively being shown in a plot area ([#200](https://github.com/luftkode/plotinator3000/issues/200))
+
+## [1.9.0]
+
+### Changed
+
+- Account for bug in Swiss FW 4.2.0 that mixes up `vbat` and `is_fan_on` during logging
+- Rework how zoom reset. Now resets on startup and when loading new files.
+
+### Fixed
+
+- fix mipmap without base not including first mipmap level
+
 ## [1.8.0]
 
 ### Added

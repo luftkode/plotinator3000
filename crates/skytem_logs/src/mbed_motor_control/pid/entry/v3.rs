@@ -6,7 +6,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use log_if::log::LogEntry;
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct PidLogEntryV2 {
+pub struct PidLogEntryV3 {
     timestamp_ms_str: String,
     pub timestamp_ms: u32,
     pub rpm: f32,
@@ -18,7 +18,7 @@ pub struct PidLogEntryV2 {
     pub vbat: f32,
 }
 
-impl LogEntry for PidLogEntryV2 {
+impl LogEntry for PidLogEntryV3 {
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         // Start with 0 bytes read
         let mut total_bytes_read = 0;
@@ -44,13 +44,12 @@ impl LogEntry for PidLogEntryV2 {
         let first_valid_rpm_count = reader.read_u32::<LittleEndian>()?;
         total_bytes_read += size_of_val(&first_valid_rpm_count);
 
-        // This looks wrong because it accounts for fan_on and vbat being mixed up
-        // in Swiss FW 4.2.0
-        let vbat_byte = reader.read_u8()?;
-        total_bytes_read += size_of_val(&vbat_byte);
-        let fan_on_f32 = reader.read_f32::<LittleEndian>()?;
-        total_bytes_read += size_of_val(&fan_on_f32);
-        let fan_on = (fan_on_f32 as u8) == 1;
+        let fan_on_byte = reader.read_u8()?;
+        let fan_on = fan_on_byte == 1;
+        total_bytes_read += size_of_val(&fan_on_byte);
+
+        let vbat = reader.read_f32::<LittleEndian>()?;
+        total_bytes_read += size_of_val(&vbat);
 
         // Return the instance and the total bytes read
         Ok((
@@ -63,7 +62,7 @@ impl LogEntry for PidLogEntryV2 {
                 rpm_error_count,
                 first_valid_rpm_count,
                 fan_on,
-                vbat: vbat_byte.into(),
+                vbat,
             },
             total_bytes_read,
         ))
@@ -74,7 +73,7 @@ impl LogEntry for PidLogEntryV2 {
     }
 }
 
-impl fmt::Display for PidLogEntryV2 {
+impl fmt::Display for PidLogEntryV3 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -113,7 +112,7 @@ mod tests {
         ];
 
         let mut cursor = Cursor::new(data);
-        let (entry, bytes_read) = PidLogEntryV2::from_reader(&mut cursor)?;
+        let (entry, bytes_read) = PidLogEntryV3::from_reader(&mut cursor)?;
 
         assert_eq!(bytes_read, 29); // Total bytes read (8 fields)
         assert_eq!(entry.timestamp_ms, 1);
@@ -123,8 +122,8 @@ mod tests {
         assert_eq!(entry.rpm_error_count, 0);
         assert_eq!(entry.first_valid_rpm_count, 1);
         assert_eq!(entry.timestamp_ms_str, "00:00:00.001"); // assuming the parse_timestamp converts 1 ms to this string
-        assert!(!entry.fan_on);
-        assert_eq!(entry.vbat, 1.);
+        assert!(entry.fan_on);
+        assert_eq!(entry.vbat, 0.);
         Ok(())
     }
 
@@ -134,7 +133,7 @@ mod tests {
         let data: Vec<u8> = vec![0x01, 0x00, 0x00]; // Only part of the timestamp
 
         let mut cursor = Cursor::new(data);
-        let result = PidLogEntryV2::from_reader(&mut cursor);
+        let result = PidLogEntryV3::from_reader(&mut cursor);
 
         assert!(result.is_err()); // Should return an error due to insufficient data
     }
@@ -142,7 +141,7 @@ mod tests {
     #[test]
     fn test_display() {
         // Create a sample PidLogEntry
-        let entry = PidLogEntryV2 {
+        let entry = PidLogEntryV3 {
             timestamp_ms_str: String::from("00:00:00.001"),
             timestamp_ms: 1,
             rpm: 1.0,
