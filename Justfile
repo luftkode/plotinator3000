@@ -2,6 +2,8 @@ import 'just/mod.just'
 # CI only recipes, `just -l ci` to list them
 mod ci 'just/ci.just'
 
+set windows-shell := ["powershell.exe", "-c"]
+
 PROJECT_NAME := "plotinator3000"
 
 alias i := init
