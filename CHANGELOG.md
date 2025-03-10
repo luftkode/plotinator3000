@@ -18,8 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 
 - `log`: 0.4.25 → 0.4.26 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
-- `serde`: 1.0.217 → 1.0.218 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
-- `tempfile`: 3.17.0 → 3.17.1 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
 - `chrono`: 0.4.39 → 0.4.40 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `getset`: 0.1.4 → 0.1.5 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `zip`: 2.2.2 → 2.2.3 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
@@ -28,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `strum`: 0.26.3 -> 0.27.1
 - `strum_macros`: 0.26.3 -> 0.27.1
 - `hdf5`: 0.9.4 -> 0.10.1
+- `serde`: 1.0.217 → 1.0.219 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
+- `semver`: 1.0.25 → 1.0.26 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
+- `egui`: 0.31.0 → 0.31.1 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
+- `eframe`: 0.31.0 → 0.31.1 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
+- `tokio`: 1.43.0 → 1.44.0 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
+- `tempfile`: 3.17.0 → 3.18.0 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
 
 ## [1.10.0]
 
