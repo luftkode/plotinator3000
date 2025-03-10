@@ -24,10 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `getset`: 0.1.4 → 0.1.5 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `zip`: 2.2.2 → 2.2.3 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `thiserror`: 2.0.11 → 2.0.12 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
-- `cargo-bins/cargo-binstall`: 1.11.0 → 1.11.2 ([#207](https://github.com/luftkode/plotinator3000/pull/207))
 - `strum`: 0.26.3 -> 0.27.1
 - `strum_macros`: 0.26.3 -> 0.27.1
 - `hdf5`: 0.9.4 -> 0.10.1
+- `cargo-bins/cargo-binstall`: 1.11.0 → 1.12.0 ([#210](https://github.com/luftkode/plotinator3000/pull/210))
 
 ## [1.10.0]
 
