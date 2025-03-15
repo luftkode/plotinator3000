@@ -69,7 +69,6 @@ skytem_logs.workspace = true
 log_if.workspace = true
 plot_util.workspace = true
 skytem_hdf = { workspace = true, optional = true }
-mqtt = { workspace = true, optional = true}
 test_util.workspace = true
 egui_plot.workspace = true
 log.workspace = true
@@ -102,6 +101,7 @@ reqwest.workspace = true
 env_logger = "0.11"
 zip = "2.2.3"
 axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
+mqtt = { workspace = true, optional = true}
 profiling = { workspace = true, optional = true}
 puffin = { workspace = true, optional = true}
 puffin_http = { workspace = true, optional = true}

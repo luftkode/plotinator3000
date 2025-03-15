@@ -2,14 +2,13 @@ use std::{
     collections::HashSet,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::Receiver,
         Arc,
     },
 };
 
 use crate::{
     broker_validator::BrokerValidator, data_receiver::MqttDataReceiver,
-    topic_discoverer::TopicDiscoverer, MqttPoint,
+    topic_discoverer::TopicDiscoverer,
 };
 
 pub struct MqttConfigWindow {
@@ -17,10 +16,8 @@ pub struct MqttConfigWindow {
     broker_port: String,
     text_input_topic: String,
     selected_topics: Vec<String>,
-
     broker_validator: BrokerValidator,
     topic_discoverer: TopicDiscoverer,
-
     mqtt_stop_flag: Arc<AtomicBool>,
 }
 
@@ -70,8 +67,8 @@ impl MqttConfigWindow {
         &mut self.broker_port
     }
 
-    /// Sets the stop flag to stop the MQTT client
-    pub fn set_stop_flag(&mut self) {
+    /// Sets the stop flag to stop the MQTT client that listens for data to plot
+    fn set_stop_flag(&mut self) {
         self.mqtt_stop_flag.store(true, Ordering::SeqCst);
     }
 
@@ -151,5 +148,11 @@ impl Default for MqttConfigWindow {
 
             mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
         }
+    }
+}
+
+impl Drop for MqttConfigWindow {
+    fn drop(&mut self) {
+        self.set_stop_flag();
     }
 }

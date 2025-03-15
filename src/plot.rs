@@ -14,9 +14,17 @@ use crate::app::supported_formats::SupportedFormat;
 mod axis_config;
 mod click_delta;
 mod plot_graphics;
+#[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+pub mod plot_mqtt;
 mod plot_settings;
 mod plot_ui;
 mod util;
+
+pub enum PlotMode<'a> {
+    Logs(&'a mut Plots),
+    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+    MQTT(&'a [mqtt::MqttPoints], &'a mut bool),
+}
 
 #[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum PlotType {
@@ -67,8 +75,9 @@ impl LogPlotUi {
         ui: &mut egui::Ui,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         mqtt_plots: &[mqtt::MqttPoints],
-        auto_scale: &mut bool,
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] auto_scale: &mut bool,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -119,20 +128,23 @@ impl LogPlotUi {
 
         plot_settings.refresh(plots);
 
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+        let mode = PlotMode::MQTT(mqtt_plots, auto_scale);
+        #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]
+        let mode = PlotMode::Logs(plots);
+
         let response = ui
             .vertical(|ui| {
                 plot_graphics::paint_plots(
                     ui,
                     reset_plot_bounds,
-                    plots,
                     plot_settings,
                     legend_cfg,
                     axis_config,
                     link_group.expect("uninitialized link group id"),
                     *line_width,
                     click_delta,
-                    mqtt_plots,
-                    auto_scale,
+                    mode,
                 );
             })
             .response;

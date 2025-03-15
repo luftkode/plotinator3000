@@ -1,9 +1,5 @@
 use std::time::Duration;
 
-use mqtt::{
-    data_receiver::MqttDataReceiver, mqtt_cfg_window::MqttConfigWindow, MqttPoint, MqttPoints,
-};
-
 use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
@@ -31,10 +27,9 @@ pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 pub struct App {
     #[serde(skip)]
     toasts: Toasts,
-    #[serde(skip)]
-    mqtt_data_receiver: Option<MqttDataReceiver>,
 
-    // auto scale plot bounds
+    // auto scale plot bounds (MQTT only)
+    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     pub auto_scale: bool,
 
     loaded_files: LoadedFiles,
@@ -43,9 +38,12 @@ pub struct App {
     font_size_init: bool,
     error_message: Option<String>,
 
+    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+    #[serde(skip)]
+    mqtt_data_receiver: Option<mqtt::data_receiver::MqttDataReceiver>,
     #[serde(skip)]
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    pub mqtt_config_window: Option<MqttConfigWindow>,
+    mqtt_config_window: Option<mqtt::mqtt_cfg_window::MqttConfigWindow>,
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     mqtt_cfg_window_open: bool,
 
@@ -70,8 +68,12 @@ impl Default for App {
             font_size: Self::DEFAULT_FONT_SIZE,
             font_size_init: false,
             error_message: None,
+
+            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt_config_window: None,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt_cfg_window_open: false,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             auto_scale: false,
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt_data_receiver: None,
@@ -145,11 +147,13 @@ impl eframe::App for App {
                 ui,
                 &self.loaded_files.take_loaded_files(),
                 &mut self.toasts,
+                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &self
                     .mqtt_data_receiver
                     .as_ref()
                     .map(|mdc| mdc.plots())
                     .unwrap_or_default(),
+                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.auto_scale,
             );
             if self.plot.plot_count() == 0 {
@@ -241,10 +245,12 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 }
                 app.loaded_files = LoadedFiles::default();
                 app.plot = LogPlotUi::default();
-                if let Some(mqtt_window) = &mut app.mqtt_config_window {
-                    mqtt_window.set_stop_flag();
+
+                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+                {
+                    app.mqtt_config_window = None;
+                    app.mqtt_data_receiver = None;
                 }
-                app.mqtt_data_receiver = None;
             }
             if ui
                 .button(RichText::new(format!(
@@ -284,23 +290,29 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
             }
             collapsible_instructions(ui);
-            if ui.button("MQTT").clicked() {
-                app.mqtt_config_window = Some(MqttConfigWindow::default());
-                app.mqtt_cfg_window_open = true;
-            }
+            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+            {
+                if ui.button("MQTT").clicked() {
+                    app.mqtt_config_window =
+                        Some(mqtt::mqtt_cfg_window::MqttConfigWindow::default());
+                    app.mqtt_cfg_window_open = true;
+                }
 
-            if let Some(data_receiver) = &mut app.mqtt_data_receiver {
-                data_receiver.poll();
-                ctx.request_repaint_after(Duration::from_millis(100));
-            }
-            // Show MQTT configuration window if needed
-            if app.mqtt_data_receiver.is_none() {
-                if let Some(config) = &mut app.mqtt_config_window {
-                    if let Some(data_receiver) =
-                        crate::mqtt::show_mqtt_window(ctx, &mut app.mqtt_cfg_window_open, config)
-                    {
-                        app.mqtt_data_receiver = Some(data_receiver);
-                        app.auto_scale = true;
+                if let Some(data_receiver) = &mut app.mqtt_data_receiver {
+                    data_receiver.poll();
+                    ctx.request_repaint_after(Duration::from_millis(100));
+                }
+                // Show MQTT configuration window if needed
+                if app.mqtt_data_receiver.is_none() {
+                    if let Some(config) = &mut app.mqtt_config_window {
+                        if let Some(data_receiver) = crate::mqtt::show_mqtt_window(
+                            ctx,
+                            &mut app.mqtt_cfg_window_open,
+                            config,
+                        ) {
+                            app.mqtt_data_receiver = Some(data_receiver);
+                            app.auto_scale = true;
+                        }
                     }
                 }
             }
