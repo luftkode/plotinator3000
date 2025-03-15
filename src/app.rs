@@ -148,8 +148,7 @@ impl eframe::App for App {
                 &self.loaded_files.take_loaded_files(),
                 &mut self.toasts,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                &self
-                    .mqtt_data_receiver
+                self.mqtt_data_receiver
                     .as_ref()
                     .map(|mdc| mdc.plots())
                     .unwrap_or_default(),

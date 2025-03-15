@@ -5,22 +5,22 @@ use std::{
 
 pub fn validate_broker(host: &str, port: &str) -> Result<(), String> {
     // Validate port first
-    let port: u16 = port.parse().map_err(|e| format!("Invalid port: {}", e))?;
+    let port: u16 = port.parse().map_err(|e| format!("Invalid port: {e}"))?;
 
     // Format host properly for IPv6 if needed
     let formatted_host = if let Ok(ipv6) = host.parse::<std::net::Ipv6Addr>() {
-        format!("[{}]", ipv6)
+        format!("[{ipv6}]")
     } else {
-        host.to_string()
+        host.to_owned()
     };
 
     // Create proper address string
-    let addr_str = format!("{}:{}", formatted_host, port);
+    let addr_str = format!("{formatted_host}:{port}");
 
     // Resolve hostname using DNS (including mDNS if supported by system)
     let addrs = addr_str
         .to_socket_addrs()
-        .map_err(|e| format!("DNS resolution failed: {}", e))?;
+        .map_err(|e| format!("DNS resolution failed: {e}"))?;
 
     // Try all resolved addresses with timeout
     let mut last_error = None;
@@ -31,7 +31,8 @@ pub fn validate_broker(host: &str, port: &str) -> Result<(), String> {
         }
     }
 
-    Err(last_error
-        .map(|e| format!("Connection failed: {}", e))
-        .unwrap_or_else(|| "No addresses found".to_string()))
+    Err(last_error.map_or_else(
+        || "No addresses found".to_owned(),
+        |e| format!("Connection failed: {e}"),
+    ))
 }

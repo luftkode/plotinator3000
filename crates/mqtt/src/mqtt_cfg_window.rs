@@ -35,7 +35,7 @@ impl MqttConfigWindow {
         self.selected_topics.retain(|t| !t.is_empty());
     }
 
-    /// Adds `topic`` to the selected topics collection if it is not empty and the collection doesn't already contain it
+    /// Adds `topic` to the selected topics collection if it is not empty and the collection doesn't already contain it
     pub fn add_selected_topic(&mut self, topic: String) {
         if !topic.is_empty() && !self.selected_topics.contains(&topic) {
             self.selected_topics.push(topic);
@@ -44,7 +44,7 @@ impl MqttConfigWindow {
 
     /// Returns the add text input topic of this [`MqttConfigWindow`].
     pub fn add_text_input_topic(&mut self) {
-        self.add_selected_topic(self.text_input_topic.to_owned());
+        self.add_selected_topic(self.text_input_topic.clone());
         self.text_input_topic.clear();
     }
 
@@ -68,7 +68,7 @@ impl MqttConfigWindow {
     }
 
     /// Sets the stop flag to stop the MQTT client that listens for data to plot
-    fn set_stop_flag(&mut self) {
+    fn set_stop_flag(&self) {
         self.mqtt_stop_flag.store(true, Ordering::SeqCst);
     }
 
@@ -99,7 +99,7 @@ impl MqttConfigWindow {
     }
 
     pub fn discovered_topics(&self) -> &HashSet<String> {
-        &self.topic_discoverer.discovered_topics()
+        self.topic_discoverer.discovered_topics()
     }
 
     pub fn discovered_topics_sorted(&self) -> Vec<String> {
@@ -128,7 +128,7 @@ impl MqttConfigWindow {
         std::thread::Builder::new()
             .name("mqtt-listener".into())
             .spawn(move || {
-                crate::mqtt_listener(tx, broker, topics, thread_stop_flag);
+                crate::mqtt_listener(&tx, broker, topics, &thread_stop_flag);
             })
             .expect("Failed spawning MQTT listener thread");
         MqttDataReceiver::new(rx)

@@ -40,12 +40,18 @@ impl BrokerValidator {
 
                 // Spawn validation thread
                 let (cp_host, cp_port) = (ip.to_owned(), port.to_owned());
-                std::thread::spawn(move || {
-                    let result = util::validate_broker(&cp_host, &cp_port);
-                    if let Err(e) = tx.send(result) {
-                        log::error!("{e}");
-                    }
-                });
+                if let Err(e) = std::thread::Builder::new()
+                    .name("broker-validator".into())
+                    .spawn(move || {
+                        let result = util::validate_broker(&cp_host, &cp_port);
+                        if let Err(e) = tx.send(result) {
+                            log::error!("{e}");
+                        }
+                    })
+                {
+                    log::error!("{e}");
+                    debug_assert!(false, "{e}");
+                }
             }
         }
 

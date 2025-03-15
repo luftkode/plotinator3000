@@ -29,10 +29,10 @@ pub struct MqttPoint {
 }
 
 pub fn mqtt_listener(
-    tx: mpsc::Sender<MqttPoint>,
+    tx: &mpsc::Sender<MqttPoint>,
     broker: String,
     topics: Vec<String>,
-    stop_flag: Arc<AtomicBool>,
+    stop_flag: &Arc<AtomicBool>,
 ) {
     let timestamp_id = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
@@ -64,7 +64,7 @@ pub fn mqtt_listener(
                         Ok(num) => {
                             let now = std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)
-                                .unwrap()
+                                .expect("Time went backwards")
                                 .as_nanos() as f64;
                             log::info!("now={now}");
                             let point = PlotPoint::new(now, num);
@@ -81,5 +81,8 @@ pub fn mqtt_listener(
             Err(e) => log::error!("{e}"),
         }
     }
-    client.disconnect().unwrap();
+    if let Err(e) = client.disconnect() {
+        log::error!("{e}");
+        debug_assert!(false, "{e}");
+    }
 }
