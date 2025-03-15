@@ -27,6 +27,28 @@ fn show_broker_status(ui: &mut Ui, broker_status: Option<&Result<(), String>>) {
     }
 }
 
+fn show_active_discovery_status(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
+    if ui
+        .button(format!(
+            "{} Stop Discovery",
+            egui_phosphor::regular::CELL_TOWER
+        ))
+        .clicked()
+    {
+        mqtt_cfg_window.stop_topic_discovery();
+    }
+    // Show discovery status
+    ui.horizontal(|ui| {
+        ui.spinner();
+        ui.colored_label(Color32::BLUE, "Discovering topics...");
+    });
+
+    // Process incoming topics
+    if let Err(e) = mqtt_cfg_window.poll_discovered_topics() {
+        ui.colored_label(Color32::RED, e);
+    }
+}
+
 /// Shows the MQTT configuration window and returns a receiver channel if connect was clicked
 pub fn show_mqtt_window(
     ctx: &egui::Context,
@@ -86,25 +108,7 @@ pub fn show_mqtt_window(
                 }
 
                 if mqtt_cfg_window.discovery_active() {
-                    if ui
-                        .button(format!(
-                            "{} Stop Discovery",
-                            egui_phosphor::regular::CELL_TOWER
-                        ))
-                        .clicked()
-                    {
-                        mqtt_cfg_window.stop_topic_discovery();
-                    }
-                    // Show discovery status
-                    ui.horizontal(|ui| {
-                        ui.spinner();
-                        ui.colored_label(Color32::BLUE, "Discovering topics...");
-                    });
-
-                    // Process incoming topics
-                    if let Err(e) = mqtt_cfg_window.poll_discovered_topics() {
-                        ui.colored_label(Color32::RED, e);
-                    }
+                    show_active_discovery_status(ui, mqtt_cfg_window);
                 }
 
                 // Display discovered topics
@@ -128,23 +132,7 @@ pub fn show_mqtt_window(
                     });
                 }
             });
-            if !mqtt_cfg_window.selected_topics().is_empty() {
-                ui.label("Subscribed Topics:");
-            }
-            for topic in mqtt_cfg_window.selected_topics_as_mut() {
-                ui.horizontal(|ui| {
-                    if ui
-                        .button(RichText::new(egui_phosphor::regular::TRASH))
-                        .clicked()
-                    {
-                        // Make them an empty string and then cleanup empty strings after the loop
-                        topic.clear();
-                    } else {
-                        ui.label(topic.clone());
-                    }
-                });
-            }
-            mqtt_cfg_window.remove_empty_selected_topics();
+            show_subscribed_topics(ui, mqtt_cfg_window);
 
             if ui.button("Connect").clicked() {
                 connect_clicked = true;
@@ -156,4 +144,24 @@ pub fn show_mqtt_window(
         mqtt_cfg_window.stop_topic_discovery();
     }
     data_receiver
+}
+
+fn show_subscribed_topics(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
+    if !mqtt_cfg_window.selected_topics().is_empty() {
+        ui.label("Subscribed Topics:");
+    }
+    for topic in mqtt_cfg_window.selected_topics_as_mut() {
+        ui.horizontal(|ui| {
+            if ui
+                .button(RichText::new(egui_phosphor::regular::TRASH))
+                .clicked()
+            {
+                // Make them an empty string and then cleanup empty strings after the loop
+                topic.clear();
+            } else {
+                ui.label(topic.clone());
+            }
+        });
+    }
+    mqtt_cfg_window.remove_empty_selected_topics();
 }
