@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use mqtt::{MqttConfigWindow, MqttData, MqttPoint};
+
 use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
@@ -27,11 +29,23 @@ pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 pub struct App {
     #[serde(skip)]
     toasts: Toasts,
+    #[serde(skip)]
+    pub mqtt_plots: Vec<MqttData>,
+    #[serde(skip)]
+    pub mqtt_data_channel: Option<std::sync::mpsc::Receiver<MqttPoint>>,
+
+    // auto scale plot bounds
+    pub auto_scale: bool,
+
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
     font_size_init: bool,
     error_message: Option<String>,
+
+    #[serde(skip)]
+    pub mqtt_config_window: Option<MqttConfigWindow>,
+    mqtt_cfg_window_open: bool,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -49,11 +63,16 @@ impl Default for App {
     fn default() -> Self {
         Self {
             toasts: Toasts::default(),
+            mqtt_plots: Vec::new(),
+            mqtt_data_channel: None,
             loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
             font_size_init: false,
             error_message: None,
+            mqtt_config_window: None,
+            mqtt_cfg_window_open: false,
+            auto_scale: false,
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),
@@ -120,8 +139,13 @@ impl eframe::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
-            self.plot
-                .ui(ui, &self.loaded_files.take_loaded_files(), &mut self.toasts);
+            self.plot.ui(
+                ui,
+                &self.loaded_files.take_loaded_files(),
+                &mut self.toasts,
+                &self.mqtt_plots,
+                &mut self.auto_scale,
+            );
             if self.plot.plot_count() == 0 {
                 // Display the message when plots are shown
                 util::draw_empty_state(ui);
@@ -211,6 +235,11 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 }
                 app.loaded_files = LoadedFiles::default();
                 app.plot = LogPlotUi::default();
+                if let Some(mqtt_window) = &mut app.mqtt_config_window {
+                    mqtt_window.set_stop_flag();
+                }
+                app.mqtt_data_channel = None;
+                app.mqtt_plots.clear();
             }
             if ui
                 .button(RichText::new(format!(
@@ -250,6 +279,43 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
             }
             collapsible_instructions(ui);
+            if ui.button("MQTT").clicked() {
+                app.mqtt_config_window = Some(MqttConfigWindow::default());
+                app.mqtt_cfg_window_open = true;
+            }
+
+            if app.mqtt_data_channel.is_some() {
+                ctx.request_repaint_after(Duration::from_millis(100));
+            }
+            if let Some(rx) = app.mqtt_data_channel.as_ref() {
+                while let Ok(mqtt_point) = rx.try_recv() {
+                    log::info!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
+                    if let Some(mp) = app
+                        .mqtt_plots
+                        .iter_mut()
+                        .find(|mp| mp.topic == mqtt_point.topic)
+                    {
+                        mp.data.push(mqtt_point.point);
+                    } else {
+                        app.mqtt_plots.push(MqttData {
+                            topic: mqtt_point.topic,
+                            data: vec![mqtt_point.point],
+                        });
+                    }
+                }
+            }
+            // Show MQTT configuration window if needed
+            if app.mqtt_data_channel.is_none() {
+                if let Some(config) = &mut app.mqtt_config_window {
+                    if let Some(recv_channel) =
+                        crate::mqtt::show_mqtt_window(ctx, &mut app.mqtt_cfg_window_open, config)
+                    {
+                        app.mqtt_data_channel = Some(recv_channel);
+                        app.auto_scale = true;
+                        log::info!("Auto scaling enabled");
+                    }
+                }
+            }
         });
     });
 }

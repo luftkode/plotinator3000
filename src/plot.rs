@@ -67,6 +67,8 @@ impl LogPlotUi {
         ui: &mut egui::Ui,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
+        mqtt_plots: &[mqtt::MqttData],
+        auto_scale: &mut bool,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -129,6 +131,8 @@ impl LogPlotUi {
                     link_group.expect("uninitialized link group id"),
                     *line_width,
                     click_delta,
+                    mqtt_plots,
+                    auto_scale,
                 );
             })
             .response;
