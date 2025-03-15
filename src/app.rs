@@ -1,7 +1,4 @@
-use std::{
-    sync::{atomic::AtomicBool, Arc},
-    time::Duration,
-};
+use std::time::Duration;
 
 use mqtt::{MqttConfigWindow, MqttData, MqttPoint};
 
@@ -35,11 +32,7 @@ pub struct App {
     #[serde(skip)]
     pub mqtt_plots: Vec<MqttData>,
     #[serde(skip)]
-    pub mqtt_channel: Option<std::sync::mpsc::Receiver<MqttPoint>>,
-    #[serde(skip)]
-    pub mqtt_stop_flag: Arc<AtomicBool>,
-    #[serde(skip)]
-    pub discovery_handle: Option<std::thread::JoinHandle<()>>,
+    pub mqtt_data_channel: Option<std::sync::mpsc::Receiver<MqttPoint>>,
 
     // auto scale plot bounds
     pub auto_scale: bool,
@@ -70,15 +63,13 @@ impl Default for App {
         Self {
             toasts: Toasts::default(),
             mqtt_plots: Vec::new(),
-            mqtt_channel: None,
+            mqtt_data_channel: None,
             loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
             font_size_init: false,
             error_message: None,
             mqtt_config_window: None,
-            mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
-            discovery_handle: None,
             auto_scale: false,
 
             #[cfg(target_arch = "wasm32")]
@@ -242,9 +233,12 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 }
                 app.loaded_files = LoadedFiles::default();
                 app.plot = LogPlotUi::default();
-                app.mqtt_stop_flag
-                    .store(true, std::sync::atomic::Ordering::SeqCst);
-                app.mqtt_channel = None;
+                if let Some(mqtt_window) = &mut app.mqtt_config_window {
+                    mqtt_window
+                        .mqtt_stop_flag
+                        .store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+                app.mqtt_data_channel = None;
                 app.mqtt_plots.clear();
             }
             if ui
@@ -289,10 +283,10 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 app.mqtt_config_window = Some(MqttConfigWindow::default());
             }
 
-            if app.mqtt_channel.is_some() {
+            if app.mqtt_data_channel.is_some() {
                 ctx.request_repaint_after(Duration::from_millis(100));
             }
-            if let Some(rx) = app.mqtt_channel.as_ref() {
+            if let Some(rx) = app.mqtt_data_channel.as_ref() {
                 while let Ok(mqtt_point) = rx.try_recv() {
                     log::info!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
                     if let Some(mp) = app
@@ -310,8 +304,14 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 }
             }
             // Show MQTT configuration window if needed
-            if app.mqtt_channel.is_none() {
-                crate::mqtt::show_mqtt_window(ctx, app);
+            if app.mqtt_data_channel.is_none() {
+                if let Some(config) = &mut app.mqtt_config_window {
+                    if let Some(recv_channel) = crate::mqtt::show_mqtt_window(ctx, config) {
+                        app.mqtt_data_channel = Some(recv_channel);
+                        app.auto_scale = true;
+                        log::info!("Auto scaling enabled");
+                    }
+                }
             }
         });
     });

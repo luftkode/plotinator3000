@@ -32,6 +32,8 @@ pub struct MqttConfigWindow {
 
     /// UI state
     pub broker_validation_receiver: Option<std::sync::mpsc::Receiver<Result<(), String>>>,
+    pub discovery_handle: Option<std::thread::JoinHandle<()>>,
+    pub mqtt_stop_flag: Arc<AtomicBool>,
 }
 
 impl Default for MqttConfigWindow {
@@ -54,6 +56,8 @@ impl Default for MqttConfigWindow {
             discovery_stop: Default::default(),
 
             broker_validation_receiver: None,
+            discovery_handle: None,
+            mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
         }
     }
 }
