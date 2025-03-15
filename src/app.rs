@@ -45,6 +45,7 @@ pub struct App {
 
     #[serde(skip)]
     pub mqtt_config_window: Option<MqttConfigWindow>,
+    mqtt_cfg_window_open: bool,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -70,6 +71,7 @@ impl Default for App {
             font_size_init: false,
             error_message: None,
             mqtt_config_window: None,
+            mqtt_cfg_window_open: false,
             auto_scale: false,
 
             #[cfg(target_arch = "wasm32")]
@@ -234,9 +236,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 app.loaded_files = LoadedFiles::default();
                 app.plot = LogPlotUi::default();
                 if let Some(mqtt_window) = &mut app.mqtt_config_window {
-                    mqtt_window
-                        .mqtt_stop_flag
-                        .store(true, std::sync::atomic::Ordering::SeqCst);
+                    mqtt_window.set_stop_flag();
                 }
                 app.mqtt_data_channel = None;
                 app.mqtt_plots.clear();
@@ -306,7 +306,9 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             // Show MQTT configuration window if needed
             if app.mqtt_data_channel.is_none() {
                 if let Some(config) = &mut app.mqtt_config_window {
-                    if let Some(recv_channel) = crate::mqtt::show_mqtt_window(ctx, config) {
+                    if let Some(recv_channel) =
+                        crate::mqtt::show_mqtt_window(ctx, &mut app.mqtt_cfg_window_open, config)
+                    {
                         app.mqtt_data_channel = Some(recv_channel);
                         app.auto_scale = true;
                         log::info!("Auto scaling enabled");

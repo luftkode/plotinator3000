@@ -7,18 +7,87 @@ use std::time::Instant;
 use egui::Color32;
 use egui::RichText;
 use egui::ScrollArea;
+use egui::Ui;
 use mqtt::MqttConfigWindow;
 use mqtt::MqttPoint;
 
+fn check_broker_status(mqtt_cfg_window: &mut MqttConfigWindow) {
+    let current_broker_input = format!(
+        "{}:{}",
+        mqtt_cfg_window.broker_ip, mqtt_cfg_window.broker_port
+    );
+
+    // Detect input changes
+    if current_broker_input != mqtt_cfg_window.previous_broker_input {
+        mqtt_cfg_window.previous_broker_input = current_broker_input.clone();
+        mqtt_cfg_window.last_input_change = Some(Instant::now());
+        mqtt_cfg_window.broker_status = None;
+    }
+
+    // Debounce and validate after 500ms
+    if let Some(last_change) = mqtt_cfg_window.last_input_change {
+        if last_change.elapsed() >= Duration::from_millis(500)
+            && !mqtt_cfg_window.validation_in_progress
+        {
+            let (tx, rx) = std::sync::mpsc::channel();
+            mqtt_cfg_window.broker_validation_receiver = Some(rx);
+            mqtt_cfg_window.validation_in_progress = true;
+            mqtt_cfg_window.last_input_change = None;
+
+            // Spawn validation thread
+            let (host, port) = (
+                mqtt_cfg_window.broker_ip.clone(),
+                mqtt_cfg_window.broker_port.clone(),
+            );
+            std::thread::spawn(move || {
+                let result = mqtt::util::validate_broker(&host, &port);
+                tx.send(result).ok();
+            });
+        }
+    }
+}
+
+fn show_broker_status(
+    ui: &mut Ui,
+    broker_status: Option<Result<(), String>>,
+    broker_validation_in_progress: bool,
+) {
+    if let Some(status) = broker_status {
+        match status {
+            Ok(()) => {
+                ui.colored_label(
+                    egui::Color32::GREEN,
+                    RichText::new(format!(
+                        "{} Broker reachable",
+                        egui_phosphor::regular::CHECK
+                    )),
+                );
+            }
+            Err(err) => {
+                ui.colored_label(
+                    egui::Color32::RED,
+                    RichText::new(format!("{} {err}", egui_phosphor::regular::WARNING_OCTAGON)),
+                );
+            }
+        }
+    } else if broker_validation_in_progress {
+        ui.horizontal(|ui| {
+            ui.spinner();
+            ui.label("Checking broker...");
+        });
+    }
+}
+
+/// Shows the MQTT configuration window and returns a receiver channel if connect was clicked
 pub fn show_mqtt_window(
     ctx: &egui::Context,
+    mqtt_cfg_window_open: &mut bool,
     mqtt_cfg_window: &mut MqttConfigWindow,
 ) -> Option<std::sync::mpsc::Receiver<MqttPoint>> {
     let mut recv_channel: Option<std::sync::mpsc::Receiver<MqttPoint>> = None;
-
     let mut connect_clicked = false;
     egui::Window::new("MQTT Configuration")
-        .open(&mut mqtt_cfg_window.open)
+        .open(mqtt_cfg_window_open)
         .show(ctx, |ui| {
             ui.group(|ui| {
                 ui.label("MQTT Broker Address");
@@ -29,33 +98,12 @@ pub fn show_mqtt_window(
                     ui.text_edit_singleline(&mut mqtt_cfg_window.broker_port)
                         .on_hover_text("1883 is the default MQTT broker port");
                 });
-                if let Some(status) = &mqtt_cfg_window.broker_status {
-                    match status {
-                        Ok(()) => {
-                            ui.colored_label(
-                                egui::Color32::GREEN,
-                                RichText::new(format!(
-                                    "{} Broker reachable",
-                                    egui_phosphor::regular::CHECK
-                                )),
-                            );
-                        }
-                        Err(err) => {
-                            ui.colored_label(
-                                egui::Color32::RED,
-                                RichText::new(format!(
-                                    "{} {err}",
-                                    egui_phosphor::regular::WARNING_OCTAGON
-                                )),
-                            );
-                        }
-                    }
-                } else if mqtt_cfg_window.validation_in_progress {
-                    ui.horizontal(|ui| {
-                        ui.spinner();
-                        ui.label("Checking broker...");
-                    });
-                }
+
+                show_broker_status(
+                    ui,
+                    mqtt_cfg_window.broker_status.clone(),
+                    mqtt_cfg_window.validation_in_progress,
+                );
 
                 let current_broker_input = format!(
                     "{}:{}",
@@ -219,22 +267,20 @@ pub fn show_mqtt_window(
 
             if ui.button("Connect").clicked() {
                 connect_clicked = true;
-                mqtt_cfg_window
-                    .mqtt_stop_flag
-                    .store(false, std::sync::atomic::Ordering::SeqCst);
+                mqtt_cfg_window.reset_stop_flag();
 
                 let broker = mqtt_cfg_window.broker_ip.clone();
                 let topics = mqtt_cfg_window.topics.clone();
                 let (tx, rx) = std::sync::mpsc::channel();
                 recv_channel = Some(rx);
-                let thread_stop_flag = Arc::clone(&mqtt_cfg_window.mqtt_stop_flag);
+                let thread_stop_flag = mqtt_cfg_window.get_stop_flag();
                 std::thread::spawn(move || {
                     mqtt::mqtt_receiver(tx, broker, topics, thread_stop_flag);
                 });
             }
         });
     // 4. Cleanup when window closes
-    if (!mqtt_cfg_window.open || connect_clicked) && mqtt_cfg_window.discovery_active {
+    if (!*mqtt_cfg_window_open || connect_clicked) && mqtt_cfg_window.discovery_active {
         mqtt_cfg_window.discovery_stop.store(true, Ordering::SeqCst);
         mqtt_cfg_window.discovery_active = false;
     }

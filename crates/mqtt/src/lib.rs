@@ -16,7 +16,6 @@ pub struct MqttConfigWindow {
     pub broker_port: String,
     pub topics: Vec<String>,
     pub new_topic: String,
-    pub open: bool,
 
     /// Broker discovery fields
     pub previous_broker_input: String,
@@ -33,7 +32,21 @@ pub struct MqttConfigWindow {
     /// UI state
     pub broker_validation_receiver: Option<std::sync::mpsc::Receiver<Result<(), String>>>,
     pub discovery_handle: Option<std::thread::JoinHandle<()>>,
-    pub mqtt_stop_flag: Arc<AtomicBool>,
+    mqtt_stop_flag: Arc<AtomicBool>,
+}
+
+impl MqttConfigWindow {
+    pub fn set_stop_flag(&mut self) {
+        self.mqtt_stop_flag.store(true, Ordering::SeqCst);
+    }
+
+    pub fn get_stop_flag(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.mqtt_stop_flag)
+    }
+
+    pub fn reset_stop_flag(&mut self) {
+        self.mqtt_stop_flag.store(false, Ordering::SeqCst);
+    }
 }
 
 impl Default for MqttConfigWindow {
@@ -43,7 +56,6 @@ impl Default for MqttConfigWindow {
             broker_port: "1883".into(),
             topics: Default::default(),
             new_topic: Default::default(),
-            open: true,
 
             previous_broker_input: Default::default(),
             broker_status: None,
