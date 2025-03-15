@@ -128,7 +128,7 @@ impl MqttConfigWindow {
         std::thread::Builder::new()
             .name("mqtt-listener".into())
             .spawn(move || {
-                crate::mqtt_listener(&tx, broker, topics, &thread_stop_flag);
+                crate::mqtt_listener::mqtt_listener(&tx, broker, topics, &thread_stop_flag);
             })
             .expect("Failed spawning MQTT listener thread");
         MqttDataReceiver::new(rx)

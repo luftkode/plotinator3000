@@ -1,6 +1,6 @@
 use std::sync::mpsc::Receiver;
 
-use crate::{MqttPoints, MqttPoint};
+use crate::{MqttPoint, MqttPoints};
 
 pub struct MqttDataReceiver {
     mqtt_plot_data: Vec<MqttPoints>,
