@@ -9,16 +9,19 @@ use std::{
 };
 
 pub(crate) mod broker_validator;
+pub mod data_receiver;
 pub mod mqtt_cfg_window;
 pub(crate) mod topic_discoverer;
-pub mod util;
+pub(crate) mod util;
 
+/// Accumulated plot points from an MQTT topic
 #[derive(Debug)]
-pub struct MqttData {
+pub struct MqttPoints {
     pub topic: String,
     pub data: Vec<PlotPoint>,
 }
 
+/// A single plot point with its topic origin
 #[derive(Debug)]
 pub struct MqttPoint {
     pub topic: String,

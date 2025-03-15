@@ -67,7 +67,7 @@ impl LogPlotUi {
         ui: &mut egui::Ui,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
-        mqtt_plots: &[mqtt::MqttData],
+        mqtt_plots: &[mqtt::MqttPoints],
         auto_scale: &mut bool,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]

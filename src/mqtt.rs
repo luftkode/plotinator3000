@@ -2,6 +2,7 @@ use egui::Color32;
 use egui::RichText;
 use egui::ScrollArea;
 use egui::Ui;
+use mqtt::data_receiver::MqttDataReceiver;
 use mqtt::mqtt_cfg_window::MqttConfigWindow;
 use mqtt::MqttPoint;
 
@@ -32,8 +33,8 @@ pub fn show_mqtt_window(
     ctx: &egui::Context,
     mqtt_cfg_window_open: &mut bool,
     mqtt_cfg_window: &mut MqttConfigWindow,
-) -> Option<std::sync::mpsc::Receiver<MqttPoint>> {
-    let mut recv_channel: Option<std::sync::mpsc::Receiver<MqttPoint>> = None;
+) -> Option<MqttDataReceiver> {
+    let mut data_receiver: Option<MqttDataReceiver> = None;
     let mut connect_clicked = false;
     egui::Window::new("MQTT Configuration")
         .open(mqtt_cfg_window_open)
@@ -44,7 +45,7 @@ pub fn show_mqtt_window(
                     ui.text_edit_singleline(mqtt_cfg_window.broker_ip_as_mut())
                         .on_hover_text("IP address, hostname, or mDNS (.local)");
                     ui.label(":");
-                    ui.text_edit_singleline(mqtt_cfg_window.broker_ip_as_mut())
+                    ui.text_edit_singleline(mqtt_cfg_window.broker_port_as_mut())
                         .on_hover_text("1883 is the default MQTT broker port");
                 });
 
@@ -137,22 +138,23 @@ pub fn show_mqtt_window(
                         .button(RichText::new(egui_phosphor::regular::TRASH))
                         .clicked()
                     {
+                        // Make them an empty string and then cleanup empty strings after the loop
                         topic.clear();
                     } else {
                         ui.label(topic.clone());
                     }
                 });
             }
+            mqtt_cfg_window.remove_empty_selected_topics();
 
             if ui.button("Connect").clicked() {
                 connect_clicked = true;
-                let rx = mqtt_cfg_window.spawn_mqtt_listener();
-                recv_channel = Some(rx);
+                data_receiver = Some(mqtt_cfg_window.spawn_mqtt_listener());
             }
         });
     // 4. Cleanup when window closes
     if (!*mqtt_cfg_window_open || connect_clicked) && mqtt_cfg_window.discovery_active() {
         mqtt_cfg_window.stop_topic_discovery();
     }
-    recv_channel
+    data_receiver
 }

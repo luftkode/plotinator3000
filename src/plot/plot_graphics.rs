@@ -38,7 +38,7 @@ pub fn paint_plots(
     link_group: egui::Id,
     line_width: f32,
     click_delta: &mut ClickDelta,
-    mqtt_plots: &[mqtt::MqttData],
+    mqtt_plots: &[mqtt::MqttPoints],
     auto_scale: &mut bool,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
@@ -212,7 +212,7 @@ fn fill_mqtt_plots(
     line_width: f32,
     click_delta: &mut ClickDelta,
     mqtt_plot_area: Plot<'_>,
-    mqtt_plots: &[mqtt::MqttData],
+    mqtt_plots: &[mqtt::MqttPoints],
     auto_scale: &mut bool,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
@@ -274,7 +274,7 @@ fn fill_mqtt_plots(
     });
 }
 
-fn get_mqtt_auto_scaled_plot_bounds(mqtt_plots: &[mqtt::MqttData]) -> Option<PlotBounds> {
+fn get_mqtt_auto_scaled_plot_bounds(mqtt_plots: &[mqtt::MqttPoints]) -> Option<PlotBounds> {
     let mut max_bounds: Option<PlotBounds> = None;
     for mp in mqtt_plots {
         let mp_first_point = mp

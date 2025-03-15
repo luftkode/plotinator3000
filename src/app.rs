@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use mqtt::{mqtt_cfg_window::MqttConfigWindow, MqttData, MqttPoint};
+use mqtt::{
+    data_receiver::MqttDataReceiver, mqtt_cfg_window::MqttConfigWindow, MqttPoint, MqttPoints,
+};
 
 use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
@@ -30,9 +32,7 @@ pub struct App {
     #[serde(skip)]
     toasts: Toasts,
     #[serde(skip)]
-    pub mqtt_plots: Vec<MqttData>,
-    #[serde(skip)]
-    pub mqtt_data_channel: Option<std::sync::mpsc::Receiver<MqttPoint>>,
+    mqtt_data_receiver: Option<MqttDataReceiver>,
 
     // auto scale plot bounds
     pub auto_scale: bool,
@@ -65,8 +65,6 @@ impl Default for App {
     fn default() -> Self {
         Self {
             toasts: Toasts::default(),
-            mqtt_plots: Vec::new(),
-            mqtt_data_channel: None,
             loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
@@ -75,6 +73,8 @@ impl Default for App {
             mqtt_config_window: None,
             mqtt_cfg_window_open: false,
             auto_scale: false,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+            mqtt_data_receiver: None,
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),
@@ -145,7 +145,11 @@ impl eframe::App for App {
                 ui,
                 &self.loaded_files.take_loaded_files(),
                 &mut self.toasts,
-                &self.mqtt_plots,
+                &self
+                    .mqtt_data_receiver
+                    .as_ref()
+                    .map(|mdc| mdc.plots())
+                    .unwrap_or_default(),
                 &mut self.auto_scale,
             );
             if self.plot.plot_count() == 0 {
@@ -240,8 +244,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 if let Some(mqtt_window) = &mut app.mqtt_config_window {
                     mqtt_window.set_stop_flag();
                 }
-                app.mqtt_data_channel = None;
-                app.mqtt_plots.clear();
+                app.mqtt_data_receiver = None;
             }
             if ui
                 .button(RichText::new(format!(
@@ -286,35 +289,18 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 app.mqtt_cfg_window_open = true;
             }
 
-            if app.mqtt_data_channel.is_some() {
+            if let Some(data_receiver) = &mut app.mqtt_data_receiver {
+                data_receiver.poll();
                 ctx.request_repaint_after(Duration::from_millis(100));
             }
-            if let Some(rx) = app.mqtt_data_channel.as_ref() {
-                while let Ok(mqtt_point) = rx.try_recv() {
-                    log::info!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
-                    if let Some(mp) = app
-                        .mqtt_plots
-                        .iter_mut()
-                        .find(|mp| mp.topic == mqtt_point.topic)
-                    {
-                        mp.data.push(mqtt_point.point);
-                    } else {
-                        app.mqtt_plots.push(MqttData {
-                            topic: mqtt_point.topic,
-                            data: vec![mqtt_point.point],
-                        });
-                    }
-                }
-            }
             // Show MQTT configuration window if needed
-            if app.mqtt_data_channel.is_none() {
+            if app.mqtt_data_receiver.is_none() {
                 if let Some(config) = &mut app.mqtt_config_window {
-                    if let Some(recv_channel) =
+                    if let Some(data_receiver) =
                         crate::mqtt::show_mqtt_window(ctx, &mut app.mqtt_cfg_window_open, config)
                     {
-                        app.mqtt_data_channel = Some(recv_channel);
+                        app.mqtt_data_receiver = Some(data_receiver);
                         app.auto_scale = true;
-                        log::info!("Auto scaling enabled");
                     }
                 }
             }

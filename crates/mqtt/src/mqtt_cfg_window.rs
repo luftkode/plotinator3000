@@ -7,7 +7,10 @@ use std::{
     },
 };
 
-use crate::{broker_validator::BrokerValidator, topic_discoverer::TopicDiscoverer, MqttPoint};
+use crate::{
+    broker_validator::BrokerValidator, data_receiver::MqttDataReceiver,
+    topic_discoverer::TopicDiscoverer, MqttPoint,
+};
 
 pub struct MqttConfigWindow {
     broker_ip: String,
@@ -29,6 +32,10 @@ impl MqttConfigWindow {
 
     pub fn selected_topics_as_mut(&mut self) -> &mut [String] {
         &mut self.selected_topics
+    }
+
+    pub fn remove_empty_selected_topics(&mut self) {
+        self.selected_topics.retain(|t| !t.is_empty());
     }
 
     /// Adds `topic`` to the selected topics collection if it is not empty and the collection doesn't already contain it
@@ -57,6 +64,10 @@ impl MqttConfigWindow {
     /// Returns a reference to the broker ip of this [`MqttConfigWindow`].
     pub fn broker_ip(&self) -> &str {
         &self.broker_ip
+    }
+
+    pub fn broker_port_as_mut(&mut self) -> &mut String {
+        &mut self.broker_port
     }
 
     /// Sets the stop flag to stop the MQTT client
@@ -111,7 +122,7 @@ impl MqttConfigWindow {
             .poll_broker_status(&self.broker_ip, &self.broker_port);
     }
 
-    pub fn spawn_mqtt_listener(&mut self) -> Receiver<MqttPoint> {
+    pub fn spawn_mqtt_listener(&mut self) -> MqttDataReceiver {
         self.reset_stop_flag();
         let broker = self.broker_ip().to_owned();
         let topics = self.selected_topics().to_owned();
@@ -123,7 +134,7 @@ impl MqttConfigWindow {
                 crate::mqtt_listener(tx, broker, topics, thread_stop_flag);
             })
             .expect("Failed spawning MQTT listener thread");
-        rx
+        MqttDataReceiver::new(rx)
     }
 }
 
