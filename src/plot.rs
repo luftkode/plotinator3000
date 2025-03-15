@@ -10,7 +10,7 @@ use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
 
-use crate::{app::supported_formats::SupportedFormat, mqtt::MqttData};
+use crate::app::supported_formats::SupportedFormat;
 mod axis_config;
 mod click_delta;
 mod plot_graphics;
@@ -67,7 +67,7 @@ impl LogPlotUi {
         ui: &mut egui::Ui,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
-        mqtt_plots: &[MqttData],
+        mqtt_plots: &[mqtt::MqttData],
         auto_scale: &mut bool,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]

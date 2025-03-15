@@ -6,11 +6,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{
-    mqtt::{MqttConfigWindow, MqttData, MqttPoint},
-    plot::LogPlotUi,
-    util::format_data_size,
-};
+use mqtt::{MqttConfigWindow, MqttData, MqttPoint};
+
+use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, ScrollArea, TextStyle, ThemePreference};
 use egui_notify::Toasts;
@@ -385,7 +383,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                         let (host, port) =
                                             (config.broker_ip.clone(), config.broker_port.clone());
                                         std::thread::spawn(move || {
-                                            let result = crate::mqtt::validate_broker(&host, &port);
+                                            let result = mqtt::validate_broker(&host, &port);
                                             tx.send(result).ok();
                                         });
                                     }
@@ -436,7 +434,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                         let (tx, rx) = mpsc::channel();
 
                                         config.discovery_rx = Some(rx);
-                                        app.discovery_handle = Some(crate::mqtt::start_discovery(
+                                        app.discovery_handle = Some(mqtt::start_discovery(
                                             host,
                                             port_u16,
                                             Arc::clone(&config.discovery_stop),
@@ -531,12 +529,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                                 app.mqtt_channel = Some(rx);
                                 let thread_stop_flag = Arc::clone(&app.mqtt_stop_flag);
                                 std::thread::spawn(move || {
-                                    crate::mqtt::mqtt_receiver(
-                                        tx,
-                                        broker,
-                                        topics,
-                                        thread_stop_flag,
-                                    );
+                                    mqtt::mqtt_receiver(tx, broker, topics, thread_stop_flag);
                                 });
                             }
                         });

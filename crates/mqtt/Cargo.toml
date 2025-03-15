@@ -1,0 +1,17 @@
+[package]
+name = "mqtt"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+egui_plot.workspace = true
+rumqttc.workspace = true
+log.workspace = true
+
+[lints]
+workspace = true

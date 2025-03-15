@@ -5,7 +5,6 @@ use std::sync::OnceLock;
 pub use app::App;
 use semver::Version;
 mod app;
-pub mod mqtt;
 
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 pub const APP_OWNER: &str = "luftkode";
