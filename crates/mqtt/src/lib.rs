@@ -16,10 +16,10 @@ pub(crate) mod topic_discoverer;
 pub mod util;
 
 pub struct MqttConfigWindow {
-    pub broker_ip: String,
-    pub broker_port: String,
+    broker_ip: String,
+    broker_port: String,
+    text_input_topic: String,
     pub selected_topics: Vec<String>,
-    pub new_topic: String,
 
     broker_validator: BrokerValidator,
     topic_discoverer: TopicDiscoverer,
@@ -28,6 +28,26 @@ pub struct MqttConfigWindow {
 }
 
 impl MqttConfigWindow {
+    pub fn text_input_topic_as_mut(&mut self) -> &mut String {
+        &mut self.text_input_topic
+    }
+
+    pub fn text_input_topic(&self) -> &str {
+        &self.text_input_topic
+    }
+
+    pub fn broker_ip_as_mut(&mut self) -> &mut String {
+        &mut self.broker_ip
+    }
+
+    pub fn broker_ip(&self) -> &str {
+        &self.broker_ip
+    }
+
+    pub fn broker_port_as_mut(&mut self) -> &mut String {
+        &mut self.broker_port
+    }
+
     pub fn set_stop_flag(&mut self) {
         self.mqtt_stop_flag.store(true, Ordering::SeqCst);
     }
@@ -94,7 +114,7 @@ impl Default for MqttConfigWindow {
             broker_ip: "127.0.0.1".into(),
             broker_port: "1883".into(),
             selected_topics: Default::default(),
-            new_topic: Default::default(),
+            text_input_topic: Default::default(),
 
             broker_validator: BrokerValidator::default(),
             topic_discoverer: TopicDiscoverer::default(),

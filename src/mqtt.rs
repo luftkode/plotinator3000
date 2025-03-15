@@ -1,5 +1,3 @@
-use std::sync::mpsc;
-
 use egui::Color32;
 use egui::RichText;
 use egui::ScrollArea;
@@ -43,10 +41,10 @@ pub fn show_mqtt_window(
             ui.group(|ui| {
                 ui.label("MQTT Broker Address");
                 ui.horizontal(|ui| {
-                    ui.text_edit_singleline(&mut mqtt_cfg_window.broker_ip)
+                    ui.text_edit_singleline(mqtt_cfg_window.broker_ip_as_mut())
                         .on_hover_text("IP address, hostname, or mDNS (.local)");
                     ui.label(":");
-                    ui.text_edit_singleline(&mut mqtt_cfg_window.broker_port)
+                    ui.text_edit_singleline(mqtt_cfg_window.broker_ip_as_mut())
                         .on_hover_text("1883 is the default MQTT broker port");
                 });
 
@@ -63,12 +61,13 @@ pub fn show_mqtt_window(
 
                 ui.label("Topics:");
                 ui.horizontal(|ui| {
-                    ui.text_edit_singleline(&mut mqtt_cfg_window.new_topic);
-                    if ui.button("Add").clicked() && !mqtt_cfg_window.new_topic.is_empty() {
+                    ui.text_edit_singleline(mqtt_cfg_window.text_input_topic_as_mut());
+                    if ui.button("Add").clicked() && !mqtt_cfg_window.text_input_topic().is_empty()
+                    {
                         mqtt_cfg_window
                             .selected_topics
-                            .push(mqtt_cfg_window.new_topic.clone());
-                        mqtt_cfg_window.new_topic.clear();
+                            .push(mqtt_cfg_window.text_input_topic().to_owned());
+                        mqtt_cfg_window.text_input_topic_as_mut().clear();
                     }
                 });
 
@@ -156,7 +155,7 @@ pub fn show_mqtt_window(
                 connect_clicked = true;
                 mqtt_cfg_window.reset_stop_flag();
 
-                let broker = mqtt_cfg_window.broker_ip.clone();
+                let broker = mqtt_cfg_window.broker_ip().to_owned();
                 let topics = mqtt_cfg_window.selected_topics.clone();
                 let (tx, rx) = std::sync::mpsc::channel();
                 recv_channel = Some(rx);
