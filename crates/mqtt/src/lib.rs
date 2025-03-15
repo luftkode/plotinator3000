@@ -29,6 +29,9 @@ pub struct MqttConfigWindow {
     pub discovered_topics: HashSet<String>, // Use HashSet for deduplication
     pub discovery_rx: Option<mpsc::Receiver<String>>,
     pub discovery_stop: Arc<AtomicBool>,
+
+    /// UI state
+    pub broker_validation_receiver: Option<std::sync::mpsc::Receiver<Result<(), String>>>,
 }
 
 impl Default for MqttConfigWindow {
@@ -49,6 +52,8 @@ impl Default for MqttConfigWindow {
             discovered_topics: Default::default(),
             discovery_rx: None,
             discovery_stop: Default::default(),
+
+            broker_validation_receiver: None,
         }
     }
 }

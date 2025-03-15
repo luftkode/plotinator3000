@@ -67,7 +67,7 @@ pub fn show_mqtt_window(ctx: &egui::Context, app: &mut crate::App) {
                             && !config.validation_in_progress
                         {
                             let (tx, rx) = std::sync::mpsc::channel();
-                            app.broker_validation_receiver = Some(rx);
+                            config.broker_validation_receiver = Some(rx);
                             config.validation_in_progress = true;
                             config.last_input_change = None;
 
@@ -82,11 +82,11 @@ pub fn show_mqtt_window(ctx: &egui::Context, app: &mut crate::App) {
                     }
 
                     // Check for validation results
-                    if let Some(receiver) = &mut app.broker_validation_receiver {
+                    if let Some(receiver) = &mut config.broker_validation_receiver {
                         if let Ok(result) = receiver.try_recv() {
                             config.broker_status = Some(result);
                             config.validation_in_progress = false;
-                            app.broker_validation_receiver = None;
+                            config.broker_validation_receiver = None;
                         }
                     }
                     ui.label("Topics:");

@@ -39,8 +39,6 @@ pub struct App {
     #[serde(skip)]
     pub mqtt_stop_flag: Arc<AtomicBool>,
     #[serde(skip)]
-    pub broker_validation_receiver: Option<std::sync::mpsc::Receiver<Result<(), String>>>,
-    #[serde(skip)]
     pub discovery_handle: Option<std::thread::JoinHandle<()>>,
 
     // auto scale plot bounds
@@ -80,7 +78,6 @@ impl Default for App {
             error_message: None,
             mqtt_config_window: None,
             mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
-            broker_validation_receiver: None,
             discovery_handle: None,
             auto_scale: false,
 
