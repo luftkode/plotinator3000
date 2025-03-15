@@ -18,7 +18,7 @@ pub(crate) struct TopicDiscoverer {
 }
 
 impl TopicDiscoverer {
-    pub fn set_stop_flag(&mut self) {
+    pub fn stop(&mut self) {
         self.stop_discovery_flag.store(true, Ordering::SeqCst);
         self.active = false;
     }
@@ -27,7 +27,7 @@ impl TopicDiscoverer {
         Arc::clone(&self.stop_discovery_flag)
     }
 
-    pub fn reset_stop_flag(&mut self) {
+    pub fn reset(&mut self) {
         self.discovered_topics.clear();
         self.stop_discovery_flag.store(false, Ordering::SeqCst);
     }
@@ -50,7 +50,7 @@ impl TopicDiscoverer {
     }
 
     pub fn start(&mut self, broker_ip: String, broker_port: u16) {
-        self.reset_stop_flag();
+        self.reset();
         self.active = true;
 
         let (tx, rx) = mpsc::channel();

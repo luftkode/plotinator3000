@@ -93,7 +93,7 @@ pub fn show_mqtt_window(
                         ))
                         .clicked()
                     {
-                        mqtt_cfg_window.set_stop_discovery_flag();
+                        mqtt_cfg_window.stop_topic_discovery();
                     }
                     // Show discovery status
                     ui.horizontal(|ui| {
@@ -160,7 +160,7 @@ pub fn show_mqtt_window(
         });
     // 4. Cleanup when window closes
     if (!*mqtt_cfg_window_open || connect_clicked) && mqtt_cfg_window.discovery_active() {
-        mqtt_cfg_window.set_stop_discovery_flag();
+        mqtt_cfg_window.stop_topic_discovery();
     }
     recv_channel
 }

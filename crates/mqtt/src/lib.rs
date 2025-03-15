@@ -28,8 +28,14 @@ pub struct MqttConfigWindow {
 }
 
 impl MqttConfigWindow {
+    /// Returns a reference to the selected topics of this [`MqttConfigWindow`].
     pub fn selected_topics(&self) -> &[String] {
         &self.selected_topics
+    }
+
+    /// Returns a mutable reference to the selected topics of this [`MqttConfigWindow`].
+    pub fn selected_topics_as_mut(&mut self) -> &mut Vec<String> {
+        &mut self.selected_topics
     }
 
     /// Adds `topic`` to the selected topics collection if it is not empty and the collection doesn't already contain it
@@ -39,31 +45,38 @@ impl MqttConfigWindow {
         }
     }
 
+    /// Returns the add text input topic of this [`MqttConfigWindow`].
     pub fn add_text_input_topic(&mut self) {
         self.add_selected_topic(self.text_input_topic().to_owned());
         self.text_input_topic.clear();
     }
 
+    /// Returns a mutable reference to the text input topic of this [`MqttConfigWindow`].
     pub fn text_input_topic_as_mut(&mut self) -> &mut String {
         &mut self.text_input_topic
     }
 
+    /// Returns a reference to the text input topic of this [`MqttConfigWindow`].
     pub fn text_input_topic(&self) -> &str {
         &self.text_input_topic
     }
 
+    /// Returns a mutable reference to the broker ip of this [`MqttConfigWindow`].
     pub fn broker_ip_as_mut(&mut self) -> &mut String {
         &mut self.broker_ip
     }
 
+    /// Returns a reference to the broker ip of this [`MqttConfigWindow`].
     pub fn broker_ip(&self) -> &str {
         &self.broker_ip
     }
 
+    /// Returns a mutable reference to the broker port of this [`MqttConfigWindow`].
     pub fn broker_port_as_mut(&mut self) -> &mut String {
         &mut self.broker_port
     }
 
+    /// Sets the stop flag to stop the MQTT client
     pub fn set_stop_flag(&mut self) {
         self.mqtt_stop_flag.store(true, Ordering::SeqCst);
     }
@@ -76,16 +89,8 @@ impl MqttConfigWindow {
         self.mqtt_stop_flag.store(false, Ordering::SeqCst);
     }
 
-    pub fn set_stop_discovery_flag(&mut self) {
-        self.topic_discoverer.set_stop_flag();
-    }
-
-    pub fn get_stop_discovery_flag(&mut self) -> Arc<AtomicBool> {
-        self.topic_discoverer.get_stop_flag()
-    }
-
-    pub fn reset_stop_discovery_flag(&mut self) {
-        self.topic_discoverer.reset_stop_flag();
+    pub fn stop_topic_discovery(&mut self) {
+        self.topic_discoverer.stop();
     }
 
     pub fn discovery_active(&self) -> bool {
