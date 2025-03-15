@@ -9,28 +9,21 @@ use std::{
     },
     time::Duration,
 };
+use topic_discoverer::TopicDiscoverer;
 
 pub(crate) mod broker_validator;
+pub(crate) mod topic_discoverer;
 pub mod util;
-
-pub(crate) struct TopicDiscoverer {}
 
 pub struct MqttConfigWindow {
     pub broker_ip: String,
     pub broker_port: String,
-    pub topics: Vec<String>,
+    pub selected_topics: Vec<String>,
     pub new_topic: String,
 
     broker_validator: BrokerValidator,
+    topic_discoverer: TopicDiscoverer,
 
-    /// Topic discovery fields
-    discovery_active: bool,
-    pub discovered_topics: HashSet<String>, // Use HashSet for deduplication
-    discovery_rx: Option<mpsc::Receiver<String>>,
-    stop_discovery_flag: Arc<AtomicBool>,
-
-    /// UI state
-    pub discovery_handle: Option<std::thread::JoinHandle<()>>,
     mqtt_stop_flag: Arc<AtomicBool>,
 }
 
@@ -48,52 +41,37 @@ impl MqttConfigWindow {
     }
 
     pub fn set_stop_discovery_flag(&mut self) {
-        self.stop_discovery_flag.store(true, Ordering::SeqCst);
-        self.discovery_active = false;
+        self.topic_discoverer.set_stop_flag();
     }
 
     pub fn get_stop_discovery_flag(&mut self) -> Arc<AtomicBool> {
-        Arc::clone(&self.stop_discovery_flag)
+        self.topic_discoverer.get_stop_flag()
     }
 
     pub fn reset_stop_discovery_flag(&mut self) {
-        self.discovered_topics.clear();
-        self.stop_discovery_flag.store(false, Ordering::SeqCst);
+        self.topic_discoverer.reset_stop_flag();
     }
 
     pub fn discovery_active(&self) -> bool {
-        self.discovery_active
+        self.topic_discoverer.active()
     }
 
     pub fn poll_discovered_topics(&mut self) -> Result<(), String> {
-        if let Some(rx) = &mut self.discovery_rx {
-            while let Ok(topic) = rx.try_recv() {
-                if topic.starts_with("!ERROR: ") {
-                    return Err(topic[8..].to_owned());
-                } else {
-                    self.discovered_topics.insert(topic);
-                }
-            }
-        }
-        Ok(())
+        self.topic_discoverer.poll_discovered_topics()
     }
 
     pub fn start_topic_discovery(&mut self) {
-        if let Ok(port_u16) = self.broker_port.parse::<u16>() {
-            self.reset_stop_discovery_flag();
-            self.discovery_active = true;
-
-            let host = self.broker_ip.clone();
-            let (tx, rx) = mpsc::channel();
-
-            self.discovery_rx = Some(rx);
-            self.discovery_handle = Some(start_discovery(
-                host,
-                port_u16,
-                self.get_stop_discovery_flag(),
-                tx,
-            ));
+        if let Ok(port) = self.broker_port.parse::<u16>() {
+            self.topic_discoverer.start(self.broker_ip.clone(), port);
         }
+    }
+
+    pub fn discovered_topics(&self) -> &HashSet<String> {
+        &self.topic_discoverer.discovered_topics()
+    }
+
+    pub fn discovered_topics_sorted(&self) -> Vec<String> {
+        self.topic_discoverer.discovered_topics_sorted()
     }
 
     pub fn broker_status(&self) -> Option<&Result<(), String>> {
@@ -115,67 +93,15 @@ impl Default for MqttConfigWindow {
         Self {
             broker_ip: "127.0.0.1".into(),
             broker_port: "1883".into(),
-            topics: Default::default(),
+            selected_topics: Default::default(),
             new_topic: Default::default(),
 
             broker_validator: BrokerValidator::default(),
+            topic_discoverer: TopicDiscoverer::default(),
 
-            discovery_active: false,
-            discovered_topics: Default::default(),
-            discovery_rx: None,
-            stop_discovery_flag: Default::default(),
-
-            discovery_handle: None,
             mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
         }
     }
-}
-
-pub fn start_discovery(
-    host: String,
-    port: u16,
-    stop_flag: Arc<AtomicBool>,
-    tx: mpsc::Sender<String>,
-) -> std::thread::JoinHandle<()> {
-    std::thread::spawn(move || {
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)
-            .expect("Time went backwards");
-        let client_id = format!("discover-{}", timestamp.as_millis());
-
-        log::info!("Subscribing for discovery with id={client_id}, broker address={host}:{port}");
-        let mut mqttoptions = MqttOptions::new(client_id, host, port);
-        mqttoptions.set_keep_alive(Duration::from_secs(5));
-        let (client, mut connection) = Client::new(mqttoptions, 100);
-
-        if let Err(e) = client.subscribe("#", rumqttc::QoS::AtMostOnce) {
-            log::error!("Subscribe err={e}");
-            let _ = tx.send(format!("!ERROR: {}", e));
-            return;
-        }
-
-        for notification in connection.iter() {
-            if stop_flag.load(Ordering::Relaxed) {
-                log::info!("Stopping discovery!");
-                break;
-            }
-
-            match notification {
-                Ok(event) => {
-                    if let Event::Incoming(Packet::Publish(p)) = event {
-                        log::info!("Discovered topic={}", p.topic);
-                        let _ = tx.send(p.topic);
-                    }
-                }
-                Err(e) => {
-                    log::error!("Discover connection err={e}");
-                    let _ = tx.send(format!("!ERROR: {}", e));
-                    break;
-                }
-            }
-        }
-        let _ = client.disconnect();
-    })
 }
 
 #[derive(Debug)]

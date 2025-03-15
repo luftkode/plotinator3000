@@ -66,7 +66,7 @@ pub fn show_mqtt_window(
                     ui.text_edit_singleline(&mut mqtt_cfg_window.new_topic);
                     if ui.button("Add").clicked() && !mqtt_cfg_window.new_topic.is_empty() {
                         mqtt_cfg_window
-                            .topics
+                            .selected_topics
                             .push(mqtt_cfg_window.new_topic.clone());
                         mqtt_cfg_window.new_topic.clear();
                     }
@@ -113,22 +113,21 @@ pub fn show_mqtt_window(
                 }
 
                 // Display discovered topics
-                if !mqtt_cfg_window.discovered_topics.is_empty() {
+                if !mqtt_cfg_window.discovered_topics().is_empty() {
                     ui.separator();
                     ui.label(format!(
                         "Discovered Topics ({})",
-                        mqtt_cfg_window.discovered_topics.len()
+                        mqtt_cfg_window.discovered_topics().len()
                     ));
 
                     ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
-                        let mut topics: Vec<_> = mqtt_cfg_window.discovered_topics.iter().collect();
-                        topics.sort();
+                        let topics: Vec<_> = mqtt_cfg_window.discovered_topics_sorted();
 
-                        for topic in topics {
+                        for topic in &topics {
                             ui.horizontal(|ui| {
                                 if ui.selectable_label(false, topic).clicked() {
-                                    if !mqtt_cfg_window.topics.contains(topic) {
-                                        mqtt_cfg_window.topics.push(topic.to_string());
+                                    if !mqtt_cfg_window.selected_topics.contains(&topic) {
+                                        mqtt_cfg_window.selected_topics.push(topic.to_string());
                                     }
                                 }
                             });
@@ -136,10 +135,10 @@ pub fn show_mqtt_window(
                     });
                 }
             });
-            if !mqtt_cfg_window.topics.is_empty() {
+            if !mqtt_cfg_window.selected_topics.is_empty() {
                 ui.label("Subscribed Topics:");
             }
-            for topic in &mut mqtt_cfg_window.topics {
+            for topic in &mut mqtt_cfg_window.selected_topics {
                 ui.horizontal(|ui| {
                     if ui
                         .button(RichText::new(egui_phosphor::regular::TRASH))
@@ -151,14 +150,14 @@ pub fn show_mqtt_window(
                     }
                 });
             }
-            mqtt_cfg_window.topics.retain(|s| !s.is_empty());
+            mqtt_cfg_window.selected_topics.retain(|s| !s.is_empty());
 
             if ui.button("Connect").clicked() {
                 connect_clicked = true;
                 mqtt_cfg_window.reset_stop_flag();
 
                 let broker = mqtt_cfg_window.broker_ip.clone();
-                let topics = mqtt_cfg_window.topics.clone();
+                let topics = mqtt_cfg_window.selected_topics.clone();
                 let (tx, rx) = std::sync::mpsc::channel();
                 recv_channel = Some(rx);
                 let thread_stop_flag = mqtt_cfg_window.get_stop_flag();
