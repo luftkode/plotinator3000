@@ -157,13 +157,17 @@ pub struct MqttPoint {
     pub point: PlotPoint,
 }
 
-pub fn mqtt_receiver(
+pub fn mqtt_listener(
     tx: mpsc::Sender<MqttPoint>,
     broker: String,
     topics: Vec<String>,
     stop_flag: Arc<AtomicBool>,
 ) {
-    let mut mqttoptions = MqttOptions::new("plotinator3000", broker, 1883);
+    let timestamp_id = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis();
+    let mut mqttoptions = MqttOptions::new(format!("plotinator3000-{timestamp_id}"), broker, 1883);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
     let (client, mut connection) = Client::new(mqttoptions, 10);

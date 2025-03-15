@@ -12,7 +12,7 @@ use std::{
 pub(crate) struct TopicDiscoverer {
     active: bool,
     discovered_topics: HashSet<String>,
-    discovery_rx: Option<mpsc::Receiver<String>>,
+    discovery_rx: Option<mpsc::Receiver<DiscoveryMsg>>,
     stop_discovery_flag: Arc<AtomicBool>,
     discovery_handle: Option<std::thread::JoinHandle<()>>,
 }
@@ -38,12 +38,11 @@ impl TopicDiscoverer {
 
     pub fn poll_discovered_topics(&mut self) -> Result<(), String> {
         if let Some(rx) = &mut self.discovery_rx {
-            while let Ok(topic) = rx.try_recv() {
-                if topic.starts_with("!ERROR: ") {
-                    return Err(topic[8..].to_owned());
-                } else {
-                    self.discovered_topics.insert(topic);
-                }
+            while let Ok(msg) = rx.try_recv() {
+                match msg {
+                    DiscoveryMsg::Topic(t) => self.discovered_topics.insert(t),
+                    DiscoveryMsg::Err(e) => return Err(e),
+                };
             }
         }
         Ok(())
@@ -75,11 +74,16 @@ impl TopicDiscoverer {
     }
 }
 
+pub enum DiscoveryMsg {
+    Topic(String),
+    Err(String),
+}
+
 pub fn start_discovery(
     host: String,
     port: u16,
     stop_flag: Arc<AtomicBool>,
-    tx: mpsc::Sender<String>,
+    tx: mpsc::Sender<DiscoveryMsg>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let timestamp = std::time::SystemTime::now()
@@ -94,7 +98,9 @@ pub fn start_discovery(
 
         if let Err(e) = client.subscribe("#", rumqttc::QoS::AtMostOnce) {
             log::error!("Subscribe err={e}");
-            let _ = tx.send(format!("!ERROR: {}", e));
+            if let Err(e) = tx.send(DiscoveryMsg::Err(e.to_string())) {
+                log::error!("{e}");
+            }
             return;
         }
 
@@ -108,12 +114,16 @@ pub fn start_discovery(
                 Ok(event) => {
                     if let Event::Incoming(Packet::Publish(p)) = event {
                         log::info!("Discovered topic={}", p.topic);
-                        let _ = tx.send(p.topic);
+                        if let Err(e) = tx.send(DiscoveryMsg::Topic(p.topic)) {
+                            log::error!("{e}");
+                        }
                     }
                 }
                 Err(e) => {
                     log::error!("Discover connection err={e}");
-                    let _ = tx.send(format!("!ERROR: {}", e));
+                    if let Err(e) = tx.send(DiscoveryMsg::Err(e.to_string())) {
+                        log::error!("{e}");
+                    }
                     break;
                 }
             }

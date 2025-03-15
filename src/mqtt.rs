@@ -154,7 +154,7 @@ pub fn show_mqtt_window(
                 recv_channel = Some(rx);
                 let thread_stop_flag = mqtt_cfg_window.get_stop_flag();
                 std::thread::spawn(move || {
-                    mqtt::mqtt_receiver(tx, broker, topics, thread_stop_flag);
+                    mqtt::mqtt_listener(tx, broker, topics, thread_stop_flag);
                 });
             }
         });
