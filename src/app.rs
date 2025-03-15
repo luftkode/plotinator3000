@@ -281,6 +281,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             collapsible_instructions(ui);
             if ui.button("MQTT").clicked() {
                 app.mqtt_config_window = Some(MqttConfigWindow::default());
+                app.mqtt_cfg_window_open = true;
             }
 
             if app.mqtt_data_channel.is_some() {

@@ -1,3 +1,4 @@
+use broker_validator::BrokerValidator;
 use egui_plot::PlotPoint;
 use rumqttc::{Client, Event, MqttOptions, Packet, QoS};
 use std::{
@@ -6,10 +7,13 @@ use std::{
         atomic::{AtomicBool, Ordering},
         mpsc, Arc,
     },
-    time::{Duration, Instant},
+    time::Duration,
 };
 
+pub(crate) mod broker_validator;
 pub mod util;
+
+pub(crate) struct TopicDiscoverer {}
 
 pub struct MqttConfigWindow {
     pub broker_ip: String,
@@ -17,20 +21,15 @@ pub struct MqttConfigWindow {
     pub topics: Vec<String>,
     pub new_topic: String,
 
-    /// Broker discovery fields
-    pub previous_broker_input: String,
-    pub broker_status: Option<Result<(), String>>,
-    pub validation_in_progress: bool,
-    pub last_input_change: Option<Instant>,
+    broker_validator: BrokerValidator,
 
     /// Topic discovery fields
-    pub discovery_active: bool,
+    discovery_active: bool,
     pub discovered_topics: HashSet<String>, // Use HashSet for deduplication
-    pub discovery_rx: Option<mpsc::Receiver<String>>,
-    pub discovery_stop: Arc<AtomicBool>,
+    discovery_rx: Option<mpsc::Receiver<String>>,
+    stop_discovery_flag: Arc<AtomicBool>,
 
     /// UI state
-    pub broker_validation_receiver: Option<std::sync::mpsc::Receiver<Result<(), String>>>,
     pub discovery_handle: Option<std::thread::JoinHandle<()>>,
     mqtt_stop_flag: Arc<AtomicBool>,
 }
@@ -47,6 +46,68 @@ impl MqttConfigWindow {
     pub fn reset_stop_flag(&mut self) {
         self.mqtt_stop_flag.store(false, Ordering::SeqCst);
     }
+
+    pub fn set_stop_discovery_flag(&mut self) {
+        self.stop_discovery_flag.store(true, Ordering::SeqCst);
+        self.discovery_active = false;
+    }
+
+    pub fn get_stop_discovery_flag(&mut self) -> Arc<AtomicBool> {
+        Arc::clone(&self.stop_discovery_flag)
+    }
+
+    pub fn reset_stop_discovery_flag(&mut self) {
+        self.discovered_topics.clear();
+        self.stop_discovery_flag.store(false, Ordering::SeqCst);
+    }
+
+    pub fn discovery_active(&self) -> bool {
+        self.discovery_active
+    }
+
+    pub fn poll_discovered_topics(&mut self) -> Result<(), String> {
+        if let Some(rx) = &mut self.discovery_rx {
+            while let Ok(topic) = rx.try_recv() {
+                if topic.starts_with("!ERROR: ") {
+                    return Err(topic[8..].to_owned());
+                } else {
+                    self.discovered_topics.insert(topic);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn start_topic_discovery(&mut self) {
+        if let Ok(port_u16) = self.broker_port.parse::<u16>() {
+            self.reset_stop_discovery_flag();
+            self.discovery_active = true;
+
+            let host = self.broker_ip.clone();
+            let (tx, rx) = mpsc::channel();
+
+            self.discovery_rx = Some(rx);
+            self.discovery_handle = Some(start_discovery(
+                host,
+                port_u16,
+                self.get_stop_discovery_flag(),
+                tx,
+            ));
+        }
+    }
+
+    pub fn broker_status(&self) -> Option<&Result<(), String>> {
+        self.broker_validator.broker_status()
+    }
+
+    pub fn validation_in_progress(&self) -> bool {
+        self.broker_validator.validation_in_progress()
+    }
+
+    pub fn poll_broker_status(&mut self) {
+        self.broker_validator
+            .poll_broker_status(&self.broker_ip, &self.broker_port);
+    }
 }
 
 impl Default for MqttConfigWindow {
@@ -57,17 +118,13 @@ impl Default for MqttConfigWindow {
             topics: Default::default(),
             new_topic: Default::default(),
 
-            previous_broker_input: Default::default(),
-            broker_status: None,
-            validation_in_progress: false,
-            last_input_change: None,
+            broker_validator: BrokerValidator::default(),
 
             discovery_active: false,
             discovered_topics: Default::default(),
             discovery_rx: None,
-            discovery_stop: Default::default(),
+            stop_discovery_flag: Default::default(),
 
-            broker_validation_receiver: None,
             discovery_handle: None,
             mqtt_stop_flag: Arc::new(AtomicBool::new(false)),
         }
