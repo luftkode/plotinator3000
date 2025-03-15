@@ -28,6 +28,22 @@ pub struct MqttConfigWindow {
 }
 
 impl MqttConfigWindow {
+    pub fn selected_topics(&self) -> &[String] {
+        &self.selected_topics
+    }
+
+    /// Adds `topic`` to the selected topics collection if it is not empty and the collection doesn't already contain it
+    pub fn add_selected_topic(&mut self, topic: String) {
+        if !topic.is_empty() && !self.selected_topics.contains(&topic) {
+            self.selected_topics.push(topic);
+        }
+    }
+
+    pub fn add_text_input_topic(&mut self) {
+        self.add_selected_topic(self.text_input_topic().to_owned());
+        self.text_input_topic.clear();
+    }
+
     pub fn text_input_topic_as_mut(&mut self) -> &mut String {
         &mut self.text_input_topic
     }
