@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use mqtt::{MqttConfigWindow, MqttData, MqttPoint};
+use mqtt::{mqtt_cfg_window::MqttConfigWindow, MqttData, MqttPoint};
 
 use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
@@ -44,7 +44,9 @@ pub struct App {
     error_message: Option<String>,
 
     #[serde(skip)]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     pub mqtt_config_window: Option<MqttConfigWindow>,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     mqtt_cfg_window_open: bool,
 
     #[cfg(target_arch = "wasm32")]

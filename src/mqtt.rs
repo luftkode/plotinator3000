@@ -2,7 +2,7 @@ use egui::Color32;
 use egui::RichText;
 use egui::ScrollArea;
 use egui::Ui;
-use mqtt::MqttConfigWindow;
+use mqtt::mqtt_cfg_window::MqttConfigWindow;
 use mqtt::MqttPoint;
 
 fn show_broker_status(ui: &mut Ui, broker_status: Option<&Result<(), String>>) {
@@ -131,7 +131,7 @@ pub fn show_mqtt_window(
             if !mqtt_cfg_window.selected_topics().is_empty() {
                 ui.label("Subscribed Topics:");
             }
-            for topic in &mut mqtt_cfg_window.selected_topics {
+            for topic in mqtt_cfg_window.selected_topics_as_mut() {
                 ui.horizontal(|ui| {
                     if ui
                         .button(RichText::new(egui_phosphor::regular::TRASH))
@@ -146,16 +146,8 @@ pub fn show_mqtt_window(
 
             if ui.button("Connect").clicked() {
                 connect_clicked = true;
-                mqtt_cfg_window.reset_stop_flag();
-
-                let broker = mqtt_cfg_window.broker_ip().to_owned();
-                let topics = mqtt_cfg_window.selected_topics().to_owned();
-                let (tx, rx) = std::sync::mpsc::channel();
+                let rx = mqtt_cfg_window.spawn_mqtt_listener();
                 recv_channel = Some(rx);
-                let thread_stop_flag = mqtt_cfg_window.get_stop_flag();
-                std::thread::spawn(move || {
-                    mqtt::mqtt_listener(tx, broker, topics, thread_stop_flag);
-                });
             }
         });
     // 4. Cleanup when window closes
