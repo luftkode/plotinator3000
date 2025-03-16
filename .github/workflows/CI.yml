@@ -96,7 +96,7 @@ jobs:
       - name: Lint WASM
         run: |
           export CLIPPY_CONF_DIR="$(pwd)/lint/wasm/clippy.toml"
-          cargo clippy --workspace --all-features --target wasm32-unknown-unknown -- -D warnings -W clippy::all
+          cargo clippy --workspace --no-default-features --target wasm32-unknown-unknown -- -D warnings -W clippy::all
 
   trunk:
     name: trunk
