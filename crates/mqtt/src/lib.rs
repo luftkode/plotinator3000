@@ -5,8 +5,6 @@ pub(crate) mod broker_validator;
 pub(crate) mod mqtt_listener;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod topic_discoverer;
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) mod util;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod data_receiver;
