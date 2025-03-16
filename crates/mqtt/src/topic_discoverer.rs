@@ -48,7 +48,7 @@ impl TopicDiscoverer {
         Ok(())
     }
 
-    pub fn start(&mut self, broker_ip: String, broker_port: u16) {
+    pub fn start(&mut self, broker_host: String, broker_port: u16) {
         self.reset();
         self.active = true;
 
@@ -56,7 +56,7 @@ impl TopicDiscoverer {
 
         self.discovery_rx = Some(rx);
         self.discovery_handle = Some(start_discovery(
-            broker_ip,
+            broker_host,
             broker_port,
             self.get_stop_flag(),
             tx,

@@ -63,7 +63,7 @@ pub fn show_mqtt_window(
             ui.group(|ui| {
                 ui.label("MQTT Broker Address");
                 ui.horizontal(|ui| {
-                    ui.text_edit_singleline(mqtt_cfg_window.broker_ip_as_mut())
+                    ui.text_edit_singleline(mqtt_cfg_window.broker_host_as_mut())
                         .on_hover_text("IP address, hostname, or mDNS (.local)");
                     ui.label(":");
                     ui.text_edit_singleline(mqtt_cfg_window.broker_port_as_mut())

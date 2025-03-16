@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub struct MqttConfigWindow {
-    broker_ip: String,
+    broker_host: String,
     broker_port: String,
     text_input_topic: String,
     selected_topics: Vec<String>,
@@ -54,13 +54,13 @@ impl MqttConfigWindow {
     }
 
     /// Returns a mutable reference to the broker ip of this [`MqttConfigWindow`].
-    pub fn broker_ip_as_mut(&mut self) -> &mut String {
-        &mut self.broker_ip
+    pub fn broker_host_as_mut(&mut self) -> &mut String {
+        &mut self.broker_host
     }
 
     /// Returns a reference to the broker ip of this [`MqttConfigWindow`].
-    pub fn broker_ip(&self) -> &str {
-        &self.broker_ip
+    pub fn broker_host(&self) -> &str {
+        &self.broker_host
     }
 
     pub fn broker_port_as_mut(&mut self) -> &mut String {
@@ -94,7 +94,7 @@ impl MqttConfigWindow {
 
     pub fn start_topic_discovery(&mut self) {
         if let Ok(port) = self.broker_port.parse::<u16>() {
-            self.topic_discoverer.start(self.broker_ip.clone(), port);
+            self.topic_discoverer.start(self.broker_host.clone(), port);
         }
     }
 
@@ -116,19 +116,26 @@ impl MqttConfigWindow {
 
     pub fn poll_broker_status(&mut self) {
         self.broker_validator
-            .poll_broker_status(&self.broker_ip, &self.broker_port);
+            .poll_broker_status(&self.broker_host, &self.broker_port);
     }
 
     pub fn spawn_mqtt_listener(&mut self) -> MqttDataReceiver {
         self.reset_stop_flag();
-        let broker = self.broker_ip().to_owned();
+        let broker_host = self.broker_host().to_owned();
+        let broker_port = self.broker_host().parse::<u16>().expect("Invalid port");
         let topics = self.selected_topics().to_owned();
         let (tx, rx) = std::sync::mpsc::channel();
         let thread_stop_flag = self.get_stop_flag();
         std::thread::Builder::new()
             .name("mqtt-listener".into())
             .spawn(move || {
-                crate::mqtt_listener::mqtt_listener(&tx, broker, topics, &thread_stop_flag);
+                crate::mqtt_listener::mqtt_listener(
+                    &tx,
+                    broker_host,
+                    broker_port,
+                    topics,
+                    &thread_stop_flag,
+                );
             })
             .expect("Failed spawning MQTT listener thread");
         MqttDataReceiver::new(rx)
@@ -138,7 +145,7 @@ impl MqttConfigWindow {
 impl Default for MqttConfigWindow {
     fn default() -> Self {
         Self {
-            broker_ip: "127.0.0.1".into(),
+            broker_host: "127.0.0.1".into(),
             broker_port: "1883".into(),
             selected_topics: Default::default(),
             text_input_topic: Default::default(),

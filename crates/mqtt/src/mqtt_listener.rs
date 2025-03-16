@@ -10,20 +10,29 @@ use std::{
 
 use crate::MqttPoint;
 
-pub fn mqtt_listener(
-    tx: &mpsc::Sender<MqttPoint>,
-    broker: String,
-    topics: Vec<String>,
-    stop_flag: &Arc<AtomicBool>,
-) {
+fn setup_client(broker_host: String, broker_port: u16) -> (rumqttc::Client, rumqttc::Connection) {
     let timestamp_id = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .expect("Time went backwards")
         .as_millis();
-    let mut mqttoptions = MqttOptions::new(format!("plotinator3000-{timestamp_id}"), broker, 1883);
+    let mut mqttoptions = MqttOptions::new(
+        format!("plotinator3000-{timestamp_id}"),
+        broker_host,
+        broker_port,
+    );
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
-    let (client, mut connection) = Client::new(mqttoptions, 10);
+    Client::new(mqttoptions, 100)
+}
+
+pub fn mqtt_listener(
+    tx: &mpsc::Sender<MqttPoint>,
+    broker_host: String,
+    broker_port: u16,
+    topics: Vec<String>,
+    stop_flag: &Arc<AtomicBool>,
+) {
+    let (client, mut connection) = setup_client(broker_host, broker_port);
     for t in topics {
         if let Err(e) = client.subscribe(t, QoS::AtMostOnce) {
             log::error!("Subscribe error: {e}");
