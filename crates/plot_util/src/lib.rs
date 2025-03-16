@@ -179,7 +179,22 @@ pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoin
 
     let start_idx = points.partition_point(|point| point.x < x_range.0);
     let end_idx = points.partition_point(|point| point.x < x_range.1);
-    PlotPoints::Borrowed(&points[start_idx..end_idx])
+
+    // This is the case if we scroll such that none of the plot points are within the plot bounds
+    // in that case we just plot a single point to avoid hiding the plot from the legend
+    // which also shuffles the coloring of every line
+    if start_idx == end_idx {
+        // If we scrolled far to the right
+        if start_idx == points.len() {
+            PlotPoints::Borrowed(&points[start_idx - 2..=start_idx - 1])
+        }
+        // If we scrolled far to the left
+        else {
+            PlotPoints::Borrowed(&points[start_idx..=start_idx])
+        }
+    } else {
+        PlotPoints::Borrowed(&points[start_idx..end_idx])
+    }
 }
 
 #[cfg(test)]
