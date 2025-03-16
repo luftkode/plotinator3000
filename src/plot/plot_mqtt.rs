@@ -36,14 +36,12 @@ pub fn fill_mqtt_plots(
         }
         let resp = plot_ui.response();
         if plot_ui.response().double_clicked() || reset_plot_bounds {
-            log::info!("Auto scaling re-enabled");
             *auto_scale = true;
             if let Some(max_bounds) = get_mqtt_auto_scaled_plot_bounds(mqtt_plots) {
                 plot_ui.set_plot_bounds(max_bounds);
             }
         } else if resp.clicked() {
             *auto_scale = false;
-            log::info!("Auto scaling DISABLED!");
             if plot_ui.ctx().input(|i| i.modifiers.shift) {
                 if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
                     click_delta.set_next_click(pointer_coordinate, PlotType::Hundreds);
@@ -52,10 +50,8 @@ pub fn fill_mqtt_plots(
                 click_delta.reset();
             }
         } else if resp.is_pointer_button_down_on() {
-            log::info!("Auto scaling DISABLED!");
             *auto_scale = false;
         } else if *auto_scale {
-            log::info!("Auto scaling enabled");
             if let Some(max_bounds) = get_mqtt_auto_scaled_plot_bounds(mqtt_plots) {
                 log::info!("Setting plots bounds: {max_bounds:?}");
                 plot_ui.set_plot_bounds(max_bounds);
