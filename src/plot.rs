@@ -129,7 +129,11 @@ impl LogPlotUi {
         plot_settings.refresh(plots);
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        let mode = PlotMode::MQTT(mqtt_plots, auto_scale);
+        let mode = if mqtt_plots.is_empty() {
+            PlotMode::Logs(plots)
+        } else {
+            PlotMode::MQTT(mqtt_plots, auto_scale)
+        };
         #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]
         let mode = PlotMode::Logs(plots);
 

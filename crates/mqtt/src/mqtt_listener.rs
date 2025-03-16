@@ -1,4 +1,3 @@
-use egui_plot::PlotPoint;
 use rumqttc::{Client, Event, MqttOptions, Packet, QoS};
 use std::{
     sync::{
@@ -65,21 +64,11 @@ pub fn mqtt_listener(
 fn handle_event_packet(tx: &mpsc::Sender<MqttPoint>, packet: rumqttc::Publish) {
     let topic = packet.topic;
     let payload = String::from_utf8_lossy(&packet.payload);
-    log::info!("Received on topic={topic}, payload={payload}");
+    log::debug!("Received on topic={topic}, payload={payload}");
 
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_nanos() as f64;
-
-    match payload.parse::<f64>() {
-        Ok(num) => {
-            let point = PlotPoint::new(now, num);
-            let mqtt_data = MqttPoint { topic, point };
-            if let Err(e) = tx.send(mqtt_data) {
-                log::error!("Send err={e}");
-            }
+    if let Some(mqtt_plot_point) = crate::known_topics::parse_packet(&topic, &payload) {
+        if let Err(e) = tx.send(mqtt_plot_point) {
+            log::error!("{e}");
         }
-        Err(e) => log::error!("Payload parse error: {e}"),
     }
 }

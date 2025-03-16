@@ -7,6 +7,9 @@ pub(crate) mod mqtt_listener;
 pub(crate) mod topic_discoverer;
 
 #[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod known_topics;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod data_receiver;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mqtt_cfg_window;

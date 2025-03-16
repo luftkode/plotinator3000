@@ -122,7 +122,7 @@ impl MqttConfigWindow {
     pub fn spawn_mqtt_listener(&mut self) -> MqttDataReceiver {
         self.reset_stop_flag();
         let broker_host = self.broker_host().to_owned();
-        let broker_port = self.broker_host().parse::<u16>().expect("Invalid port");
+        let broker_port = self.broker_port.parse::<u16>().expect("Invalid port");
         let topics = self.selected_topics().to_owned();
         let (tx, rx) = std::sync::mpsc::channel();
         let thread_stop_flag = self.get_stop_flag();

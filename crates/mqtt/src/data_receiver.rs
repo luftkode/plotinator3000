@@ -21,7 +21,7 @@ impl MqttDataReceiver {
 
     pub fn poll(&mut self) {
         while let Ok(mqtt_point) = self.recv.try_recv() {
-            log::info!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
+            log::debug!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
             self.insert_data(mqtt_point);
         }
     }
