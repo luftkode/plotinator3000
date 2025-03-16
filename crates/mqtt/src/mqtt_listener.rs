@@ -33,6 +33,7 @@ pub fn mqtt_listener(
     stop_flag: &Arc<AtomicBool>,
 ) {
     let (client, mut connection) = setup_client(broker_host, broker_port);
+
     for t in topics {
         if let Err(e) = client.subscribe(t, QoS::AtMostOnce) {
             log::error!("Subscribe error: {e}");
@@ -48,24 +49,7 @@ pub fn mqtt_listener(
         match notification {
             Ok(event) => {
                 if let Event::Incoming(Packet::Publish(publish)) = event {
-                    let topic = publish.topic;
-                    let payload = String::from_utf8_lossy(&publish.payload);
-                    log::info!("Received on topic={topic}, payload={payload}");
-                    match payload.parse::<f64>() {
-                        Ok(num) => {
-                            let now = std::time::SystemTime::now()
-                                .duration_since(std::time::UNIX_EPOCH)
-                                .expect("Time went backwards")
-                                .as_nanos() as f64;
-                            log::info!("now={now}");
-                            let point = PlotPoint::new(now, num);
-                            let mqtt_data = MqttPoint { topic, point };
-                            if let Err(e) = tx.send(mqtt_data) {
-                                log::error!("Send err={e}");
-                            }
-                        }
-                        Err(e) => log::error!("Payload parse error: {e}"),
-                    }
+                    handle_event_packet(tx, publish);
                 }
             }
 
@@ -75,5 +59,27 @@ pub fn mqtt_listener(
     if let Err(e) = client.disconnect() {
         log::error!("{e}");
         debug_assert!(false, "{e}");
+    }
+}
+
+fn handle_event_packet(tx: &mpsc::Sender<MqttPoint>, packet: rumqttc::Publish) {
+    let topic = packet.topic;
+    let payload = String::from_utf8_lossy(&packet.payload);
+    log::info!("Received on topic={topic}, payload={payload}");
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_nanos() as f64;
+
+    match payload.parse::<f64>() {
+        Ok(num) => {
+            let point = PlotPoint::new(now, num);
+            let mqtt_data = MqttPoint { topic, point };
+            if let Err(e) = tx.send(mqtt_data) {
+                log::error!("Send err={e}");
+            }
+        }
+        Err(e) => log::error!("Payload parse error: {e}"),
     }
 }
