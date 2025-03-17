@@ -25,8 +25,14 @@ pub enum KnownTopic {
     DebugSensorsPressure,
     #[strum(serialize = "debug/sensors/mag")]
     DebugSensorsMag,
-    #[strum(serialize = "Speed")]
+    #[strum(serialize = "speed")]
     PilotDisplaySpeed,
+    #[strum(serialize = "altitude")]
+    PilotDisplayAltitude,
+    #[strum(serialize = "heading")]
+    PilotDisplayHeading,
+    #[strum(serialize = "closest_line")]
+    PilotDisplayClosestLine,
 }
 
 /// Debug packet
@@ -53,7 +59,42 @@ impl KnownTopic {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
                 Ok(MqttPoint {
                     topic: self.to_string(),
-                    point: PlotPoint::new(now_timestamp(), p.speed),
+                    point: PlotPoint {
+                        x: now_timestamp(),
+                        y: p.speed.parse().unwrap(),
+                    },
+                })
+            }
+            Self::PilotDisplayAltitude => {
+                let p: PilotDisplayAltitudePacket = serde_json::from_str(p)?;
+                Ok(MqttPoint {
+                    topic: self.to_string(),
+                    point: PlotPoint {
+                        x: now_timestamp(),
+                        y: p.height.parse().unwrap(),
+                    },
+                })
+            }
+            Self::PilotDisplayHeading => {
+                let p: PilotDisplayHeadingPacket = serde_json::from_str(p)?;
+                let point = PlotPoint {
+                    x: now_timestamp(),
+                    y: p.heading.parse().unwrap(),
+                };
+                let mqtt_point = MqttPoint {
+                    topic: self.to_string(),
+                    point,
+                };
+                Ok(mqtt_point)
+            }
+            Self::PilotDisplayClosestLine => {
+                let p: PilotDisplayClosestLinePacket = serde_json::from_str(p)?;
+                Ok(MqttPoint {
+                    topic: self.to_string(),
+                    point: PlotPoint {
+                        x: now_timestamp(),
+                        y: p.distance,
+                    },
                 })
             }
         }
@@ -62,7 +103,23 @@ impl KnownTopic {
 
 #[derive(Deserialize)]
 pub struct PilotDisplaySpeedPacket {
-    speed: f64,
+    #[serde(rename(deserialize = "Speed"))]
+    speed: String,
+}
+
+#[derive(Deserialize)]
+pub struct PilotDisplayAltitudePacket {
+    #[serde(rename(deserialize = "Height"))]
+    height: String,
+}
+#[derive(Deserialize)]
+pub struct PilotDisplayHeadingPacket {
+    #[serde(rename(deserialize = "Heading"))]
+    heading: String,
+}
+#[derive(Deserialize)]
+pub struct PilotDisplayClosestLinePacket {
+    distance: f64,
 }
 
 pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttPoint> {
@@ -101,6 +158,7 @@ pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttPoint> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn test_enum_parse_packet() {
@@ -113,10 +171,22 @@ mod tests {
 
     #[test]
     fn test_parse_pilot_display_speed_packet() {
-        let s = "Speed".to_owned();
+        let s = "speed".to_owned();
         let e = KnownTopic::from_str(&s).unwrap();
-        let payload = r#"{ "speed": 12.433 }"#;
-        let p = e.parse_packet(payload).unwrap();
+        let payload = json!({
+            "Speed": 12.433,
+        })
+        .to_string();
+        let p = e.parse_packet(&payload).unwrap();
+        dbg!(p);
+    }
+
+    #[test]
+    fn test_parse_pilot_display_closest_line() {
+        let t = "closest_line";
+        let known_topic = KnownTopic::from_str(t).unwrap();
+        let payload = r#"{"id": 12, "flight_line": "L501100", "distance": 1.84167211, "mode": "automatic", "filename": "20231023_Bremervoerde_Combined_300_NS_32N.kml"}"#;
+        let p = known_topic.parse_packet(payload).unwrap();
         dbg!(p);
     }
 }

@@ -10,11 +10,6 @@ stop-remove-mqtt-broker:
     docker stop {{BROKER_CONTAINER_NAME}} || echo "No test broker running"
     docker rm {{BROKER_CONTAINER_NAME}} || echo "No test broker container"
 
-# Publish a msg to a topic repeadtedly with a set delay
-[group("MQTT")]
-pub-mqtt TOPIC="dt/speed" MSG='{ \"speed\": 12.4951 }' REPEAT="100000" REPEAT_DELAY="0.1":
-    mosquitto_pub -t "{{TOPIC}}" -m "{{MSG}}" --repeat {{REPEAT}} --repeat-delay {{REPEAT_DELAY}}
-
 # Publishes random numbers within a specified range to an MQTT topic
 [group("MQTT")]
 pub-random TOPIC="sensors/random" MIN="0" MAX="100" REPEAT="100" DELAY="1.0":
