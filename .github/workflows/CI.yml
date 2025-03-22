@@ -24,6 +24,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Default features
+          - TARGET: x86_64-unknown-linux-gnu
+            flags: ""
           - TARGET: x86_64-unknown-linux-gnu
             # If you add features to your crate, chances are you want to test for all features for native binaries,
             # so that all features are checked and can be build by someone cloning your repository.
@@ -35,6 +38,8 @@ jobs:
             # Thus we only test for the default features by default.
             # Since we build with trunk the entrypoint will also be the "src/main.rs" file.
             flags: "--bin ${{ github.event.repository.name }}"
+          - TARGET: x86_64-unknown-linux-gnu
+            flags: "--no-default-features"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
