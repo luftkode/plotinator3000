@@ -1,12 +1,16 @@
+use egui_plot::PlotPoint;
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
-use crate::{data::MqttData, MqttTopicData};
+use crate::{
+    data::listener::{MqttData, MqttTopicData},
+    util,
+};
 
 /// Known topics can have custom payloads that have an associated known packet structure
 /// which allows recognizing and parsing them appropriately
 #[derive(EnumString, Display)]
-pub enum KnownTopic {
+pub(crate) enum KnownTopic {
     #[strum(serialize = "debug/sensors/temperature")]
     DebugSensorsTemperature,
     #[strum(serialize = "debug/sensors/humidity")]
@@ -27,15 +31,25 @@ pub enum KnownTopic {
     PilotDisplayClosestLine,
 }
 
-/// Debug packet
+/// Debug packet with a single value
+/// e.g. { "value": 70.56164 }
 #[derive(Deserialize)]
-pub struct DebugSensorPacket {
+pub(crate) struct DebugSensorPacket {
     value: f64,
 }
 
-/// Debug packet with multiple values
+/// A pair of values and timestamp
+/// e.g. {"value": 3167.38561, "timestamp": "1742662585.527223099"}
 #[derive(Deserialize)]
-pub struct DebugSensorsGps {
+pub(crate) struct ValueWithTimestampString {
+    value: f64,
+    timestamp: String, // Format determined by `data +%s.%N`
+}
+
+/// Debug packet with multiple values
+/// e.g. { "value1": 44.50188, "value2": 41.58077 }
+#[derive(Deserialize)]
+pub(crate) struct DebugSensorsGps {
     value1: f64,
     value2: f64,
 }
@@ -45,8 +59,7 @@ impl KnownTopic {
         match self {
             Self::DebugSensorsTemperature
             | Self::DebugSensorsHumidity
-            | Self::DebugSensorsPressure
-            | Self::DebugSensorsMag => {
+            | Self::DebugSensorsPressure => {
                 let sp: DebugSensorPacket = serde_json::from_str(p)?;
                 Ok(self.into_single_mqtt_data(sp.value))
             }
@@ -56,6 +69,19 @@ impl KnownTopic {
                 let td2 = MqttTopicData::single(self.subtopic_str("lon"), sp.value2);
                 let d = MqttData::multiple(vec![td1, td2]);
                 Ok(d)
+            }
+            Self::DebugSensorsMag => {
+                let values: Vec<ValueWithTimestampString> =
+                    serde_json::from_str(p).expect("Debug failure");
+                let mut points: Vec<PlotPoint> = vec![];
+                for v in values {
+                    let t = util::parse_timestamp_to_nanos_f64(&v.timestamp)
+                        .expect("failed parsing timestamp");
+                    let p = PlotPoint::new(t, v.value);
+                    points.push(p);
+                }
+                let td = MqttTopicData::multiple(self.to_string(), points);
+                Ok(MqttData::single(td))
             }
             Self::PilotDisplaySpeed => {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
@@ -169,5 +195,15 @@ mod tests {
         let payload = r#"{"id": 12, "flight_line": "L501100", "distance": 1.84167211, "mode": "automatic", "filename": "20231023_Bremervoerde_Combined_300_NS_32N.kml"}"#;
         let p = known_topic.parse_packet(payload).unwrap();
         dbg!(p);
+    }
+
+    #[test]
+    fn test_parse_debug_buffered_packet() {
+        let topic = KnownTopic::DebugSensorsMag;
+        let payload = r#"[{"value": 4125.26202, "timestamp": "1742661659.597146009"},{"value": 5319.64538, "timestamp": "1742661659.597977050"},{"value": 3088.24687, "timestamp": "1742661659.598809170"},{"value": 3032.34963, "timestamp": "1742661659.599677984"},{"value": 3220.23746, "timestamp": "1742661659.600710924"}]"#;
+        let _decoded: Vec<ValueWithTimestampString> = serde_json::from_str(payload).unwrap();
+        let known_topic = KnownTopic::from_str(&topic.to_string()).unwrap();
+        let data = known_topic.parse_packet(payload).unwrap();
+        dbg!(data);
     }
 }

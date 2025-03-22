@@ -1,7 +1,7 @@
 use std::sync::mpsc::Receiver;
 
 use crate::{
-    data::{MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayload},
+    data::listener::{MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayload},
     MqttPlotPoints,
 };
 
@@ -26,7 +26,7 @@ impl MqttPlotData {
         }
     }
 
-    pub fn insert_data(&mut self, data: MqttData) {
+    pub(crate) fn insert_data(&mut self, data: MqttData) {
         match data.inner {
             MqttTopicDataWrapper::Topic(mqtt_topic_data) => self.insert_inner_data(mqtt_topic_data),
             MqttTopicDataWrapper::Topics(mqtt_topic_data_vec) => {
@@ -44,7 +44,7 @@ pub struct MqttDataReceiver {
 }
 
 impl MqttDataReceiver {
-    pub fn new(recv: Receiver<MqttData>) -> Self {
+    pub(crate) fn new(recv: Receiver<MqttData>) -> Self {
         Self {
             mqtt_plot_data: MqttPlotData::default(),
             recv,

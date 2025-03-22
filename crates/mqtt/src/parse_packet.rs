@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use known_topic::KnownTopic;
 
-use crate::{data::MqttData, MqttTopicData};
+use crate::data::listener::{MqttData, MqttTopicData};
 
 pub mod known_topic;
 

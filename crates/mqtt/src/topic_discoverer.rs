@@ -74,12 +74,12 @@ impl TopicDiscoverer {
     }
 }
 
-pub enum DiscoveryMsg {
+pub(crate) enum DiscoveryMsg {
     Topic(String),
     Err(String),
 }
 
-pub fn start_discovery(
+pub(crate) fn start_discovery(
     host: String,
     port: u16,
     stop_flag: Arc<AtomicBool>,
