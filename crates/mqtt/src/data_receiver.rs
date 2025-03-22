@@ -1,43 +1,64 @@
 use std::sync::mpsc::Receiver;
 
-use crate::data::{MqttPoint, MqttPoints};
+use crate::{
+    data::{MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayload},
+    MqttPlotPoints,
+};
+
+#[derive(Default)]
+pub struct MqttPlotData {
+    mqtt_plot_data: Vec<MqttPlotPoints>,
+}
+
+impl MqttPlotData {
+    fn insert_inner_data(&mut self, data: MqttTopicData) {
+        if let Some(mp) = self
+            .mqtt_plot_data
+            .iter_mut()
+            .find(|mp| mp.topic == data.topic())
+        {
+            match data.payload {
+                TopicPayload::Point(plot_point) => mp.data.push(plot_point),
+                TopicPayload::Points(mut plot_points) => mp.data.append(&mut plot_points),
+            }
+        } else {
+            self.mqtt_plot_data.push(data.into());
+        }
+    }
+
+    pub fn insert_data(&mut self, data: MqttData) {
+        match data.inner {
+            MqttTopicDataWrapper::Topic(mqtt_topic_data) => self.insert_inner_data(mqtt_topic_data),
+            MqttTopicDataWrapper::Topics(mqtt_topic_data_vec) => {
+                for mtd in mqtt_topic_data_vec {
+                    self.insert_inner_data(mtd);
+                }
+            }
+        }
+    }
+}
 
 pub struct MqttDataReceiver {
-    mqtt_plot_data: Vec<MqttPoints>,
-    recv: Receiver<MqttPoint>,
+    mqtt_plot_data: MqttPlotData,
+    recv: Receiver<MqttData>,
 }
 
 impl MqttDataReceiver {
-    pub fn new(recv: Receiver<MqttPoint>) -> Self {
+    pub fn new(recv: Receiver<MqttData>) -> Self {
         Self {
-            mqtt_plot_data: Vec::new(),
+            mqtt_plot_data: MqttPlotData::default(),
             recv,
         }
     }
 
-    pub fn plots(&self) -> &[MqttPoints] {
-        &self.mqtt_plot_data
+    pub fn plots(&self) -> &[MqttPlotPoints] {
+        &self.mqtt_plot_data.mqtt_plot_data
     }
 
     pub fn poll(&mut self) {
-        while let Ok(mqtt_point) = self.recv.try_recv() {
-            log::debug!("Got point=[{},{}]", mqtt_point.point.x, mqtt_point.point.y);
-            self.insert_data(mqtt_point);
-        }
-    }
-
-    fn insert_data(&mut self, point: MqttPoint) {
-        if let Some(mp) = self
-            .mqtt_plot_data
-            .iter_mut()
-            .find(|mp| mp.topic == point.topic)
-        {
-            mp.data.push(point.point);
-        } else {
-            self.mqtt_plot_data.push(MqttPoints {
-                topic: point.topic,
-                data: vec![point.point],
-            });
+        while let Ok(mqtt_data) = self.recv.try_recv() {
+            log::debug!("Got MqttData: {mqtt_data:?}");
+            self.mqtt_plot_data.insert_data(mqtt_data);
         }
     }
 }

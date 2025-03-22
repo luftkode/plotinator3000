@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use crate::data::MqttPoint;
+use crate::data::MqttData;
 
 fn setup_client(broker_host: String, broker_port: u16) -> (rumqttc::Client, rumqttc::Connection) {
     let timestamp_id = std::time::SystemTime::now()
@@ -25,7 +25,7 @@ fn setup_client(broker_host: String, broker_port: u16) -> (rumqttc::Client, rumq
 }
 
 pub fn mqtt_listener(
-    tx: &mpsc::Sender<MqttPoint>,
+    tx: &mpsc::Sender<MqttData>,
     broker_host: String,
     broker_port: u16,
     topics: Vec<String>,
@@ -61,12 +61,12 @@ pub fn mqtt_listener(
     }
 }
 
-fn handle_event_packet(tx: &mpsc::Sender<MqttPoint>, packet: rumqttc::Publish) {
+fn handle_event_packet(tx: &mpsc::Sender<MqttData>, packet: rumqttc::Publish) {
     let topic = packet.topic;
     let payload = String::from_utf8_lossy(&packet.payload);
     log::debug!("Received on topic={topic}, payload={payload}");
 
-    if let Some(mqtt_plot_point) = crate::known_topics::parse_packet(&topic, &payload) {
+    if let Some(mqtt_plot_point) = crate::parse_packet::parse_packet(&topic, &payload) {
         if let Err(e) = tx.send(mqtt_plot_point) {
             log::error!("{e}");
         }

@@ -1,17 +1,7 @@
-use std::str::FromStr;
-
-use egui_plot::PlotPoint;
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
-use crate::data::MqttPoint;
-
-pub(crate) fn now_timestamp() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_nanos() as f64
-}
+use crate::{data::MqttData, MqttTopicData};
 
 /// Known topics can have custom payloads that have an associated known packet structure
 /// which allows recognizing and parsing them appropriately
@@ -25,6 +15,8 @@ pub enum KnownTopic {
     DebugSensorsPressure,
     #[strum(serialize = "debug/sensors/mag")]
     DebugSensorsMag,
+    #[strum(serialize = "debug/sensors/gps")]
+    DebugSensorsGps,
     #[strum(serialize = "speed")]
     PilotDisplaySpeed,
     #[strum(serialize = "altitude")]
@@ -38,18 +30,32 @@ pub enum KnownTopic {
 /// Debug packet
 #[derive(Deserialize)]
 pub struct DebugSensorPacket {
-    value: u32,
+    value: f64,
+}
+
+/// Debug packet with multiple values
+#[derive(Deserialize)]
+pub struct DebugSensorsGps {
+    value1: f64,
+    value2: f64,
 }
 
 impl KnownTopic {
-    pub(crate) fn parse_packet(self, p: &str) -> Result<MqttPoint, serde_json::Error> {
+    pub(crate) fn parse_packet(self, p: &str) -> Result<MqttData, serde_json::Error> {
         match self {
             Self::DebugSensorsTemperature
             | Self::DebugSensorsHumidity
             | Self::DebugSensorsPressure
             | Self::DebugSensorsMag => {
                 let sp: DebugSensorPacket = serde_json::from_str(p)?;
-                Ok(self.into_mqtt_point(sp.value.into()))
+                Ok(self.into_single_mqtt_data(sp.value))
+            }
+            Self::DebugSensorsGps => {
+                let sp: DebugSensorsGps = serde_json::from_str(p)?;
+                let td1 = MqttTopicData::single(self.subtopic_str("lat"), sp.value1);
+                let td2 = MqttTopicData::single(self.subtopic_str("lon"), sp.value2);
+                let d = MqttData::multiple(vec![td1, td2]);
+                Ok(d)
             }
             Self::PilotDisplaySpeed => {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
@@ -57,7 +63,7 @@ impl KnownTopic {
                     .speed
                     .parse()
                     .expect("Failed to parse PilotDisplaySpeedPacket");
-                Ok(self.into_mqtt_point(value))
+                Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayAltitude => {
                 let p: PilotDisplayAltitudePacket = serde_json::from_str(p)?;
@@ -65,7 +71,7 @@ impl KnownTopic {
                     .height
                     .parse()
                     .expect("Failed to parse PilotDisplayAltitudePacket");
-                Ok(self.into_mqtt_point(value))
+                Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayHeading => {
                 let p: PilotDisplayHeadingPacket = serde_json::from_str(p)?;
@@ -73,17 +79,36 @@ impl KnownTopic {
                     .heading
                     .parse()
                     .expect("Failed to parse PilotDisplayHeadingPacket");
-                Ok(self.into_mqtt_point(value))
+                Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayClosestLine => {
                 let p: PilotDisplayClosestLinePacket = serde_json::from_str(p)?;
-                Ok(self.into_mqtt_point(p.distance))
+                Ok(self.into_single_mqtt_data(p.distance))
             }
         }
     }
 
-    fn into_mqtt_point(self, value: f64) -> MqttPoint {
-        MqttPoint::new(self.to_string(), value)
+    // Converts a value to a simple MqttData with just a single topic and point
+    // this is appropriate for very simple topics with just a single point per message
+    fn into_single_mqtt_data(self, value: f64) -> MqttData {
+        let topic_data = MqttTopicData::single(self.to_string(), value);
+        MqttData::single(topic_data)
+    }
+
+    // Returns a string with the topic name appended with [subtopic_name]
+    //
+    // helper function to construct topic strings with a 'subvalue' specifier
+    // for topics that essentially have subtopics, meaning they receive payload
+    //  with multiple different kind of values, e.g. a gps
+    // that publishes both longitude and latitude
+    fn subtopic_str(&self, subtopic_name: &str) -> String {
+        let mut topic_with_subvalue = self.to_string();
+        // yes this could be a single line of format!("[{subtopic_name}]")
+        // but this potentially has better performance
+        topic_with_subvalue.push('[');
+        topic_with_subvalue.push_str(subtopic_name);
+        topic_with_subvalue.push(']');
+        topic_with_subvalue
     }
 }
 
@@ -109,42 +134,10 @@ pub struct PilotDisplayClosestLinePacket {
     distance: f64,
 }
 
-pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttPoint> {
-    if let Ok(known) = KnownTopic::from_str(topic) {
-        match known.parse_packet(payload) {
-            Ok(mp) => Some(mp),
-            Err(e) => {
-                log::error!("{e}");
-                debug_assert!(false, "{e}");
-                None
-            }
-        }
-    } else {
-        log::warn!("Unknown topic: {topic}, attempting to parse as f64");
-        parse_unknown_topic(topic, payload)
-    }
-}
-
-fn parse_unknown_topic(topic: &str, payload: &str) -> Option<MqttPoint> {
-    let now = now_timestamp();
-    match payload.parse::<f64>() {
-        Ok(num) => {
-            let point = PlotPoint::new(now, num);
-            let mqtt_data = MqttPoint {
-                topic: topic.to_owned(),
-                point,
-            };
-            Some(mqtt_data)
-        }
-        Err(e) => {
-            log::error!("Payload parse error: {e}");
-            None
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use serde_json::json;
 

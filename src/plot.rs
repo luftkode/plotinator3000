@@ -23,7 +23,7 @@ mod util;
 pub enum PlotMode<'a> {
     Logs(&'a mut Plots),
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    MQTT(&'a [mqtt::MqttPoints], &'a mut bool),
+    MQTT(&'a [mqtt::MqttPlotPoints], &'a mut bool),
 }
 
 #[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -76,7 +76,7 @@ impl LogPlotUi {
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        mqtt_plots: &[mqtt::MqttPoints],
+        mqtt_plots: &[mqtt::MqttPlotPoints],
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] auto_scale: &mut bool,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
