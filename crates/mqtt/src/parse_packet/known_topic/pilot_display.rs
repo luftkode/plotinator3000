@@ -1,3 +1,5 @@
+use std::num::ParseFloatError;
+
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -7,10 +9,8 @@ pub struct PilotDisplaySpeedPacket {
 }
 
 impl PilotDisplaySpeedPacket {
-    pub fn speed(self) -> f64 {
-        self.speed
-            .parse()
-            .expect("Failed to parse PilotDisplaySpeedPacket")
+    pub fn speed(self) -> Result<f64, ParseFloatError> {
+        self.speed.parse()
     }
 }
 
@@ -21,10 +21,8 @@ pub struct PilotDisplayAltitudePacket {
 }
 
 impl PilotDisplayAltitudePacket {
-    pub fn height(self) -> f64 {
-        self.height
-            .parse()
-            .expect("Failed to parse PilotDisplayAltitudePacket")
+    pub fn height(self) -> Result<f64, ParseFloatError> {
+        self.height.parse()
     }
 }
 
@@ -35,10 +33,8 @@ pub struct PilotDisplayHeadingPacket {
 }
 
 impl PilotDisplayHeadingPacket {
-    pub fn heading(self) -> f64 {
-        self.heading
-            .parse()
-            .expect("Failed to parse PilotDisplayHeadingPacket")
+    pub fn heading(self) -> Result<f64, ParseFloatError> {
+        self.heading.parse()
     }
 }
 

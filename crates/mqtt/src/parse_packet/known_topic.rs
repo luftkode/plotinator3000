@@ -61,21 +61,21 @@ pub(crate) struct DebugSensorsGps {
 }
 
 impl KnownTopic {
-    pub(crate) fn parse_packet(self, p: &str) -> Result<MqttData, serde_json::Error> {
+    pub(crate) fn parse_packet(self, p: &str) -> anyhow::Result<MqttData> {
         match self {
             Self::PilotDisplaySpeed => {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
-                let value = p.speed();
+                let value = p.speed()?;
                 Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayAltitude => {
                 let p: PilotDisplayAltitudePacket = serde_json::from_str(p)?;
-                let value = p.height();
+                let value = p.height()?;
                 Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayHeading => {
                 let p: PilotDisplayHeadingPacket = serde_json::from_str(p)?;
-                let value = p.heading();
+                let value = p.heading()?;
                 Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayClosestLine => {
