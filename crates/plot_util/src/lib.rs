@@ -180,16 +180,22 @@ pub fn filter_plot_points(points: &[PlotPoint], (x_start, x_end): (f64, f64)) ->
     let start_idx = points.partition_point(|point| point.x < x_start);
     let end_idx = points.partition_point(|point| point.x < x_end);
 
-    // This is the case if we scroll such that none of the plot points are within the plot bounds
-    // in that case we just plot a two points to avoid hiding the plot from the legend
+    let range: usize = end_idx - start_idx;
+
+    // This is the case if we scroll such that none OR one of the plot points are within the plot bounds
+    // in that case we plot the first two points to avoid hiding the plot from the legend
     // which also shuffles the coloring of every line
-    // we plot two to avoid auto bounds setting invalid boundaries
-    // (it's invalid if there's only point because then the x range is 0)
-    if start_idx == end_idx {
+    let filtered_points = if range < 2 {
         PlotPoints::Borrowed(&points[0..=1])
     } else {
         PlotPoints::Borrowed(&points[start_idx..end_idx])
-    }
+    };
+
+    debug_assert!(
+        filtered_points.points().len() >= 2,
+        "Filtered points should always return at least 2 points!"
+    );
+    filtered_points
 }
 
 #[cfg(test)]
@@ -230,8 +236,8 @@ mod tests {
             .collect();
         let x_range = (2000.0, 3000.0);
 
-        // Since range is outside the data points we expect to just get the first point
-        let expected_result = &[points.first().copied().unwrap()];
+        // Since range is outside the data points we expect to just get the first two points
+        let expected_result = &points[0..=1];
 
         let result = filter_plot_points(&points, x_range);
 
@@ -245,8 +251,8 @@ mod tests {
             .collect();
         let x_range = (0.0, 100.0);
 
-        // Since range is outside the data points we expect to just get the first point
-        let expected_result = &[points.first().copied().unwrap()];
+        // Since range is outside the data points we expect to just get the first two points
+        let expected_result = &points[0..=1];
 
         let result = filter_plot_points(&points, x_range);
 
