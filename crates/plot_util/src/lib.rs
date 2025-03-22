@@ -152,7 +152,7 @@ pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (
 }
 
 /// Filter plot points based on the x plot bounds.
-pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoints<'_> {
+pub fn filter_plot_points(points: &[PlotPoint], (x_start, x_end): (f64, f64)) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
 
@@ -161,9 +161,17 @@ pub fn filter_plot_points(points: &[PlotPoint], x_range: (f64, f64)) -> PlotPoin
         return PlotPoints::Borrowed(points);
     }
 
-    let start_idx = points.partition_point(|point| point.x < x_range.0);
-    let end_idx = points.partition_point(|point| point.x < x_range.1);
-    PlotPoints::Borrowed(&points[start_idx..end_idx])
+    let start_idx = points.partition_point(|point| point.x < x_start);
+    let end_idx = points.partition_point(|point| point.x < x_end);
+
+    // This is the case if we scroll such that none of the plot points are within the plot bounds
+    // in that case we just plot a single point to avoid hiding the plot from the legend
+    // which also shuffles the coloring of every line
+    if start_idx == end_idx {
+        PlotPoints::Borrowed(&points[0..=0])
+    } else {
+        PlotPoints::Borrowed(&points[start_idx..end_idx])
+    }
 }
 
 #[cfg(test)]
@@ -198,15 +206,32 @@ mod tests {
     }
 
     #[test]
-    fn test_range_outside_bounds_with_large_data() {
+    fn test_range_outside_bounds_to_the_right_with_large_data() {
         let points: Vec<PlotPoint> = (0..1500)
             .map(|i| [i as f64, i as f64 + 1.0].into())
             .collect();
         let x_range = (2000.0, 3000.0);
 
-        // Since range is outside the data points, we should get first and last points
+        // Since range is outside the data points we expect to just get the first point
+        let expected_result = &[points.first().copied().unwrap()];
+
         let result = filter_plot_points(&points, x_range);
 
-        assert_eq!(result.points(), &[]);
+        assert_eq!(result.points(), expected_result);
+    }
+
+    #[test]
+    fn test_range_outside_bounds_to_the_left_with_large_data() {
+        let points: Vec<PlotPoint> = (1500..3000)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
+        let x_range = (0.0, 100.0);
+
+        // Since range is outside the data points we expect to just get the first point
+        let expected_result = &[points.first().copied().unwrap()];
+
+        let result = filter_plot_points(&points, x_range);
+
+        assert_eq!(result.points(), expected_result);
     }
 }
