@@ -2603,6 +2603,7 @@ version = "1.10.1"
 dependencies = [
  "egui_plot",
  "log",
+ "plotinator_macros",
  "rumqttc",
  "serde",
  "serde_json",
@@ -3261,6 +3262,7 @@ dependencies = [
  "log_if",
  "mqtt",
  "plot_util",
+ "plotinator_macros",
  "profiling",
  "puffin",
  "puffin_http",
@@ -3280,6 +3282,10 @@ dependencies = [
  "web-sys",
  "zip",
 ]
+
+[[package]]
+name = "plotinator_macros"
+version = "1.10.1"
 
 [[package]]
 name = "png"

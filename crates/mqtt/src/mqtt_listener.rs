@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use crate::MqttPoint;
+use crate::data::MqttPoint;
 
 fn setup_client(broker_host: String, broker_port: u16) -> (rumqttc::Client, rumqttc::Connection) {
     let timestamp_id = std::time::SystemTime::now()

@@ -4,9 +4,9 @@ use egui_plot::PlotPoint;
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
-use crate::MqttPoint;
+use crate::data::MqttPoint;
 
-fn now_timestamp() -> f64 {
+pub(crate) fn now_timestamp() -> f64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("Time went backwards")
@@ -42,62 +42,48 @@ pub struct DebugSensorPacket {
 }
 
 impl KnownTopic {
-    pub(crate) fn parse_packet(&self, p: &str) -> Result<MqttPoint, serde_json::Error> {
+    pub(crate) fn parse_packet(self, p: &str) -> Result<MqttPoint, serde_json::Error> {
         match self {
             Self::DebugSensorsTemperature
             | Self::DebugSensorsHumidity
             | Self::DebugSensorsPressure
             | Self::DebugSensorsMag => {
                 let sp: DebugSensorPacket = serde_json::from_str(p)?;
-
-                Ok(MqttPoint {
-                    topic: self.to_string(),
-                    point: PlotPoint::new(now_timestamp(), sp.value),
-                })
+                Ok(self.into_mqtt_point(sp.value.into()))
             }
             Self::PilotDisplaySpeed => {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
-                Ok(MqttPoint {
-                    topic: self.to_string(),
-                    point: PlotPoint {
-                        x: now_timestamp(),
-                        y: p.speed.parse().unwrap(),
-                    },
-                })
+                let value = p
+                    .speed
+                    .parse()
+                    .expect("Failed to parse PilotDisplaySpeedPacket");
+                Ok(self.into_mqtt_point(value))
             }
             Self::PilotDisplayAltitude => {
                 let p: PilotDisplayAltitudePacket = serde_json::from_str(p)?;
-                Ok(MqttPoint {
-                    topic: self.to_string(),
-                    point: PlotPoint {
-                        x: now_timestamp(),
-                        y: p.height.parse().unwrap(),
-                    },
-                })
+                let value = p
+                    .height
+                    .parse()
+                    .expect("Failed to parse PilotDisplayAltitudePacket");
+                Ok(self.into_mqtt_point(value))
             }
             Self::PilotDisplayHeading => {
                 let p: PilotDisplayHeadingPacket = serde_json::from_str(p)?;
-                let point = PlotPoint {
-                    x: now_timestamp(),
-                    y: p.heading.parse().unwrap(),
-                };
-                let mqtt_point = MqttPoint {
-                    topic: self.to_string(),
-                    point,
-                };
-                Ok(mqtt_point)
+                let value = p
+                    .heading
+                    .parse()
+                    .expect("Failed to parse PilotDisplayHeadingPacket");
+                Ok(self.into_mqtt_point(value))
             }
             Self::PilotDisplayClosestLine => {
                 let p: PilotDisplayClosestLinePacket = serde_json::from_str(p)?;
-                Ok(MqttPoint {
-                    topic: self.to_string(),
-                    point: PlotPoint {
-                        x: now_timestamp(),
-                        y: p.distance,
-                    },
-                })
+                Ok(self.into_mqtt_point(p.distance))
             }
         }
+    }
+
+    fn into_mqtt_point(self, value: f64) -> MqttPoint {
+        MqttPoint::new(self.to_string(), value)
     }
 }
 
@@ -117,6 +103,7 @@ pub struct PilotDisplayHeadingPacket {
     #[serde(rename(deserialize = "Heading"))]
     heading: String,
 }
+
 #[derive(Deserialize)]
 pub struct PilotDisplayClosestLinePacket {
     distance: f64,
@@ -134,23 +121,24 @@ pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttPoint> {
         }
     } else {
         log::warn!("Unknown topic: {topic}, attempting to parse as f64");
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_nanos() as f64;
-        match payload.parse::<f64>() {
-            Ok(num) => {
-                let point = PlotPoint::new(now, num);
-                let mqtt_data = MqttPoint {
-                    topic: topic.to_owned(),
-                    point,
-                };
-                Some(mqtt_data)
-            }
-            Err(e) => {
-                log::error!("Payload parse error: {e}");
-                None
-            }
+        parse_unknown_topic(topic, payload)
+    }
+}
+
+fn parse_unknown_topic(topic: &str, payload: &str) -> Option<MqttPoint> {
+    let now = now_timestamp();
+    match payload.parse::<f64>() {
+        Ok(num) => {
+            let point = PlotPoint::new(now, num);
+            let mqtt_data = MqttPoint {
+                topic: topic.to_owned(),
+                point,
+            };
+            Some(mqtt_data)
+        }
+        Err(e) => {
+            log::error!("Payload parse error: {e}");
+            None
         }
     }
 }
