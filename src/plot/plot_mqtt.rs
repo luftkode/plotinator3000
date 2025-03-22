@@ -20,7 +20,7 @@ pub fn fill_mqtt_plots(
     click_delta: &mut ClickDelta,
     mqtt_plot_area: Plot<'_>,
     mqtt_plots: &[plotinator_mqtt::MqttPlotPoints],
-    auto_scale: &mut bool,
+    set_auto_bounds: &mut bool,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
@@ -36,12 +36,11 @@ pub fn fill_mqtt_plots(
         }
         let resp = plot_ui.response();
         if plot_ui.response().double_clicked() || reset_plot_bounds {
-            *auto_scale = true;
+            *set_auto_bounds = true;
             if let Some(max_bounds) = get_mqtt_auto_scaled_plot_bounds(mqtt_plots) {
                 plot_ui.set_plot_bounds(max_bounds);
             }
         } else if resp.clicked() {
-            *auto_scale = false;
             if plot_ui.ctx().input(|i| i.modifiers.shift) {
                 if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
                     click_delta.set_next_click(pointer_coordinate, PlotType::Hundreds);
@@ -49,14 +48,11 @@ pub fn fill_mqtt_plots(
             } else {
                 click_delta.reset();
             }
-        } else if resp.is_pointer_button_down_on() {
-            *auto_scale = false;
-        } else if *auto_scale {
-            if let Some(max_bounds) = get_mqtt_auto_scaled_plot_bounds(mqtt_plots) {
-                log::info!("Setting plots bounds: {max_bounds:?}");
-                plot_ui.set_plot_bounds(max_bounds);
-            }
+        } else if *set_auto_bounds {
+            plot_ui.set_auto_bounds(true);
+            *set_auto_bounds = false;
         }
+
         click_delta.ui(plot_ui, PlotType::Hundreds);
         let (x_lower, x_higher) = plot_util::extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
         for mp in mqtt_plots {

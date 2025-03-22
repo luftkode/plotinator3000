@@ -100,7 +100,7 @@ pub fn paint_plots(
             );
         }
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        PlotMode::MQTT(mqtt_plots, auto_scale) => {
+        PlotMode::MQTT(mqtt_plots, set_auto_bounds) => {
             let mqtt_plot = build_plot_ui(
                 "mqtt",
                 ui.available_height(),
@@ -116,7 +116,7 @@ pub fn paint_plots(
                 click_delta,
                 mqtt_plot,
                 mqtt_plots,
-                auto_scale,
+                set_auto_bounds,
             );
         }
     }

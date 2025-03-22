@@ -30,7 +30,7 @@ pub struct App {
 
     // auto scale plot bounds (MQTT only)
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    pub auto_scale: bool,
+    pub set_auto_bounds: bool,
 
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
@@ -74,7 +74,7 @@ impl Default for App {
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt_cfg_window_open: false,
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            auto_scale: false,
+            set_auto_bounds: false,
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt_data_receiver: None,
 
@@ -153,7 +153,7 @@ impl eframe::App for App {
                     .map(|mdc| mdc.plots())
                     .unwrap_or_default(),
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                &mut self.auto_scale,
+                &mut self.set_auto_bounds,
             );
             if self.plot.plot_count() == 0 {
                 // Display the message when plots are shown
@@ -298,7 +298,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
 
                 if let Some(data_receiver) = &mut app.mqtt_data_receiver {
                     data_receiver.poll();
-                    ctx.request_repaint_after(Duration::from_millis(100));
+                    ctx.request_repaint_after(Duration::from_millis(50));
                 }
                 // Show MQTT configuration window if needed
                 if app.mqtt_data_receiver.is_none() {
@@ -309,7 +309,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                             config,
                         ) {
                             app.mqtt_data_receiver = Some(data_receiver);
-                            app.auto_scale = true;
+                            app.set_auto_bounds = true;
                         }
                     }
                 }

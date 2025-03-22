@@ -77,7 +77,7 @@ impl LogPlotUi {
         toasts: &mut Toasts,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         mqtt_plots: &[plotinator_mqtt::MqttPlotPoints],
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] auto_scale: &mut bool,
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] set_auto_bounds: &mut bool,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -132,7 +132,7 @@ impl LogPlotUi {
         let mode = if mqtt_plots.is_empty() {
             PlotMode::Logs(plots)
         } else {
-            PlotMode::MQTT(mqtt_plots, auto_scale)
+            PlotMode::MQTT(mqtt_plots, set_auto_bounds)
         };
         #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]
         let mode = PlotMode::Logs(plots);
