@@ -303,7 +303,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 // Show MQTT configuration window if needed
                 if app.mqtt_data_receiver.is_none() {
                     if let Some(config) = &mut app.mqtt_config_window {
-                        if let Some(data_receiver) = crate::mqtt::show_mqtt_window(
+                        if let Some(data_receiver) = crate::mqtt_window::show_mqtt_window(
                             ctx,
                             &mut app.mqtt_cfg_window_open,
                             config,

@@ -4,50 +4,6 @@ use egui::ScrollArea;
 use egui::Ui;
 use plotinator_mqtt::{MqttConfigWindow, MqttDataReceiver};
 
-fn show_broker_status(ui: &mut Ui, broker_status: Option<&Result<(), String>>) {
-    if let Some(status) = broker_status {
-        match status {
-            Ok(()) => {
-                ui.colored_label(
-                    egui::Color32::GREEN,
-                    RichText::new(format!(
-                        "{} Broker reachable",
-                        egui_phosphor::regular::CHECK
-                    )),
-                );
-            }
-            Err(err) => {
-                ui.colored_label(
-                    egui::Color32::RED,
-                    RichText::new(format!("{} {err}", egui_phosphor::regular::WARNING_OCTAGON)),
-                );
-            }
-        }
-    }
-}
-
-fn show_active_discovery_status(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
-    if ui
-        .button(format!(
-            "{} Stop Discovery",
-            egui_phosphor::regular::CELL_TOWER
-        ))
-        .clicked()
-    {
-        mqtt_cfg_window.stop_topic_discovery();
-    }
-    // Show discovery status
-    ui.horizontal(|ui| {
-        ui.spinner();
-        ui.colored_label(Color32::BLUE, "Discovering topics...");
-    });
-
-    // Process incoming topics
-    if let Err(e) = mqtt_cfg_window.poll_discovered_topics() {
-        ui.colored_label(Color32::RED, e);
-    }
-}
-
 /// Shows the MQTT configuration window and returns a receiver channel if connect was clicked
 pub fn show_mqtt_window(
     ctx: &egui::Context,
@@ -143,6 +99,50 @@ pub fn show_mqtt_window(
         mqtt_cfg_window.stop_topic_discovery();
     }
     data_receiver
+}
+
+fn show_broker_status(ui: &mut Ui, broker_status: Option<&Result<(), String>>) {
+    if let Some(status) = broker_status {
+        match status {
+            Ok(()) => {
+                ui.colored_label(
+                    egui::Color32::GREEN,
+                    RichText::new(format!(
+                        "{} Broker reachable",
+                        egui_phosphor::regular::CHECK
+                    )),
+                );
+            }
+            Err(err) => {
+                ui.colored_label(
+                    egui::Color32::RED,
+                    RichText::new(format!("{} {err}", egui_phosphor::regular::WARNING_OCTAGON)),
+                );
+            }
+        }
+    }
+}
+
+fn show_active_discovery_status(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
+    if ui
+        .button(format!(
+            "{} Stop Discovery",
+            egui_phosphor::regular::CELL_TOWER
+        ))
+        .clicked()
+    {
+        mqtt_cfg_window.stop_topic_discovery();
+    }
+    // Show discovery status
+    ui.horizontal(|ui| {
+        ui.spinner();
+        ui.colored_label(Color32::BLUE, "Discovering topics...");
+    });
+
+    // Process incoming topics
+    if let Err(e) = mqtt_cfg_window.poll_discovered_topics() {
+        ui.colored_label(Color32::RED, e);
+    }
 }
 
 fn show_subscribed_topics(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
