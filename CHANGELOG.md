@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.10.1]
+
 ### Fixed
 
 - Fix RUSTSEC-2025-0009 by updating ring
+- Fix issue where under certain conditions, plots would disappear from the legend and plot colors would shift around if a plot was far outside the view
 
 ### Changed
 
