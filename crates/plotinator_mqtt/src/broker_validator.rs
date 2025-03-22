@@ -1,5 +1,6 @@
 use std::{
     net::{Ipv6Addr, TcpStream, ToSocketAddrs},
+    sync::mpsc,
     time::{Duration, Instant},
 };
 
@@ -9,7 +10,7 @@ pub(crate) struct BrokerValidator {
     broker_status: Option<Result<(), String>>,
     validation_in_progress: bool,
     last_input_change: Option<Instant>,
-    broker_validation_receiver: Option<std::sync::mpsc::Receiver<Result<(), String>>>,
+    broker_validation_receiver: Option<mpsc::Receiver<Result<(), String>>>,
 }
 
 impl BrokerValidator {

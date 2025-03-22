@@ -144,44 +144,46 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+    use test_util::*;
 
     #[test]
-    fn test_enum_parse_packet() {
-        let s = "debug/sensors/temperature".to_owned();
-        let e = KnownTopic::from_str(&s).unwrap();
+    fn test_enum_parse_packet() -> TestResult {
+        let known_topic = KnownTopic::from_str("debug/sensors/temperature")?;
         let payload = r#"{ "value": 40 }"#;
-        let p = e.parse_packet(payload).unwrap();
-        dbg!(p);
+        let mqtt_data = known_topic.parse_packet(payload)?;
+        dbg!(mqtt_data);
+        Ok(())
     }
 
     #[test]
-    fn test_parse_pilot_display_speed_packet() {
-        let s = "speed".to_owned();
-        let e = KnownTopic::from_str(&s).unwrap();
+    fn test_parse_pilot_display_speed_packet() -> TestResult {
+        let known_topic = KnownTopic::from_str("speed")?;
         let payload = json!({
             "Speed": "12.433",
         })
         .to_string();
-        let p = e.parse_packet(&payload).unwrap();
-        dbg!(p);
+        let mqtt_data = known_topic.parse_packet(&payload)?;
+        dbg!(mqtt_data);
+        Ok(())
     }
 
     #[test]
-    fn test_parse_pilot_display_closest_line() {
-        let t = "closest_line";
-        let known_topic = KnownTopic::from_str(t).unwrap();
+    fn test_parse_pilot_display_closest_line() -> TestResult {
+        let known_topic = KnownTopic::from_str("closest_line")?;
         let payload = r#"{"id": 12, "flight_line": "L501100", "distance": 1.84167211, "mode": "automatic", "filename": "20231023_Bremervoerde_Combined_300_NS_32N.kml"}"#;
-        let p = known_topic.parse_packet(payload).unwrap();
-        dbg!(p);
+        let mqtt_data = known_topic.parse_packet(payload)?;
+        dbg!(mqtt_data);
+        Ok(())
     }
 
     #[test]
-    fn test_parse_debug_buffered_packet() {
+    fn test_parse_debug_buffered_packet() -> TestResult {
         let topic = KnownTopic::DebugSensorsMag;
         let payload = r#"[{"value": 4125.26202, "timestamp": "1742661659.597146009"},{"value": 5319.64538, "timestamp": "1742661659.597977050"},{"value": 3088.24687, "timestamp": "1742661659.598809170"},{"value": 3032.34963, "timestamp": "1742661659.599677984"},{"value": 3220.23746, "timestamp": "1742661659.600710924"}]"#;
-        let _decoded: Vec<ValueWithTimestampString> = serde_json::from_str(payload).unwrap();
-        let known_topic = KnownTopic::from_str(&topic.to_string()).unwrap();
-        let data = known_topic.parse_packet(payload).unwrap();
-        dbg!(data);
+        let _decoded: Vec<ValueWithTimestampString> = serde_json::from_str(payload)?;
+        let known_topic = KnownTopic::from_str(&topic.to_string())?;
+        let mqtt_data = known_topic.parse_packet(payload)?;
+        dbg!(mqtt_data);
+        Ok(())
     }
 }

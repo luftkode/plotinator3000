@@ -156,6 +156,7 @@ impl eframe::App for App {
                 &mut self.set_auto_bounds,
             );
 
+            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             if let Some(mqtt_receiver) = self.mqtt_data_receiver.as_ref() {
                 if mqtt_receiver.plots().is_empty() {
                     ui.add_space(20.);
