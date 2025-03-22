@@ -138,7 +138,7 @@ impl MqttConfigWindow {
                 );
             })
             .expect("Failed spawning MQTT listener thread");
-        MqttDataReceiver::new(rx)
+        MqttDataReceiver::new(rx, self.selected_topics().to_owned())
     }
 }
 

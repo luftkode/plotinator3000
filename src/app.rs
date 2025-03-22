@@ -155,6 +155,19 @@ impl eframe::App for App {
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.set_auto_bounds,
             );
+
+            if let Some(mqtt_receiver) = self.mqtt_data_receiver.as_ref() {
+                if mqtt_receiver.plots().is_empty() {
+                    ui.add_space(20.);
+                    ui.vertical_centered_justified(|ui| {
+                        ui.heading("Waiting for data on any of the following topics:");
+                        for topic in mqtt_receiver.subscribed_topics() {
+                            ui.label(topic);
+                        }
+                        ui.spinner();
+                    });
+                }
+            }
             if self.plot.plot_count() == 0 {
                 // Display the message when plots are shown
                 util::draw_empty_state(ui);
@@ -288,7 +301,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             if cfg!(target_arch = "wasm32") {
                 ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
             }
-            collapsible_instructions(ui);
+
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             {
                 if ui.button("MQTT connect").clicked() {
@@ -314,6 +327,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                     }
                 }
             }
+            collapsible_instructions(ui);
         });
     });
 }

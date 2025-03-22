@@ -39,13 +39,15 @@ impl MqttPlotData {
 }
 
 pub struct MqttDataReceiver {
+    subscribed_topics: Vec<String>,
     mqtt_plot_data: MqttPlotData,
     recv: Receiver<MqttData>,
 }
 
 impl MqttDataReceiver {
-    pub(crate) fn new(recv: Receiver<MqttData>) -> Self {
+    pub(crate) fn new(recv: Receiver<MqttData>, subscribed_topics: Vec<String>) -> Self {
         Self {
+            subscribed_topics,
             mqtt_plot_data: MqttPlotData::default(),
             recv,
         }
@@ -60,5 +62,9 @@ impl MqttDataReceiver {
             log::debug!("Got MqttData: {mqtt_data:?}");
             self.mqtt_plot_data.insert_data(mqtt_data);
         }
+    }
+
+    pub fn subscribed_topics(&self) -> &[String] {
+        &self.subscribed_topics
     }
 }
