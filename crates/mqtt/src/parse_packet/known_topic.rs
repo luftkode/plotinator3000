@@ -57,32 +57,6 @@ pub(crate) struct DebugSensorsGps {
 impl KnownTopic {
     pub(crate) fn parse_packet(self, p: &str) -> Result<MqttData, serde_json::Error> {
         match self {
-            Self::DebugSensorsTemperature
-            | Self::DebugSensorsHumidity
-            | Self::DebugSensorsPressure => {
-                let sp: DebugSensorPacket = serde_json::from_str(p)?;
-                Ok(self.into_single_mqtt_data(sp.value))
-            }
-            Self::DebugSensorsGps => {
-                let sp: DebugSensorsGps = serde_json::from_str(p)?;
-                let td1 = MqttTopicData::single(self.subtopic_str("lat"), sp.value1);
-                let td2 = MqttTopicData::single(self.subtopic_str("lon"), sp.value2);
-                let d = MqttData::multiple(vec![td1, td2]);
-                Ok(d)
-            }
-            Self::DebugSensorsMag => {
-                let values: Vec<ValueWithTimestampString> =
-                    serde_json::from_str(p).expect("Debug failure");
-                let mut points: Vec<PlotPoint> = vec![];
-                for v in values {
-                    let t = util::parse_timestamp_to_nanos_f64(&v.timestamp)
-                        .expect("failed parsing timestamp");
-                    let p = PlotPoint::new(t, v.value);
-                    points.push(p);
-                }
-                let td = MqttTopicData::multiple(self.to_string(), points);
-                Ok(MqttData::single(td))
-            }
             Self::PilotDisplaySpeed => {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
                 let value = p
@@ -110,6 +84,34 @@ impl KnownTopic {
             Self::PilotDisplayClosestLine => {
                 let p: PilotDisplayClosestLinePacket = serde_json::from_str(p)?;
                 Ok(self.into_single_mqtt_data(p.distance))
+            }
+            // Debug topics for development and for inspiration for how to implement parsing of various kinds of
+            // topics and payloads
+            Self::DebugSensorsTemperature
+            | Self::DebugSensorsHumidity
+            | Self::DebugSensorsPressure => {
+                let sp: DebugSensorPacket = serde_json::from_str(p)?;
+                Ok(self.into_single_mqtt_data(sp.value))
+            }
+            Self::DebugSensorsGps => {
+                let sp: DebugSensorsGps = serde_json::from_str(p)?;
+                let td1 = MqttTopicData::single(self.subtopic_str("lat"), sp.value1);
+                let td2 = MqttTopicData::single(self.subtopic_str("lon"), sp.value2);
+                let d = MqttData::multiple(vec![td1, td2]);
+                Ok(d)
+            }
+            Self::DebugSensorsMag => {
+                let values: Vec<ValueWithTimestampString> =
+                    serde_json::from_str(p).expect("Debug failure");
+                let mut points: Vec<PlotPoint> = vec![];
+                for v in values {
+                    let t = util::parse_timestamp_to_nanos_f64(&v.timestamp)
+                        .expect("failed parsing timestamp");
+                    let p = PlotPoint::new(t, v.value);
+                    points.push(p);
+                }
+                let td = MqttTopicData::multiple(self.to_string(), points);
+                Ok(MqttData::single(td))
             }
         }
     }
