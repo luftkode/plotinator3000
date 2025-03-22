@@ -20,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `log`: 0.4.25 → 0.4.26 ([#204](https://github.com/luftkode/plotinator3000/pull/204))
 - `chrono`: 0.4.39 → 0.4.40 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `getset`: 0.1.4 → 0.1.5 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
-- `zip`: 2.2.2 → 2.2.3 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `thiserror`: 2.0.11 → 2.0.12 ([#206](https://github.com/luftkode/plotinator3000/pull/206))
 - `strum`: 0.26.3 -> 0.27.1
 - `strum_macros`: 0.26.3 -> 0.27.1
@@ -29,9 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `semver`: 1.0.25 → 1.0.26 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
 - `egui`: 0.31.0 → 0.31.1 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
 - `eframe`: 0.31.0 → 0.31.1 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
-- `tokio`: 1.43.0 → 1.44.0 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
-- `tempfile`: 3.17.0 → 3.18.0 ([#211](https://github.com/luftkode/plotinator3000/pull/211))
-- `cargo-bins/cargo-binstall`: 1.11.0 → 1.12.0 ([#210](https://github.com/luftkode/plotinator3000/pull/210))
+- `rfd`: 0.15.2 → 0.15.3 ([#212](https://github.com/luftkode/plotinator3000/pull/212))
+- `tokio`: 1.43.0 → 1.44.1 ([#212](https://github.com/luftkode/plotinator3000/pull/212))
+- `env_logger`: 0.11.6 → 0.11.7 ([#212](https://github.com/luftkode/plotinator3000/pull/212))
+- `zip`: 2.2.2 → 2.3.0 ([#212](https://github.com/luftkode/plotinator3000/pull/212))
+- `tempfile`: 3.17.0 → 3.19.0 ([#212](https://github.com/luftkode/plotinator3000/pull/212))
+- `reqwest`: 0.12.12 → 0.12.14 ([#212](https://github.com/luftkode/plotinator3000/pull/212))
+- `cargo-bins/cargo-binstall`: 1.11.0 → 1.12.1 ([#213](https://github.com/luftkode/plotinator3000/pull/213))
 
 ## [1.10.0]
 
