@@ -2,7 +2,7 @@ use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plot_util::{PlotData, Plots};
 
-use crate::plot::util;
+use crate::plot::{util, PlotMode};
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
 
@@ -26,75 +26,100 @@ use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, Pl
 pub fn paint_plots(
     ui: &mut egui::Ui,
     reset_plot_bounds: bool,
-    plots: &mut Plots,
     plot_settings: &PlotSettings,
     legend_cfg: &Legend,
     axis_cfg: &AxisConfig,
     link_group: egui::Id,
     line_width: f32,
     click_delta: &mut ClickDelta,
+    mode: PlotMode<'_>,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
-    let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
     let x_axes = vec![AxisHints::new_x().formatter(crate::util::format_time)];
 
-    let percentage_plot = build_plot_ui(
-        "percentage",
-        plot_height,
-        legend_cfg.clone(),
-        axis_cfg,
-        x_axes.clone(),
-        link_group,
-    )
-    .include_y(1.0)
-    .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0));
+    match mode {
+        PlotMode::Logs(plots) => {
+            let plot_height = ui.available_height() / (plot_settings.total_plot_count() as f32);
 
-    let to_hundred_plot = build_plot_ui(
-        "to_hundred",
-        plot_height,
-        legend_cfg.clone(),
-        axis_cfg,
-        x_axes.clone(),
-        link_group,
-    );
-    let thousands_plot: Plot<'_> = build_plot_ui(
-        "thousands",
-        plot_height,
-        legend_cfg.clone(),
-        axis_cfg,
-        x_axes,
-        link_group,
-    );
-    let mut plot_components_list = Vec::with_capacity(plot_settings.total_plot_count().into());
+            let percentage_plot = build_plot_ui(
+                "percentage",
+                plot_height,
+                legend_cfg.clone(),
+                axis_cfg,
+                x_axes.clone(),
+                link_group,
+            )
+            .include_y(1.0)
+            .y_axis_formatter(|y, _range| format!("{:.0}%", y.value * 100.0));
 
-    let Plots {
-        percentage,
-        one_to_hundred,
-        thousands,
-    } = plots;
+            let to_hundred_plot = build_plot_ui(
+                "to_hundred",
+                plot_height,
+                legend_cfg.clone(),
+                axis_cfg,
+                x_axes.clone(),
+                link_group,
+            );
+            let thousands_plot: Plot<'_> = build_plot_ui(
+                "thousands",
+                plot_height,
+                legend_cfg.clone(),
+                axis_cfg,
+                x_axes.clone(),
+                link_group,
+            );
+            let mut plot_components_list =
+                Vec::with_capacity(plot_settings.total_plot_count().into());
 
-    if plot_settings.display_percentage() {
-        plot_components_list.push((percentage_plot, percentage, PlotType::Percentage));
+            let Plots {
+                percentage,
+                one_to_hundred,
+                thousands,
+            } = plots;
+
+            if plot_settings.display_percentage() {
+                plot_components_list.push((percentage_plot, percentage, PlotType::Percentage));
+            }
+
+            if plot_settings.display_hundreds() {
+                plot_components_list.push((to_hundred_plot, one_to_hundred, PlotType::Hundreds));
+            }
+
+            if plot_settings.display_thousands() {
+                plot_components_list.push((thousands_plot, thousands, PlotType::Thousands));
+            }
+            fill_log_plots(
+                ui,
+                reset_plot_bounds,
+                plot_components_list,
+                line_width,
+                plot_settings,
+                click_delta,
+            );
+        }
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+        PlotMode::MQTT(mqtt_plots, set_auto_bounds) => {
+            let mqtt_plot = build_plot_ui(
+                "mqtt",
+                ui.available_height(),
+                legend_cfg.clone(),
+                axis_cfg,
+                x_axes,
+                link_group,
+            );
+            crate::plot::plot_mqtt::fill_mqtt_plots(
+                ui,
+                reset_plot_bounds,
+                line_width,
+                click_delta,
+                mqtt_plot,
+                mqtt_plots,
+                set_auto_bounds,
+            );
+        }
     }
-
-    if plot_settings.display_hundreds() {
-        plot_components_list.push((to_hundred_plot, one_to_hundred, PlotType::Hundreds));
-    }
-
-    if plot_settings.display_thousands() {
-        plot_components_list.push((thousands_plot, thousands, PlotType::Thousands));
-    }
-
-    fill_plots(
-        ui,
-        reset_plot_bounds,
-        plot_components_list,
-        line_width,
-        plot_settings,
-        click_delta,
-    );
 }
 
 /// Iterates through and fills/paints all plots with their respective data.
@@ -107,7 +132,7 @@ pub fn paint_plots(
 /// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
 /// * `click_delta` - State relating to pointer clicks on plots
-fn fill_plots(
+fn fill_log_plots(
     gui: &mut egui::Ui,
     reset_plot_bounds: bool,
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
@@ -224,7 +249,7 @@ fn build_plot_ui<'a>(
         .label_formatter(crate::util::format_label_ns)
         .link_axis(link_group, Vec2b::new(axis_config.link_x(), false))
         .link_cursor(link_group, [axis_config.link_cursor_x(), false])
-        .y_axis_min_width(50.0) // Adds enough margin for 5-digits
+        .y_axis_min_width(60.0) // Adds enough margin for 5-digits
         .allow_boxed_zoom(true)
         .allow_zoom(false) // Manually implemented
         .allow_scroll(true)

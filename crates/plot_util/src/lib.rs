@@ -130,6 +130,22 @@ fn plot_raw<'p>(
     plot_ui.line(line);
 }
 
+pub fn plot_raw_mqtt<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    label: &str,
+    plot_points: &'p [PlotPoint],
+    line_width: f32,
+    x_min_max_ext: (f64, f64),
+) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
+
+    let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
+
+    let line = Line::new(filtered_points).width(line_width).name(label);
+    plot_ui.line(line);
+}
+
 #[inline(always)]
 fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
     let range = bounds.range_x();
@@ -164,14 +180,22 @@ pub fn filter_plot_points(points: &[PlotPoint], (x_start, x_end): (f64, f64)) ->
     let start_idx = points.partition_point(|point| point.x < x_start);
     let end_idx = points.partition_point(|point| point.x < x_end);
 
-    // This is the case if we scroll such that none of the plot points are within the plot bounds
-    // in that case we just plot a single point to avoid hiding the plot from the legend
+    let range: usize = end_idx - start_idx;
+
+    // This is the case if we scroll such that none OR one of the plot points are within the plot bounds
+    // in that case we plot the first two points to avoid hiding the plot from the legend
     // which also shuffles the coloring of every line
-    if start_idx == end_idx {
-        PlotPoints::Borrowed(&points[0..=0])
+    let filtered_points = if range < 2 {
+        PlotPoints::Borrowed(&points[0..=1])
     } else {
         PlotPoints::Borrowed(&points[start_idx..end_idx])
-    }
+    };
+
+    debug_assert!(
+        filtered_points.points().len() >= 2,
+        "Filtered points should always return at least 2 points!"
+    );
+    filtered_points
 }
 
 #[cfg(test)]
@@ -212,8 +236,8 @@ mod tests {
             .collect();
         let x_range = (2000.0, 3000.0);
 
-        // Since range is outside the data points we expect to just get the first point
-        let expected_result = &[points.first().copied().unwrap()];
+        // Since range is outside the data points we expect to just get the first two points
+        let expected_result = &points[0..=1];
 
         let result = filter_plot_points(&points, x_range);
 
@@ -227,8 +251,8 @@ mod tests {
             .collect();
         let x_range = (0.0, 100.0);
 
-        // Since range is outside the data points we expect to just get the first point
-        let expected_result = &[points.first().copied().unwrap()];
+        // Since range is outside the data points we expect to just get the first two points
+        let expected_result = &points[0..=1];
 
         let result = filter_plot_points(&points, x_range);
 
