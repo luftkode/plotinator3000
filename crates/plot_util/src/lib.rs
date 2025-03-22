@@ -222,13 +222,28 @@ mod tests {
     }
 
     #[test]
-    fn test_range_outside_bounds_with_large_data() {
+    fn test_range_outside_bounds_to_the_right_with_large_data() {
         let points: Vec<PlotPoint> = (0..1500)
             .map(|i| [i as f64, i as f64 + 1.0].into())
             .collect();
         let x_range = (2000.0, 3000.0);
 
-        // Since range is outside the data points and t
+        // Since range is outside the data points we expect to just get the first point
+        let expected_result = &[points.first().copied().unwrap()];
+
+        let result = filter_plot_points(&points, x_range);
+
+        assert_eq!(result.points(), expected_result);
+    }
+
+    #[test]
+    fn test_range_outside_bounds_to_the_left_with_large_data() {
+        let points: Vec<PlotPoint> = (1500..3000)
+            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .collect();
+        let x_range = (0.0, 100.0);
+
+        // Since range is outside the data points we expect to just get the first point
         let expected_result = &[points.first().copied().unwrap()];
 
         let result = filter_plot_points(&points, x_range);
