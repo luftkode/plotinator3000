@@ -1,4 +1,8 @@
 use egui_plot::PlotPoint;
+use pilot_display::{
+    PilotDisplayAltitudePacket, PilotDisplayClosestLinePacket, PilotDisplayHeadingPacket,
+    PilotDisplaySpeedPacket,
+};
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
@@ -6,6 +10,8 @@ use crate::{
     data::listener::{MqttData, MqttTopicData},
     util,
 };
+
+pub(crate) mod pilot_display;
 
 /// Known topics can have custom payloads that have an associated known packet structure
 /// which allows recognizing and parsing them appropriately
@@ -59,31 +65,23 @@ impl KnownTopic {
         match self {
             Self::PilotDisplaySpeed => {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
-                let value = p
-                    .speed
-                    .parse()
-                    .expect("Failed to parse PilotDisplaySpeedPacket");
+                let value = p.speed();
                 Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayAltitude => {
                 let p: PilotDisplayAltitudePacket = serde_json::from_str(p)?;
-                let value = p
-                    .height
-                    .parse()
-                    .expect("Failed to parse PilotDisplayAltitudePacket");
+                let value = p.height();
                 Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayHeading => {
                 let p: PilotDisplayHeadingPacket = serde_json::from_str(p)?;
-                let value = p
-                    .heading
-                    .parse()
-                    .expect("Failed to parse PilotDisplayHeadingPacket");
+                let value = p.heading();
                 Ok(self.into_single_mqtt_data(value))
             }
             Self::PilotDisplayClosestLine => {
                 let p: PilotDisplayClosestLinePacket = serde_json::from_str(p)?;
-                Ok(self.into_single_mqtt_data(p.distance))
+                let distance = p.distance();
+                Ok(self.into_single_mqtt_data(distance))
             }
             // Debug topics for development and for inspiration for how to implement parsing of various kinds of
             // topics and payloads
@@ -138,28 +136,6 @@ impl KnownTopic {
         topic_with_subvalue.push(']');
         topic_with_subvalue
     }
-}
-
-#[derive(Deserialize)]
-pub struct PilotDisplaySpeedPacket {
-    #[serde(rename(deserialize = "Speed"))]
-    speed: String,
-}
-
-#[derive(Deserialize)]
-pub struct PilotDisplayAltitudePacket {
-    #[serde(rename(deserialize = "Height"))]
-    height: String,
-}
-#[derive(Deserialize)]
-pub struct PilotDisplayHeadingPacket {
-    #[serde(rename(deserialize = "Heading"))]
-    heading: String,
-}
-
-#[derive(Deserialize)]
-pub struct PilotDisplayClosestLinePacket {
-    distance: f64,
 }
 
 #[cfg(test)]
