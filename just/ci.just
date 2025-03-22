@@ -20,6 +20,7 @@ fmt:
 # Check clippy lints, treating warnings as errors, and check for typos
 lint:
     cargo clippy --workspace --all-targets --all-features -- -D warnings -W clippy::all
+    cargo clippy --workspace --no-default-features --target wasm32-unknown-unknown -- -D warnings -W clippy::all
     typos
 
 # Run all tests with the CI profile and include all ignored tests

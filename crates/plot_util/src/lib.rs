@@ -130,6 +130,22 @@ fn plot_raw<'p>(
     plot_ui.line(line);
 }
 
+pub fn plot_raw_mqtt<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    label: &str,
+    plot_points: &'p [PlotPoint],
+    line_width: f32,
+    x_min_max_ext: (f64, f64),
+) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
+
+    let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
+
+    let line = Line::new(filtered_points).width(line_width).name(label);
+    plot_ui.line(line);
+}
+
 #[inline(always)]
 fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
     let range = bounds.range_x();
