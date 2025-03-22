@@ -2,7 +2,7 @@ use egui::Color32;
 use egui::RichText;
 use egui::ScrollArea;
 use egui::Ui;
-use mqtt::{MqttConfigWindow, MqttDataReceiver};
+use plotinator_mqtt::{MqttConfigWindow, MqttDataReceiver};
 
 fn show_broker_status(ui: &mut Ui, broker_status: Option<&Result<(), String>>) {
     if let Some(status) = broker_status {

@@ -40,10 +40,10 @@ pub struct App {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     #[serde(skip)]
-    mqtt_data_receiver: Option<mqtt::data_receiver::MqttDataReceiver>,
+    mqtt_data_receiver: Option<plotinator_mqtt::MqttDataReceiver>,
     #[serde(skip)]
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    mqtt_config_window: Option<mqtt::mqtt_cfg_window::MqttConfigWindow>,
+    mqtt_config_window: Option<plotinator_mqtt::MqttConfigWindow>,
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     mqtt_cfg_window_open: bool,
 
@@ -292,8 +292,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             {
                 if ui.button("MQTT").clicked() {
-                    app.mqtt_config_window =
-                        Some(mqtt::mqtt_cfg_window::MqttConfigWindow::default());
+                    app.mqtt_config_window = Some(plotinator_mqtt::MqttConfigWindow::default());
                     app.mqtt_cfg_window_open = true;
                 }
 

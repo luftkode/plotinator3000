@@ -2598,21 +2598,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mqtt"
-version = "1.10.1"
-dependencies = [
- "anyhow",
- "egui_plot",
- "log",
- "plotinator_macros",
- "rumqttc",
- "serde",
- "serde_json",
- "strum 0.27.1",
- "strum_macros 0.27.1",
-]
-
-[[package]]
 name = "naga"
 version = "24.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3261,9 +3246,9 @@ dependencies = [
  "getset",
  "log",
  "log_if",
- "mqtt",
  "plot_util",
  "plotinator_macros",
+ "plotinator_mqtt",
  "profiling",
  "puffin",
  "puffin_http",
@@ -3287,6 +3272,21 @@ dependencies = [
 [[package]]
 name = "plotinator_macros"
 version = "1.10.1"
+
+[[package]]
+name = "plotinator_mqtt"
+version = "1.10.1"
+dependencies = [
+ "anyhow",
+ "egui_plot",
+ "log",
+ "plotinator_macros",
+ "rumqttc",
+ "serde",
+ "serde_json",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
+]
 
 [[package]]
 name = "png"

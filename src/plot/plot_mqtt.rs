@@ -19,7 +19,7 @@ pub fn fill_mqtt_plots(
     line_width: f32,
     click_delta: &mut ClickDelta,
     mqtt_plot_area: Plot<'_>,
-    mqtt_plots: &[mqtt::MqttPlotPoints],
+    mqtt_plots: &[plotinator_mqtt::MqttPlotPoints],
     auto_scale: &mut bool,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
@@ -78,7 +78,9 @@ pub fn fill_mqtt_plots(
     });
 }
 
-pub fn get_mqtt_auto_scaled_plot_bounds(mqtt_plots: &[mqtt::MqttPlotPoints]) -> Option<PlotBounds> {
+pub fn get_mqtt_auto_scaled_plot_bounds(
+    mqtt_plots: &[plotinator_mqtt::MqttPlotPoints],
+) -> Option<PlotBounds> {
     let mut max_bounds: Option<PlotBounds> = None;
     for mp in mqtt_plots {
         let mp_first_point = mp
