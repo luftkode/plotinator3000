@@ -291,7 +291,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             collapsible_instructions(ui);
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             {
-                if ui.button("MQTT").clicked() {
+                if ui.button("MQTT connect").clicked() {
                     app.mqtt_config_window = Some(plotinator_mqtt::MqttConfigWindow::default());
                     app.mqtt_cfg_window_open = true;
                 }

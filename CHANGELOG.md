@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.11.0]
+
+### Added
+
+- Plotinator3000 can now connect a specified MQTT broker and continuously plot data from selected topics
+
 ## [1.10.1]
 
 ### Fixed
