@@ -174,7 +174,7 @@ mod tests {
         let s = "speed".to_owned();
         let e = KnownTopic::from_str(&s).unwrap();
         let payload = json!({
-            "Speed": 12.433,
+            "Speed": "12.433",
         })
         .to_string();
         let p = e.parse_packet(&payload).unwrap();
