@@ -64,8 +64,8 @@ puffin_http = "0.16"
 # Dev dependencies
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
-tempfile = "3.19.0"
-reqwest = "0.12.14"
+tempfile = "3.19.1"
+reqwest = "0.12.15"
 
 [dependencies]
 skytem_logs.workspace = true
@@ -103,7 +103,7 @@ reqwest.workspace = true
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
-zip = "2.3.0"
+zip = "2.5.0"
 axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
 plotinator_mqtt = { workspace = true, optional = true}
 profiling = { workspace = true, optional = true}
