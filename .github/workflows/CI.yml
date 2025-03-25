@@ -56,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.1
+        uses: cargo-bins/cargo-binstall@v1.12.2
       - name: Install Cargo audit
         run: cargo binstall cargo-audit
       - name: Run Audit
