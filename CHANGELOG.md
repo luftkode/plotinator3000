@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `reqwest`: 0.12.14 → 0.12.15 ([#218](https://github.com/luftkode/plotinator3000/pull/218))
 - `cargo-bins/cargo-binstall`: 1.12.1 → 1.12.2 ([#217](https://github.com/luftkode/plotinator3000/pull/217))
 - `crambl/dependabot-changelog-writer`: 1.0.2 → 1.0.3 ([#219](https://github.com/luftkode/plotinator3000/pull/219))
+- `openssl ` 0.10.70 -> 0.10.72
+- `openssl-sys` 0.9.105 -> 0.9.107
 
 ## [1.11.0]
 
