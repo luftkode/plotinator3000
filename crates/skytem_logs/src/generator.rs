@@ -105,7 +105,7 @@ impl Plotable for GeneratorLog {
             .and_utc()
     }
 
-    fn descriptive_name(&self) -> &str {
+    fn descriptive_name(&self) -> &'static str {
         "Legacy Generator"
     }
 
