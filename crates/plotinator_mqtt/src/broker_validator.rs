@@ -1,5 +1,5 @@
 use std::{
-    net::{Ipv6Addr, TcpStream, ToSocketAddrs},
+    net::{Ipv6Addr, TcpStream, ToSocketAddrs as _},
     sync::mpsc,
     time::{Duration, Instant},
 };

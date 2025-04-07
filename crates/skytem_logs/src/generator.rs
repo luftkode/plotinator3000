@@ -1,6 +1,7 @@
+use std::io::BufRead as _;
 use std::{
     fmt, fs,
-    io::{self, BufRead, BufReader},
+    io::{self, BufReader},
     path::Path,
     str::FromStr,
 };
@@ -105,7 +106,7 @@ impl Plotable for GeneratorLog {
             .and_utc()
     }
 
-    fn descriptive_name(&self) -> &str {
+    fn descriptive_name(&self) -> &'static str {
         "Legacy Generator"
     }
 
@@ -302,7 +303,7 @@ impl fmt::Display for GeneratorLogEntry {
             "{timestamp}: {vout} {vbat} {i_out} {rpm} {load} {pwm} {temp1} {temp2} {i_in} {i_rotor} {r_rotor}",
             timestamp = self.timestamp,
             vout = self.vout,
-            vbat =  self.vbat,
+            vbat = self.vbat,
             i_out = self.i_out,
             rpm = self.rpm,
             load = self.load,

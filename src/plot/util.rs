@@ -4,7 +4,7 @@ use plot_util::{Plots, StoredPlotLabels};
 
 use crate::app::supported_formats::SupportedFormat;
 
-use super::plot_settings::{date_settings::LoadedLogSettings, PlotSettings};
+use super::plot_settings::{PlotSettings, date_settings::LoadedLogSettings};
 
 pub fn add_plot_data_to_plot_collections(
     plots: &mut Plots,
@@ -101,9 +101,5 @@ pub fn set_zoom_factor(scroll: Vec2, modifiers: Modifiers) -> Option<Vec2> {
     }
 
     log::info!("zoom_factor={zoom_factor}");
-    if ctrl {
-        Some(zoom_factor)
-    } else {
-        None
-    }
+    if ctrl { Some(zoom_factor) } else { None }
 }

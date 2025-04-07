@@ -5,8 +5,8 @@ use egui_plot::{Line, PlotBounds, PlotPoint, PlotPoints};
 pub mod plots;
 
 pub use plots::{
-    plot_data::{PlotData, PlotValues, StoredPlotLabels},
     Plots,
+    plot_data::{PlotData, PlotValues, StoredPlotLabels},
 };
 
 /// An instance of a `MipMap` configuration for a given frame

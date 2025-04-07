@@ -13,7 +13,9 @@ use std::{
 };
 
 pub static APP_INSTALL_DIR: OnceLock<PathBuf> = OnceLock::new();
-/// Returns the parent of the parent of the executable directory due to the installation being done at <`target_dir`>/bin/<`new_plotinator_binary`>
+/// Returns the parent of the parent of the executable directory.
+///
+/// This is due to the installation being done at <`target_dir`>/bin/<`new_plotinator_binary`>
 /// so if we point at /bin/<`current_exe`> the axoupdater would install the update at /bin/bin/<`new_exe`>, therefor we go one level higher
 pub fn get_app_install_dir() -> &'static PathBuf {
     APP_INSTALL_DIR.get_or_init(|| {
@@ -282,7 +284,7 @@ mod tests {
     /// EDIT: It seemed to be due to rate limiting and should be fixed by setting the github token on axoupdater
     #[tokio::test]
     async fn test_github_api_auth_ok() -> TestResult {
-        use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, USER_AGENT};
+        use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
         let mut headers = HeaderMap::new();
 
         // Try to get token from environment

@@ -1,6 +1,8 @@
 use crate::{parse_unique_description, util::timestamp_from_raw};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::ReadBytesExt as _;
+
+use byteorder::LittleEndian;
 use chrono::{NaiveDateTime, ParseResult};
 use log_if::prelude::*;
 

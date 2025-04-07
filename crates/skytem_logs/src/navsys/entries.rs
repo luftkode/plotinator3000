@@ -3,7 +3,7 @@ use he::AltimeterEntry;
 use log_if::log::LogEntry;
 use mag::MagSensor;
 use serde::{Deserialize, Serialize};
-use std::{fmt, io, str::FromStr};
+use std::{fmt, io, str::FromStr as _};
 use tl::InclinometerEntry;
 
 pub mod gps;
@@ -42,8 +42,11 @@ impl LogEntry for NavSysSpsEntry {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!(
-                "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={}", line.len(), line
-            )));
+                    "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={}",
+                    line.len(),
+                    line
+                ),
+            ));
         }
         let first_three_chars = &line[..3];
         let entry: Self = match first_three_chars {
@@ -98,7 +101,7 @@ impl LogEntry for NavSysSpsEntry {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!("Expected a NavSysSps entry ID, got: {first_three_chars}"),
-                ))
+                ));
             }
         };
         Ok((entry, bytes_read))

@@ -1,13 +1,14 @@
 use std::io;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt as _;
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 
 use super::MbedConfig;
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct MbedConfigV2 {
     #[getset(get_copy = "pub")]
     kp: f32,

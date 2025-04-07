@@ -1,7 +1,7 @@
 use egui::Vec2;
 use egui_plot::{Plot, PlotBounds};
 
-use crate::plot::{util, PlotType};
+use crate::plot::{PlotType, util};
 
 use super::click_delta::ClickDelta;
 

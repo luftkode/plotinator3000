@@ -1,6 +1,6 @@
 use std::{
     io,
-    sync::mpsc::{channel, Receiver, Sender},
+    sync::mpsc::{Receiver, Sender, channel},
 };
 
 use crate::app::LoadedFiles;

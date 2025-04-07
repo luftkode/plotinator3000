@@ -9,7 +9,9 @@ use std::{
 use thiserror::Error;
 
 #[derive(Debug, Clone, Display, PartialEq, Deserialize, Serialize, CopyGetters)]
-#[display("GP{id} {timestamp}: {latitude:.5} {longitude:.5} {gp_time} {num_satellites} WGS84 {speed_kmh:.1} {hdop:.1} {vdop:.1} {pdop:.1} {altitude_above_mean_sea:.1}")]
+#[display(
+    "GP{id} {timestamp}: {latitude:.5} {longitude:.5} {gp_time} {num_satellites} WGS84 {speed_kmh:.1} {hdop:.1} {vdop:.1} {pdop:.1} {altitude_above_mean_sea:.1}"
+)]
 pub struct Gps {
     pub id: u8,
     timestamp: DateTime<Utc>,
@@ -307,7 +309,9 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
 
     #[test]
     fn test_gps_time_delta() -> TestResult {
-        let gps = Gps::from_str("GP1 2024 10 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 WGS84 0.0 0.8 1.3 1.5 0.2")?;
+        let gps = Gps::from_str(
+            "GP1 2024 10 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 WGS84 0.0 0.8 1.3 1.5 0.2",
+        )?;
         // System time is 42.994, GPS time is 43.000
         // Expected delta: 42.994 - 43.000 = -0.006 seconds = -6 milliseconds
         let gps_time_delta_ms = gps.gps_time_delta_ms();

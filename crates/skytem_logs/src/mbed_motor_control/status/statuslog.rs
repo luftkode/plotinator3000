@@ -1,25 +1,22 @@
 use chrono::{DateTime, Utc};
 use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt, fs,
-    io::{self, Read},
-    path::Path,
-};
+use std::io::Read as _;
+use std::{fmt, fs, io, path::Path};
 
 use crate::{
     mbed_motor_control::{
-        mbed_config::MbedConfig,
-        mbed_header::{MbedMotorControlLogHeader, SIZEOF_UNIQ_DESC},
+        mbed_config::MbedConfig as _,
+        mbed_header::{MbedMotorControlLogHeader as _, SIZEOF_UNIQ_DESC},
     },
     parse_unique_description,
 };
 
 use super::{
     entry::{
-        convert_v1_to_status_log_entry, convert_v2_to_status_log_entry,
+        StatusLogEntry, convert_v1_to_status_log_entry, convert_v2_to_status_log_entry,
         convert_v3_to_status_log_entry, convert_v4_to_status_log_entry, v1::StatusLogEntryV1,
-        v2::StatusLogEntryV2, v3::StatusLogEntryV3, v4::StatusLogEntryV4, StatusLogEntry,
+        v2::StatusLogEntryV2, v3::StatusLogEntryV3, v4::StatusLogEntryV4,
     },
     header::StatusLogHeader,
 };
@@ -274,7 +271,10 @@ impl Parseable for StatusLog {
             if let Some([first_timestamp, ..]) = first_plot.points().first() {
                 for p in &all_plots_raw {
                     if let Some([current_first_timestamp, ..]) = p.points().first() {
-                        debug_assert_eq!(current_first_timestamp, first_timestamp, "First timestamp of plots are not equal, was an offset applied to some plots but not all?");
+                        debug_assert_eq!(
+                            current_first_timestamp, first_timestamp,
+                            "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
+                        );
                     }
                 }
             }

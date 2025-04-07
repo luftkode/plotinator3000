@@ -1,13 +1,13 @@
-use std::io;
-
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt as _;
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
+use std::io;
 
 use super::MbedConfig;
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct MbedConfigV3 {
     #[getset(get_copy = "pub")]
     pid_cfg: PidConfig,
@@ -38,7 +38,7 @@ impl MbedConfig for MbedConfigV3 {
 }
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct GeneralConfig {
     #[getset(get_copy = "pub")]
     t_run: u8,
@@ -142,7 +142,7 @@ impl MbedConfig for GeneralConfig {
 }
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct PidConfig {
     #[getset(get_copy = "pub")]
     kp_idle: f32,

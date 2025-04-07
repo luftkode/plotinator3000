@@ -1,6 +1,7 @@
 use std::{fmt, io};
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt as _;
 use serde::{Deserialize, Serialize};
 use v1::StatusLogHeaderV1;
 use v2::StatusLogHeaderV2;
@@ -8,10 +9,9 @@ use v3::StatusLogHeaderV3;
 use v4::StatusLogHeaderV4;
 use v6::StatusLogHeaderV6;
 
+use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader as _;
 use crate::{
-    mbed_motor_control::mbed_header::{
-        MbedMotorControlLogHeader, UniqueDescriptionData, SIZEOF_UNIQ_DESC,
-    },
+    mbed_motor_control::mbed_header::{SIZEOF_UNIQ_DESC, UniqueDescriptionData},
     parse_unique_description,
 };
 
@@ -103,7 +103,9 @@ impl StatusLogHeader {
                 Self::V3(header)
             }
 
-            4 => panic!("Unsupported version. This log version is a pre-release version for MBED v4. The log version for the MBED v4 is 5."),
+            4 => panic!(
+                "Unsupported version. This log version is a pre-release version for MBED v4. The log version for the MBED v4 is 5."
+            ),
             5 => {
                 let (header, bytes_read) = StatusLogHeaderV4::from_reader_with_uniq_descr_version(
                     reader,
@@ -111,8 +113,7 @@ impl StatusLogHeader {
                     version,
                 )?;
                 total_bytes_read += bytes_read;
-                    Self::V5(header)
-
+                Self::V5(header)
             }
             6 => {
                 let (header, bytes_read) = StatusLogHeaderV6::from_reader_with_uniq_descr_version(
@@ -122,7 +123,6 @@ impl StatusLogHeader {
                 )?;
                 total_bytes_read += bytes_read;
                 Self::V6(header)
-
             }
             _ => {
                 return Err(io::Error::new(

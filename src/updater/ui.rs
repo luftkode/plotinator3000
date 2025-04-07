@@ -1,14 +1,14 @@
 use std::{
     sync::{
+        Arc,
         atomic::{AtomicBool, AtomicU8, Ordering},
         mpsc::{self, Receiver},
-        Arc,
     },
     thread,
     time::Duration,
 };
 
-use egui::{mutex::Mutex, Color32, Context, RichText, ScrollArea};
+use egui::{Color32, Context, RichText, ScrollArea, mutex::Mutex};
 
 pub(super) mod error_window;
 #[cfg(target_os = "windows")]
