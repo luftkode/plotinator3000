@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- Update rust version and edition to latest
+
 ### Dependencies
 
 - `log`: 0.4.26 → 0.4.27 ([#218](https://github.com/luftkode/plotinator3000/pull/218))
