@@ -35,7 +35,7 @@ impl PlotNameFilter {
             self.plots
                 .iter()
                 .find(|pf| pf.name() == pv.name())
-                .map_or(false, |pf| pf.show() && fn_show_id(pv.log_id()))
+                .is_some_and(|pf| pf.show() && fn_show_id(pv.log_id()))
         })
     }
 
