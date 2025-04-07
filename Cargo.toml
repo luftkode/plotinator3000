@@ -93,7 +93,7 @@ eframe = { version = "0.31", default-features = false, features = [
 rfd = "0.15"
 egui-phosphor = "0.9.0"
 egui-notify = "0.19.0"
-tokio = "1.44.1"
+tokio = "1.44.2"
 
 [dev-dependencies]
 testresult.workspace = true
@@ -103,7 +103,7 @@ reqwest.workspace = true
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
-zip = "2.5.0"
+zip = "2.6.1"
 axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
 plotinator_mqtt = { workspace = true, optional = true}
 profiling = { workspace = true, optional = true}
