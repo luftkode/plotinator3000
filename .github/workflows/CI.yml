@@ -55,11 +55,9 @@ jobs:
       RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
     steps:
       - uses: actions/checkout@v4
-      - uses: extractions/setup-crate@v1
+      - uses: rustsec/audit-check@v2.0.0
         with:
-          repo: rustsec/rustsec
-      - name: Run Audit
-        run: cargo audit
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   test:
     name: Test Suite
