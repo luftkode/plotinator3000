@@ -83,11 +83,7 @@ impl ClickDelta {
         let offset = plot_bounds_delta_x / offset_factor;
 
         let x2_closest_right = (x2 - range_x.end()).abs() < (x2 - range_x.start()).abs();
-        if x2_closest_right {
-            -offset
-        } else {
-            offset
-        }
+        if x2_closest_right { -offset } else { offset }
     }
 
     // Calculate the y offset for the text that describes the point delta
@@ -97,11 +93,7 @@ impl ClickDelta {
         let offset = plot_bounds_delta_y / offset_factor;
 
         let y2_closest_top = (y2 - range_y.end()).abs() < (y2 - range_y.start()).abs();
-        if y2_closest_top {
-            -offset
-        } else {
-            offset
-        }
+        if y2_closest_top { -offset } else { offset }
     }
 
     fn replace_first_click(&mut self, click: [f64; 2]) {

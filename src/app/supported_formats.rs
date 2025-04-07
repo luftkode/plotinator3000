@@ -1,7 +1,7 @@
 use log_if::prelude::*;
 use logs::{
-    parse_info::{ParseInfo, ParsedBytes, TotalBytes},
     SupportedLog,
+    parse_info::{ParseInfo, ParsedBytes, TotalBytes},
 };
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
@@ -184,7 +184,10 @@ impl SupportedFormat {
     fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Recognized '{}' as an HDF file. HDF files are only supported on the native version", path.display()),
+            format!(
+                "Recognized '{}' as an HDF file. HDF files are only supported on the native version",
+                path.display()
+            ),
         ))
     }
 

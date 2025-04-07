@@ -1,6 +1,6 @@
 use hdf5::{
-    types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
     Attribute,
+    types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
 
 /// Reads an HDF5 attribute's value as a HDF5 string type and returns it as a native [`String`].

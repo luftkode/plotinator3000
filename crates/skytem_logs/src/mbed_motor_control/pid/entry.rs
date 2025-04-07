@@ -4,7 +4,7 @@ pub(crate) mod v3;
 
 use std::fmt;
 
-use log_if::log::LogEntry;
+use log_if::log::LogEntry as _;
 use serde::{Deserialize, Serialize};
 use v1::PidLogEntryV1;
 use v2::PidLogEntryV2;

@@ -1,10 +1,10 @@
+use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader as _;
 use crate::{
-    mbed_motor_control::mbed_header::{
-        MbedMotorControlLogHeader, UniqueDescriptionData, SIZEOF_UNIQ_DESC,
-    },
+    mbed_motor_control::mbed_header::{SIZEOF_UNIQ_DESC, UniqueDescriptionData},
     parse_unique_description,
 };
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt as _;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
 use v1::PidLogHeaderV1;

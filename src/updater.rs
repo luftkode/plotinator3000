@@ -284,7 +284,7 @@ mod tests {
     /// EDIT: It seemed to be due to rate limiting and should be fixed by setting the github token on axoupdater
     #[tokio::test]
     async fn test_github_api_auth_ok() -> TestResult {
-        use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, USER_AGENT};
+        use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
         let mut headers = HeaderMap::new();
 
         // Try to get token from environment

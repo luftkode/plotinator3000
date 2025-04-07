@@ -1,6 +1,6 @@
 use std::{ops::RangeInclusive, time::Duration};
 
-use chrono::{DateTime, Timelike};
+use chrono::{DateTime, Timelike as _};
 use egui_plot::{GridMark, PlotPoint};
 
 /// Format a timestamp in milliseconds into `HH:MM:SS.ms`

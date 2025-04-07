@@ -2,9 +2,9 @@ use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plot_util::{PlotData, Plots};
 
-use crate::plot::{util, PlotMode};
+use crate::plot::{PlotMode, util};
 
-use super::{axis_config::AxisConfig, plot_settings::PlotSettings, ClickDelta, PlotType};
+use super::{ClickDelta, PlotType, axis_config::AxisConfig, plot_settings::PlotSettings};
 
 /// Paints multiple plots based on the provided settings and configurations.
 ///

@@ -70,10 +70,11 @@ impl BifrostLoopCurrent {
                 .collect::<Vec<String>>()
                 .join(", ");
             return Err(io::Error::new(
-        io::ErrorKind::InvalidData,
-        format!(
-            "Expected 'description' among dataset attributes, but attributes do not contain 'description'. Attributes in dataset: {comma_separated_attr_list}",
-            )));
+                io::ErrorKind::InvalidData,
+                format!(
+                    "Expected 'description' among dataset attributes, but attributes do not contain 'description'. Attributes in dataset: {comma_separated_attr_list}",
+                ),
+            ));
         }
 
         Ok(current_data_set)
@@ -92,7 +93,8 @@ impl BifrostLoopCurrent {
                 io::ErrorKind::InvalidData,
                 format!(
                     "Failed decoding 'stream_descriptor' string as TOML from stream_descriptor: {stream_descriptor_toml_str}"
-                    )));
+                ),
+            ));
         };
 
         for a in current_dataset.attr_names()? {
@@ -104,7 +106,9 @@ impl BifrostLoopCurrent {
         let data_3: ndarray::Array3<f32> = current_dataset.read()?;
 
         let (gps_timestamps, samples_per_ts, polarities) = data_3.dim();
-        log::info!("Got bifrost current dataset with: GPS timestamps: {gps_timestamps}, samples per timestamp: {samples_per_ts}, polarities: {polarities}");
+        log::info!(
+            "Got bifrost current dataset with: GPS timestamps: {gps_timestamps}, samples per timestamp: {samples_per_ts}, polarities: {polarities}"
+        );
         let mut metadata = vec![
             ("Dataset Description".into(), dataset_description.clone()),
             ("GPS Timestamps".into(), gps_timestamps.to_string()),

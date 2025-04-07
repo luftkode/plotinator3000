@@ -1,5 +1,5 @@
 use egui::{Align2, Color32, Id, LayerId, Order, TextStyle};
-use std::fmt::Write;
+use std::fmt::Write as _;
 
 /// Preview hovering files
 pub fn preview_files(ctx: &egui::Context) {

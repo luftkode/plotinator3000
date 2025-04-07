@@ -1,6 +1,7 @@
 use std::io;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt as _;
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 

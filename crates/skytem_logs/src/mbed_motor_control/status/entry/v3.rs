@@ -1,7 +1,8 @@
 use std::{fmt, io};
 
 use crate::util::parse_timestamp;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt as _;
 use log_if::log::LogEntry;
 use serde::{Deserialize, Serialize};
 
