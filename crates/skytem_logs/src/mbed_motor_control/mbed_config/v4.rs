@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::MbedConfig;
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct MbedConfigV4 {
     #[getset(get_copy = "pub")]
     pid_cfg: PidConfig,
@@ -38,7 +38,7 @@ impl MbedConfig for MbedConfigV4 {
 }
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct GeneralConfig {
     #[getset(get_copy = "pub")]
     t_run: u8,
@@ -160,7 +160,7 @@ impl MbedConfig for GeneralConfig {
 }
 
 #[derive(Debug, CopyGetters, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct PidConfig {
     #[getset(get_copy = "pub")]
     kp_idle: f32,
