@@ -1,10 +1,9 @@
+use chrono::Datelike as _;
+use num_traits::ToPrimitive as _;
 use std::{io, path::Path};
-
-use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use hdf5::Dataset;
 use log_if::prelude::*;
-use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use stream_descriptor::StreamDescriptor;
 
