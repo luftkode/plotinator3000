@@ -55,10 +55,9 @@ jobs:
       RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
     steps:
       - uses: actions/checkout@v4
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.2
-      - name: Install Cargo audit
-        run: cargo binstall cargo-audit
+      - uses: extractions/setup-crate@v1
+        with:
+          repo: rustsec/rustsec
       - name: Run Audit
         run: cargo audit
 
