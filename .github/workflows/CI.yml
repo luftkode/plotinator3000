@@ -55,9 +55,12 @@ jobs:
       RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
     steps:
       - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+      - name: Install Cargo audit
+        run: cargo binstall cargo-audit
+      - name: Run Audit
+        run: cargo audit
 
   test:
     name: Test Suite
