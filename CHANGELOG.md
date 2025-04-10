@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Fix crash when parsing a Navsyssps-file where some sensor IDs are not present.
+
 ### Changed
 
 - Update rust version and edition to latest
