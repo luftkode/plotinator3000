@@ -48,12 +48,12 @@ impl PlotData {
     pub fn add_plot_if_not_exists(&mut self, raw_plot: &RawPlot, log_id: u16) {
         // Crash in development but just emit an error message in release mode
         debug_assert!(
-            !raw_plot.points().is_empty(),
-            "got empty raw_plot. Empty datasets should be removed by a parser before being passed to the plotter"
+            raw_plot.points().len() > 2,
+            "got raw_plot with less than 2 points. Datasets that contain less than 2 points should be removed by a parser before being passed to the plotter!"
         );
-        if raw_plot.points().is_empty() {
+        if raw_plot.points().len() < 2 {
             eprintln!(
-                "Error: got empty raw_plot. Empty datasets should be removed by a parser before being passed to the plotter"
+                "Error: Got raw_plot with less than 2 points. Datasets that contain less than 2 points should be removed by a parser before being passed to the plotter!"
             );
             return;
         }
