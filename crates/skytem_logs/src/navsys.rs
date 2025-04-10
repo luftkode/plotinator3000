@@ -270,6 +270,24 @@ impl NavSysSps {
                 true
             }
         });
+
+        // ensure that no timestamps are identical.
+        for rp in &mut raw_plots {
+            // Track the last timestamp we've seen
+            let mut last_timestamp = f64::NEG_INFINITY;
+
+            for p in rp.points_as_mut() {
+                if p[0] <= last_timestamp {
+                    // For large nanosecond timestamps, we need to ensure the increment is enough to be represented by f64
+                    // Calculate the minimum increment that will actually change the value
+                    let min_representable_delta = last_timestamp * f64::EPSILON;
+                    p[0] = last_timestamp + min_representable_delta;
+                }
+
+                last_timestamp = p[0];
+            }
+        }
+
         raw_plots
     }
 }
