@@ -124,7 +124,8 @@ impl NavSysSps {
                 }
             }
         }
-        vec![
+
+        let mut raw_plots = vec![
             RawPlot::new(
                 "HE1 Altitude [M]".into(),
                 raw_he1_points_altitude,
@@ -260,7 +261,16 @@ impl NavSysSps {
                 raw_mag1_points,
                 ExpectedPlotRange::Thousands,
             ),
-        ]
+        ];
+        raw_plots.retain(|rp| {
+            if rp.points().is_empty() {
+                log::warn!("{} has no data", rp.name());
+                false
+            } else {
+                true
+            }
+        });
+        raw_plots
     }
 }
 
