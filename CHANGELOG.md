@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix crash when parsing a Navsyssps-file where some sensor IDs are not present.
+- Update crossbeam to fix [RUSTSEC-2025-0024](https://rustsec.org/advisories/RUSTSEC-2025-0024)
 
 ### Changed
 
