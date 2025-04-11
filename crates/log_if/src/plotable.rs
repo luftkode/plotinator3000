@@ -57,6 +57,9 @@ impl RawPlot {
     pub fn points(&self) -> &[[f64; 2]] {
         &self.points
     }
+    pub fn points_as_mut(&mut self) -> &mut [[f64; 2]] {
+        &mut self.points
+    }
     pub fn expected_range(&self) -> ExpectedPlotRange {
         self.expected_range
     }

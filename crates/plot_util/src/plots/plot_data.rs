@@ -46,6 +46,17 @@ impl PlotData {
 
     /// Adds a plot to the [`PlotData`] collection if another plot with the same label doesn't already exist
     pub fn add_plot_if_not_exists(&mut self, raw_plot: &RawPlot, log_id: u16) {
+        // Crash in development but just emit an error message in release mode
+        debug_assert!(
+            raw_plot.points().len() > 2,
+            "got raw_plot with less than 2 points. Datasets that contain less than 2 points should be removed by a parser before being passed to the plotter!"
+        );
+        if raw_plot.points().len() < 2 {
+            eprintln!(
+                "Error: Got raw_plot with less than 2 points. Datasets that contain less than 2 points should be removed by a parser before being passed to the plotter!"
+            );
+            return;
+        }
         let mut plot_label = String::with_capacity(30); // Approx. enough to not reallocate
         plot_label.push('#');
         plot_label.push_str(&log_id.to_string());
