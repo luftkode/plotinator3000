@@ -45,11 +45,11 @@ serde-big-array = "0.5.1"
 strum = "0.27.1"
 strum_macros = "0.27.1"
 byteorder = "1.5.0"
-chrono = { version = "0.4.40", features = ["serde"] }
+chrono = { version = "0.4.41", features = ["serde"] }
 getset = "0.1.5"
 derive_more = { version = "2", features = ["full"] }
 num-traits = "0.2.19"
-toml = "0.8.19"
+toml = "0.8.22"
 thiserror = "2.0"
 semver = "1.0.26"
 elevated-command = "1.1"
