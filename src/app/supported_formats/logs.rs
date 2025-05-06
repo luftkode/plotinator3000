@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
-    navsys::NavSysSps,
+    navsys::NavSysSps, wasp200::Wasp200Sps,
 };
 
 pub(crate) mod parse_info;
@@ -19,6 +19,7 @@ pub enum SupportedLog {
     MbedStatus(StatusLog, ParseInfo),
     Generator(GeneratorLog, ParseInfo),
     NavSysSps(NavSysSps, ParseInfo),
+    Wasp200Sps(Wasp200Sps, ParseInfo),
 }
 
 impl SupportedLog {
@@ -27,7 +28,8 @@ impl SupportedLog {
             Self::MbedPid(_, parse_info)
             | Self::MbedStatus(_, parse_info)
             | Self::NavSysSps(_, parse_info)
-            | Self::Generator(_, parse_info) => *parse_info,
+            | Self::Generator(_, parse_info)
+            | Self::Wasp200Sps(_, parse_info) => *parse_info,
         }
     }
 }
@@ -56,6 +58,12 @@ impl From<(NavSysSps, ParseInfo)> for SupportedLog {
     }
 }
 
+impl From<(Wasp200Sps, ParseInfo)> for SupportedLog {
+    fn from(value: (Wasp200Sps, ParseInfo)) -> Self {
+        Self::Wasp200Sps(value.0, value.1)
+    }
+}
+
 impl Plotable for SupportedLog {
     fn raw_plots(&self) -> &[RawPlot] {
         match self {
@@ -63,6 +71,7 @@ impl Plotable for SupportedLog {
             Self::MbedStatus(l, _) => l.raw_plots(),
             Self::Generator(l, _) => l.raw_plots(),
             Self::NavSysSps(l, _) => l.raw_plots(),
+            Self::Wasp200Sps(l, _) => l.raw_plots(),
         }
     }
 
@@ -72,6 +81,7 @@ impl Plotable for SupportedLog {
             Self::MbedStatus(l, _) => l.first_timestamp(),
             Self::Generator(l, _) => l.first_timestamp(),
             Self::NavSysSps(l, _) => l.first_timestamp(),
+            Self::Wasp200Sps(l, _) => l.first_timestamp()
         }
     }
 
@@ -81,6 +91,7 @@ impl Plotable for SupportedLog {
             Self::MbedStatus(l, _) => l.descriptive_name(),
             Self::Generator(l, _) => l.descriptive_name(),
             Self::NavSysSps(l, _) => l.descriptive_name(),
+            Self::Wasp200Sps(l, _) => l.descriptive_name()
         }
     }
 
@@ -90,6 +101,7 @@ impl Plotable for SupportedLog {
             Self::MbedStatus(l, _) => l.labels(),
             Self::Generator(l, _) => l.labels(),
             Self::NavSysSps(l, _) => l.labels(),
+            Self::Wasp200Sps(l, _) => l.labels()
         }
     }
 
@@ -99,6 +111,7 @@ impl Plotable for SupportedLog {
             Self::MbedStatus(l, _) => l.metadata(),
             Self::Generator(l, _) => l.metadata(),
             Self::NavSysSps(l, _) => l.metadata(),
+            Self::Wasp200Sps(l, _) => l.metadata()
         }
     }
 }

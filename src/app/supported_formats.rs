@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
-    navsys::NavSysSps,
+    navsys::NavSysSps, wasp200::Wasp200Sps,
 };
 use std::{
     fs,
@@ -61,6 +61,12 @@ impl From<(NavSysSps, ParseInfo)> for SupportedFormat {
     }
 }
 
+impl From<(Wasp200Sps, ParseInfo)> for SupportedFormat {
+    fn from(value: (Wasp200Sps, ParseInfo)) -> Self {
+        Self::Log(SupportedLog::from(value))
+    }
+}
+
 impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     ///
@@ -93,6 +99,11 @@ impl SupportedFormat {
                 ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
             )
                 .into()
+        } else if let Ok((wasp200sps, read_bytes)) = Wasp200Sps::try_from_buf(content) {
+            (
+                wasp200sps,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes))
+            ).into()
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -138,6 +149,13 @@ impl SupportedFormat {
                 .into()
         } else if NavSysSps::file_is_valid(path) {
             let (log, parsed_bytes) = NavSysSps::from_reader(&mut reader)?;
+            (
+                log,
+                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
+        } else if Wasp200Sps::file_is_valid(path) {
+            let (log, parsed_bytes) = Wasp200Sps::from_reader(&mut reader)?;
             (
                 log,
                 ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
