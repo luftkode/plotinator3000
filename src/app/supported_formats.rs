@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
-    navsys::NavSysSps, wasp200::Wasp200Sps,
+    navsys::NavSysSps,
+    wasp200::Wasp200Sps,
 };
 use std::{
     fs,
@@ -102,8 +103,9 @@ impl SupportedFormat {
         } else if let Ok((wasp200sps, read_bytes)) = Wasp200Sps::try_from_buf(content) {
             (
                 wasp200sps,
-                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes))
-            ).into()
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,

@@ -1,12 +1,15 @@
-
-use std::{fmt, fs, io::{self, BufReader}, path::Path, str::FromStr as _};
+use std::{
+    fmt, fs,
+    io::{self, BufReader},
+    path::Path,
+    str::FromStr as _,
+};
 
 use chrono::{DateTime, Utc};
 use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::entries::he::AltimeterEntry;
-
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Wasp200Sps {
@@ -33,7 +36,6 @@ impl fmt::Display for Wasp200Sps {
     }
 }
 
-
 impl LogEntry for AltimeterEntry {
     fn from_reader(reader: &mut impl std::io::BufRead) -> std::io::Result<(Self, usize)> {
         let mut line = String::new();
@@ -50,8 +52,8 @@ impl LogEntry for AltimeterEntry {
             ));
         }
         let entry = AltimeterEntry::from_str(&line)
-                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-                
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
         Ok((entry, bytes_read))
     }
 
@@ -82,25 +84,21 @@ impl Parseable for Wasp200Sps {
     const DESCRIPTIVE_NAME: &str = "Wasp200Sps";
 
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
-
         let (entries, bytes_read): (Vec<AltimeterEntry>, usize) = parse_to_vec(reader);
 
-        
         let mut raw_points_altitude: Vec<[f64; 2]> = Vec::new();
 
         for e in &entries {
             if let Some(altitude) = e.altitude_m() {
                 raw_points_altitude.push([e.timestamp_ns(), altitude]);
-            } 
+            }
         }
 
-        let mut raw_plots = vec![
-            RawPlot::new(
-                "Wasp200 Altitude [M]".into(),
-                raw_points_altitude,
-                ExpectedPlotRange::OneToOneHundred,
-            )
-        ];
+        let mut raw_plots = vec![RawPlot::new(
+            "Wasp200 Altitude [M]".into(),
+            raw_points_altitude,
+            ExpectedPlotRange::OneToOneHundred,
+        )];
         raw_plots.retain(|rp| {
             if rp.points().is_empty() {
                 log::warn!("{} has no data", rp.name());
@@ -110,14 +108,7 @@ impl Parseable for Wasp200Sps {
             }
         });
 
-
-        Ok((
-            Self {
-                entries,
-                raw_plots,
-            },
-            bytes_read,
-        ))
+        Ok((Self { entries, raw_plots }, bytes_read))
     }
 
     fn is_buf_valid(buf: &[u8]) -> bool {
