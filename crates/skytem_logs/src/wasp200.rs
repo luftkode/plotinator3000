@@ -51,8 +51,8 @@ impl LogEntry for AltimeterEntry {
                 ),
             ));
         }
-        let entry = Self::from_str(&line)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let entry =
+            Self::from_str(&line).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         Ok((entry, bytes_read))
     }
@@ -123,7 +123,10 @@ impl Plotable for Wasp200Sps {
     }
 
     fn first_timestamp(&self) -> DateTime<Utc> {
-        self.entries.first().expect("No entries in Wasp200Sps, unable to get first timestamp").timestamp()
+        self.entries
+            .first()
+            .expect("No entries in Wasp200Sps, unable to get first timestamp")
+            .timestamp()
     }
 
     fn descriptive_name(&self) -> &str {
