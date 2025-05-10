@@ -1,3 +1,5 @@
+set windows-shell := ["powershell.exe", "-c"]
+
 [group("Init")]
 init: install-devtools
     @echo "Run {{BOLD + YELLOW}}install-extra-devtools{{NORMAL}} for some adittional productivity tools that fit into the existent workflow"

@@ -7,7 +7,6 @@ set windows-shell := ["powershell.exe", "-c"]
 
 PROJECT_NAME := "plotinator3000"
 
-alias i := init
 alias t := test
 alias l := lint
 alias fmt := format
