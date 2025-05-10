@@ -3,7 +3,7 @@ set windows-shell := ["powershell.exe", "-c"]
 [group("Init")]
 init: install-devtools
     @echo "Run {{BOLD + YELLOW}}install-extra-devtools{{NORMAL}} for some adittional productivity tools that fit into the existent workflow"
-    @echo "Run {{BOLD + YELLOW}}apt-install-hdf5-header{{NORMAL}} to get HDF5 headers for developing HDF5 features on linux"
+    @echo "Run {{BOLD + YELLOW}}apt-install-hdf5-headers{{NORMAL}} to get HDF5 headers for developing HDF5 features on linux"
 
 
 # Trunk is used to serve the app with a webserver, cargo-dist is used to generate and update workflows for distributing installers for various platforms
@@ -22,7 +22,7 @@ install-extra-devtools:
     cargo install bacon --locked
 
 [group("Init")]
-apt-install-hdf5-header:
+apt-install-hdf5-headers:
     sudo apt install libhdf5-dev
 
 [windows]

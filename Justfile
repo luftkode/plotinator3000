@@ -1,6 +1,7 @@
 import 'just/mod.just'
 # CI only recipes, `just -l ci` to list them
 mod ci 'just/ci.just'
+# init only recipes, `just -l init` to list them
 mod init 'just/init.just'
 
 set windows-shell := ["powershell.exe", "-c"]
