@@ -130,6 +130,7 @@ pub fn format_data_size(size_bytes: usize) -> String {
 }
 
 /// Selects between the colors based on the current UI theme
+#[must_use]
 pub(crate) fn theme_color(ui: &Ui, dark: Color32, light: Color32) -> Color32 {
     match ui.ctx().theme() {
         egui::Theme::Dark => dark,
