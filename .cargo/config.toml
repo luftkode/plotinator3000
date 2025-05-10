@@ -1,2 +1,6 @@
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
+
+[env]
+# We generally want to bypass updates in the build, they should only really be run in CI as they touch many parts of the host
+PLOTINATOR_BYPASS_UPDATES = "true"
