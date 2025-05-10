@@ -7,6 +7,8 @@ use plot_util::{MipMapConfiguration, PlotValues, Plots};
 use plot_visibility_config::PlotVisibilityConfig;
 use serde::{Deserialize, Serialize};
 
+use crate::util::theme_color;
+
 pub mod date_settings;
 mod loaded_logs;
 pub mod mipmap_settings;
@@ -63,7 +65,11 @@ pub struct PlotSettings {
 impl PlotSettings {
     pub fn show(&mut self, ui: &mut egui::Ui) {
         if self.loaded_log_settings.is_empty() {
-            ui.label(RichText::new("No Files Loaded").color(Color32::RED));
+            ui.label(RichText::new("No Files Loaded").color(theme_color(
+                ui,
+                Color32::RED,
+                Color32::DARK_RED,
+            )));
         } else {
             self.show_loaded_files(ui);
             self.ui_plot_filter_settings(ui);
