@@ -8,6 +8,8 @@ use std::{
     time::Duration,
 };
 
+use crate::util::timestamped_client_id;
+
 #[derive(Default)]
 pub(crate) struct TopicDiscoverer {
     active: bool,
@@ -88,10 +90,7 @@ pub(crate) fn start_discovery(
     std::thread::Builder::new()
         .name("mqtt-topic-discoverer".into())
         .spawn(move || {
-            let timestamp = std::time::SystemTime::now()
-                .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                .expect("Time went backwards");
-            let client_id = format!("discover-{}", timestamp.as_millis());
+            let client_id = timestamped_client_id("discover");
 
             log::info!(
                 "Subscribing for discovery with id={client_id}, broker address={host}:{port}"
@@ -139,3 +138,5 @@ pub(crate) fn start_discovery(
         })
         .expect("Failed to start MQTT topic discoverer thread")
 }
+
+
