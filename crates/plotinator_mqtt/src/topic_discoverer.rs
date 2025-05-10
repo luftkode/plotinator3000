@@ -14,6 +14,7 @@ use crate::util::timestamped_client_id;
 pub(crate) struct TopicDiscoverer {
     active: bool,
     discovered_topics: HashSet<String>,
+    discovered_sys_topics: HashSet<String>,
     discovery_rx: Option<mpsc::Receiver<DiscoveryMsg>>,
     stop_discovery_flag: Arc<AtomicBool>,
     discovery_handle: Option<std::thread::JoinHandle<()>>,
@@ -43,6 +44,7 @@ impl TopicDiscoverer {
             while let Ok(msg) = rx.try_recv() {
                 match msg {
                     DiscoveryMsg::Topic(t) => self.discovered_topics.insert(t),
+                    DiscoveryMsg::SysTopic(t) => self.discovered_sys_topics.insert(t),
                     DiscoveryMsg::Err(e) => return Err(e),
                 };
             }
@@ -74,10 +76,21 @@ impl TopicDiscoverer {
         topics.sort();
         topics
     }
+
+    pub fn discovered_sys_topics(&self) -> &HashSet<String> {
+        &self.discovered_sys_topics
+    }
+
+    pub fn discovered_sys_topics_sorted(&self) -> Vec<String> {
+        let mut topics: Vec<String> = self.discovered_sys_topics.iter().cloned().collect();
+        topics.sort();
+        topics
+    }
 }
 
 pub(crate) enum DiscoveryMsg {
     Topic(String),
+    SysTopic(String),
     Err(String),
 }
 
@@ -107,6 +120,14 @@ pub(crate) fn start_discovery(
                 return;
             }
 
+            if let Err(e) = client.subscribe("$SYS/#", rumqttc::QoS::AtMostOnce) {
+                log::error!("Subscribe err={e}");
+                if let Err(e) = tx.send(DiscoveryMsg::Err(e.to_string())) {
+                    log::error!("{e}");
+                }
+                // Don't error out on this
+            }
+
             for notification in connection.iter() {
                 if stop_flag.load(Ordering::Relaxed) {
                     log::info!("Stopping discovery!");
@@ -117,7 +138,12 @@ pub(crate) fn start_discovery(
                     Ok(event) => {
                         if let Event::Incoming(Packet::Publish(p)) = event {
                             log::info!("Discovered topic={}", p.topic);
-                            if let Err(e) = tx.send(DiscoveryMsg::Topic(p.topic)) {
+                            let msg = if p.topic.starts_with("$SYS") {
+                                DiscoveryMsg::SysTopic(p.topic)
+                            } else {
+                                DiscoveryMsg::Topic(p.topic)
+                            };
+                            if let Err(e) = tx.send(msg) {
                                 log::error!("{e}");
                             }
                         }

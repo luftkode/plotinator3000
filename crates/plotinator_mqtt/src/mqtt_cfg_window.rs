@@ -111,6 +111,14 @@ impl MqttConfigWindow {
         self.topic_discoverer.discovered_topics_sorted()
     }
 
+    pub fn discovered_sys_topics(&self) -> &HashSet<String> {
+        self.topic_discoverer.discovered_sys_topics()
+    }
+
+    pub fn discovered_sys_topics_sorted(&self) -> Vec<String> {
+        self.topic_discoverer.discovered_sys_topics_sorted()
+    }
+
     pub fn broker_status(&self) -> &BrokerStatus {
         self.broker_validator.broker_status()
     }
