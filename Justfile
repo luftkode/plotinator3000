@@ -1,6 +1,7 @@
 import 'just/mod.just'
 # CI only recipes, `just -l ci` to list them
 mod ci 'just/ci.just'
+mod init 'just/init.just'
 
 set windows-shell := ["powershell.exe", "-c"]
 
@@ -24,12 +25,7 @@ export RUST_LOG := env_var_or_default("RUST_LOG", "info")
 export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATES", "true")
 
 @_default:
-    just --list --no-aliases
-
-[group("Init")]
-init: install-devtools
-    @echo "Run {{BOLD + YELLOW}}install-extra-devtools{{NORMAL}} for some adittional productivity tools that fit into the existent workflow"
-    @echo "Run {{BOLD + YELLOW}}apt-install-hdf5-header{{NORMAL}} to get HDF5 headers for developing HDF5 features on linux"
+    just --list
 
 [doc("Checks both native and wasm"), group("Check"), no-exit-message]
 check-all: check check-wasm
