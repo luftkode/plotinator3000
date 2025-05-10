@@ -6,7 +6,7 @@ use std::{
 use rumqttc::{Client, Event, MqttOptions, Packet};
 use crate::util::timestamped_client_id;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum BrokerStatus {
     #[default]
     None,
@@ -18,10 +18,10 @@ pub enum BrokerStatus {
 impl BrokerStatus {
     pub fn reachable(&self) -> bool {
         match self {
-            BrokerStatus::Reachable |
-            BrokerStatus::ReachableVersion(_) => true,
-            BrokerStatus::Unreachable(_) |
-            BrokerStatus::None => false,
+            Self::Reachable |
+            Self::ReachableVersion(_) => true,
+            Self::Unreachable(_) |
+            Self::None => false,
         }
     }
 }
@@ -176,9 +176,9 @@ fn get_broker_version(addr: SocketAddr) -> Result<String, String> {
             }
             Some(Err(e)) => return Err(format!("Connection error: {e}")),
             None => break,
-            _ => continue,
+            _ => (),
         }
     }
 
-    Err("Timeout waiting for broker version".to_string())
+    Err("Timeout waiting for broker version".to_owned())
 }

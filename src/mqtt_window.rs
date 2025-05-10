@@ -186,10 +186,10 @@ fn show_subscribed_topics(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
 fn show_discovered_topics_list(
     ui: &mut Ui,
     mqtt_cfg_window: &mut MqttConfigWindow,
-    topics: Vec<String>,
+    topics: &[String],
 ) {
     ScrollArea::vertical().max_height(800.0).show(ui, |ui| {
-        for topic in &topics {
+        for topic in topics {
             if !mqtt_cfg_window.selected_topics_contains(topic) {
                 ui.horizontal(|ui| {
                     if ui.selectable_label(false, topic).clicked() {
@@ -233,7 +233,7 @@ fn show_discovered_topics_section(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigW
         show_discovered_topics_list(
             ui,
             mqtt_cfg_window,
-            mqtt_cfg_window.discovered_topics_sorted(),
+            &mqtt_cfg_window.discovered_topics_sorted(),
         );
     }
 
@@ -246,7 +246,7 @@ fn show_discovered_topics_section(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigW
                 show_discovered_topics_list(
                     ui,
                     mqtt_cfg_window,
-                    mqtt_cfg_window.discovered_sys_topics_sorted(),
+                    &mqtt_cfg_window.discovered_sys_topics_sorted(),
                 );
             },
         );
