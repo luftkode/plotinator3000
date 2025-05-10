@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    broker_validator::BrokerValidator, data_receiver::MqttDataReceiver,
+    broker_validator::{BrokerStatus, BrokerValidator}, data_receiver::MqttDataReceiver,
     topic_discoverer::TopicDiscoverer,
 };
 
@@ -25,6 +25,11 @@ impl MqttConfigWindow {
     /// Returns a reference to the selected topics of this [`MqttConfigWindow`].
     pub fn selected_topics(&self) -> &[String] {
         &self.selected_topics
+    }
+
+    /// Returns whether or not the selected topics contains `topic`
+    pub fn selected_topics_contains(&self, topic: &str) -> bool {
+        self.selected_topics.iter().any(|t| t == topic)
     }
 
     pub fn selected_topics_as_mut(&mut self) -> &mut [String] {
@@ -106,7 +111,7 @@ impl MqttConfigWindow {
         self.topic_discoverer.discovered_topics_sorted()
     }
 
-    pub fn broker_status(&self) -> Option<&Result<(), String>> {
+    pub fn broker_status(&self) -> &BrokerStatus {
         self.broker_validator.broker_status()
     }
 

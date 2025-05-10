@@ -2,6 +2,7 @@ use egui::Color32;
 use egui::RichText;
 use egui::ScrollArea;
 use egui::Ui;
+use plotinator_mqtt::BrokerStatus;
 use plotinator_mqtt::{MqttConfigWindow, MqttDataReceiver};
 
 /// Shows the MQTT configuration window and returns a receiver channel if connect was clicked
@@ -14,6 +15,7 @@ pub fn show_mqtt_window(
     let mut connect_clicked = false;
     egui::Window::new("MQTT Configuration")
         .open(mqtt_cfg_window_open)
+        .scroll([false, true])
         .show(ctx, |ui| {
             ui.group(|ui| {
                 ui.label("MQTT Broker Address");
@@ -28,7 +30,7 @@ pub fn show_mqtt_window(
                 if mqtt_cfg_window.validation_in_progress() {
                     ui.horizontal(|ui| {
                         ui.spinner();
-                        ui.label("Checking broker...");
+                        ui.label("Checking for broker...");
                     });
                 } else {
                     show_broker_status(ui, mqtt_cfg_window.broker_status());
@@ -44,7 +46,7 @@ pub fn show_mqtt_window(
                     }
                 });
 
-                let discover_enabled = mqtt_cfg_window.broker_status().is_some_and(|s| s.is_ok())
+                let discover_enabled = mqtt_cfg_window.broker_status().reachable()
                     && !mqtt_cfg_window.discovery_active();
 
                 if !mqtt_cfg_window.discovery_active()
@@ -74,13 +76,15 @@ pub fn show_mqtt_window(
                         mqtt_cfg_window.discovered_topics().len()
                     ));
 
-                    ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                    ScrollArea::vertical().max_height(800.0).show(ui, |ui| {
                         let topics: Vec<_> = mqtt_cfg_window.discovered_topics_sorted();
 
                         for topic in &topics {
                             ui.horizontal(|ui| {
-                                if ui.selectable_label(false, topic).clicked() {
-                                    mqtt_cfg_window.add_selected_topic(topic.to_string());
+                                if !mqtt_cfg_window.selected_topics_contains(topic) {
+                                    if ui.selectable_label(false, topic).clicked() {
+                                        mqtt_cfg_window.add_selected_topic(topic.to_string());
+                                    }
                                 }
                             });
                         }
@@ -101,26 +105,36 @@ pub fn show_mqtt_window(
     data_receiver
 }
 
-fn show_broker_status(ui: &mut Ui, broker_status: Option<&Result<(), String>>) {
-    if let Some(status) = broker_status {
-        match status {
-            Ok(()) => {
-                ui.colored_label(
-                    egui::Color32::GREEN,
-                    RichText::new(format!(
-                        "{} Broker reachable",
-                        egui_phosphor::regular::CHECK
-                    )),
-                );
-            }
-            Err(err) => {
-                ui.colored_label(
-                    egui::Color32::RED,
-                    RichText::new(format!("{} {err}", egui_phosphor::regular::WARNING_OCTAGON)),
-                );
-            }
+fn show_broker_status(ui: &mut Ui, broker_status: &BrokerStatus) {
+    match broker_status {
+        BrokerStatus::None => (),
+        BrokerStatus::Reachable => {
+            draw_reachable_label(ui, None);
+        }
+        BrokerStatus::Unreachable(err) => {
+            ui.colored_label(
+                egui::Color32::RED,
+                RichText::new(format!(
+                    "{icon} {err}",
+                    icon = egui_phosphor::regular::WARNING_OCTAGON
+                )),
+            );
+        }
+        BrokerStatus::ReachableVersion(v) => {
+            draw_reachable_label(ui, Some(v.as_ref()));
         }
     }
+}
+
+fn draw_reachable_label(ui: &mut Ui, version: Option<&str>) {
+    ui.colored_label(
+        egui::Color32::GREEN,
+        RichText::new(format!(
+            "{icon} {desc}",
+            icon = egui_phosphor::regular::CHECK,
+            desc = version.unwrap_or("Broker reachable")
+        )),
+    );
 }
 
 fn show_active_discovery_status(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {

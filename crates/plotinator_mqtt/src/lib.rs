@@ -11,5 +11,6 @@ non_wasm_modules!(
 );
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::{
-    data::plot::MqttPlotPoints, data_receiver::MqttDataReceiver, mqtt_cfg_window::MqttConfigWindow,
+    broker_validator::BrokerStatus, data::plot::MqttPlotPoints, data_receiver::MqttDataReceiver,
+    mqtt_cfg_window::MqttConfigWindow,
 };
