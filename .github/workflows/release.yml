@@ -141,7 +141,7 @@ jobs:
         shell: "pwsh"
       - name: "Use patched cargo-dist version (windows)"
         if: "runner.os == 'Windows'"
-        run: "cargo install cargo-dist \\ --git https://github.com/CramBL/cargo-dist \\ --branch fix-ignored-msvc-crt-static-flag \\ --rev a4cabb10395c7b275ea40d1636cd2d0e58be8af6"
+        run: "cargo install cargo-dist --git https://github.com/CramBL/cargo-dist --branch fix-ignored-msvc-crt-static-flag --rev a4cabb10395c7b275ea40d1636cd2d0e58be8af6"
       - uses: swatinem/rust-cache@v2
         with:
           key: ${{ join(matrix.targets, '-') }}
