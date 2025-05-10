@@ -17,6 +17,8 @@ env:
   RUSTDOCFLAGS: -D warnings
   RUST_BACKTRACE: 1
   RUST_LOG: debug
+  JUST_VERBOSE: 1
+  JUST_COLOR: always
 
 jobs:
   check:
