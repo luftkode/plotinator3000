@@ -6,7 +6,7 @@
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// // Declare multiple modules that will only be included in non-WebAssembly builds
 /// non_wasm_modules!(
 ///     // Public module
