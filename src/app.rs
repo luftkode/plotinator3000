@@ -267,8 +267,8 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             }
             if ui
                 .button(RichText::new(format!(
-                    "{} Open File",
-                    egui_phosphor::regular::FOLDER_OPEN
+                    "{icon} Open File",
+                    icon = egui_phosphor::regular::FOLDER_OPEN
                 )))
                 .clicked()
             {
