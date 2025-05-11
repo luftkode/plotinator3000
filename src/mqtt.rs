@@ -68,8 +68,9 @@ impl Mqtt {
 
     pub fn show_waiting_for_initial_data(&self, ui: &mut egui::Ui) {
         if self.waiting_for_initial_data() {
+            ui.add_space(20.);
             ui.vertical_centered_justified(|ui| {
-                ui.heading("Waiting for data on any of the following topics:");
+                ui.heading("Waiting for 2 data points on any of the following topics:");
                 debug_assert!(self.mqtt_data_receiver.is_some(), "Expected an active MQTT data receiver when painting 'waiting for initial data' elements");
                 for topic in self.mqtt_data_receiver.as_ref().expect("Unsound condition").subscribed_topics() {
                     ui.label(topic);

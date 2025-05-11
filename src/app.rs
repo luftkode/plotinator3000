@@ -133,16 +133,9 @@ impl eframe::App for App {
                 &self.loaded_files.take_loaded_files(),
                 &mut self.toasts,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                crate::mqtt::Mqtt::plots(self.mqtt.mqtt_data_receiver.as_ref()),
-                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                &mut self.mqtt.set_auto_bounds,
+                &mut self.mqtt,
             );
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            {
-                ui.add_space(20.);
-                self.mqtt.show_waiting_for_initial_data(ui);
-            }
             if self.plot.plot_count() == 0 {
                 // Display the message when plots are shown
                 util::draw_empty_state(ui);
