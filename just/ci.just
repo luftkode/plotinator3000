@@ -25,7 +25,7 @@ lint:
     typos
 
 # Run all tests with the CI profile and include all ignored tests
-[confirm("\
+[confirm("
 Are you sure you want to run tests in CI mode?
 Some tests will touch your environment (e.g. .profile)
 with installers and artifacts from the upgrade functionality
