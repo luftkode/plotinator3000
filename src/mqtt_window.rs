@@ -38,7 +38,6 @@ pub fn show_mqtt_window(
 
 fn show_broker_config_column(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
     ui.group(|ui| {
-        ui.set_min_width(ui.available_width() - 200.0); // Reserve space for right column
         ui.label("MQTT Broker Address");
         ui.horizontal(|ui| {
             ui.text_edit_singleline(mqtt_cfg_window.broker_host_as_mut())
@@ -78,7 +77,6 @@ fn show_subscribed_topics_column(
     data_receiver: &mut Option<MqttDataReceiver>,
 ) {
     ui.group(|ui| {
-        ui.set_min_width(200.0);
         let is_connect_valid = mqtt_cfg_window.broker_status().reachable()
             && !mqtt_cfg_window.selected_topics().is_empty();
         ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
