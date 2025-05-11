@@ -39,7 +39,7 @@ pub(crate) enum KnownTopic {
     SYSBrokerUptime,
     // We cannot meaningfully plot this, but we use it to show the version when choosing a broker to connect to
     #[strum(serialize = "$SYS/broker/version")]
-    SYSBrokerVersion
+    SYSBrokerVersion,
 }
 
 /// Debug packet with a single value
@@ -155,7 +155,7 @@ impl KnownTopic {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use super::*;
     use serde_json::json;
