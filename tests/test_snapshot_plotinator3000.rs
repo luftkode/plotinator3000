@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use egui::{DroppedFile, Event, Pos2, Rect, accesskit::Role};
 use egui_kittest::{
     Harness,
-    kittest::{Node, Queryable},
+    kittest::{Node, Queryable as _},
 };
 use test_util::{mbed_pid_v6_regular, mbed_status_v6_regular};
 
@@ -45,8 +45,8 @@ impl HarnessWrapper {
     pub fn drop_file(&mut self, path: PathBuf) {
         let dropped_file = DroppedFile {
             path: Some(path),
-            name: "".into(),
-            mime: "".into(),
+            name: String::new(),
+            mime: String::new(),
             last_modified: None,
             bytes: None,
         };
