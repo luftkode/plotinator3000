@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.12.0]
+
+### Changed
+
+- Move from the discontinued original `cargo-dist` to the [fork maintained by astral](https://github.com/astral-sh/cargo-dist)
+- Use the forked `cargo-dist` with the MSVC CRT linker configuration fix in the release workflow (astral [PR here](https://github.com/astral-sh/cargo-dist/pull/36))
+- Avoid statically linking MSVC CRT to allow statically linking HDF5 on windows.
+- Disallow bypassing updates in CI, to force tests to run update scenarios
+
 ### Dependencies
 
 - `anyhow`: 1.0.97 → 1.0.98 ([#228](https://github.com/luftkode/plotinator3000/pull/228))
