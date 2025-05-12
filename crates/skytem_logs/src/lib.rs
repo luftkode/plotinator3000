@@ -6,6 +6,7 @@ pub mod generator;
 pub mod mbed_motor_control;
 pub mod navsys;
 pub mod util;
+pub mod wasp200;
 
 /// Parse the unique description string from a 128-byte array
 ///

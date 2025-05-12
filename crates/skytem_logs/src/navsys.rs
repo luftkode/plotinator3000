@@ -10,7 +10,7 @@ use header::NavSysSpsHeader;
 use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
-mod entries;
+pub(crate) mod entries;
 mod header;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
