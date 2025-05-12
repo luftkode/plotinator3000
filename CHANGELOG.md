@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 
 - `anyhow`: 1.0.97 → 1.0.98 ([#228](https://github.com/luftkode/plotinator3000/pull/228))
+- `chrono`: 0.4.40 → 0.4.41 ([#239](https://github.com/luftkode/plotinator3000/pull/239))
+- `tokio`: 1.44.2 → 1.45.0 ([#239](https://github.com/luftkode/plotinator3000/pull/239))
+- `tempfile`: 3.19.1 → 3.20.0 ([#239](https://github.com/luftkode/plotinator3000/pull/239))
+- `toml`: 0.8.20 → 0.8.22 ([#239](https://github.com/luftkode/plotinator3000/pull/239))
 
 ## [1.11.1]
 
