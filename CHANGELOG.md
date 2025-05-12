@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Switch to `mimalloc` as the global allocator for significant performance improvements (~20%)
 
+### Dependencies
+
+- Run `cargo update`
+
 ### Internal
 
 - Better encapsulation of MQTT features in GUI code
