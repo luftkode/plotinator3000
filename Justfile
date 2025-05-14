@@ -10,6 +10,10 @@ PROJECT_NAME := "plotinator3000"
 
 alias t := test
 alias l := lint
+alias lint-native := clippy-native
+alias ln := clippy-native
+alias lint-web := clippy-wasm
+alias lw := clippy-wasm
 alias fmt := format
 alias f := format
 alias d := doc
