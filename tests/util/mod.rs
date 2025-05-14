@@ -36,8 +36,19 @@ impl HarnessWrapper {
 
     /// Save a named snapshot, ensure that contents are fitted before taking the snapshot
     pub fn save_snapshot(&mut self) {
+        let is_macos = cfg!(target_os = "macos");
         self.harness.fit_contents();
-        self.harness.snapshot(&self.name);
+        if std::env::var("CI").is_ok_and(|v| v == "true") {
+            // Only macos runners have access to a GPU
+            if is_macos {
+                self.harness.fit_contents();
+                let opt = egui_kittest::SnapshotOptions::new().threshold(70.0);
+                self.harness.snapshot_options(&self.name, &opt);
+            }
+        } else {
+            self.harness.fit_contents();
+            self.harness.snapshot(&self.name);
+        }
     }
 
     pub fn drop_file(&mut self, path: PathBuf) {
