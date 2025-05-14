@@ -166,7 +166,7 @@ mod tests {
     use super::*;
     use test_util::*;
 
-    use crate::mbed_motor_control::mbed_config::MbedConfig;
+    use crate::mbed_motor_control::mbed_config::MbedConfig as _;
 
     #[test]
     fn test_deserialize() -> TestResult {

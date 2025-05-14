@@ -93,13 +93,13 @@ pub fn set_zoom_factor(scroll: Vec2, modifiers: Modifiers) -> Option<Vec2> {
     let ctrl_plus_alt = modifiers.alt && ctrl;
 
     if ctrl_plus_alt {
-        log::info!("CTRL+ALT locks X-axis");
+        log::debug!("CTRL+ALT locks X-axis");
         zoom_factor.x = 1.0;
     } else if ctrl {
-        log::info!("CTRL locks Y-axis");
+        log::debug!("CTRL locks Y-axis");
         zoom_factor.y = 1.0;
     }
 
-    log::info!("zoom_factor={zoom_factor}");
+    log::debug!("zoom_factor={zoom_factor}");
     if ctrl { Some(zoom_factor) } else { None }
 }

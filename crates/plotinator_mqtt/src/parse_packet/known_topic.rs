@@ -35,6 +35,11 @@ pub(crate) enum KnownTopic {
     PilotDisplayHeading,
     #[strum(serialize = "closest_line")]
     PilotDisplayClosestLine,
+    #[strum(serialize = "$SYS/broker/uptime")]
+    SYSBrokerUptime,
+    // We cannot meaningfully plot this, but we use it to show the version when choosing a broker to connect to
+    #[strum(serialize = "$SYS/broker/version")]
+    SYSBrokerVersion,
 }
 
 /// Debug packet with a single value
@@ -61,27 +66,27 @@ pub(crate) struct DebugSensorsGps {
 }
 
 impl KnownTopic {
-    pub(crate) fn parse_packet(self, p: &str) -> anyhow::Result<MqttData> {
+    pub(crate) fn parse_packet(self, p: &str) -> anyhow::Result<Option<MqttData>> {
         match self {
             Self::PilotDisplaySpeed => {
                 let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
                 let value = p.speed()?;
-                Ok(self.into_single_mqtt_data(value))
+                Ok(Some(self.into_single_mqtt_data(value)))
             }
             Self::PilotDisplayAltitude => {
                 let p: PilotDisplayAltitudePacket = serde_json::from_str(p)?;
                 let value = p.height()?;
-                Ok(self.into_single_mqtt_data(value))
+                Ok(Some(self.into_single_mqtt_data(value)))
             }
             Self::PilotDisplayHeading => {
                 let p: PilotDisplayHeadingPacket = serde_json::from_str(p)?;
                 let value = p.heading()?;
-                Ok(self.into_single_mqtt_data(value))
+                Ok(Some(self.into_single_mqtt_data(value)))
             }
             Self::PilotDisplayClosestLine => {
                 let p: PilotDisplayClosestLinePacket = serde_json::from_str(p)?;
                 let distance = p.distance();
-                Ok(self.into_single_mqtt_data(distance))
+                Ok(Some(self.into_single_mqtt_data(distance)))
             }
             // Debug topics for development and for inspiration for how to implement parsing of various kinds of
             // topics and payloads
@@ -89,14 +94,14 @@ impl KnownTopic {
             | Self::DebugSensorsHumidity
             | Self::DebugSensorsPressure => {
                 let sp: DebugSensorPacket = serde_json::from_str(p)?;
-                Ok(self.into_single_mqtt_data(sp.value))
+                Ok(Some(self.into_single_mqtt_data(sp.value)))
             }
             Self::DebugSensorsGps => {
                 let sp: DebugSensorsGps = serde_json::from_str(p)?;
                 let td1 = MqttTopicData::single(self.subtopic_str("lat"), sp.value1);
                 let td2 = MqttTopicData::single(self.subtopic_str("lon"), sp.value2);
                 let d = MqttData::multiple(vec![td1, td2]);
-                Ok(d)
+                Ok(Some(d))
             }
             Self::DebugSensorsMag => {
                 let values: Vec<ValueWithTimestampString> =
@@ -109,7 +114,17 @@ impl KnownTopic {
                     points.push(p);
                 }
                 let td = MqttTopicData::multiple(self.to_string(), points);
-                Ok(MqttData::single(td))
+                Ok(Some(MqttData::single(td)))
+            }
+            Self::SYSBrokerUptime => {
+                // Example payload: '2256144 seconds'
+                let uptime_str = p.trim_end_matches(" seconds");
+                let uptime: f64 = uptime_str.parse()?;
+                Ok(Some(self.into_single_mqtt_data(uptime)))
+            }
+            Self::SYSBrokerVersion => {
+                // Does not make sense to plot
+                Ok(None)
             }
         }
     }
@@ -140,7 +155,7 @@ impl KnownTopic {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use super::*;
     use serde_json::json;

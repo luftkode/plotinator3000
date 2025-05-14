@@ -13,7 +13,7 @@ pub fn show_settings_grid(
     ui.horizontal_wrapped(|ui| {
         plot_settings.show(ui);
         ui.label("|");
-        let axis_cfg_str = RichText::new(format!("{} Axis config", regular::GEAR));
+        let axis_cfg_str = RichText::new(format!("{icon} Axis", icon = regular::GEAR));
         if ui.button(axis_cfg_str.clone()).clicked() {
             axis_cfg.ui_visible = !axis_cfg.ui_visible;
         }

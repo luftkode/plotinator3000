@@ -75,9 +75,7 @@ impl LogPlotUi {
         ui: &mut egui::Ui,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        mqtt_plots: &[plotinator_mqtt::MqttPlotPoints],
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] set_auto_bounds: &mut bool,
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt: &mut crate::mqtt::Mqtt,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -129,10 +127,14 @@ impl LogPlotUi {
         plot_settings.refresh(plots);
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        let mode = if mqtt_plots.is_empty() {
-            PlotMode::Logs(plots)
-        } else {
-            PlotMode::MQTT(mqtt_plots, set_auto_bounds)
+        let mode = {
+            mqtt.show_waiting_for_initial_data(ui);
+            let mqtt_plots = crate::mqtt::Mqtt::plots(mqtt.mqtt_data_receiver.as_ref());
+            if mqtt_plots.is_empty() {
+                PlotMode::Logs(plots)
+            } else {
+                PlotMode::MQTT(mqtt_plots, &mut mqtt.set_auto_bounds)
+            }
         };
         #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]
         let mode = PlotMode::Logs(plots);

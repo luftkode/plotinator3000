@@ -99,12 +99,16 @@ tokio = "1.44.2"
 testresult.workspace = true
 tempfile.workspace = true
 reqwest.workspace = true
+# For GUI and GUI snapshot tests
+egui_kittest = { version = "0.31.1", features = ["eframe", "snapshot", "wgpu", "x11"] }
+
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 zip = "2.6.1"
 axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
+mimalloc = "0.1.46"
 plotinator_mqtt = { workspace = true, optional = true}
 profiling = { workspace = true, optional = true}
 puffin = { workspace = true, optional = true}
@@ -171,7 +175,6 @@ clear_with_drain = "warn"
 cloned_instead_of_copied = "warn"
 dbg_macro = "warn"
 debug_assert_with_mut_call = "warn"
-derive_partial_eq_without_eq = "warn"
 doc_link_with_quotes = "warn"
 doc_markdown = "warn"
 empty_enum = "warn"

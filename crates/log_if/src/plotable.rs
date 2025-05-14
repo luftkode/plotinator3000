@@ -65,7 +65,7 @@ impl RawPlot {
     }
 }
 
-/// [`PlotLabel`] represents some text label that should be displayed in the plot
+/// [`PlotLabels`] represents some text label that should be displayed in the plot
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PlotLabels {
     label_points: Vec<([f64; 2], String)>,

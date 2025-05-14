@@ -4,6 +4,7 @@ export RUSTFLAGS := "-D warnings"
 export RUSTDOCFLAGS := "-D warnings"
 export RUST_LOG := "debug"
 
+
 ci: lint check fmt test trunk audit dist-plan
 
 # We only check the most common native linux target because that is the target we usually develop on,
@@ -24,6 +25,11 @@ lint:
     typos
 
 # Run all tests with the CI profile and include all ignored tests
+[confirm("
+Are you sure you want to run tests in CI mode?
+Some tests will touch your environment (e.g. .profile)
+with installers and artifacts from the upgrade functionality
+")]
 test:
     cargo nextest run --workspace --profile ci --run-ignored=all
 

@@ -16,6 +16,10 @@
 
 Inspect logs from SkyTEM systems.
 
+## Example (snapshot)
+
+![plotinator3000_snapshot](./tests/snapshots/dropped_mbed_pid_regular_v6.png)
+
 ## Why is this repository public?
 
 For inspiration/educational purposes. Anyone developing `egui`/`eframe` apps may or may not find any of the solutions in this repository useful for their own project(s).

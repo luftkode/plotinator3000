@@ -28,10 +28,6 @@ pub struct App {
     #[serde(skip)]
     toasts: Toasts,
 
-    // auto scale plot bounds (MQTT only)
-    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    pub set_auto_bounds: bool,
-
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
@@ -40,12 +36,7 @@ pub struct App {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     #[serde(skip)]
-    mqtt_data_receiver: Option<plotinator_mqtt::MqttDataReceiver>,
-    #[serde(skip)]
-    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    mqtt_config_window: Option<plotinator_mqtt::MqttConfigWindow>,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    mqtt_cfg_window_open: bool,
+    mqtt: crate::mqtt::Mqtt,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -70,13 +61,7 @@ impl Default for App {
             error_message: None,
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            mqtt_config_window: None,
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            mqtt_cfg_window_open: false,
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            set_auto_bounds: false,
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            mqtt_data_receiver: None,
+            mqtt: crate::mqtt::Mqtt::default(),
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),
@@ -148,27 +133,9 @@ impl eframe::App for App {
                 &self.loaded_files.take_loaded_files(),
                 &mut self.toasts,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                self.mqtt_data_receiver
-                    .as_ref()
-                    .map(|mdc| mdc.plots())
-                    .unwrap_or_default(),
-                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                &mut self.set_auto_bounds,
+                &mut self.mqtt,
             );
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            if let Some(mqtt_receiver) = self.mqtt_data_receiver.as_ref() {
-                if mqtt_receiver.plots().is_empty() {
-                    ui.add_space(20.);
-                    ui.vertical_centered_justified(|ui| {
-                        ui.heading("Waiting for data on any of the following topics:");
-                        for topic in mqtt_receiver.subscribed_topics() {
-                            ui.label(topic);
-                        }
-                        ui.spinner();
-                    });
-                }
-            }
             if self.plot.plot_count() == 0 {
                 // Display the message when plots are shown
                 util::draw_empty_state(ui);
@@ -242,8 +209,8 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
         egui::menu::bar(ui, |ui| {
             if ui
                 .button(RichText::new(format!(
-                    "{} Reset",
-                    egui_phosphor::regular::TRASH
+                    "{icon} Reset",
+                    icon = egui_phosphor::regular::TRASH
                 )))
                 .clicked()
             {
@@ -260,15 +227,12 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 app.plot = LogPlotUi::default();
 
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                {
-                    app.mqtt_config_window = None;
-                    app.mqtt_data_receiver = None;
-                }
+                app.mqtt.reset();
             }
             if ui
                 .button(RichText::new(format!(
-                    "{} Open File",
-                    egui_phosphor::regular::FOLDER_OPEN
+                    "{icon} Open File",
+                    icon = egui_phosphor::regular::FOLDER_OPEN
                 )))
                 .clicked()
             {
@@ -306,27 +270,15 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             {
                 if ui.button("MQTT connect").clicked() {
-                    app.mqtt_config_window = Some(plotinator_mqtt::MqttConfigWindow::default());
-                    app.mqtt_cfg_window_open = true;
+                    app.mqtt.connect();
                 }
 
-                if let Some(data_receiver) = &mut app.mqtt_data_receiver {
-                    data_receiver.poll();
+                if app.mqtt.listener_active() {
+                    app.mqtt.poll_data();
                     ctx.request_repaint_after(Duration::from_millis(50));
                 }
                 // Show MQTT configuration window if needed
-                if app.mqtt_data_receiver.is_none() {
-                    if let Some(config) = &mut app.mqtt_config_window {
-                        if let Some(data_receiver) = crate::mqtt_window::show_mqtt_window(
-                            ctx,
-                            &mut app.mqtt_cfg_window_open,
-                            config,
-                        ) {
-                            app.mqtt_data_receiver = Some(data_receiver);
-                            app.set_auto_bounds = true;
-                        }
-                    }
-                }
+                app.mqtt.show_connect_window(ctx);
             }
             collapsible_instructions(ui);
         });
