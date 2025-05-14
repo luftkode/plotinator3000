@@ -83,11 +83,6 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: cargo nextest run --workspace --profile ci --run-ignored=all
 
-      - name: Test ${{ matrix.os }}
-        if: matrix.os != 'macos-latest'
-        run:
-          cargo nextest run --workspace --profile ci --run-ignored=all
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         if: matrix.os == 'macos-latest' && always()

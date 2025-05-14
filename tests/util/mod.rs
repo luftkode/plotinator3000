@@ -55,7 +55,7 @@ impl HarnessWrapper {
 
     /// Save a named snapshot, ensure that contents are fitted before taking the snapshot
     ///
-    /// `ci_threshold` specifies how much difference we allow in CI before a snapshot diff is an error.
+    /// [`CiThreshold`] specifies how much difference we allow in CI before a snapshot diff is an error.
     ///
     /// In CI the snapshot rendering is done on a Mac OS runner, as they are the only ones with
     /// access to a GPU. Typically a threshold of 1-2 is enough to not get false positives,
