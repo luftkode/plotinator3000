@@ -86,7 +86,7 @@ jobs:
       - name: Test ${{ matrix.os }}
         if: matrix.os != 'macos-latest'
         run:
-          cargo nextest run --workspace --profile ci --run-ignored=all --filterset 'not test(test_snapshot)'
+          cargo nextest run --workspace --profile ci --run-ignored=all
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

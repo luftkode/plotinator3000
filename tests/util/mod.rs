@@ -13,6 +13,20 @@ pub fn get_harness() -> Harness<'static, plotinator3000::App> {
     Harness::new_eframe(|cc| plotinator3000::App::new(cc))
 }
 
+const DEFAULT_CI_DIFF_THRESHOLD: f32 = 1.0;
+
+/// specifies how much difference we allow in CI before a snapshot diff is an error.
+///
+/// Default is `1.0`
+#[derive(Clone, Copy)]
+pub struct CiThreshold(pub f32);
+
+impl Default for CiThreshold {
+    fn default() -> Self {
+        Self(DEFAULT_CI_DIFF_THRESHOLD)
+    }
+}
+
 pub struct HarnessWrapper {
     name: String,
     harness: Harness<'static, plotinator3000::App>,
@@ -36,17 +50,28 @@ impl HarnessWrapper {
 
     /// Save a named snapshot, ensure that contents are fitted before taking the snapshot
     pub fn save_snapshot(&mut self) {
+        self.save_snapshot_with_threshold(CiThreshold::default());
+    }
+
+    /// Save a named snapshot, ensure that contents are fitted before taking the snapshot
+    ///
+    /// `ci_threshold` specifies how much difference we allow in CI before a snapshot diff is an error.
+    ///
+    /// In CI the snapshot rendering is done on a Mac OS runner, as they are the only ones with
+    /// access to a GPU. Typically a threshold of 1-2 is enough to not get false positives,
+    /// but for a snapshot that includes a plot with lots of narrow lines (like plotting Mbed PID log)
+    /// the threshold will need to be higher.
+    pub fn save_snapshot_with_threshold(&mut self, threshold: CiThreshold) {
         let is_macos = cfg!(target_os = "macos");
         self.harness.fit_contents();
+
         if std::env::var("CI").is_ok_and(|v| v == "true") {
             // Only macos runners have access to a GPU
             if is_macos {
-                self.harness.fit_contents();
-                let opt = egui_kittest::SnapshotOptions::new().threshold(70.0);
+                let opt = egui_kittest::SnapshotOptions::new().threshold(threshold.0);
                 self.harness.snapshot_options(&self.name, &opt);
             }
         } else {
-            self.harness.fit_contents();
             self.harness.snapshot(&self.name);
         }
     }

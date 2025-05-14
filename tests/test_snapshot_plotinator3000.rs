@@ -57,5 +57,7 @@ fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
     harness.input_event(egui::Event::PointerMoved(cursor_pos));
     harness.step();
 
-    harness.save_snapshot();
+    // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
+    // a higher diff from GPU to GPU
+    harness.save_snapshot_with_threshold(CiThreshold(62.0));
 }
