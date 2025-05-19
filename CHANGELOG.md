@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `chrono`: 0.4.40 → 0.4.41 ([#240](https://github.com/luftkode/plotinator3000/pull/240))
+- `tokio`: 1.44.2 → 1.45.0 ([#240](https://github.com/luftkode/plotinator3000/pull/240))
+- `zip`: 2.6.1 → 3.0.0 ([#240](https://github.com/luftkode/plotinator3000/pull/240))
+- `tempfile`: 3.19.1 → 3.20.0 ([#240](https://github.com/luftkode/plotinator3000/pull/240))
+- `toml`: 0.8.20 → 0.8.22 ([#240](https://github.com/luftkode/plotinator3000/pull/240))
+
 ## [1.12.0]
 
 ### Changed
