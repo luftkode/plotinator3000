@@ -1,13 +1,14 @@
 use std::{
     collections::HashSet,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use crate::{
-    broker_validator::{BrokerStatus, BrokerValidator}, data_receiver::MqttDataReceiver,
+    broker_validator::{BrokerStatus, BrokerValidator, ValidatorStatus},
+    data_receiver::MqttDataReceiver,
     topic_discoverer::TopicDiscoverer,
 };
 
@@ -123,8 +124,8 @@ impl MqttConfigWindow {
         self.broker_validator.broker_status()
     }
 
-    pub fn validation_in_progress(&self) -> bool {
-        self.broker_validator.validation_in_progress()
+    pub fn validator_status(&self) -> ValidatorStatus {
+        self.broker_validator.status()
     }
 
     pub fn poll_broker_status(&mut self) {

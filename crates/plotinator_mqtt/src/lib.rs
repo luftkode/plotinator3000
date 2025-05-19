@@ -1,6 +1,6 @@
 use plotinator_macros::non_wasm_modules;
 non_wasm_modules!(
-    pub(crate) mod broker_validator;
+    pub mod broker_validator;
     pub(crate) mod mqtt_listener;
     pub(crate) mod topic_discoverer;
     pub(crate) mod parse_packet;

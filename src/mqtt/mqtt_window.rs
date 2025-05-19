@@ -2,7 +2,7 @@ use egui::Color32;
 use egui::RichText;
 use egui::ScrollArea;
 use egui::Ui;
-use plotinator_mqtt::BrokerStatus;
+use plotinator_mqtt::{BrokerStatus, broker_validator::ValidatorStatus};
 use plotinator_mqtt::{MqttConfigWindow, MqttDataReceiver};
 
 use crate::util::theme_color;
@@ -47,13 +47,20 @@ fn show_broker_config_column(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow
                 .on_hover_text("1883 is the default MQTT broker port");
         });
 
-        if mqtt_cfg_window.validation_in_progress() {
-            ui.horizontal(|ui| {
-                ui.spinner();
-                ui.label("Checking for broker...");
-            });
-        } else {
-            show_broker_status(ui, mqtt_cfg_window.broker_status());
+        match mqtt_cfg_window.validator_status() {
+            ValidatorStatus::Inactive => show_broker_status(ui, mqtt_cfg_window.broker_status()),
+            ValidatorStatus::Connecting => {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label("Checking for broker...");
+                });
+            }
+            ValidatorStatus::RetrievingVersion => {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label("Retrieving broker version...");
+                });
+            }
         }
 
         mqtt_cfg_window.poll_broker_status();
