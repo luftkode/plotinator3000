@@ -19,7 +19,6 @@ use std::{
 #[cfg(not(target_arch = "wasm32"))]
 mod hdf;
 pub(crate) mod logs;
-mod util;
 
 /// Represents a supported format, which can be any of the supported format types.
 ///
@@ -112,8 +111,8 @@ impl SupportedFormat {
         log::debug!("Parsing content of length: {total_bytes}");
 
         let mut reader = BufReader::new(file);
-        let log: Self = if util::path_has_hdf_extension(path) {
-            Self::parse_hdf_from_path(path)?
+        let log: Self = if skytem_hdf5::path_has_hdf5_extension(path) {
+            Self::parse_hdf5_from_path(path)?
         } else if PidLog::file_is_valid(path) {
             let (log, parsed_bytes) = PidLog::from_reader(&mut reader)?;
             log::debug!("Read: {parsed_bytes} bytes");
@@ -155,7 +154,7 @@ impl SupportedFormat {
 
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
-    fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
+    fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
         use skytem_hdf5::bifrost::BifrostLoopCurrent;
         // Attempt to parse it has an hdf5 file
         if let Ok(bifrost_loop_current) = BifrostLoopCurrent::from_path(path) {
@@ -170,7 +169,7 @@ impl SupportedFormat {
 
     #[cfg(not(feature = "hdf5"))]
     #[cfg(not(target_arch = "wasm32"))]
-    fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
+    fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(
@@ -181,7 +180,7 @@ impl SupportedFormat {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
+    fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(

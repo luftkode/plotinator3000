@@ -71,7 +71,7 @@ reqwest = "0.12.15"
 skytem_logs.workspace = true
 log_if.workspace = true
 plot_util.workspace = true
-skytem_hdf5 = { workspace = true, optional = true }
+skytem_hdf5.workspace = true
 test_util.workspace = true
 plotinator_macros.workspace = true
 egui_plot.workspace = true
@@ -126,7 +126,7 @@ elevated-command.workspace = true
 
 [features]
 default = ["selfupdater", "mqtt", "hdf5"]
-hdf5 = ["dep:skytem_hdf5"]
+hdf5 = []
 selfupdater = ["dep:axoupdater"]
 mqtt = ["dep:plotinator_mqtt"]
 profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
