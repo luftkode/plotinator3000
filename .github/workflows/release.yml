@@ -130,7 +130,7 @@ jobs:
           fi
       - name: "Update RUSTFLAGS with custom windows linker flags"
         if: "runner.os == 'Windows'"
-        run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib\" >> \"$GITHUB_ENV\""
+        run: "echo RUSTFLAGS=\"$RUSTFLAGS -Ctarget-feature=+crt-static -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib\" >> \"$GITHUB_ENV\""
         shell: "bash"
       - uses: swatinem/rust-cache@v2
         with:
