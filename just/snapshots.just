@@ -5,7 +5,7 @@ test-snapshots *ARGS="":
 
 # Run snapshot tests and update the snapshots
 [group("Snapshot Tests"), no-exit-message]
-test-snapshots-update $UPDATE_SNAPSHOT="1":
+test-snapshots-update $UPDATE_SNAPSHOTS="1":
     cargo {{test}} test_snapshot
 
 # Delete all the snapshot images
