@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 
 - Run `cargo update`
+- `zip`: 2.6.1 → 3.0.0 ([#243](https://github.com/luftkode/plotinator3000/pull/243))
 
 ### Internal
 
