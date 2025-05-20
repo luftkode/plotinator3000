@@ -1,12 +1,6 @@
-- name: Install Just
-  uses: extractions/setup-just@v3
-- name: Install HDF5
-  shell: bash
-  run: just init::install-hdf5-headers
-
-- name: Run MSI installer (windows)
+# A workaround for
+# https://github.com/axodotdev/cargo-dist/issues/1571
+# See the .cargo/config.toml for more information about these flags.
+- name: Update RUSTFLAGS with custom windows linker flags
   if: runner.os == 'Windows'
-  shell: pwsh
-  run: |
-    cd just\hdf
-    msiexec /i HDF5-1.14.0-win64.msi /quiet /qn /norestart
+  run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib" >> "$GITHUB_ENV"
