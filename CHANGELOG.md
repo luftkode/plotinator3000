@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Run `cargo update`
 - `zip`: 2.6.1 → 3.0.0 ([#243](https://github.com/luftkode/plotinator3000/pull/243))
+- `cargo-bins/cargo-binstall`: 1.12.3 → 1.12.4 ([#238](https://github.com/luftkode/plotinator3000/pull/238))
 
 ### Internal
 
