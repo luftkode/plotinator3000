@@ -1,7 +1,12 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-#[cfg(not(target_arch = "wasm32"))]
+// Don't enable on ARM64 Linux due to:
+// 'c_src/mimalloc/src/options.c:215:19: error: expansion of date or time macro is not reproducible [-Werror,-Wdate-time]'
+#[cfg(not(any(
+    target_arch = "wasm32",
+    all(target_arch = "aarch64", target_os = "linux")
+)))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc; // Much faster allocator, frames rendered ~25% faster on windows 11
 
