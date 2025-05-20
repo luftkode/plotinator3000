@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Discover broker `$SYS`-topics
+- Show reachable broker's version if available
+- Better UX for the MQTT connection window
+
+### Changed
+
+- Switch to `mimalloc` as the global allocator for significant performance improvements (~20%)
+
+### Dependencies
+
+- Run `cargo update`
+
+### Internal
+
+- Better encapsulation of MQTT features in GUI code
+- Added GUI tests, including snapshot tests
+
 ## [1.12.0]
 
 ### Changed

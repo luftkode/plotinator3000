@@ -37,3 +37,10 @@ pub(crate) fn parse_timestamp_to_nanos_f64(
     // Total nanoseconds since epoch
     Ok((seconds * 1_000_000_000.0) + nanos)
 }
+
+pub(crate) fn timestamped_client_id(name: impl Into<String>) -> String {
+    let mut client_id = name.into();
+    client_id.push('-');
+    client_id.push_str(&now_timestamp().to_string());
+    client_id
+}

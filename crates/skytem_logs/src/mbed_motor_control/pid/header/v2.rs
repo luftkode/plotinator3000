@@ -170,7 +170,7 @@ mod tests {
     use super::*;
     use test_util::*;
 
-    use io::Read;
+    use io::Read as _;
 
     #[test]
     fn test_deserialize() -> TestResult {

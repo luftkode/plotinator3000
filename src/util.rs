@@ -1,6 +1,7 @@
 use std::{ops::RangeInclusive, time::Duration};
 
 use chrono::{DateTime, Timelike as _};
+use egui::{Color32, Ui};
 use egui_plot::{GridMark, PlotPoint};
 
 /// Format a timestamp in milliseconds into `HH:MM:SS.ms`
@@ -125,5 +126,14 @@ pub fn format_data_size(size_bytes: usize) -> String {
             let gib_bytes = size_bytes as f64 / GI_B_DIVIDER;
             format!("{gib_bytes:.2} GiB")
         }
+    }
+}
+
+/// Selects between the colors based on the current UI theme
+#[must_use]
+pub(crate) fn theme_color(ui: &Ui, dark: Color32, light: Color32) -> Color32 {
+    match ui.ctx().theme() {
+        egui::Theme::Dark => dark,
+        egui::Theme::Light => light,
     }
 }

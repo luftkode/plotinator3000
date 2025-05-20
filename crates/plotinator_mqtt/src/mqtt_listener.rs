@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use crate::data::listener::MqttData;
+use crate::{data::listener::MqttData, util::timestamped_client_id};
 
 pub fn mqtt_listener(
     tx: &mpsc::Sender<MqttData>,
@@ -47,18 +47,14 @@ pub fn mqtt_listener(
 }
 
 fn setup_client(broker_host: String, broker_port: u16) -> (rumqttc::Client, rumqttc::Connection) {
-    let timestamp_id = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_millis();
     let mut mqttoptions = MqttOptions::new(
-        format!("plotinator3000-{timestamp_id}"),
+        timestamped_client_id("plotinator3000"),
         broker_host,
         broker_port,
     );
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
-    Client::new(mqttoptions, 100)
+    Client::new(mqttoptions, 10000)
 }
 
 fn handle_event_packet(tx: &mpsc::Sender<MqttData>, packet: rumqttc::Publish) {
