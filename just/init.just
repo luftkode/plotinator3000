@@ -9,7 +9,8 @@ init: install-devtools
 [group("Init"), doc("Install the required tools for performing all dev tasks for the project")]
 install-devtools:
     cargo install trunk --locked
-    cargo install cargo-dist --locked
+    # Use the uv fork that is still maintained
+    cargo install cargo-dist --locked --git https://github.com/astral-sh/cargo-dist.git --tag v0.28.5
     cargo install typos-cli --locked
     cargo install cargo-audit --locked
 
