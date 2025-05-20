@@ -1,20 +1,7 @@
 # A workaround for
 # https://github.com/axodotdev/cargo-dist/issues/1571
 # See the .cargo/config.toml for more information about these flags.
-# And divided into individual steps because it doesn't work as a single step for some reason
-
-- name: Update RUSTFLAGS with -Clink-args=/DEFAULTLIB:ucrt.lib
+- name: Update RUSTFLAGS with custom windows linker flags
   if: runner.os == 'Windows'
-  run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib" >> "$GITHUB_ENV"
-
-- name: Update RUSTFLAGS with -Clink-args=/NODEFAULTLIB:vcruntime.lib
-  if: runner.os == 'Windows'
-  run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/NODEFAULTLIB:vcruntime.lib" >> "$GITHUB_ENV"
-
-- name: Update RUSTFLAGS with -Clink-args=/NODEFAULTLIB:msvcrt.lib
-  if: runner.os == 'Windows'
-  run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/NODEFAULTLIB:msvcrt.lib" >> "$GITHUB_ENV"
-
-- name: Update RUSTFLAGS with -Clink-args=/NODEFAULTLIB:libucrt.lib
-  if: runner.os == 'Windows'
-  run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/NODEFAULTLIB:libucrt.lib" >> "$GITHUB_ENV"
+  shell: bash
+  run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib" >> "$GITHUB_ENV"
