@@ -128,9 +128,18 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
-      - name: "Update RUSTFLAGS with custom windows linker flags"
+      - name: "Update RUSTFLAGS with -Clink-args=/DEFAULTLIB:ucrt.lib"
         if: "runner.os == 'Windows'"
-        run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib\" >> \"$GITHUB_ENV\""
+        run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib\" >> \"$GITHUB_ENV\""
+      - name: "Update RUSTFLAGS with -Clink-args=/NODEFAULTLIB:vcruntime.lib"
+        if: "runner.os == 'Windows'"
+        run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/NODEFAULTLIB:vcruntime.lib\" >> \"$GITHUB_ENV\""
+      - name: "Update RUSTFLAGS with -Clink-args=/NODEFAULTLIB:msvcrt.lib"
+        if: "runner.os == 'Windows'"
+        run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/NODEFAULTLIB:msvcrt.lib\" >> \"$GITHUB_ENV\""
+      - name: "Update RUSTFLAGS with -Clink-args=/NODEFAULTLIB:libucrt.lib"
+        if: "runner.os == 'Windows'"
+        run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/NODEFAULTLIB:libucrt.lib\" >> \"$GITHUB_ENV\""
       - uses: swatinem/rust-cache@v2
         with:
           key: ${{ join(matrix.targets, '-') }}
