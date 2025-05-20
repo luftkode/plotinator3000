@@ -1,4 +1,4 @@
-// File extensions we recognize as hdf files.
+// File extensions we recognize as hdf5 files.
 const POSSIBLE_HDF_EXTENSIONS_CASE_INSENSITIVE: [&str; 3] = ["h5", "hdf", "hdf5"];
 
 pub fn path_has_hdf_extension(path: &std::path::Path) -> bool {

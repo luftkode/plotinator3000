@@ -33,7 +33,7 @@ test_util.path = "crates/test_util"
 skytem_logs.path = "crates/skytem_logs"
 log_if.path = "crates/log_if"
 plot_util.path = "crates/plot_util"
-skytem_hdf.path = "crates/skytem_hdf"
+skytem_hdf5.path = "crates/skytem_hdf5"
 plotinator_mqtt.path = "crates/plotinator_mqtt"
 plotinator_macros.path = "crates/plotinator_macros"
 egui = { version = "0.31", features = ["rayon", "callstack"] }
@@ -71,7 +71,7 @@ reqwest = "0.12.15"
 skytem_logs.workspace = true
 log_if.workspace = true
 plot_util.workspace = true
-skytem_hdf = { workspace = true, optional = true }
+skytem_hdf5 = { workspace = true, optional = true }
 test_util.workspace = true
 plotinator_macros.workspace = true
 egui_plot.workspace = true
@@ -125,8 +125,8 @@ web-sys = "0.3.70"
 elevated-command.workspace = true
 
 [features]
-default = ["selfupdater", "mqtt", "hdf"]
-hdf = ["dep:skytem_hdf"]
+default = ["selfupdater", "mqtt", "hdf5"]
+hdf5 = ["dep:skytem_hdf5"]
 selfupdater = ["dep:axoupdater"]
 mqtt = ["dep:plotinator_mqtt"]
 profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]

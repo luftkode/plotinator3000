@@ -15,7 +15,7 @@ use std::{
     path::Path,
 };
 
-#[cfg(feature = "hdf")]
+#[cfg(feature = "hdf5")]
 #[cfg(not(target_arch = "wasm32"))]
 mod hdf;
 pub(crate) mod logs;
@@ -31,7 +31,7 @@ mod util;
 )]
 pub enum SupportedFormat {
     Log(SupportedLog),
-    #[cfg(feature = "hdf")]
+    #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF...")]
     HDF(hdf::SupportedHdfFormat),
@@ -153,28 +153,28 @@ impl SupportedFormat {
         Ok(log)
     }
 
-    #[cfg(feature = "hdf")]
+    #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
-        use skytem_hdf::bifrost::BifrostLoopCurrent;
-        // Attempt to parse it has an hdf file
+        use skytem_hdf5::bifrost::BifrostLoopCurrent;
+        // Attempt to parse it has an hdf5 file
         if let Ok(bifrost_loop_current) = BifrostLoopCurrent::from_path(path) {
             Ok(Self::HDF(bifrost_loop_current.into()))
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "Unrecognized HDF file",
+                "Unrecognized HDF5 file",
             ))
         }
     }
 
-    #[cfg(not(feature = "hdf"))]
+    #[cfg(not(feature = "hdf5"))]
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf_from_path(path: &Path) -> io::Result<Self> {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(
-                "Recognized '{}' as an HDF file. But the HDF feature is turned off.",
+                "Recognized '{}' as an HDF5 file. But the HDF5 feature is turned off.",
                 path.display()
             ),
         ))
@@ -185,7 +185,7 @@ impl SupportedFormat {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(
-                "Recognized '{}' as an HDF file. HDF files are only supported on the native version",
+                "Recognized '{}' as an HDF5 file. HDF5 files are only supported on the native version",
                 path.display()
             ),
         ))
@@ -194,12 +194,12 @@ impl SupportedFormat {
     /// Returns [`None`] if there's no meaningful parsing information such as with HDF5 files.
     #[allow(
         clippy::unnecessary_wraps,
-        reason = "HDF files are not supported on web (yet?) and the lint is triggered when compiling for web since then only logs are supported which always have parse info"
+        reason = "HDF5 files are not supported on web (yet?) and the lint is triggered when compiling for web since then only logs are supported which always have parse info"
     )]
     pub fn parse_info(&self) -> Option<ParseInfo> {
         match self {
             Self::Log(l) => Some(l.parse_info()),
-            #[cfg(feature = "hdf")]
+            #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(_) => None,
         }
@@ -211,7 +211,7 @@ impl Plotable for SupportedFormat {
         match self {
             Self::Log(l) => l.raw_plots(),
 
-            #[cfg(feature = "hdf")]
+            #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.raw_plots(),
         }
@@ -220,7 +220,7 @@ impl Plotable for SupportedFormat {
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
         match self {
             Self::Log(l) => l.first_timestamp(),
-            #[cfg(feature = "hdf")]
+            #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.first_timestamp(),
         }
@@ -229,7 +229,7 @@ impl Plotable for SupportedFormat {
     fn descriptive_name(&self) -> &str {
         match self {
             Self::Log(l) => l.descriptive_name(),
-            #[cfg(feature = "hdf")]
+            #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.descriptive_name(),
         }
@@ -238,7 +238,7 @@ impl Plotable for SupportedFormat {
     fn labels(&self) -> Option<&[PlotLabels]> {
         match self {
             Self::Log(l) => l.labels(),
-            #[cfg(feature = "hdf")]
+            #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.labels(),
         }
@@ -247,7 +247,7 @@ impl Plotable for SupportedFormat {
     fn metadata(&self) -> Option<Vec<(String, String)>> {
         match self {
             Self::Log(l) => l.metadata(),
-            #[cfg(feature = "hdf")]
+            #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.metadata(),
         }
