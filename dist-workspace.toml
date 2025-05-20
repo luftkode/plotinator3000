@@ -17,6 +17,4 @@ install-path = "CARGO_HOME"
 install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "upload"
-# Whether +crt-static should be used on msvc
-msvc-crt-static = false
 github-build-setup = "../custom_build_setup/build-setup.yml"

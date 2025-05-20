@@ -125,7 +125,7 @@ web-sys = "0.3.70"
 elevated-command.workspace = true
 
 [features]
-default = ["selfupdater", "mqtt"]
+default = ["selfupdater", "mqtt", "hdf"]
 hdf = ["dep:skytem_hdf"]
 selfupdater = ["dep:axoupdater"]
 mqtt = ["dep:plotinator_mqtt"]
