@@ -106,7 +106,7 @@ egui_kittest = { version = "0.31.1", features = ["eframe", "snapshot", "wgpu", "
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
-zip = "2.6.1"
+zip = "3.0.0"
 axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
 mimalloc = "0.1.46"
 plotinator_mqtt = { workspace = true, optional = true}
