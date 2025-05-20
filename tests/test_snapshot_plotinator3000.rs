@@ -1,5 +1,5 @@
 mod util;
-use test_util::{mbed_pid_v6_regular, mbed_status_v6_regular};
+use test_util::{bifrost_current::bifrost_current, mbed_pid_v6_regular, mbed_status_v6_regular};
 use util::*;
 
 #[test]
@@ -60,4 +60,12 @@ fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
     harness.save_snapshot_with_threshold(CiThreshold(62.0));
+}
+
+#[test]
+fn test_snapshot_drop_load_hdf5_bifrost_current() {
+    let mut harness = HarnessWrapper::new("dropped_hdf5_bifrost_current");
+    harness.drop_file(bifrost_current());
+    harness.run();
+    harness.save_snapshot();
 }

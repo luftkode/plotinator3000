@@ -51,7 +51,7 @@ serve *ARGS:
 run *ARGS:
     cargo {{run}} {{ARGS}}
 
-# Run tests
+# Run all tests
 [group("Check"), no-exit-message]
 test *ARGS="--workspace":
     cargo {{test}} {{ARGS}}

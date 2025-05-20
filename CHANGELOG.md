@@ -7,11 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.13.0]
+
 ### Added
 
 - Discover broker `$SYS`-topics
 - Show reachable broker's version if available
 - Better UX for the MQTT connection window
+- Add additional distribution targets: `ARM64 Linux` & `x64 MUSL Linux`.
 
 ### Changed
 
