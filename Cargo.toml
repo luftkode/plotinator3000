@@ -108,12 +108,14 @@ egui_kittest = { version = "0.31.1", features = ["eframe", "snapshot", "wgpu", "
 env_logger = "0.11"
 zip = "3.0.0"
 axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
-mimalloc = "0.1.46"
 plotinator_mqtt = { workspace = true, optional = true}
 profiling = { workspace = true, optional = true}
 puffin = { workspace = true, optional = true}
 puffin_http = { workspace = true, optional = true}
 
+# native (except aarch64-linux):
+[target.'cfg(all(not(target_arch = "wasm32"), not(all(target_arch = "aarch64", target_os = "linux"))))'.dependencies]
+mimalloc = "0.1.46"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
