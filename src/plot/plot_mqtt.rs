@@ -54,7 +54,7 @@ pub fn fill_mqtt_plots(
         }
 
         click_delta.ui(plot_ui, PlotType::Hundreds);
-        let (x_lower, x_higher) = plot_util::extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
+        let x_bounds = plot_ui.plot_bounds().range_x();
         for mp in mqtt_plots {
             if mp.data.len() < 2 {
                 // We don't plot less than two points. It's mostly because when the
@@ -63,13 +63,7 @@ pub fn fill_mqtt_plots(
                 // height and width of the bounds is greater than 0.0
                 continue;
             }
-            plot_util::plot_raw_mqtt(
-                plot_ui,
-                &mp.topic,
-                &mp.data,
-                line_width,
-                (x_lower, x_higher),
-            );
+            plot_util::plot_raw_mqtt(plot_ui, &mp.topic, &mp.data, line_width, x_bounds.clone());
         }
     });
 }

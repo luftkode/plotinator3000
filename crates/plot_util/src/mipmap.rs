@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, ops::RangeInclusive};
 
 use egui_plot::PlotPoint;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
@@ -152,12 +152,13 @@ impl MipMap2DPlotPoints {
     pub fn get_level_match(
         &self,
         pixel_width: usize,
-        x_bounds: (f64, f64),
+        x_bounds: RangeInclusive<f64>,
     ) -> (usize, Option<(usize, usize)>) {
+        let (x_min, x_max) = (*x_bounds.start(), *x_bounds.end());
         if self
             .most_recent_lookup
             .borrow()
-            .is_equal(pixel_width, x_bounds)
+            .is_equal(pixel_width, (x_min, x_max))
         {
             return (
                 self.most_recent_lookup.borrow().result_idx,
@@ -165,7 +166,6 @@ impl MipMap2DPlotPoints {
             );
         }
         let target_point_count = pixel_width;
-        let (x_min, x_max) = x_bounds;
 
         // Avoid repeated calls to num_levels()
         let num_levels = self.num_levels();
@@ -188,7 +188,7 @@ impl MipMap2DPlotPoints {
             if count_within_bounds > target_point_count {
                 let new_cached = LevelLookupCached {
                     pixel_width,
-                    x_bounds,
+                    x_bounds: (x_min, x_max),
                     result_span: (start_idx, end_idx),
                     result_idx: lvl_idx,
                 };
@@ -284,7 +284,7 @@ mod tests {
             (8, 0, Some((0, 15))),
             (16, 0, None),
         ] {
-            let (lvl, range_res) = mipmap.get_level_match(pixel_width, (0., 15.));
+            let (lvl, range_res) = mipmap.get_level_match(pixel_width, 0.0..=15.);
             assert_eq!(
                 lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
@@ -305,7 +305,7 @@ mod tests {
             .collect();
         let mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Min, 1);
 
-        let x_bounds = (UNIX_TS_NS + 300., UNIX_TS_NS + 1500.);
+        let x_bounds = UNIX_TS_NS + 300.0..=UNIX_TS_NS + 1500.;
 
         for (pixel_width, expected_lvl, expected_range) in [
             (100usize, 3usize, Some((17, 176))),
@@ -314,7 +314,7 @@ mod tests {
             (800, 0, Some((129, 1408))),
             (1600, 0, None),
         ] {
-            let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds);
+            let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds.clone());
             assert_eq!(
                 lvl, expected_lvl,
                 "Expected lvl {expected_lvl} for width: {pixel_width}"
