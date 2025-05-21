@@ -87,6 +87,10 @@ const TIME_UNITS: &[TimeUnit] = &[
 ];
 
 /// Generate grid marks for the time (X) axis
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "That's the callback signature, and since GridInput is just 3xf64 it's probabl a performance win to just copy it instead of hanging onto pointers"
+)]
 pub fn x_grid(input: GridInput) -> Vec<GridMark> {
     let (min_ns, max_ns) = input.bounds;
     let range_ns = max_ns - min_ns;
@@ -209,7 +213,14 @@ pub fn format_time(mark: GridMark, range: &RangeInclusive<f64>) -> String {
                 dt.format("%H:%M")
             }
         }
-        AxisRange::Over4Seconds => dt.format("%H:%M:%S"),
+        AxisRange::Over4Seconds => {
+            if dt.hour() == 0 && dt.minute() == 0 && dt.second() == 0 {
+                // Midnight: show the date
+                dt.format("%Y-%m-%d")
+            } else {
+                dt.format("%H:%M:%S")
+            }
+        }
         AxisRange::Over10MilliSeconds => dt.format("%H:%M:%S.%3fms"),
         AxisRange::Over10MicroSeconds => dt.format("%S.%6fus"),
         AxisRange::Under => dt.format(".%9fns"),
