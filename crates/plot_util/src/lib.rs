@@ -182,14 +182,25 @@ pub fn filter_plot_points(points: &[PlotPoint], (x_start, x_end): (f64, f64)) ->
 
     let range: usize = end_idx - start_idx;
 
-    // This is the case if we scroll such that none OR one of the plot points are within the plot bounds
-    // in that case we plot the first two points to avoid hiding the plot from the legend
-    // which also shuffles the coloring of every line
-    let filtered_points = if range < 2 {
-        PlotPoints::Borrowed(&points[0..=1])
+    // The range is 0 if we scroll such that none OR one of the plot points are within the plot bounds
+    // in that case we plot the closest two points on either side of plot bounds.
+    let (start, end) = if range == 0 {
+        // No points in range - find closest points on either side
+        // 3 cases to cover: (and yes they all happen in practice)
+        // 1. Start index equals 0: add 2 to end index
+        // 2. End index equals slice length: subtract 2 from start index
+        // 3. The rest: subtract 1 from start index and add 1 to end index
+        match (start_idx, end_idx) {
+            (0, _) => (0, end_idx + 2),
+            (_, end) if end == points.len() => (start_idx.saturating_sub(2), end),
+            _ => (start_idx - 1, end_idx + 1),
+        }
     } else {
-        PlotPoints::Borrowed(&points[start_idx..end_idx])
+        // Some points in range - add one point on each side when possible
+        (start_idx.saturating_sub(1), (end_idx + 1).min(points.len()))
     };
+
+    let filtered_points = PlotPoints::Borrowed(&points[start..end]);
 
     debug_assert!(
         filtered_points.points().len() >= 2,
