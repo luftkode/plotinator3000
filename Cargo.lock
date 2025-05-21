@@ -3490,6 +3490,7 @@ dependencies = [
  "chrono",
  "egui",
  "egui_plot",
+ "log",
  "log_if",
  "num-traits",
  "pretty_assertions",
