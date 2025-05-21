@@ -210,14 +210,18 @@ mod tests {
     #[test]
     fn test_more_than_1024_points_with_filtering() {
         let points: Vec<PlotPoint> = (0..1500)
-            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .map(|i| [i as f64, i as f64 + 0.2].into())
             .collect();
-        let x_range = 100.0..=500.0;
+        let (x_min, x_max) = (100.1, 500.1); // .1 to avoid bounds and plot bounds that are "exactly equal" (as f64 is flaky with that)
+        let expected_x_min = x_min as usize; // Shaves off decimal so it's like subtracting 1
+        let expected_x_max = x_max as usize + 1;
 
         // Since the points are more than 1024, filtering should happen
-        let result = filter_plot_points(&points, x_range);
+        let result = filter_plot_points(&points, x_min..=x_max);
 
-        assert_eq!(result.points(), &points[100..500]);
+        assert_eq!(*result.points().first().unwrap(), points[expected_x_min]);
+        assert_eq!(*result.points().last().unwrap(), points[expected_x_max]);
+        pretty_assertions::assert_eq!(result.points(), &points[expected_x_min..=expected_x_max]);
     }
 
     #[test]
@@ -227,8 +231,8 @@ mod tests {
             .collect();
         let x_range = 2000.0..=3000.0;
 
-        // Since range is outside the data points we expect to just get the first two points
-        let expected_result = &points[0..=1];
+        // Since range is outside the data points we expect to get the two closest points to the bounds
+        let expected_result = &points[1498..=1499];
 
         let result = filter_plot_points(&points, x_range);
 
