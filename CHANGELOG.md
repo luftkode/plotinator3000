@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update pilot display related MQTT topics
 
-
 ## [1.13.2]
 
 ### Changed

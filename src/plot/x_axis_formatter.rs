@@ -89,7 +89,7 @@ const TIME_UNITS: &[TimeUnit] = &[
 /// Generate grid marks for the time (X) axis
 #[allow(
     clippy::needless_pass_by_value,
-    reason = "That's the callback signature, and since GridInput is just 3xf64 it's probabl a performance win to just copy it instead of hanging onto pointers"
+    reason = "That's the callback signature, and since GridInput is just 3xf64 it's probably a performance win to just copy it instead of hanging onto pointers"
 )]
 pub fn x_grid(input: GridInput) -> Vec<GridMark> {
     let (min_ns, max_ns) = input.bounds;
