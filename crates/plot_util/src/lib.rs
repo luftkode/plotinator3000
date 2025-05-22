@@ -1,6 +1,8 @@
 pub mod mipmap;
 
-use egui_plot::{Line, PlotBounds, PlotPoint, PlotPoints};
+use std::ops::RangeInclusive;
+
+use egui_plot::{Line, PlotPoint, PlotPoints};
 
 pub mod plots;
 
@@ -26,22 +28,22 @@ pub fn plot_lines<'pv>(
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
-    let (x_lower, x_higher) = extended_x_plot_bound(plot_ui.plot_bounds(), 0.1);
+    let x_plot_bounds = plot_ui.plot_bounds().range_x();
     for plot_vals in plots {
         match mipmap_cfg {
             MipMapConfiguration::Disabled => {
-                plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
+                plot_raw(plot_ui, plot_vals, line_width, x_plot_bounds.clone());
             }
             MipMapConfiguration::Auto => {
                 let (level, idx_range) =
-                    plot_vals.get_scaled_mipmap_levels(plots_width_pixels, (x_lower, x_higher));
+                    plot_vals.get_scaled_mipmap_levels(plots_width_pixels, x_plot_bounds.clone());
 
                 plot_with_mipmapping(
                     plot_ui,
                     plot_vals,
                     line_width,
                     level,
-                    (x_lower, x_higher),
+                    x_plot_bounds.clone(),
                     idx_range,
                 );
             }
@@ -51,7 +53,7 @@ pub fn plot_lines<'pv>(
                     plot_vals,
                     line_width,
                     level,
-                    (x_lower, x_higher),
+                    x_plot_bounds.clone(),
                     None,
                 );
             }
@@ -64,22 +66,21 @@ fn plot_with_mipmapping<'p>(
     plot_vals: &'p PlotValues,
     line_width: f32,
     mipmap_lvl: usize,
-    x_range: (f64, f64),
+    x_bounds: RangeInclusive<f64>,
     // if the range is already known then we can skip filtering
     known_idx_range: Option<(usize, usize)>,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
-    let (x_lower, x_higher) = x_range;
 
     let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
     if plot_points_minmax.is_empty() {
         // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
-        plot_raw(plot_ui, plot_vals, line_width, (x_lower, x_higher));
+        plot_raw(plot_ui, plot_vals, line_width, x_bounds);
     } else {
         let plot_points_minmax = match known_idx_range {
             Some((start, end)) => PlotPoints::Borrowed(&plot_points_minmax[start..end]),
-            None => filter_plot_points(plot_points_minmax, (x_lower, x_higher)),
+            None => filter_plot_points(plot_points_minmax, x_bounds),
         };
 
         let line = Line::new(plot_points_minmax)
@@ -115,12 +116,12 @@ fn plot_raw<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     plot_vals: &'p PlotValues,
     line_width: f32,
-    x_min_max_ext: (f64, f64),
+    x_bounds: RangeInclusive<f64>,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let plot_points = plot_vals.raw_plot_points();
-    let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
+    let filtered_points = filter_plot_points(plot_points, x_bounds);
 
     let line = Line::new(filtered_points)
         .width(line_width)
@@ -135,40 +136,19 @@ pub fn plot_raw_mqtt<'p>(
     label: &str,
     plot_points: &'p [PlotPoint],
     line_width: f32,
-    x_min_max_ext: (f64, f64),
+    x_bounds: RangeInclusive<f64>,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
 
-    let filtered_points = filter_plot_points(plot_points, x_min_max_ext);
+    let filtered_points = filter_plot_points(plot_points, x_bounds);
 
     let line = Line::new(filtered_points).width(line_width).name(label);
     plot_ui.line(line);
 }
 
-#[inline(always)]
-fn x_plot_bound(bounds: PlotBounds) -> (f64, f64) {
-    let range = bounds.range_x();
-    (*range.start(), *range.end())
-}
-
-/// Extends the x plot bounds by a specified percentage in both directions
-#[inline]
-pub fn extended_x_plot_bound(bounds: PlotBounds, extension_percentage: f64) -> (f64, f64) {
-    let (x_bound_min, x_bound_max) = x_plot_bound(bounds);
-
-    // Calculate the extension values based on the magnitude of the bounds
-    let x_extension = (x_bound_max - x_bound_min).abs() * extension_percentage;
-
-    // Extend the bounds
-    let extended_x_bound_min = x_bound_min - x_extension;
-    let extended_x_bound_max = x_bound_max + x_extension;
-
-    (extended_x_bound_min, extended_x_bound_max)
-}
-
 /// Filter plot points based on the x plot bounds.
-pub fn filter_plot_points(points: &[PlotPoint], (x_start, x_end): (f64, f64)) -> PlotPoints<'_> {
+pub fn filter_plot_points(points: &[PlotPoint], x_bounds: RangeInclusive<f64>) -> PlotPoints<'_> {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
 
@@ -177,19 +157,30 @@ pub fn filter_plot_points(points: &[PlotPoint], (x_start, x_end): (f64, f64)) ->
         return PlotPoints::Borrowed(points);
     }
 
-    let start_idx = points.partition_point(|point| point.x < x_start);
-    let end_idx = points.partition_point(|point| point.x < x_end);
+    let start_idx = points.partition_point(|point| point.x < *x_bounds.start());
+    let end_idx = points.partition_point(|point| point.x < *x_bounds.end());
 
     let range: usize = end_idx - start_idx;
 
-    // This is the case if we scroll such that none OR one of the plot points are within the plot bounds
-    // in that case we plot the first two points to avoid hiding the plot from the legend
-    // which also shuffles the coloring of every line
-    let filtered_points = if range < 2 {
-        PlotPoints::Borrowed(&points[0..=1])
+    // The range is 0 if we scroll such that none OR one of the plot points are within the plot bounds
+    // in that case we plot the closest two points on either side of plot bounds.
+    let (start, end) = if range == 0 {
+        // No points in range - find closest points on either side
+        // 3 cases to cover: (and yes they all happen in practice)
+        // 1. Start index equals 0: add 2 to end index
+        // 2. End index equals slice length: subtract 2 from start index
+        // 3. The rest: subtract 1 from start index and add 1 to end index
+        match (start_idx, end_idx) {
+            (0, _) => (0, end_idx + 2),
+            (_, end) if end == points.len() => (start_idx.saturating_sub(2), end),
+            _ => (start_idx - 1, end_idx + 1),
+        }
     } else {
-        PlotPoints::Borrowed(&points[start_idx..end_idx])
+        // Some points in range - add one point on each side when possible
+        (start_idx.saturating_sub(1), (end_idx + 1).min(points.len()))
     };
+
+    let filtered_points = PlotPoints::Borrowed(&points[start..end]);
 
     debug_assert!(
         filtered_points.points().len() >= 2,
@@ -207,7 +198,7 @@ mod tests {
         let points: Vec<PlotPoint> = (0..500)
             .map(|i| [i as f64, i as f64 + 1.0].into())
             .collect();
-        let x_range = (100.0, 300.0);
+        let x_range = 100.0..=300.0;
 
         // Since points are less than 1024, no filtering should be done
         let result = filter_plot_points(&points, x_range);
@@ -219,14 +210,18 @@ mod tests {
     #[test]
     fn test_more_than_1024_points_with_filtering() {
         let points: Vec<PlotPoint> = (0..1500)
-            .map(|i| [i as f64, i as f64 + 1.0].into())
+            .map(|i| [i as f64, i as f64 + 0.2].into())
             .collect();
-        let x_range = (100.0, 500.0);
+        let (x_min, x_max) = (100.1, 500.1); // .1 to avoid bounds and plot bounds that are "exactly equal" (as f64 is flaky with that)
+        let expected_x_min = x_min as usize; // Shaves off decimal so it's like subtracting 1
+        let expected_x_max = x_max as usize + 1;
 
         // Since the points are more than 1024, filtering should happen
-        let result = filter_plot_points(&points, x_range);
+        let result = filter_plot_points(&points, x_min..=x_max);
 
-        assert_eq!(result.points(), &points[100..500]);
+        assert_eq!(*result.points().first().unwrap(), points[expected_x_min]);
+        assert_eq!(*result.points().last().unwrap(), points[expected_x_max]);
+        pretty_assertions::assert_eq!(result.points(), &points[expected_x_min..=expected_x_max]);
     }
 
     #[test]
@@ -234,10 +229,10 @@ mod tests {
         let points: Vec<PlotPoint> = (0..1500)
             .map(|i| [i as f64, i as f64 + 1.0].into())
             .collect();
-        let x_range = (2000.0, 3000.0);
+        let x_range = 2000.0..=3000.0;
 
-        // Since range is outside the data points we expect to just get the first two points
-        let expected_result = &points[0..=1];
+        // Since range is outside the data points we expect to get the two closest points to the bounds
+        let expected_result = &points[1498..=1499];
 
         let result = filter_plot_points(&points, x_range);
 
@@ -249,7 +244,7 @@ mod tests {
         let points: Vec<PlotPoint> = (1500..3000)
             .map(|i| [i as f64, i as f64 + 1.0].into())
             .collect();
-        let x_range = (0.0, 100.0);
+        let x_range = 0.0..=100.0;
 
         // Since range is outside the data points we expect to just get the first two points
         let expected_result = &points[0..=1];
