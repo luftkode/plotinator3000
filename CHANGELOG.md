@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.13.2]
+
+### Changed
+
+- Vastly improved X-axis time labelling
+
 ## [1.13.1]
 
 ### Fixed

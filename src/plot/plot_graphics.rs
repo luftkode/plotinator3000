@@ -4,7 +4,9 @@ use plot_util::{PlotData, Plots};
 
 use crate::plot::{PlotMode, util};
 
-use super::{ClickDelta, PlotType, axis_config::AxisConfig, plot_settings::PlotSettings};
+use super::{
+    ClickDelta, PlotType, axis_config::AxisConfig, plot_settings::PlotSettings, x_axis_formatter,
+};
 
 /// Paints multiple plots based on the provided settings and configurations.
 ///
@@ -37,7 +39,7 @@ pub fn paint_plots(
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
 
-    let x_axes = vec![AxisHints::new_x().formatter(crate::util::format_time)];
+    let x_axes = vec![AxisHints::new_x().formatter(x_axis_formatter::format_time)];
 
     match mode {
         PlotMode::Logs(plots) => {
@@ -254,4 +256,5 @@ fn build_plot_ui<'a>(
         .allow_zoom(false) // Manually implemented
         .allow_scroll(true)
         .allow_double_click_reset(false) // Manually implemented
+        .x_grid_spacer(x_axis_formatter::x_grid)
 }
