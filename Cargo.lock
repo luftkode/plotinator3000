@@ -2684,7 +2684,7 @@ checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "log_if"
-version = "1.13.2"
+version = "1.13.3"
 dependencies = [
  "chrono",
  "log",
@@ -3485,7 +3485,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plot_util"
-version = "1.13.2"
+version = "1.13.3"
 dependencies = [
  "chrono",
  "egui",
@@ -3503,7 +3503,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "1.13.2"
+version = "1.13.3"
 dependencies = [
  "axoupdater",
  "chrono",
@@ -3544,11 +3544,11 @@ dependencies = [
 
 [[package]]
 name = "plotinator_macros"
-version = "1.13.2"
+version = "1.13.3"
 
 [[package]]
 name = "plotinator_mqtt"
-version = "1.13.2"
+version = "1.13.3"
 dependencies = [
  "anyhow",
  "egui_plot",
@@ -4448,7 +4448,7 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 
 [[package]]
 name = "skytem_hdf5"
-version = "1.13.2"
+version = "1.13.3"
 dependencies = [
  "byteorder",
  "chrono",
@@ -4471,7 +4471,7 @@ dependencies = [
 
 [[package]]
 name = "skytem_logs"
-version = "1.13.2"
+version = "1.13.3"
 dependencies = [
  "byteorder",
  "chrono",
@@ -4721,7 +4721,7 @@ dependencies = [
 
 [[package]]
 name = "test_util"
-version = "1.13.2"
+version = "1.13.3"
 dependencies = [
  "paste",
  "testresult",

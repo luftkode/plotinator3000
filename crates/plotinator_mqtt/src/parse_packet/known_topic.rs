@@ -1,8 +1,5 @@
 use egui_plot::PlotPoint;
-use pilot_display::{
-    PilotDisplayAltitudePacket, PilotDisplayClosestLinePacket, PilotDisplayHeadingPacket,
-    PilotDisplaySpeedPacket,
-};
+use pilot_display::{PilotDisplayCoordinates, PilotDisplayRemainingDistance};
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
@@ -27,14 +24,10 @@ pub(crate) enum KnownTopic {
     DebugSensorsMag,
     #[strum(serialize = "debug/sensors/gps")]
     DebugSensorsGps,
-    #[strum(serialize = "speed")]
-    PilotDisplaySpeed,
-    #[strum(serialize = "altitude")]
-    PilotDisplayAltitude,
-    #[strum(serialize = "heading")]
-    PilotDisplayHeading,
-    #[strum(serialize = "closest_line")]
-    PilotDisplayClosestLine,
+    #[strum(serialize = "dt/blackbird/pigeon/x/coordinates")]
+    PilotDisplayCoordinates,
+    #[strum(serialize = "dt/skynav/heli/backend/remaining-distance")]
+    PilotDisplayRemainingDistance,
     #[strum(serialize = "$SYS/broker/uptime")]
     SYSBrokerUptime,
     // We cannot meaningfully plot this, but we use it to show the version when choosing a broker to connect to
@@ -68,25 +61,16 @@ pub(crate) struct DebugSensorsGps {
 impl KnownTopic {
     pub(crate) fn parse_packet(self, p: &str) -> anyhow::Result<Option<MqttData>> {
         match self {
-            Self::PilotDisplaySpeed => {
-                let p = serde_json::from_str::<PilotDisplaySpeedPacket>(p)?;
-                let value = p.speed()?;
-                Ok(Some(self.into_single_mqtt_data(value)))
+            Self::PilotDisplayCoordinates => {
+                let p: PilotDisplayCoordinates = serde_json::from_str(p)?;
+                let lat = MqttTopicData::single(self.subtopic_str("lat"), p.lat());
+                let lon = MqttTopicData::single(self.subtopic_str("lon"), p.lon());
+                let data = MqttData::multiple(vec![lat, lon]);
+                Ok(Some(data))
             }
-            Self::PilotDisplayAltitude => {
-                let p: PilotDisplayAltitudePacket = serde_json::from_str(p)?;
-                let value = p.height()?;
-                Ok(Some(self.into_single_mqtt_data(value)))
-            }
-            Self::PilotDisplayHeading => {
-                let p: PilotDisplayHeadingPacket = serde_json::from_str(p)?;
-                let value = p.heading()?;
-                Ok(Some(self.into_single_mqtt_data(value)))
-            }
-            Self::PilotDisplayClosestLine => {
-                let p: PilotDisplayClosestLinePacket = serde_json::from_str(p)?;
-                let distance = p.distance();
-                Ok(Some(self.into_single_mqtt_data(distance)))
+            Self::PilotDisplayRemainingDistance => {
+                let p: PilotDisplayRemainingDistance = serde_json::from_str(p)?;
+                Ok(Some(self.into_single_mqtt_data(p.distance())))
             }
             // Debug topics for development and for inspiration for how to implement parsing of various kinds of
             // topics and payloads
@@ -166,28 +150,34 @@ mod tests {
         let known_topic = KnownTopic::from_str("debug/sensors/temperature")?;
         let payload = r#"{ "value": 40 }"#;
         let mqtt_data = known_topic.parse_packet(payload)?;
-        dbg!(mqtt_data);
+        dbg!(&mqtt_data);
+        assert!(mqtt_data.is_some());
         Ok(())
     }
 
     #[test]
-    fn test_parse_pilot_display_speed_packet() -> TestResult {
-        let known_topic = KnownTopic::from_str("speed")?;
+    fn test_parse_pilot_display_coordinate_packet() -> TestResult {
+        let known_topic = KnownTopic::from_str("dt/blackbird/pigeon/x/coordinates")?;
         let payload = json!({
-            "Speed": "12.433",
+            "lon": 10.1473,"lat": 56.2179
         })
         .to_string();
         let mqtt_data = known_topic.parse_packet(&payload)?;
-        dbg!(mqtt_data);
+        dbg!(&mqtt_data);
+        assert!(mqtt_data.is_some());
         Ok(())
     }
 
     #[test]
-    fn test_parse_pilot_display_closest_line() -> TestResult {
-        let known_topic = KnownTopic::from_str("closest_line")?;
-        let payload = r#"{"id": 12, "flight_line": "L501100", "distance": 1.84167211, "mode": "automatic", "filename": "20231023_Bremervoerde_Combined_300_NS_32N.kml"}"#;
-        let mqtt_data = known_topic.parse_packet(payload)?;
-        dbg!(mqtt_data);
+    fn test_parse_pilot_display_remaining_distance_packet() -> TestResult {
+        let known_topic = KnownTopic::from_str("dt/skynav/heli/backend/remaining-distance")?;
+        let payload = json!({
+            "distance": 1560.514601457434
+        })
+        .to_string();
+        let mqtt_data = known_topic.parse_packet(&payload)?;
+        dbg!(&mqtt_data);
+        assert!(mqtt_data.is_some());
         Ok(())
     }
 
