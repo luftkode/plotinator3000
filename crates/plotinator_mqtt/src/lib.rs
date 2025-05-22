@@ -1,6 +1,6 @@
 use plotinator_macros::non_wasm_modules;
 non_wasm_modules!(
-    pub(crate) mod broker_validator;
+    pub mod broker_validator;
     pub(crate) mod mqtt_listener;
     pub(crate) mod topic_discoverer;
     pub(crate) mod parse_packet;
@@ -11,5 +11,6 @@ non_wasm_modules!(
 );
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::{
-    data::plot::MqttPlotPoints, data_receiver::MqttDataReceiver, mqtt_cfg_window::MqttConfigWindow,
+    broker_validator::BrokerStatus, data::plot::MqttPlotPoints, data_receiver::MqttDataReceiver,
+    mqtt_cfg_window::MqttConfigWindow,
 };

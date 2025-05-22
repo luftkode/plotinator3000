@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.13.0]
+
+### Added
+
+- Discover broker `$SYS`-topics
+- Show reachable broker's version if available
+- Better UX for the MQTT connection window
+- Add additional distribution targets: `ARM64 Linux` & `x64 MUSL Linux`.
+
+### Changed
+
+- Switch to `mimalloc` as the global allocator for significant performance improvements (~20%)
+
+### Dependencies
+
+- Run `cargo update`
+- `zip`: 2.6.1 → 3.0.0 ([#243](https://github.com/luftkode/plotinator3000/pull/243))
+- `cargo-bins/cargo-binstall`: 1.12.3 → 1.12.4 ([#238](https://github.com/luftkode/plotinator3000/pull/238))
+
+### Internal
+
+- Better encapsulation of MQTT features in GUI code
+- Added GUI tests, including snapshot tests
+
+## [1.12.0]
+
+### Changed
+
+- Move from the discontinued original `cargo-dist` to the [fork maintained by astral](https://github.com/astral-sh/cargo-dist)
+- Use the forked `cargo-dist` with the MSVC CRT linker configuration fix in the release workflow (astral [PR here](https://github.com/astral-sh/cargo-dist/pull/36))
+- Avoid statically linking MSVC CRT to allow statically linking HDF5 on windows.
+- Disallow bypassing updates in CI, to force tests to run update scenarios
+
 ### Dependencies
 
 - `anyhow`: 1.0.97 → 1.0.98 ([#228](https://github.com/luftkode/plotinator3000/pull/228))

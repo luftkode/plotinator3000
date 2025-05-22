@@ -16,6 +16,10 @@
 
 Inspect logs from SkyTEM systems.
 
+## Example (snapshot)
+
+![plotinator3000_snapshot](./tests/snapshots/dropped_mbed_pid_regular_v6.png)
+
 ## Why is this repository public?
 
 For inspiration/educational purposes. Anyone developing `egui`/`eframe` apps may or may not find any of the solutions in this repository useful for their own project(s).
@@ -64,21 +68,22 @@ All the boilerplate and workflows etc. is pulled from [this eframe template](htt
 
 [cargo-dist](https://github.com/axodotdev/cargo-dist) handles the complexities of setting up build/releases for various platforms.
 
-Read their documentation!!
+> [!IMPORTANT]
+> [uv](https://github.com/astral-sh/uv) also uses `cargo-dist` and since the original project ran out of funding, the [uv fork](https://github.com/astral-sh/cargo-dist) is used instead
 
 Generating the first instance of CI for the release workflow is done via
 
 ```shell
-cargo dist init
+dist init
 ```
 ... And then following the instructions/prompts.
 
-A (very complicated) [release.yml](.github/workflows/release.yml) is generated and metadata is added to [Cargo.toml](Cargo.toml), if distributing for windows, a [main.wxs](wix/main.wxs) is also generated. To update these with changes to the project, simply rerun `cargo dist init`, don't edit the workflow manually, there's a [section on CI customization](https://opensource.axo.dev/cargo-dist/book/ci/customizing.html) in the `cargo dist` docs.
+A (very complicated) [release.yml](.github/workflows/release.yml) is generated and metadata is added to [dist-workspace.toml](dist-workspace.toml), if distributing for windows, a [main.wxs](wix/main.wxs) is also generated. To update these with changes to the project, simply rerun `dist init`, don't edit the workflow manually, there's section on CI customizations in their docs, but as of this writing the site is down, Astral (uv authors) will probably host the docs again at some point.
 
 When developing/trouble shooting the release pipeline adding `pr-run-mode = "upload"` like this
 
 ```toml
-[workspace.metadata.dist]
+[dist]
 pr-run-mode = "upload"
 ```
 

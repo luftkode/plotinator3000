@@ -1,14 +1,19 @@
 import 'just/mod.just'
 # CI only recipes, `just -l ci` to list them
 mod ci 'just/ci.just'
+# init only recipes, `just -l init` to list them
+mod init 'just/init.just'
 
 set windows-shell := ["powershell.exe", "-c"]
 
 PROJECT_NAME := "plotinator3000"
 
-alias i := init
 alias t := test
 alias l := lint
+alias lint-native := clippy-native
+alias ln := clippy-native
+alias lint-web := clippy-wasm
+alias lw := clippy-wasm
 alias fmt := format
 alias f := format
 alias d := doc
@@ -24,12 +29,7 @@ export RUST_LOG := env_var_or_default("RUST_LOG", "info")
 export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATES", "true")
 
 @_default:
-    just --list --no-aliases
-
-[group("Init")]
-init: install-devtools
-    @echo "Run {{BOLD + YELLOW}}install-extra-devtools{{NORMAL}} for some adittional productivity tools that fit into the existent workflow"
-    @echo "Run {{BOLD + YELLOW}}apt-install-hdf5-header{{NORMAL}} to get HDF5 headers for developing HDF5 features on linux"
+    just --list
 
 [doc("Checks both native and wasm"), group("Check"), no-exit-message]
 check-all: check check-wasm
@@ -51,7 +51,7 @@ serve *ARGS:
 run *ARGS:
     cargo {{run}} {{ARGS}}
 
-# Run tests
+# Run all tests
 [group("Check"), no-exit-message]
 test *ARGS="--workspace":
     cargo {{test}} {{ARGS}}
@@ -100,7 +100,7 @@ audit *ARGS:
 [group("Profiling")]
 run-profiling *ARGS:
     cargo install puffin_viewer --locked
-    cargo {{run}} --features profiling -- {{ARGS}}
+    cargo {{run}} --features profiling {{ARGS}}
 
 # Requires firebase CLI and access to MKI firebase account
 [group("Web")]

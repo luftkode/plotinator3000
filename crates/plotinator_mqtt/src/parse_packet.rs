@@ -8,7 +8,7 @@ pub mod known_topic;
 pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttData> {
     if let Ok(known) = KnownTopic::from_str(topic) {
         match known.parse_packet(payload) {
-            Ok(mp) => Some(mp),
+            Ok(mp) => mp,
             Err(e) => {
                 log::error!("{e}");
                 debug_assert!(false, "{e}");

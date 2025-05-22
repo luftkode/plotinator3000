@@ -1,11 +1,11 @@
 use chrono::{DateTime, Utc};
 use log_if::prelude::*;
 use serde::{Deserialize, Serialize};
-use skytem_hdf::bifrost::BifrostLoopCurrent;
+use skytem_hdf5::bifrost::BifrostLoopCurrent;
 
-/// Represents a supported HDF format, which can be any of the supported HDF format types.
+/// Represents a supported HDF5 format, which can be any of the supported HDF5 format types.
 ///
-/// This simply serves to encapsulate all the supported HDF formats in a single type
+/// This simply serves to encapsulate all the supported HDF5 formats in a single type
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum SupportedHdfFormat {
     BifrostLoopCurrent(BifrostLoopCurrent),

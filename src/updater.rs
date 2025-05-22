@@ -209,7 +209,15 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
 
 /// Check for the environment variable to bypass updates
 fn bypass_updates() -> bool {
+    // This is generally set in the build environment (see config.toml)
     if let Ok(value) = env::var(BYPASS_UPDATES_ENV_VAR) {
+        // If we're in the build environment and we detect CI, we don't allow bypassing updates
+        if let Ok(value) = env::var("GITHUB_ACTIONS") {
+            if value == "true" {
+                log::info!("GitHub actions detected, disabling bypass updates");
+                return false;
+            }
+        }
         if value == "1" || value.eq_ignore_ascii_case("true") {
             log::info!("Update bypassed due to environment variable.");
             return true;

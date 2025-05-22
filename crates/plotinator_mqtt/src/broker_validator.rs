@@ -1,25 +1,53 @@
+use crate::util::timestamped_client_id;
+use rumqttc::{Client, Event, MqttOptions, Packet};
 use std::{
-    net::{Ipv6Addr, TcpStream, ToSocketAddrs as _},
-    sync::mpsc,
+    net::{Ipv6Addr, SocketAddr, TcpStream, ToSocketAddrs as _},
+    sync::mpsc::{self, Sender},
     time::{Duration, Instant},
 };
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub enum BrokerStatus {
+    #[default]
+    None,
+    Reachable,
+    Unreachable(String),
+    ReachableVersion(String),
+}
+
+impl BrokerStatus {
+    pub fn reachable(&self) -> bool {
+        match self {
+            Self::Reachable | Self::ReachableVersion(_) => true,
+            Self::Unreachable(_) | Self::None => false,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum ValidatorStatus {
+    #[default]
+    Inactive,
+    Connecting,
+    RetrievingVersion,
+}
+
 #[derive(Default)]
 pub(crate) struct BrokerValidator {
+    status: ValidatorStatus,
     previous_broker_input: String,
-    broker_status: Option<Result<(), String>>,
-    validation_in_progress: bool,
+    broker_status: BrokerStatus,
     last_input_change: Option<Instant>,
-    broker_validation_receiver: Option<mpsc::Receiver<Result<(), String>>>,
+    broker_validation_receiver: Option<mpsc::Receiver<BrokerStatus>>,
 }
 
 impl BrokerValidator {
-    pub fn broker_status(&self) -> Option<&Result<(), String>> {
-        self.broker_status.as_ref()
+    pub fn broker_status(&self) -> &BrokerStatus {
+        &self.broker_status
     }
 
-    pub fn validation_in_progress(&self) -> bool {
-        self.validation_in_progress
+    pub fn status(&self) -> ValidatorStatus {
+        self.status
     }
 
     pub(crate) fn poll_broker_status(&mut self, ip: &str, port: &str) {
@@ -29,46 +57,83 @@ impl BrokerValidator {
         if current_broker_input != self.previous_broker_input {
             self.previous_broker_input = current_broker_input.clone();
             self.last_input_change = Some(Instant::now());
-            self.broker_status = None;
+            self.broker_status = BrokerStatus::None;
         }
 
-        // Debounce and validate after 500ms
+        // Debounce and validate after a timeout
         if let Some(last_change) = self.last_input_change {
-            if last_change.elapsed() >= Duration::from_millis(500) && !self.validation_in_progress {
+            if last_change.elapsed() >= Duration::from_millis(500)
+                && self.status() == ValidatorStatus::Inactive
+            {
                 let (tx, rx) = std::sync::mpsc::channel();
                 self.broker_validation_receiver = Some(rx);
-                self.validation_in_progress = true;
+                self.status = ValidatorStatus::Connecting;
                 self.last_input_change = None;
 
-                // Spawn validation thread
-                let (cp_host, cp_port) = (ip.to_owned(), port.to_owned());
-                if let Err(e) = std::thread::Builder::new()
-                    .name("broker-validator".into())
-                    .spawn(move || {
-                        let result = validate_broker(&cp_host, &cp_port);
-                        if let Err(e) = tx.send(result) {
-                            log::error!("{e}");
-                        }
-                    })
-                {
-                    log::error!("{e}");
-                    debug_assert!(false, "{e}");
-                }
+                spawn_validation_thread((ip, port), tx);
             }
         }
 
         // Check for validation results, if we got a result we store the result and reset the check status
         if let Some(receiver) = &mut self.broker_validation_receiver {
             if let Ok(result) = receiver.try_recv() {
-                self.broker_status = Some(result);
-                self.validation_in_progress = false;
-                self.broker_validation_receiver = None;
+                // If the broker is reachable we continue so we can resolve its version
+                match result {
+                    BrokerStatus::Reachable => self.status = ValidatorStatus::RetrievingVersion,
+                    BrokerStatus::ReachableVersion(_)
+                    | BrokerStatus::None
+                    | BrokerStatus::Unreachable(_) => {
+                        self.status = ValidatorStatus::Inactive;
+                        self.broker_validation_receiver = None;
+                    }
+                }
+                self.broker_status = result;
             }
         }
     }
 }
 
-fn validate_broker(host: &str, port: &str) -> Result<(), String> {
+fn spawn_validation_thread((ip, port): (&str, &str), tx: Sender<BrokerStatus>) {
+    // Spawn validation thread
+    let (cp_host, cp_port) = (ip.to_owned(), port.to_owned());
+    if let Err(e) = std::thread::Builder::new()
+        .name("broker-validator".into())
+        .spawn(move || {
+            match validate_broker(&cp_host, &cp_port) {
+                Ok(addr) => {
+                    // First send that it's reachable
+                    if let Err(e) = tx.send(BrokerStatus::Reachable) {
+                        log::error!("{e}");
+                        return;
+                    }
+
+                    // Then try to get the version
+                    match get_broker_version(addr) {
+                        Ok(version) => {
+                            if let Err(e) = tx.send(BrokerStatus::ReachableVersion(version)) {
+                                log::error!("{e}");
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to get broker version: {e}");
+                            // Keep the Reachable status since we at least know it's reachable
+                        }
+                    }
+                }
+                Err(e) => {
+                    if let Err(e) = tx.send(BrokerStatus::Unreachable(e)) {
+                        log::error!("{e}");
+                    }
+                }
+            }
+        })
+    {
+        log::error!("{e}");
+        debug_assert!(false, "{e}");
+    }
+}
+
+fn validate_broker(host: &str, port: &str) -> Result<SocketAddr, String> {
     // Validate port first
     let port: u16 = port.parse().map_err(|e| format!("Invalid port: {e}"))?;
 
@@ -91,7 +156,7 @@ fn validate_broker(host: &str, port: &str) -> Result<(), String> {
     let mut last_error = None;
     for addr in addrs {
         match TcpStream::connect_timeout(&addr, Duration::from_secs(2)) {
-            Ok(_) => return Ok(()),
+            Ok(_) => return Ok(addr),
             Err(e) => last_error = Some(e),
         }
     }
@@ -100,4 +165,38 @@ fn validate_broker(host: &str, port: &str) -> Result<(), String> {
         || "No addresses found".to_owned(),
         |e| format!("Connection failed: {e}"),
     ))
+}
+
+fn get_broker_version(addr: SocketAddr) -> Result<String, String> {
+    let client_id = timestamped_client_id("version-check");
+    let mut mqttoptions = MqttOptions::new(client_id, addr.ip().to_string(), addr.port());
+    mqttoptions.set_keep_alive(Duration::from_secs(5));
+    let (client, mut connection) = Client::new(mqttoptions, 100);
+
+    // Subscribe to the version topic
+    if let Err(e) = client.subscribe("$SYS/broker/version", rumqttc::QoS::AtMostOnce) {
+        return Err(format!("Failed to subscribe to version topic: {e}"));
+    }
+
+    // Wait for the version message with a timeout
+    let start = Instant::now();
+    let timeout = Duration::from_secs(2);
+
+    while start.elapsed() < timeout {
+        match connection.iter().next() {
+            Some(Ok(Event::Incoming(Packet::Publish(publish)))) => {
+                if publish.topic == "$SYS/broker/version" {
+                    if let Ok(version) = String::from_utf8(publish.payload.to_vec()) {
+                        log::info!("Got broker version: {version}");
+                        return Ok(version);
+                    }
+                }
+            }
+            Some(Err(e)) => return Err(format!("Connection error: {e}")),
+            None => break,
+            _ => (),
+        }
+    }
+
+    Err("Timeout waiting for broker version".to_owned())
 }
