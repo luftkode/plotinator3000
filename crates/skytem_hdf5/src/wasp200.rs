@@ -1,4 +1,4 @@
-use chrono::TimeZone;
+use chrono::TimeZone as _;
 use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
 use log_if::prelude::*;
