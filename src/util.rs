@@ -1,8 +1,15 @@
-use std::{ops::RangeInclusive, time::Duration};
+use std::time::Duration;
 
 use chrono::{DateTime, Timelike as _};
 use egui::{Color32, Ui};
-use egui_plot::{GridMark, PlotPoint};
+use egui_plot::PlotPoint;
+
+pub const NANOS_PER_SEC: u32 = 1_000_000_000;
+pub const SECS_PER_DAY: u32 = 24 * 60 * 60;
+pub const SECS_PER_H: u16 = 60 * 60;
+
+pub const MINS_PER_DAY: u16 = 24 * 60;
+pub const MINS_PER_H: u8 = 60;
 
 /// Format a timestamp in milliseconds into `HH:MM:SS.ms`
 pub fn format_ms_timestamp(timestamp_ms: f64) -> String {
@@ -19,20 +26,6 @@ pub fn format_ms_timestamp(timestamp_ms: f64) -> String {
         duration.subsec_millis()
     )
 }
-
-/// The first parameter of formatter is the raw tick value as f64. The second parameter of formatter is the currently shown range on this axis.
-///
-/// Assumes x is time in nanoseconds
-pub fn format_time(mark: GridMark, _range: &RangeInclusive<f64>) -> String {
-    let ns = mark.value;
-    let sec = ns / NANOS_PER_SEC as f64;
-    let ns_remainder = sec.fract() * NANOS_PER_SEC as f64;
-    let dt = DateTime::from_timestamp(sec as i64, ns_remainder as u32)
-        .unwrap_or_else(|| panic!("Timestamp value out of range: {sec}"));
-    dt.format("%Y-%m-%d %H:%M:%S").to_string()
-}
-
-const NANOS_PER_SEC: u64 = 1_000_000_000;
 
 /// Assumes x is time in nanoseconds
 pub fn format_label_ns(plot_name: &str, val: &PlotPoint) -> String {
@@ -59,7 +52,7 @@ pub fn format_delta_xy(delta_x_time_s: f64, delta_y: f64) -> String {
 }
 
 /// Formats seconds to a human readable strings from milliseconds up to days.
-pub fn format_time_s(time_s: f64) -> String {
+fn format_time_s(time_s: f64) -> String {
     const SECOND: f64 = 1.0;
     const MINUTE: f64 = 60.0;
     const HOUR: f64 = 3600.0;

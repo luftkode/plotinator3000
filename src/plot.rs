@@ -19,6 +19,7 @@ pub mod plot_mqtt;
 mod plot_settings;
 mod plot_ui;
 mod util;
+mod x_axis_formatter;
 
 pub enum PlotMode<'a> {
     Logs(&'a mut Plots),

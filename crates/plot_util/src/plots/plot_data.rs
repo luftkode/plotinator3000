@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
@@ -209,7 +211,7 @@ impl PlotValues {
     pub fn get_scaled_mipmap_levels(
         &self,
         pixel_width: usize,
-        x_bounds: (f64, f64),
+        x_bounds: RangeInclusive<f64>,
     ) -> (usize, Option<(usize, usize)>) {
         self.mipmap_minmax_plot_points
             .as_ref()

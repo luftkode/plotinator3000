@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.13.3]
+
+### Changed
+
+- Update pilot display related MQTT topics
+
+## [1.13.2]
+
+### Changed
+
+- Vastly improved X-axis time labelling
+
+## [1.13.1]
+
+### Fixed
+
+- Fix long standing issue where zooming to a high enough degree could cause plot lines to not display all the points that should be visible
+
 ## [1.13.0]
 
 ### Added
