@@ -1,3 +1,4 @@
+use super::stream_descriptor::StreamDescriptor;
 use chrono::Datelike as _;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use hdf5::Dataset;
@@ -5,11 +6,8 @@ use log_if::prelude::*;
 use num_traits::ToPrimitive as _;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
-use stream_descriptor::StreamDescriptor;
 
 use crate::util::{read_any_attribute_to_string, read_string_attribute};
-
-mod stream_descriptor;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BifrostLoopCurrent {

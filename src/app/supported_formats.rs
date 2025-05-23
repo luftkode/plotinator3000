@@ -8,6 +8,7 @@ use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
     navsys::NavSysSps,
+    wasp200::Wasp200Sps,
 };
 use std::{
     fs,
@@ -60,6 +61,12 @@ impl From<(NavSysSps, ParseInfo)> for SupportedFormat {
     }
 }
 
+impl From<(Wasp200Sps, ParseInfo)> for SupportedFormat {
+    fn from(value: (Wasp200Sps, ParseInfo)) -> Self {
+        Self::Log(SupportedLog::from(value))
+    }
+}
+
 impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     ///
@@ -92,10 +99,16 @@ impl SupportedFormat {
                 ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
             )
                 .into()
+        } else if let Ok((wasp200sps, read_bytes)) = Wasp200Sps::try_from_buf(content) {
+            (
+                wasp200sps,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "Unrecognized format",
+                "Got a byte buffer but did not recognize the format",
             ));
         };
         log::debug!("Got: {}", log.descriptive_name());
@@ -142,6 +155,13 @@ impl SupportedFormat {
                 ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
             )
                 .into()
+        } else if Wasp200Sps::file_is_valid(path) {
+            let (log, parsed_bytes) = Wasp200Sps::from_reader(&mut reader)?;
+            (
+                log,
+                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -155,10 +175,12 @@ impl SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
-        use skytem_hdf5::bifrost::BifrostLoopCurrent;
+        use skytem_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
         // Attempt to parse it has an hdf5 file
         if let Ok(bifrost_loop_current) = BifrostLoopCurrent::from_path(path) {
             Ok(Self::HDF(bifrost_loop_current.into()))
+        } else if let Ok(wasp200) = Wasp200::from_path(path) {
+            Ok(Self::HDF(wasp200.into()))
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,

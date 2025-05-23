@@ -12,6 +12,8 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
+plotinator_macros.workspace = true
+test_util.workspace = true
 plot_util.workspace = true
 log_if.workspace = true
 egui_plot.workspace = true

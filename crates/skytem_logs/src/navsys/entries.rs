@@ -15,6 +15,8 @@ pub mod tl;
 pub enum NavSysSpsEntry {
     HE1(AltimeterEntry),
     HE2(AltimeterEntry),
+    HE3(AltimeterEntry), // wasp200
+    HEx(AltimeterEntry), // fallback for none of the other HEs
     TL1(InclinometerEntry),
     TL2(InclinometerEntry),
     GP1(Gps),
@@ -25,7 +27,7 @@ pub enum NavSysSpsEntry {
 impl fmt::Display for NavSysSpsEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::HE1(he) | Self::HE2(he) => write!(f, "{he}"),
+            Self::HE1(he) | Self::HE2(he) | Self::HE3(he) | Self::HEx(he) => write!(f, "{he}"),
             Self::TL1(tl) | Self::TL2(tl) => write!(f, "{tl}"),
             Self::GP1(gps) | Self::GP2(gps) => write!(f, "{gps}"),
             Self::MA1(ma) => write!(f, "{ma}"),
@@ -50,14 +52,14 @@ impl LogEntry for NavSysSpsEntry {
         }
         let first_three_chars = &line[..3];
         let entry: Self = match first_three_chars {
-            "HE1" | "HE2" => {
+            h if h.starts_with("HE") => {
                 let he = AltimeterEntry::from_str(&line)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-                debug_assert!(he.id == 1 || he.id == 2);
-                if he.id == 1 {
-                    Self::HE1(he)
-                } else {
-                    Self::HE2(he)
+                match he.id {
+                    1 => Self::HE1(he),
+                    2 => Self::HE2(he),
+                    3 => Self::HE3(he),
+                    _ => Self::HEx(he),
                 }
             }
             "TL1" | "TL2" => {
@@ -109,7 +111,7 @@ impl LogEntry for NavSysSpsEntry {
 
     fn timestamp_ns(&self) -> f64 {
         match self {
-            Self::HE1(he) | Self::HE2(he) => he.timestamp_ns(),
+            Self::HE1(he) | Self::HE2(he) | Self::HE3(he) | Self::HEx(he) => he.timestamp_ns(),
             Self::TL1(tl) | Self::TL2(tl) => tl.timestamp_ns(),
             Self::GP1(gps) | Self::GP2(gps) => gps.timestamp_ns(),
             Self::MA1(ma) => ma.timestamp_ns(),

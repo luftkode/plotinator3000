@@ -1,8 +1,9 @@
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) mod util;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub mod bifrost;
+plotinator_macros::non_wasm_modules!(
+    pub(crate) mod util;
+    pub(crate) mod stream_descriptor;
+    pub mod bifrost;
+    pub mod wasp200;
+);
 
 // File extensions we recognize as hdf5 files.
 const POSSIBLE_HDF5_EXTENSIONS_CASE_INSENSITIVE: [&str; 3] = ["h5", "hdf5", "hdf"];

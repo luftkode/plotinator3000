@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use toml::Value;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub(crate) struct StreamDescriptor {
@@ -52,16 +53,30 @@ impl StreamDescriptor {
 struct Axis {
     classname: String,
     description: String,
-    values: Vec<i32>,
+    values: Vec<Value>,
     unit: String,
 }
 
 impl Axis {
     fn to_metadata(&self) -> Vec<(String, String)> {
+        let values_str: String = self
+            .values
+            .iter()
+            .map(|v| match v {
+                Value::String(s) => s.to_owned(),
+                Value::Integer(i) => i.to_string(),
+                Value::Float(f) => f.to_string(),
+                Value::Boolean(b) => b.to_string(),
+                Value::Datetime(datetime) => datetime.to_string(),
+                Value::Array(values) => format!("{values:?}"),
+                Value::Table(map) => format!("{map:?}"),
+            })
+            .collect::<Vec<String>>()
+            .join(",");
         vec![
             ("classname".to_owned(), self.classname.clone()),
             ("description".to_owned(), self.description.clone()),
-            ("values".to_owned(), format!("{:?}", self.values)),
+            ("values".to_owned(), values_str),
             ("unit".to_owned(), self.unit.clone()),
         ]
     }
@@ -80,16 +95,20 @@ impl Converter {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct AuxMetadata {
-    cal_offset: f64,
-    cal_scale: f64,
+    cal_offset: Option<f64>,
+    cal_scale: Option<f64>,
 }
 
 impl AuxMetadata {
     fn to_metadata(&self) -> Vec<(String, String)> {
-        vec![
-            ("cal_offset".to_owned(), self.cal_offset.to_string()),
-            ("cal_scale".to_owned(), self.cal_scale.to_string()),
-        ]
+        let mut md = vec![];
+        if let Some(c) = self.cal_offset {
+            md.push(("cal_offset".to_owned(), c.to_string()));
+        }
+        if let Some(c) = self.cal_scale {
+            md.push(("cal_scale".to_owned(), c.to_string()));
+        }
+        md
     }
 }
 
@@ -449,10 +468,56 @@ mod tests {
         assert_eq!(stream_descriptor.description, "TX Loop Current");
         assert_eq!(stream_descriptor.stream_id, "hm_current");
         assert_eq!(stream_descriptor.unit, "A");
-        assert_eq!(stream_descriptor.axes["2"].values, vec![0, 1]);
+        assert_eq!(
+            stream_descriptor.axes["2"].values[0].as_integer().unwrap(),
+            0
+        );
+        assert_eq!(
+            stream_descriptor.axes["2"].values[1].as_integer().unwrap(),
+            1
+        );
 
-        assert_eq!(stream_descriptor.aux_metadata.cal_offset, 0.0);
-        assert_eq!(stream_descriptor.aux_metadata.cal_scale, 0.005);
+        assert_eq!(stream_descriptor.aux_metadata.cal_offset.unwrap(), 0.0);
+        assert_eq!(stream_descriptor.aux_metadata.cal_scale.unwrap(), 0.005);
+
+        Ok(())
+    }
+
+    const TEST_WASP200_TOML_STR: &str = r#"stream_id = "height"
+chunk_size = [
+    10,
+    1,
+]
+description = "Range"
+unit = "m"
+data_type = "numpy.float32"
+timestamp_stream = ""
+
+[axes.0]
+classname = "Primary"
+description = ""
+values = []
+unit = ""
+
+[axes.1]
+classname = "Selector"
+description = "Component"
+values = [
+    "$range$",
+]
+unit = "['m']"
+
+[converter]
+classname = "Unity"
+
+[aux_metadata]
+"#;
+
+    #[test]
+    fn test_deserialize_wasp200() -> TestResult {
+        let stream_descriptor: StreamDescriptor = toml::from_str(TEST_WASP200_TOML_STR)?;
+
+        assert_eq!(stream_descriptor.stream_id, "height");
 
         Ok(())
     }
