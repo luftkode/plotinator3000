@@ -108,7 +108,7 @@ impl SupportedFormat {
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "Unrecognized format",
+                "Got a byte buffer but did not recognize the format",
             ));
         };
         log::debug!("Got: {}", log.descriptive_name());
@@ -175,10 +175,12 @@ impl SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
-        use skytem_hdf5::bifrost::BifrostLoopCurrent;
+        use skytem_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
         // Attempt to parse it has an hdf5 file
         if let Ok(bifrost_loop_current) = BifrostLoopCurrent::from_path(path) {
             Ok(Self::HDF(bifrost_loop_current.into()))
+        } else if let Ok(wasp200) = Wasp200::from_path(path) {
+            Ok(Self::HDF(wasp200.into()))
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,

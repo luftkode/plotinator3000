@@ -4460,10 +4460,12 @@ dependencies = [
  "ndarray",
  "num-traits",
  "plot_util",
+ "plotinator_macros",
  "serde",
  "serde-big-array",
  "strum 0.27.1",
  "strum_macros 0.27.1",
+ "test_util",
  "testresult",
  "toml",
 ]
