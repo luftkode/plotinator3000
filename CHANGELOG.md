@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.14.1]
+
+### Fixed
+
+- Update check at startup would prevent app creation if no connection was available, now skips updater on request failure.
+
 ## [1.14.0]
 
 ### Added
