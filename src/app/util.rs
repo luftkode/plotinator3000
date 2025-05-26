@@ -83,5 +83,14 @@ fn list_supported_hdf5_formats(ui: &mut egui::Ui) {
             "https://github.com/luftkode/bifrost-app",
         ));
         ui.end_row();
+
+        ui.label(RichText::new("Wasp 200 Altitude").strong());
+        ui.label("Height measurements");
+
+        ui.add(Hyperlink::from_label_and_url(
+            "https://github.com/luftkode/njord-altimeter",
+            "https://github.com/luftkode/njord-altimeter",
+        ));
+        ui.end_row();
     }
 }
