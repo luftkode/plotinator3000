@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
 use crate::stream_descriptor::StreamDescriptor;
-use crate::util::{read_any_attribute_to_string, read_string_attribute};
+use crate::util::{log_all_attributes, read_any_attribute_to_string, read_string_attribute};
 
 #[derive(H5Type, Clone, Debug)]
 #[repr(C)]
@@ -87,71 +87,17 @@ impl Wasp200 {
         Ok((height_dataset, timestamp_dataset))
     }
 
-    pub fn from_path<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let (height_dataset, timestamp_dataset) = Self::open_wasp200_datasets(path)?;
-
+    fn extract_metadata(
+        height_dataset: &Dataset,
+        time_dataset: &Dataset,
+    ) -> io::Result<Vec<(String, String)>> {
         let height_dataset_description =
             read_string_attribute(&height_dataset.attr("description")?)?;
-        let height_stream_descriptor_toml_str =
-            read_string_attribute(&height_dataset.attr("stream_descriptor")?)?;
-        let Ok(height_stream_descriptor): Result<StreamDescriptor, toml::de::Error> =
-            toml::from_str(&height_stream_descriptor_toml_str)
-        else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Failed decoding 'stream_descriptor' string as TOML from stream_descriptor: {height_stream_descriptor_toml_str}"
-                ),
-            ));
-        };
-
-        for a in height_dataset.attr_names()? {
-            let attr = height_dataset.attr(&a)?;
-            let attr_val_as_string = read_any_attribute_to_string(&attr)?;
-            log::info!("Attr: {attr_val_as_string}");
-        }
-
-        let height_unit = read_any_attribute_to_string(&height_dataset.attr("unit")?)?;
-
-        let heights: ndarray::Array2<f32> = height_dataset.read()?;
-        log::info!("Got wasp wasp heights with {} samples", heights.len());
-
-        let timestamps_data: ndarray::Array2<Timestamp> = timestamp_dataset.read_2d()?;
-        let timestamps_raw: Vec<i64> = timestamps_data.iter().map(|t| t.time).collect();
-
-        let mut timestamps = vec![];
-        let mut first_timestamp: Option<DateTime<Utc>> = None;
-        for t in timestamps_raw {
-            let ts = chrono::Utc.timestamp_nanos(t).to_utc();
-            if first_timestamp.is_none() {
-                first_timestamp = Some(ts);
-            }
-            timestamps.push(
-                ts.timestamp_nanos_opt()
-                    .expect("timestamp as nanoseconds out of range") as f64,
-            );
-        }
-
+        let height_stream_descriptor = StreamDescriptor::try_from(height_dataset)?;
         let timestamp_dataset_description =
             read_string_attribute(&height_dataset.attr("description")?)?;
-        let timestamp_stream_descriptor_toml_str =
-            read_string_attribute(&timestamp_dataset.attr("stream_descriptor")?)?;
-        let Ok(timestamp_stream_descriptor): Result<StreamDescriptor, toml::de::Error> =
-            toml::from_str(&timestamp_stream_descriptor_toml_str)
-        else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Failed decoding 'stream_descriptor' string as TOML from stream_descriptor: {timestamp_stream_descriptor_toml_str}"
-                ),
-            ));
-        };
+        let timestamp_stream_descriptor = StreamDescriptor::try_from(time_dataset)?;
 
-        for a in timestamp_dataset.attr_names()? {
-            let attr = timestamp_dataset.attr(&a)?;
-            let attr_val_as_string = read_any_attribute_to_string(&attr)?;
-            log::info!("Attr: {attr_val_as_string}");
-        }
         let mut metadata = vec![(
             "Dataset Description".into(),
             height_dataset_description.clone(),
@@ -163,7 +109,46 @@ impl Wasp200 {
         ));
         metadata.extend_from_slice(&timestamp_stream_descriptor.to_metadata());
 
-        let _timestamp_unit = read_any_attribute_to_string(&timestamp_dataset.attr("unit")?)?;
+        Ok(metadata)
+    }
+
+    fn extract_timestamps(
+        timestamp_data: &ndarray::Array2<Timestamp>,
+    ) -> (Vec<f64>, DateTime<Utc>) {
+        let timestamps_raw: Vec<i64> = timestamp_data.iter().map(|t| t.time).collect();
+        let first_timestamp: DateTime<Utc> = chrono::Utc
+            .timestamp_nanos(*timestamps_raw.first().expect("Empty timestamps"))
+            .to_utc();
+
+        let mut timestamps = vec![];
+        for t in timestamps_raw {
+            let ts = chrono::Utc.timestamp_nanos(t).to_utc();
+            timestamps.push(
+                ts.timestamp_nanos_opt()
+                    .expect("timestamp as nanoseconds out of range") as f64,
+            );
+        }
+
+        (timestamps, first_timestamp)
+    }
+
+    pub fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+        let (height_dataset, timestamp_dataset) = Self::open_wasp200_datasets(path)?;
+        log_all_attributes(&height_dataset);
+        log_all_attributes(&timestamp_dataset);
+
+        let height_unit = read_any_attribute_to_string(&height_dataset.attr("unit")?)?;
+        let heights: ndarray::Array2<f32> = height_dataset.read()?;
+        log::info!("Got wasp wasp heights with {} samples", heights.len());
+
+        let timestamp_data: ndarray::Array2<Timestamp> = timestamp_dataset.read_2d()?;
+        if timestamp_data.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "No timestamps in wasp200 dataset",
+            ));
+        }
+        let (timestamps, first_timestamp) = Self::extract_timestamps(&timestamp_data);
 
         let mut height_with_ts: Vec<[f64; 2]> = Vec::new();
 
@@ -177,8 +162,10 @@ impl Wasp200 {
             ExpectedPlotRange::OneToOneHundred,
         );
 
+        let metadata = Self::extract_metadata(&height_dataset, &timestamp_dataset)?;
+
         Ok(Self {
-            starting_timestamp_utc: first_timestamp.expect("No first timestamp"),
+            starting_timestamp_utc: first_timestamp,
             dataset_description: "Wasp200 Height".to_owned(),
             raw_plots: vec![rawplot],
             metadata,

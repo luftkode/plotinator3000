@@ -3,6 +3,27 @@ use hdf5::{
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
 
+/// Logs all dataset attributes at INFO verbosity
+///
+/// Ignores errors
+pub(crate) fn log_all_attributes(ds: &hdf5::Dataset) {
+    let Ok(attrs) = ds.attr_names() else {
+        log::error!("Failed loading HDF5 attribute names");
+        return;
+    };
+    for a in attrs {
+        let Ok(attr) = ds.attr(&a) else {
+            log::error!("Failed loading Attribute: {a}");
+            continue;
+        };
+        let Ok(attr_val_as_str) = read_any_attribute_to_string(&attr) else {
+            log::error!("Failed reading attribute '{attr:?}' value as string");
+            continue;
+        };
+        log::info!("Attr: {attr_val_as_str}");
+    }
+}
+
 /// Reads an HDF5 attribute's value as a HDF5 string type and returns it as a native [`String`].
 ///
 /// If the value is not a string type, an error is returned.

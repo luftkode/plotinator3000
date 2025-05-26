@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io};
 
 use serde::{Deserialize, Serialize};
 use toml::Value;
+
+use crate::util::read_string_attribute;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub(crate) struct StreamDescriptor {
@@ -46,6 +48,23 @@ impl StreamDescriptor {
         }
 
         metadata
+    }
+}
+
+impl TryFrom<&hdf5::Dataset> for StreamDescriptor {
+    type Error = io::Error;
+
+    fn try_from(dataset: &hdf5::Dataset) -> Result<Self, Self::Error> {
+        let sd_attr = dataset.attr("stream_descriptor")?;
+        let sd_toml = read_string_attribute(&sd_attr)?;
+
+        let Ok(sd) = toml::from_str(&sd_toml) else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Failed decoding 'stream_descriptor' string as TOML: {sd_toml}"),
+            ));
+        };
+        Ok(sd)
     }
 }
 
