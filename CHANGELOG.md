@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for Wasp200/Njord altimeter hdf5 and .sps files
 
+### Changed
+
+- Don't include empty hdf5 attributes under loaded file descriptions
+
 ## [1.13.3]
 
 ### Changed
