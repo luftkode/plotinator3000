@@ -91,7 +91,7 @@ impl PlotinatorUpdater {
             Err(e) => {
                 log::error!("{e}");
                 match e {
-                    axoupdater::AxoupdateError::Reqwest(_) => {
+                    axoupdater::AxoupdateError::Reqwest(e) if e.is_connect() => {
                         log::warn!("No internet - can't check for updates");
                         return Ok(CheckUpdateResult::NoConnection);
                     }
