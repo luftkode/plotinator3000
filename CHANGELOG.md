@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.14.0]
+
+### Added
+
+- Support for Wasp200/Njord altimeter hdf5 and .sps files
+
 ## [1.13.3]
 
 ### Changed
