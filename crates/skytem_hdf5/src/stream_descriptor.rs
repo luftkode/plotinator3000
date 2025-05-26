@@ -23,28 +23,46 @@ impl StreamDescriptor {
     pub(crate) fn to_metadata(&self) -> Vec<(String, String)> {
         let mut metadata = Vec::new();
 
-        metadata.push(("stream_id".to_owned(), self.stream_id.clone()));
-        metadata.push(("chunk_size".to_owned(), format!("{:?}", self.chunk_size)));
-        metadata.push(("description".to_owned(), self.description.clone()));
-        metadata.push(("unit".to_owned(), self.unit.clone()));
-        metadata.push(("data_type".to_owned(), self.data_type.clone()));
-        metadata.push(("timestamp_stream".to_owned(), self.timestamp_stream.clone()));
+        if !self.stream_id.is_empty() {
+            metadata.push(("stream_id".to_owned(), self.stream_id.clone()));
+        }
+        if !self.chunk_size.is_empty() {
+            metadata.push(("chunk_size".to_owned(), format!("{:?}", self.chunk_size)));
+        }
+        if !self.description.is_empty() {
+            metadata.push(("description".to_owned(), self.description.clone()));
+        }
+        if !self.unit.is_empty() {
+            metadata.push(("unit".to_owned(), self.unit.clone()));
+        }
+        if !self.data_type.is_empty() {
+            metadata.push(("data_type".to_owned(), self.data_type.clone()));
+        }
+        if !self.timestamp_stream.is_empty() {
+            metadata.push(("timestamp_stream".to_owned(), self.timestamp_stream.clone()));
+        }
 
         // Flatten axes
         for (key, axis) in &self.axes {
             for (sub_key, value) in axis.to_metadata() {
-                metadata.push((format!("axes.{key}.{sub_key}"), value));
+                if !value.is_empty() {
+                    metadata.push((format!("axes.{key}.{sub_key}"), value));
+                }
             }
         }
 
         // Converter
         for (key, value) in self.converter.to_metadata() {
-            metadata.push((format!("converter.{key}"), value));
+            if !value.is_empty() {
+                metadata.push((format!("converter.{key}"), value));
+            }
         }
 
         // AuxMetadata
         for (key, value) in self.aux_metadata.to_metadata() {
-            metadata.push((format!("aux_metadata.{key}"), value));
+            if !value.is_empty() {
+                metadata.push((format!("aux_metadata.{key}"), value));
+            }
         }
 
         metadata
@@ -92,12 +110,21 @@ impl Axis {
             })
             .collect::<Vec<String>>()
             .join(",");
-        vec![
-            ("classname".to_owned(), self.classname.clone()),
-            ("description".to_owned(), self.description.clone()),
-            ("values".to_owned(), values_str),
-            ("unit".to_owned(), self.unit.clone()),
-        ]
+
+        let mut metadata = vec![];
+        if !self.classname.is_empty() {
+            metadata.push(("classname".to_owned(), self.classname.clone()));
+        }
+        if !self.description.is_empty() {
+            metadata.push(("description".to_owned(), self.description.clone()));
+        }
+        if !values_str.is_empty() {
+            metadata.push(("values".to_owned(), values_str));
+        }
+        if !self.unit.is_empty() {
+            metadata.push(("unit".to_owned(), self.unit.clone()));
+        }
+        metadata
     }
 }
 
@@ -108,7 +135,11 @@ struct Converter {
 
 impl Converter {
     fn to_metadata(&self) -> Vec<(String, String)> {
-        vec![("classname".to_owned(), self.classname.clone())]
+        let mut metadata = vec![];
+        if !self.classname.is_empty() {
+            metadata.push(("classname".to_owned(), self.classname.clone()));
+        }
+        metadata
     }
 }
 
