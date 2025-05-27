@@ -37,6 +37,13 @@ const FORCE_UPGRADE: bool = false;
 
 mod ui;
 
+#[derive(Debug, Clone, Copy)]
+pub enum CheckUpdateResult {
+    NoConnection,
+    UpdateAvailable,
+    NoUpdate,
+}
+
 /// A wrapper around the [`axoupdater::AxoUpdater`] struct that sets up the updater with the correct parameters
 /// for plotinator3000. It doesn't use an install receipt but sets the necessary parameters manually.
 pub(crate) struct PlotinatorUpdater {
@@ -71,25 +78,38 @@ impl PlotinatorUpdater {
             .set_install_dir(path.to_string_lossy().into_owned());
     }
 
-    pub fn is_update_needed(&mut self) -> axoupdater::AxoupdateResult<bool> {
-        let res = tokio::runtime::Builder::new_current_thread()
+    pub fn is_update_needed(&mut self) -> axoupdater::AxoupdateResult<CheckUpdateResult> {
+        let remote_version = match tokio::runtime::Builder::new_current_thread()
             .worker_threads(1)
             .max_blocking_threads(128)
             .enable_all()
             .build()
             .expect("Initializing tokio runtime failed")
-            .block_on(self.updater.query_new_version())?;
+            .block_on(self.updater.query_new_version())
+        {
+            Ok(v) => v,
+            Err(e) => {
+                log::error!("{e}");
+                match e {
+                    axoupdater::AxoupdateError::Reqwest(e) if e.is_connect() => {
+                        log::warn!("No internet - can't check for updates");
+                        return Ok(CheckUpdateResult::NoConnection);
+                    }
+                    _ => return Err(e),
+                }
+            }
+        };
 
-        match res {
+        match remote_version {
             Some(v) => {
                 if v > crate::get_app_version() {
                     log::info!("New version available");
-                    Ok(true)
+                    Ok(CheckUpdateResult::UpdateAvailable)
                 } else {
-                    Ok(false)
+                    Ok(CheckUpdateResult::NoUpdate)
                 }
             }
-            None => Ok(false),
+            None => Ok(CheckUpdateResult::NoUpdate),
         }
     }
 
@@ -273,12 +293,20 @@ fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
         }
         updater.always_update(FORCE_UPGRADE); // Set to test it
     }
-    if updater.is_update_needed()? {
-        log::warn!("{APP_NAME} is outdated and should be upgraded");
-        Ok(true)
-    } else {
-        log::info!("{APP_NAME} is up to date");
-        Ok(false)
+    log::debug!("Checking for update");
+    match updater.is_update_needed()? {
+        CheckUpdateResult::NoConnection => {
+            log::info!("Cannot check for update");
+            Ok(false)
+        }
+        CheckUpdateResult::NoUpdate => {
+            log::info!("{APP_NAME} is up to date");
+            Ok(false)
+        }
+        CheckUpdateResult::UpdateAvailable => {
+            log::warn!("{APP_NAME} is outdated and should be upgraded");
+            Ok(true)
+        }
     }
 }
 
