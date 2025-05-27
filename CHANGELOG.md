@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.14.0]
+
+### Added
+
+- Support for Wasp200/Njord altimeter hdf5 and .sps files
+
+### Changed
+
+- Don't include empty hdf5 attributes under loaded file descriptions
+
 ### Dependencies
 
 - `tokio`: 1.45.0 → 1.45.1 ([#248](https://github.com/luftkode/plotinator3000/pull/248))

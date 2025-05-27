@@ -1,6 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io};
 
 use serde::{Deserialize, Serialize};
+use toml::Value;
+
+use crate::util::read_string_attribute;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub(crate) struct StreamDescriptor {
@@ -20,31 +23,66 @@ impl StreamDescriptor {
     pub(crate) fn to_metadata(&self) -> Vec<(String, String)> {
         let mut metadata = Vec::new();
 
-        metadata.push(("stream_id".to_owned(), self.stream_id.clone()));
-        metadata.push(("chunk_size".to_owned(), format!("{:?}", self.chunk_size)));
-        metadata.push(("description".to_owned(), self.description.clone()));
-        metadata.push(("unit".to_owned(), self.unit.clone()));
-        metadata.push(("data_type".to_owned(), self.data_type.clone()));
-        metadata.push(("timestamp_stream".to_owned(), self.timestamp_stream.clone()));
+        if !self.stream_id.is_empty() {
+            metadata.push(("stream_id".to_owned(), self.stream_id.clone()));
+        }
+        if !self.chunk_size.is_empty() {
+            metadata.push(("chunk_size".to_owned(), format!("{:?}", self.chunk_size)));
+        }
+        if !self.description.is_empty() {
+            metadata.push(("description".to_owned(), self.description.clone()));
+        }
+        if !self.unit.is_empty() {
+            metadata.push(("unit".to_owned(), self.unit.clone()));
+        }
+        if !self.data_type.is_empty() {
+            metadata.push(("data_type".to_owned(), self.data_type.clone()));
+        }
+        if !self.timestamp_stream.is_empty() {
+            metadata.push(("timestamp_stream".to_owned(), self.timestamp_stream.clone()));
+        }
 
         // Flatten axes
         for (key, axis) in &self.axes {
             for (sub_key, value) in axis.to_metadata() {
-                metadata.push((format!("axes.{key}.{sub_key}"), value));
+                if !value.is_empty() {
+                    metadata.push((format!("axes.{key}.{sub_key}"), value));
+                }
             }
         }
 
         // Converter
         for (key, value) in self.converter.to_metadata() {
-            metadata.push((format!("converter.{key}"), value));
+            if !value.is_empty() {
+                metadata.push((format!("converter.{key}"), value));
+            }
         }
 
         // AuxMetadata
         for (key, value) in self.aux_metadata.to_metadata() {
-            metadata.push((format!("aux_metadata.{key}"), value));
+            if !value.is_empty() {
+                metadata.push((format!("aux_metadata.{key}"), value));
+            }
         }
 
         metadata
+    }
+}
+
+impl TryFrom<&hdf5::Dataset> for StreamDescriptor {
+    type Error = io::Error;
+
+    fn try_from(dataset: &hdf5::Dataset) -> Result<Self, Self::Error> {
+        let sd_attr = dataset.attr("stream_descriptor")?;
+        let sd_toml = read_string_attribute(&sd_attr)?;
+
+        let Ok(sd) = toml::from_str(&sd_toml) else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Failed decoding 'stream_descriptor' string as TOML: {sd_toml}"),
+            ));
+        };
+        Ok(sd)
     }
 }
 
@@ -52,18 +90,41 @@ impl StreamDescriptor {
 struct Axis {
     classname: String,
     description: String,
-    values: Vec<i32>,
+    values: Vec<Value>,
     unit: String,
 }
 
 impl Axis {
     fn to_metadata(&self) -> Vec<(String, String)> {
-        vec![
-            ("classname".to_owned(), self.classname.clone()),
-            ("description".to_owned(), self.description.clone()),
-            ("values".to_owned(), format!("{:?}", self.values)),
-            ("unit".to_owned(), self.unit.clone()),
-        ]
+        let values_str: String = self
+            .values
+            .iter()
+            .map(|v| match v {
+                Value::String(s) => s.to_owned(),
+                Value::Integer(i) => i.to_string(),
+                Value::Float(f) => f.to_string(),
+                Value::Boolean(b) => b.to_string(),
+                Value::Datetime(datetime) => datetime.to_string(),
+                Value::Array(values) => format!("{values:?}"),
+                Value::Table(map) => format!("{map:?}"),
+            })
+            .collect::<Vec<String>>()
+            .join(",");
+
+        let mut metadata = vec![];
+        if !self.classname.is_empty() {
+            metadata.push(("classname".to_owned(), self.classname.clone()));
+        }
+        if !self.description.is_empty() {
+            metadata.push(("description".to_owned(), self.description.clone()));
+        }
+        if !values_str.is_empty() {
+            metadata.push(("values".to_owned(), values_str));
+        }
+        if !self.unit.is_empty() {
+            metadata.push(("unit".to_owned(), self.unit.clone()));
+        }
+        metadata
     }
 }
 
@@ -74,22 +135,30 @@ struct Converter {
 
 impl Converter {
     fn to_metadata(&self) -> Vec<(String, String)> {
-        vec![("classname".to_owned(), self.classname.clone())]
+        let mut metadata = vec![];
+        if !self.classname.is_empty() {
+            metadata.push(("classname".to_owned(), self.classname.clone()));
+        }
+        metadata
     }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct AuxMetadata {
-    cal_offset: f64,
-    cal_scale: f64,
+    cal_offset: Option<f64>,
+    cal_scale: Option<f64>,
 }
 
 impl AuxMetadata {
     fn to_metadata(&self) -> Vec<(String, String)> {
-        vec![
-            ("cal_offset".to_owned(), self.cal_offset.to_string()),
-            ("cal_scale".to_owned(), self.cal_scale.to_string()),
-        ]
+        let mut md = vec![];
+        if let Some(c) = self.cal_offset {
+            md.push(("cal_offset".to_owned(), c.to_string()));
+        }
+        if let Some(c) = self.cal_scale {
+            md.push(("cal_scale".to_owned(), c.to_string()));
+        }
+        md
     }
 }
 
@@ -449,10 +518,56 @@ mod tests {
         assert_eq!(stream_descriptor.description, "TX Loop Current");
         assert_eq!(stream_descriptor.stream_id, "hm_current");
         assert_eq!(stream_descriptor.unit, "A");
-        assert_eq!(stream_descriptor.axes["2"].values, vec![0, 1]);
+        assert_eq!(
+            stream_descriptor.axes["2"].values[0].as_integer().unwrap(),
+            0
+        );
+        assert_eq!(
+            stream_descriptor.axes["2"].values[1].as_integer().unwrap(),
+            1
+        );
 
-        assert_eq!(stream_descriptor.aux_metadata.cal_offset, 0.0);
-        assert_eq!(stream_descriptor.aux_metadata.cal_scale, 0.005);
+        assert_eq!(stream_descriptor.aux_metadata.cal_offset.unwrap(), 0.0);
+        assert_eq!(stream_descriptor.aux_metadata.cal_scale.unwrap(), 0.005);
+
+        Ok(())
+    }
+
+    const TEST_WASP200_TOML_STR: &str = r#"stream_id = "height"
+chunk_size = [
+    10,
+    1,
+]
+description = "Range"
+unit = "m"
+data_type = "numpy.float32"
+timestamp_stream = ""
+
+[axes.0]
+classname = "Primary"
+description = ""
+values = []
+unit = ""
+
+[axes.1]
+classname = "Selector"
+description = "Component"
+values = [
+    "$range$",
+]
+unit = "['m']"
+
+[converter]
+classname = "Unity"
+
+[aux_metadata]
+"#;
+
+    #[test]
+    fn test_deserialize_wasp200() -> TestResult {
+        let stream_descriptor: StreamDescriptor = toml::from_str(TEST_WASP200_TOML_STR)?;
+
+        assert_eq!(stream_descriptor.stream_id, "height");
 
         Ok(())
     }

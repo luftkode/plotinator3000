@@ -10,7 +10,7 @@ use header::NavSysSpsHeader;
 use log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
-mod entries;
+pub(crate) mod entries;
 mod header;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -39,10 +39,16 @@ impl NavSysSps {
     fn build_raw_plots(entries: &[NavSysSpsEntry]) -> Vec<RawPlot> {
         let mut raw_he1_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_he2_points_altitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_he3_points_altitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_hex_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut he1_invalid_value_count: u64 = 0;
         let mut raw_he1_points_invalid_value: Vec<[f64; 2]> = Vec::new();
         let mut he2_invalid_value_count: u64 = 0;
         let mut raw_he2_points_invalid_value: Vec<[f64; 2]> = Vec::new();
+        let mut he3_invalid_value_count: u64 = 0;
+        let mut raw_he3_points_invalid_value: Vec<[f64; 2]> = Vec::new();
+        let mut hex_invalid_value_count: u64 = 0;
+        let mut raw_hex_points_invalid_value: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl1_points_pitch: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl2_points_pitch: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl1_points_roll: Vec<[f64; 2]> = Vec::new();
@@ -85,6 +91,24 @@ impl NavSysSps {
                         he2_invalid_value_count += 1;
                         raw_he2_points_invalid_value
                             .push([e.timestamp_ns(), he2_invalid_value_count as f64]);
+                    }
+                }
+                NavSysSpsEntry::HE3(e) => {
+                    if let Some(altitude) = e.altitude_m() {
+                        raw_he3_points_altitude.push([e.timestamp_ns(), altitude]);
+                    } else {
+                        he3_invalid_value_count += 1;
+                        raw_he3_points_invalid_value
+                            .push([e.timestamp_ns(), he3_invalid_value_count as f64]);
+                    }
+                }
+                NavSysSpsEntry::HEx(e) => {
+                    if let Some(altitude) = e.altitude_m() {
+                        raw_hex_points_altitude.push([e.timestamp_ns(), altitude]);
+                    } else {
+                        hex_invalid_value_count += 1;
+                        raw_hex_points_invalid_value
+                            .push([e.timestamp_ns(), hex_invalid_value_count as f64]);
                     }
                 }
                 NavSysSpsEntry::TL1(e) => {
@@ -137,6 +161,16 @@ impl NavSysSps {
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
+                "HE3 Altitude [M]".into(),
+                raw_he3_points_altitude,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "HEx Altitude [M]".into(),
+                raw_hex_points_altitude,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
                 "HE1 Invalid Count".into(),
                 raw_he1_points_invalid_value,
                 ExpectedPlotRange::Thousands,
@@ -144,6 +178,16 @@ impl NavSysSps {
             RawPlot::new(
                 "HE2 Invalid Count".into(),
                 raw_he2_points_invalid_value,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "HE3 Invalid Count".into(),
+                raw_he3_points_invalid_value,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "HEx Invalid Count".into(),
+                raw_hex_points_invalid_value,
                 ExpectedPlotRange::Thousands,
             ),
             RawPlot::new(

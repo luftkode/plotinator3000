@@ -23,6 +23,10 @@ impl AltimeterEntry {
             .expect("timestamp as nanoseconds out of range") as f64
     }
 
+    pub(crate) fn timestamp(&self) -> DateTime<Utc> {
+        self.timestamp
+    }
+
     /// Altitude in meters above mean sea level, return `None` if the altitude was the invalid value
     pub(crate) fn altitude_m(&self) -> Option<f64> {
         self.altitude_m
