@@ -8,6 +8,28 @@ use std::{io, path::Path};
 use crate::stream_descriptor::StreamDescriptor;
 use crate::util::{log_all_attributes, read_any_attribute_to_string, read_string_attribute};
 
+impl Plotable for Wasp200 {
+    fn raw_plots(&self) -> &[RawPlot] {
+        &self.raw_plots
+    }
+
+    fn first_timestamp(&self) -> DateTime<Utc> {
+        self.starting_timestamp_utc
+    }
+
+    fn descriptive_name(&self) -> &str {
+        &self.dataset_description
+    }
+
+    fn labels(&self) -> Option<&[PlotLabels]> {
+        None
+    }
+
+    fn metadata(&self) -> Option<Vec<(String, String)>> {
+        Some(self.metadata.clone())
+    }
+}
+
 #[derive(H5Type, Clone, Debug)]
 #[repr(C)]
 struct Timestamp {
@@ -24,7 +46,47 @@ pub struct Wasp200 {
 }
 
 impl Wasp200 {
-    pub fn open_wasp200_datasets(path: impl AsRef<Path>) -> io::Result<(Dataset, Dataset)> {
+    pub fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+        let (height_dataset, timestamp_dataset) = Self::open_wasp200_datasets(path)?;
+        log_all_attributes(&height_dataset);
+        log_all_attributes(&timestamp_dataset);
+
+        let height_unit = read_any_attribute_to_string(&height_dataset.attr("unit")?)?;
+        let heights: ndarray::Array2<f32> = height_dataset.read()?;
+        log::info!("Got wasp wasp heights with {} samples", heights.len());
+
+        let timestamp_data: ndarray::Array2<Timestamp> = timestamp_dataset.read_2d()?;
+        if timestamp_data.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "No timestamps in wasp200 dataset",
+            ));
+        }
+        let (timestamps, first_timestamp) = Self::extract_timestamps(&timestamp_data);
+
+        let mut height_with_ts: Vec<[f64; 2]> = Vec::new();
+
+        for (height, ts) in heights.iter().zip(timestamps) {
+            height_with_ts.push([ts, *height as f64]);
+        }
+
+        let rawplot = RawPlot::new(
+            format!("Height [{height_unit}]"),
+            height_with_ts,
+            ExpectedPlotRange::OneToOneHundred,
+        );
+
+        let metadata = Self::extract_metadata(&height_dataset, &timestamp_dataset)?;
+
+        Ok(Self {
+            starting_timestamp_utc: first_timestamp,
+            dataset_description: "Wasp200 Height".to_owned(),
+            raw_plots: vec![rawplot],
+            metadata,
+        })
+    }
+
+    fn open_wasp200_datasets(path: impl AsRef<Path>) -> io::Result<(Dataset, Dataset)> {
         let hdf5_file = hdf5::File::open(&path)?;
 
         let height_dataset_name = "height";
@@ -130,68 +192,6 @@ impl Wasp200 {
         }
 
         (timestamps, first_timestamp)
-    }
-
-    pub fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
-        let (height_dataset, timestamp_dataset) = Self::open_wasp200_datasets(path)?;
-        log_all_attributes(&height_dataset);
-        log_all_attributes(&timestamp_dataset);
-
-        let height_unit = read_any_attribute_to_string(&height_dataset.attr("unit")?)?;
-        let heights: ndarray::Array2<f32> = height_dataset.read()?;
-        log::info!("Got wasp wasp heights with {} samples", heights.len());
-
-        let timestamp_data: ndarray::Array2<Timestamp> = timestamp_dataset.read_2d()?;
-        if timestamp_data.is_empty() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "No timestamps in wasp200 dataset",
-            ));
-        }
-        let (timestamps, first_timestamp) = Self::extract_timestamps(&timestamp_data);
-
-        let mut height_with_ts: Vec<[f64; 2]> = Vec::new();
-
-        for (height, ts) in heights.iter().zip(timestamps) {
-            height_with_ts.push([ts, *height as f64]);
-        }
-
-        let rawplot = RawPlot::new(
-            format!("Height [{height_unit}]"),
-            height_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
-
-        let metadata = Self::extract_metadata(&height_dataset, &timestamp_dataset)?;
-
-        Ok(Self {
-            starting_timestamp_utc: first_timestamp,
-            dataset_description: "Wasp200 Height".to_owned(),
-            raw_plots: vec![rawplot],
-            metadata,
-        })
-    }
-}
-
-impl Plotable for Wasp200 {
-    fn raw_plots(&self) -> &[RawPlot] {
-        &self.raw_plots
-    }
-
-    fn first_timestamp(&self) -> DateTime<Utc> {
-        self.starting_timestamp_utc
-    }
-
-    fn descriptive_name(&self) -> &str {
-        &self.dataset_description
-    }
-
-    fn labels(&self) -> Option<&[PlotLabels]> {
-        None
-    }
-
-    fn metadata(&self) -> Option<Vec<(String, String)>> {
-        Some(self.metadata.clone())
     }
 }
 
