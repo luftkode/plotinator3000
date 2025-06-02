@@ -125,24 +125,26 @@ fn find_appropriate_time_unit(range_ns: f64, target_count_min: f64) -> (&'static
 
 /// Generate grid marks using the selected time unit and step size
 fn generate_grid_marks(min_ns: f64, max_ns: f64, unit: &TimeUnit, step: u64) -> Vec<GridMark> {
-    let mut marks = Vec::new();
+    // Typically 3-12 marks, preallocate 12 to avoid reallocating in 99.9% of cases
+    let mut marks = Vec::with_capacity(12);
 
     // Calculate step size in nanoseconds
     let step_ns = step as f64 * unit.nanos_per_unit;
 
     // Find the first mark position (round up to the next step)
-    let step_count = (min_ns / step_ns).ceil();
-    let first_mark = step_count * step_ns;
+    let first_mark = (min_ns / step_ns).ceil() as u64;
 
-    // Generate marks in a simple loop
-    let mut current = first_mark;
-    while current <= max_ns {
+    // NOTE: Use a loop counter to avoid accumulating floating point precision errors
+    let mut i = first_mark;
+    let mut value = i as f64 * step_ns;
+    while value < max_ns {
         marks.push(GridMark {
-            value: current,
+            value,
             step_size: step_ns,
         });
 
-        current += step_ns;
+        i += 1;
+        value = i as f64 * step_ns;
     }
 
     marks

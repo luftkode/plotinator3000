@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix [#250](https://github.com/luftkode/plotinator3000/issues/250) crash when the calculated distance between x-axis grid marks is less than machine epsilon
 - Fix crash on timestamp out of range when X-axis stretches >100 years
 
 ### Dependencies
