@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `reqwest`: 0.12.15 → 0.12.18 ([#254](https://github.com/luftkode/plotinator3000/pull/254))
+
 ## [1.14.1]
 
 ### Fixed
