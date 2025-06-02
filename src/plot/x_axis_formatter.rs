@@ -193,8 +193,11 @@ pub fn format_time(mark: GridMark, range: &RangeInclusive<f64>) -> String {
     // Convert to seconds and get timestamp
     let sec = ns / NANOS_PER_SEC as f64;
     let ns_remainder = sec.fract() * NANOS_PER_SEC as f64;
-    let dt = DateTime::from_timestamp(sec as i64, ns_remainder as u32)
-        .unwrap_or_else(|| panic!("Timestamp value out of range: {sec}"));
+    let Some(dt) = DateTime::from_timestamp(sec as i64, ns_remainder as u32) else {
+        // Will happen if the user zooms out where the X-axis is extended >100 years
+        log::warn!("Timestamp value out of range: {sec}");
+        return "out of range".to_owned();
+    };
 
     match AxisRange::from_ns(range_ns) {
         AxisRange::Over2Days => {
