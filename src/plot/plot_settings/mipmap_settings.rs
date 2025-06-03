@@ -1,7 +1,7 @@
 use egui::{Response, RichText};
 use egui_phosphor::regular;
 use serde::{Deserialize, Serialize};
-use skytem_plot_util::MipMapConfiguration;
+use plotinator_plot_util::MipMapConfiguration;
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct MipMapSettings {
@@ -49,8 +49,8 @@ impl MipMapSettings {
         .response
     }
 
-    /// Return the current configuration as a [`skytem_plot_util::MipMapSetting`].
-    pub fn configuration(&self) -> skytem_plot_util::MipMapConfiguration {
+    /// Return the current configuration as a [`plotinator_plot_util::MipMapSetting`].
+    pub fn configuration(&self) -> plotinator_plot_util::MipMapConfiguration {
         if self.enabled {
             if self.auto_set {
                 MipMapConfiguration::Auto

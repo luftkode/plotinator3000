@@ -1,6 +1,6 @@
 use egui::{Modifiers, Vec2};
 use plotinator_log_if::prelude::*;
-use skytem_plot_util::{Plots, StoredPlotLabels};
+use plotinator_plot_util::{Plots, StoredPlotLabels};
 
 use crate::app::supported_formats::SupportedFormat;
 

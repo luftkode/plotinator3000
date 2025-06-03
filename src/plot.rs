@@ -3,8 +3,8 @@ use std::time::Duration;
 use click_delta::ClickDelta;
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
+use plotinator_plot_util::{Plots, plots::MaxPlotBounds};
 use serde::{Deserialize, Serialize};
-use skytem_plot_util::{Plots, plots::MaxPlotBounds};
 
 use axis_config::AxisConfig;
 use egui::{Id, Response};

@@ -1,5 +1,5 @@
 [package]
-name = "plotinator_mqtt"
+name = "plotinator-mqtt"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

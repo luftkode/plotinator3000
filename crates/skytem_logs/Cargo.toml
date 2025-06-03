@@ -12,7 +12,7 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-skytem-plot-util.workspace = true
+plotinator-plot-util.workspace = true
 plotinator-log-if.workspace = true
 egui_plot.workspace = true
 serde.workspace = true

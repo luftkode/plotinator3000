@@ -1,6 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use egui::RichText;
-use skytem_plot_util::{PlotData, Plots};
+use plotinator_plot_util::{PlotData, Plots};
 use serde::{Deserialize, Serialize};
 
 use crate::app::supported_formats::logs::parse_info::ParseInfo;

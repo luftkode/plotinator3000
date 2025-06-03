@@ -1,5 +1,5 @@
 [package]
-name = "skytem-plot-util"
+name = "plotinator-plot-util"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

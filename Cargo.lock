@@ -3488,6 +3488,41 @@ name = "plotinator-macros"
 version = "1.14.2"
 
 [[package]]
+name = "plotinator-mqtt"
+version = "1.14.2"
+dependencies = [
+ "anyhow",
+ "egui_plot",
+ "log",
+ "plotinator-macros",
+ "rumqttc",
+ "serde",
+ "serde_json",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
+ "test_util",
+ "testresult",
+]
+
+[[package]]
+name = "plotinator-plot-util"
+version = "1.14.2"
+dependencies = [
+ "chrono",
+ "egui",
+ "egui_plot",
+ "log",
+ "num-traits",
+ "plotinator-log-if",
+ "pretty_assertions",
+ "profiling",
+ "puffin",
+ "puffin_http",
+ "serde",
+ "testresult",
+]
+
+[[package]]
 name = "plotinator3000"
 version = "1.14.2"
 dependencies = [
@@ -3506,7 +3541,8 @@ dependencies = [
  "mimalloc",
  "plotinator-log-if",
  "plotinator-macros",
- "plotinator_mqtt",
+ "plotinator-mqtt",
+ "plotinator-plot-util",
  "profiling",
  "puffin",
  "puffin_http",
@@ -3514,7 +3550,6 @@ dependencies = [
  "rfd",
  "semver",
  "serde",
- "skytem-plot-util",
  "skytem_hdf5",
  "skytem_logs",
  "strum 0.27.1",
@@ -3526,23 +3561,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "zip",
-]
-
-[[package]]
-name = "plotinator_mqtt"
-version = "1.14.2"
-dependencies = [
- "anyhow",
- "egui_plot",
- "log",
- "plotinator-macros",
- "rumqttc",
- "serde",
- "serde_json",
- "strum 0.27.1",
- "strum_macros 0.27.1",
- "test_util",
- "testresult",
 ]
 
 [[package]]
@@ -4426,24 +4444,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 
 [[package]]
-name = "skytem-plot-util"
-version = "1.14.2"
-dependencies = [
- "chrono",
- "egui",
- "egui_plot",
- "log",
- "num-traits",
- "plotinator-log-if",
- "pretty_assertions",
- "profiling",
- "puffin",
- "puffin_http",
- "serde",
- "testresult",
-]
-
-[[package]]
 name = "skytem_hdf5"
 version = "1.14.2"
 dependencies = [
@@ -4458,9 +4458,9 @@ dependencies = [
  "num-traits",
  "plotinator-log-if",
  "plotinator-macros",
+ "plotinator-plot-util",
  "serde",
  "serde-big-array",
- "skytem-plot-util",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "test_util",
@@ -4479,9 +4479,9 @@ dependencies = [
  "getset",
  "log",
  "plotinator-log-if",
+ "plotinator-plot-util",
  "serde",
  "serde-big-array",
- "skytem-plot-util",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "test_util",
