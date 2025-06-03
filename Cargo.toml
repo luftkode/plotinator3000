@@ -37,7 +37,15 @@ plotinator-hdf5.path = "crates/plotinator-hdf5"
 plotinator-mqtt.path = "crates/plotinator-mqtt"
 plotinator-macros.path = "crates/plotinator-macros"
 plotinator-supported-formats.path = "crates/plotinator-supported-formats"
+plotinator-updater.path = "crates/plotinator-updater"
 egui = { version = "0.31", features = ["rayon", "callstack"] }
+eframe = { version = "0.31", default-features = false, features = [
+    "default_fonts", # Embed the default egui fonts.
+    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+    "persistence",   # Enable restoring app state when restarting the app.
+    "wayland",
+    "x11"
+] }
 egui_plot = { version = "0.31", features = ["serde"] }
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
@@ -58,6 +66,7 @@ paste = "1.0.15"
 anyhow = "1.0.98"
 rumqttc = "0.24.0"
 memmap2 = "0.9.5"
+tokio = "1.45.1"
 # Dependencies for profiling the app
 profiling = { version = "1.0.16", default-features = false, features = ["profile-with-puffin"] }
 puffin = "0.19"
@@ -86,23 +95,16 @@ chrono.workspace = true
 getset.workspace = true
 semver.workspace = true
 egui.workspace = true
-eframe = { version = "0.31", default-features = false, features = [
-    "default_fonts", # Embed the default egui fonts.
-    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
-    "persistence",   # Enable restoring app state when restarting the app.
-    "wayland",
-    "x11"
-] }
+eframe.workspace = true
 rfd = "0.15"
 egui-phosphor = "0.9.0"
 egui-notify = "0.19.0"
-tokio = "1.45.1"
+tokio.workspace = true
 memmap2.workspace = true
 
 [dev-dependencies]
 testresult.workspace = true
 tempfile.workspace = true
-reqwest.workspace = true
 # For GUI and GUI snapshot tests
 egui_kittest = { version = "0.31.1", features = ["eframe", "snapshot", "wgpu", "x11"] }
 
@@ -111,7 +113,7 @@ egui_kittest = { version = "0.31.1", features = ["eframe", "snapshot", "wgpu", "
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 zip = "4.0.0"
-axoupdater = { version = "0.9.0", features = ["blocking"], optional = true}
+plotinator-updater = {workspace = true, optional = true }
 plotinator-mqtt = { workspace = true, optional = true }
 profiling = { workspace = true, optional = true}
 puffin = { workspace = true, optional = true}
@@ -126,14 +128,10 @@ mimalloc = "0.1.46"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"
 
-# windows
-[target.'cfg(target_os = "windows")'.dependencies]
-elevated-command.workspace = true
-
 [features]
 default = ["selfupdater", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5"]
-selfupdater = ["dep:axoupdater"]
+selfupdater = ["dep:plotinator-updater"]
 mqtt = ["dep:plotinator-mqtt"]
 profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
 

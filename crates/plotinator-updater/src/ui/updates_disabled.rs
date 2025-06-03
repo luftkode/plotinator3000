@@ -5,7 +5,7 @@ use std::sync::{
 
 use egui::RichText;
 
-use crate::{APP_NAME, updater::remove_disable_update_file};
+use crate::{APP_NAME, remove_disable_update_file};
 
 /// Display a simple window that allows users to re-enable automatic updates
 /// or click `continue...` to open the app

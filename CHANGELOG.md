@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unify crate naming scheme
 - Reduce boilerplate of introducing new logs/hdf5 files with some simple macros
 - Move supported format definitions to separate crate
+- Move updater to separate crate
 
 ## [1.14.2]
 

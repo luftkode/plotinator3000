@@ -14,13 +14,16 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc; // Much faster allocator
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     // Log to stderr (if run with `RUST_LOG=debug`).
+
+    #[cfg(feature = "selfupdater")]
+    use plotinator3000::get_app_version;
     env_logger::init();
 
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     plotinator3000::profiling::start_puffin_server();
 
     #[cfg(feature = "selfupdater")]
-    match plotinator3000::updater::update_if_applicable() {
+    match plotinator_updater::update_if_applicable(get_app_version().clone()) {
         Ok(needs_restart) => {
             if needs_restart {
                 return Ok(());
