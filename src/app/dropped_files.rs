@@ -1,6 +1,6 @@
 use std::io;
 
-use super::supported_formats::LoadedFiles;
+use crate::app::loaded_files::LoadedFiles;
 
 pub mod preview_dropped;
 

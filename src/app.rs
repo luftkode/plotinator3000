@@ -8,11 +8,13 @@ use egui_phosphor::regular;
 use plotinator_log_if::prelude::Plotable as _;
 
 use file_dialog as fd;
-use supported_formats::{LoadedFiles, SupportedFormat};
+use loaded_files::LoadedFiles;
+use supported_formats::SupportedFormat;
 
 mod dropped_files;
 mod file_dialog;
 
+pub mod loaded_files;
 pub mod supported_formats;
 mod util;
 

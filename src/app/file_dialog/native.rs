@@ -1,6 +1,6 @@
 use std::{io, path::PathBuf};
 
-use crate::app::supported_formats::LoadedFiles;
+use crate::app::loaded_files::LoadedFiles;
 
 #[derive(Debug, Default)]
 pub struct NativeFileDialog {

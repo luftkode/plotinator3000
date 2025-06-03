@@ -21,80 +21,6 @@ use std::{
 mod hdf5;
 pub(crate) mod logs;
 
-/// Contains all supported logs in a single vector.
-#[derive(Default, Deserialize, Serialize)]
-pub struct LoadedFiles {
-    loaded: Vec<SupportedFormat>,
-}
-
-impl LoadedFiles {
-    /// Return a vector of immutable references to all logs
-    pub(crate) fn loaded(&self) -> &[SupportedFormat] {
-        &self.loaded
-    }
-
-    /// Take all the `loaded_files` currently stored and return them as a list
-    pub(crate) fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
-        self.loaded.drain(..).collect()
-    }
-
-    pub(crate) fn parse_path(&mut self, path: &Path) -> io::Result<()> {
-        if path.is_dir() {
-            self.parse_directory(path)?;
-        } else if is_zip_file(path) {
-            #[cfg(not(target_arch = "wasm32"))]
-            self.parse_zip_file(path)?;
-        } else {
-            self.loaded.push(SupportedFormat::parse_from_path(path)?);
-        }
-        Ok(())
-    }
-
-    pub(crate) fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.loaded.push(SupportedFormat::parse_from_buf(buf)?);
-        Ok(())
-    }
-
-    fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                if let Err(e) = self.parse_directory(&path) {
-                    log::warn!("{e}");
-                }
-            } else if is_zip_file(&path) {
-                #[cfg(not(target_arch = "wasm32"))]
-                self.parse_zip_file(&path)?;
-            } else {
-                match SupportedFormat::parse_from_path(&path) {
-                    Ok(l) => self.loaded.push(l),
-                    Err(e) => log::warn!("{e}"),
-                }
-            }
-        }
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
-        let file = fs::File::open(path)?;
-        let mut archive = zip::ZipArchive::new(file)?;
-
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i)?;
-            if file.is_file() {
-                let mut contents = Vec::new();
-                io::Read::read_to_end(&mut file, &mut contents)?;
-                if let Ok(log) = SupportedFormat::parse_from_buf(&contents) {
-                    self.loaded.push(log);
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
 /// Represents a supported format, which can be any of the supported format types.
 ///
 /// This simply serves to encapsulate all the supported format in a single type
@@ -145,7 +71,7 @@ impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     ///
     /// This is how content is made available in a browser.
-    fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
+    pub(super) fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
         let total_bytes = content.len();
         log::debug!("Parsing content of length: {total_bytes}");
         let log: Self = if let Ok((pidlog, read_bytes)) = PidLog::try_from_buf(content) {
@@ -192,7 +118,7 @@ impl SupportedFormat {
     /// Attempts to parse a log from a file path.
     ///
     /// This is how it is made available on native.
-    fn parse_from_path(path: &Path) -> io::Result<Self> {
+    pub(crate) fn parse_from_path(path: &Path) -> io::Result<Self> {
         let file = fs::File::open(path)?;
         let total_bytes = file.metadata()?.len() as usize;
         log::debug!("Parsing content of length: {total_bytes}");
@@ -313,11 +239,6 @@ impl Plotable for SupportedFormat {
             Self::HDF(hdf) => hdf.metadata(),
         }
     }
-}
-
-fn is_zip_file(path: &Path) -> bool {
-    path.extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"))
 }
 
 #[cfg(test)]
