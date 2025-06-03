@@ -3,7 +3,7 @@ use egui::RichText;
 use plotinator_plot_util::{PlotData, Plots};
 use serde::{Deserialize, Serialize};
 
-use crate::app::supported_formats::logs::parse_info::ParseInfo;
+use crate::app::supported_format::logs::parse_info::ParseInfo;
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoadedLogMetadata {

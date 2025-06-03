@@ -8,12 +8,14 @@ use egui_phosphor::regular;
 use plotinator_log_if::prelude::Plotable as _;
 
 use file_dialog as fd;
-use supported_formats::{LoadedFiles, SupportedFormat};
+use loaded_files::LoadedFiles;
+use supported_format::SupportedFormat;
 
 mod dropped_files;
 mod file_dialog;
 
-pub mod supported_formats;
+pub mod loaded_files;
+pub mod supported_format;
 mod util;
 
 /// if a log is loaded from content that exceeds this many unparsed bytes:

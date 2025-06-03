@@ -8,45 +8,8 @@ use std::{io, path::Path};
 use crate::stream_descriptor::StreamDescriptor;
 use crate::util::{log_all_attributes, read_any_attribute_to_string, read_string_attribute};
 
-impl Plotable for Wasp200 {
-    fn raw_plots(&self) -> &[RawPlot] {
-        &self.raw_plots
-    }
-
-    fn first_timestamp(&self) -> DateTime<Utc> {
-        self.starting_timestamp_utc
-    }
-
-    fn descriptive_name(&self) -> &str {
-        &self.dataset_description
-    }
-
-    fn labels(&self) -> Option<&[PlotLabels]> {
-        None
-    }
-
-    fn metadata(&self) -> Option<Vec<(String, String)>> {
-        Some(self.metadata.clone())
-    }
-}
-
-#[derive(H5Type, Clone, Debug)]
-#[repr(C)]
-struct Timestamp {
-    time: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Wasp200 {
-    // It does not actually contain a timestamp so we just add 1. january current year to make it slightly more convenient
-    starting_timestamp_utc: DateTime<Utc>,
-    dataset_description: String,
-    raw_plots: Vec<RawPlot>,
-    metadata: Vec<(String, String)>,
-}
-
-impl Wasp200 {
-    pub fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+impl SkytemHdf5 for Wasp200 {
+    fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
         let (height_dataset, timestamp_dataset) = Self::open_wasp200_datasets(path)?;
         log_all_attributes(&height_dataset);
         log_all_attributes(&timestamp_dataset);
@@ -85,7 +48,46 @@ impl Wasp200 {
             metadata,
         })
     }
+}
 
+impl Plotable for Wasp200 {
+    fn raw_plots(&self) -> &[RawPlot] {
+        &self.raw_plots
+    }
+
+    fn first_timestamp(&self) -> DateTime<Utc> {
+        self.starting_timestamp_utc
+    }
+
+    fn descriptive_name(&self) -> &str {
+        &self.dataset_description
+    }
+
+    fn labels(&self) -> Option<&[PlotLabels]> {
+        None
+    }
+
+    fn metadata(&self) -> Option<Vec<(String, String)>> {
+        Some(self.metadata.clone())
+    }
+}
+
+#[derive(H5Type, Clone, Debug)]
+#[repr(C)]
+struct Timestamp {
+    time: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Wasp200 {
+    // It does not actually contain a timestamp so we just add 1. january current year to make it slightly more convenient
+    starting_timestamp_utc: DateTime<Utc>,
+    dataset_description: String,
+    raw_plots: Vec<RawPlot>,
+    metadata: Vec<(String, String)>,
+}
+
+impl Wasp200 {
     fn open_wasp200_datasets(path: impl AsRef<Path>) -> io::Result<(Dataset, Dataset)> {
         let hdf5_file = hdf5::File::open(&path)?;
 

@@ -37,7 +37,7 @@ impl fmt::Display for Wasp200Sps {
 }
 
 impl LogEntry for AltimeterEntry {
-    fn from_reader(reader: &mut impl std::io::BufRead) -> std::io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut line = String::new();
         let bytes_read = reader.read_line(&mut line)?;
         // just a sanity check, it is definitely invalid if it is less than 10 characters

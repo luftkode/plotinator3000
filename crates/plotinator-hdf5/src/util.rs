@@ -27,7 +27,7 @@ pub(crate) fn log_all_attributes(ds: &hdf5::Dataset) {
 /// Reads an HDF5 attribute's value as a HDF5 string type and returns it as a native [`String`].
 ///
 /// If the value is not a string type, an error is returned.
-pub fn read_string_attribute(attr: &Attribute) -> hdf5::Result<String> {
+pub(crate) fn read_string_attribute(attr: &Attribute) -> hdf5::Result<String> {
     // Get the data type descriptor for the attribute
     match attr.dtype()?.to_descriptor()? {
         // Handle variable-length ASCII string
@@ -62,7 +62,7 @@ pub fn read_string_attribute(attr: &Attribute) -> hdf5::Result<String> {
 }
 
 /// Reads an HDF5 attribute's value and converts it to a native [`String`].
-pub fn read_any_attribute_to_string(attr: &Attribute) -> hdf5::Result<String> {
+pub(crate) fn read_any_attribute_to_string(attr: &Attribute) -> hdf5::Result<String> {
     // Get the data type descriptor for the attribute
     let type_descriptor = attr.dtype()?.to_descriptor()?;
     match &type_descriptor {

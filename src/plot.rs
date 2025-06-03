@@ -10,7 +10,7 @@ use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
 
-use crate::app::supported_formats::SupportedFormat;
+use crate::app::supported_format::SupportedFormat;
 mod axis_config;
 mod click_delta;
 mod plot_graphics;
