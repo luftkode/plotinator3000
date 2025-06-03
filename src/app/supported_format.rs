@@ -34,7 +34,7 @@ pub enum SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF...")]
-    HDF(hdf5::SupportedHdfFormat),
+    HDF(hdf5::SupportedHdf5Format),
 }
 
 impl From<(PidLog, ParseInfo)> for SupportedFormat {
@@ -120,8 +120,6 @@ impl SupportedFormat {
     /// This is how it is made available on native.
     pub(crate) fn parse_from_path(path: &Path) -> io::Result<Self> {
         let file = fs::File::open(path)?;
-        let total_bytes = file.metadata()?.len() as usize;
-        log::debug!("Parsing content of length: {total_bytes}");
 
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
             Self::parse_hdf5_from_path(path)?
@@ -141,18 +139,8 @@ impl SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
-        use plotinator_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
-        // Attempt to parse it has an hdf5 file
-        if let Ok(bifrost_loop_current) = BifrostLoopCurrent::from_path(path) {
-            Ok(Self::HDF(bifrost_loop_current.into()))
-        } else if let Ok(wasp200) = Wasp200::from_path(path) {
-            Ok(Self::HDF(wasp200.into()))
-        } else {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Unrecognized HDF5 file",
-            ))
-        }
+        let h5file = hdf5::SupportedHdf5Format::from_path(path)?;
+        Ok(Self::HDF(h5file))
     }
 
     #[cfg(not(feature = "hdf5"))]
