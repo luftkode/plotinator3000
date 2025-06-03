@@ -3,8 +3,8 @@ use std::ops::RangeInclusive;
 use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
-use serde::{Deserialize, Serialize};
 use plotinator_log_if::prelude::RawPlot;
+use serde::{Deserialize, Serialize};
 
 use crate::mipmap::{MipMap2DPlotPoints, MipMapStrategy};
 

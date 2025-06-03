@@ -1,7 +1,7 @@
 use egui::{Response, RichText};
 use egui_phosphor::regular;
-use serde::{Deserialize, Serialize};
 use plotinator_plot_util::MipMapConfiguration;
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct MipMapSettings {

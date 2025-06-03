@@ -1,7 +1,7 @@
 use gps::Gps;
 use he::AltimeterEntry;
-use plotinator_log_if::log::LogEntry;
 use mag::MagSensor;
+use plotinator_log_if::log::LogEntry;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, str::FromStr as _};
 use tl::InclinometerEntry;

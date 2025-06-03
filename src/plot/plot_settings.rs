@@ -4,8 +4,8 @@ use egui_phosphor::regular;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
-use serde::{Deserialize, Serialize};
 use plotinator_plot_util::{MipMapConfiguration, PlotValues, Plots};
+use serde::{Deserialize, Serialize};
 
 use crate::util::theme_color;
 
