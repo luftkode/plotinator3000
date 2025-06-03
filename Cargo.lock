@@ -3590,10 +3590,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "plotinator3000"
+name = "plotinator-updater"
 version = "1.14.2"
 dependencies = [
  "axoupdater",
+ "eframe",
+ "egui",
+ "log",
+ "reqwest",
+ "semver",
+ "tempfile",
+ "testresult",
+ "tokio",
+]
+
+[[package]]
+name = "plotinator3000"
+version = "1.14.2"
+dependencies = [
  "chrono",
  "eframe",
  "egui",
@@ -3615,10 +3629,10 @@ dependencies = [
  "plotinator-plot-util",
  "plotinator-supported-formats",
  "plotinator-test-util",
+ "plotinator-updater",
  "profiling",
  "puffin",
  "puffin_http",
- "reqwest",
  "rfd",
  "semver",
  "serde",

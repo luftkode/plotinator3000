@@ -9,6 +9,7 @@ use std::{
 };
 
 use egui::{Color32, Context, RichText, ScrollArea, mutex::Mutex};
+use semver::Version;
 
 pub(super) mod error_window;
 #[cfg(target_os = "windows")]
@@ -96,6 +97,7 @@ impl UpdateStep {
     reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really our fault"
 )]
 fn perform_update(
+    version: Version,
     sender: &mpsc::Sender<UpdateStep>,
     countdown: &AtomicU8,
     update_cancelled: &AtomicBool,
@@ -106,7 +108,7 @@ fn perform_update(
         .send(UpdateStep::Initial)
         .expect("Failed sending update to gui");
 
-    let mut updater = match PlotinatorUpdater::new() {
+    let mut updater = match PlotinatorUpdater::new(version) {
         Ok(updater) => updater,
         Err(e) => {
             sender
@@ -154,8 +156,10 @@ fn perform_update(
         Ok(result) => {
             if let Some(update_result) = result {
                 let msg = format!(
-                    "Updated to: {APP_NAME} v{}\nInstalled at {}",
-                    update_result.new_version, update_result.install_prefix
+                    "Updated to: {app_name} v{new_version}\nInstalled at {install_prefix}",
+                    app_name = APP_NAME,
+                    new_version = update_result.new_version,
+                    install_prefix = update_result.install_prefix
                 );
                 sender
                     .send(UpdateStep::Completed(msg))
@@ -180,7 +184,7 @@ fn perform_update(
     }
 }
 
-pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
+pub(super) fn show_simple_update_window(version: Version) -> eframe::Result<bool> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([400.0, 300.0])
@@ -218,6 +222,7 @@ pub(super) fn show_simple_update_window() -> eframe::Result<bool> {
             let error_occurred = error_occurred.clone();
             move || {
                 let did_update = perform_update(
+                    version,
                     &tx,
                     &countdown,
                     &update_cancelled,

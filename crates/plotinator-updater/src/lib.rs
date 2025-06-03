@@ -1,9 +1,10 @@
+#![cfg(not(target_arch = "wasm32"))]
 #![allow(
     clippy::result_large_err,
     reason = "This lint is triggered by the axoupdater library, due to their AxoupdateResult enum being very large. The updater is only run once, so performance doesn't really suffer."
 )]
-use crate::{APP_NAME, APP_OWNER};
 use axoupdater::AxoupdateResult;
+use semver::Version;
 use std::{
     env,
     fs::{self, File},
@@ -11,6 +12,10 @@ use std::{
     path::{Path, PathBuf},
     sync::OnceLock,
 };
+
+pub const APP_ICON: &[u8] = include_bytes!("../../../assets/skytem-icon-256.png");
+pub const APP_NAME: &str = "plotinator3000";
+pub const APP_OWNER: &str = "luftkode";
 
 pub static APP_INSTALL_DIR: OnceLock<PathBuf> = OnceLock::new();
 /// Returns the parent of the parent of the executable directory.
@@ -37,7 +42,7 @@ const FORCE_UPGRADE: bool = false;
 
 mod ui;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CheckUpdateResult {
     NoConnection,
     UpdateAvailable,
@@ -48,13 +53,14 @@ pub enum CheckUpdateResult {
 /// for plotinator3000. It doesn't use an install receipt but sets the necessary parameters manually.
 pub(crate) struct PlotinatorUpdater {
     updater: axoupdater::AxoUpdater,
+    version: Version,
 }
 
 impl PlotinatorUpdater {
-    pub fn new() -> axoupdater::AxoupdateResult<Self> {
+    pub fn new(version: semver::Version) -> axoupdater::AxoupdateResult<Self> {
         let mut updater = axoupdater::AxoUpdater::new_for(APP_NAME);
         updater.set_install_dir(get_app_install_dir().to_string_lossy().into_owned());
-        updater.set_current_version(crate::get_app_version().clone())?;
+        updater.set_current_version(version.clone())?;
         updater.set_release_source(axoupdater::ReleaseSource {
             release_type: axoupdater::ReleaseSourceType::GitHub,
             owner: APP_OWNER.to_owned(),
@@ -66,7 +72,7 @@ impl PlotinatorUpdater {
             updater.set_github_token(&t);
         }
 
-        Ok(Self { updater })
+        Ok(Self { updater, version })
     }
 
     #[allow(
@@ -102,7 +108,7 @@ impl PlotinatorUpdater {
 
         match remote_version {
             Some(v) => {
-                if v > crate::get_app_version() {
+                if v > &self.version {
                     log::info!("New version available");
                     Ok(CheckUpdateResult::UpdateAvailable)
                 } else {
@@ -176,7 +182,7 @@ fn is_admin_run_elevated() -> io::Result<bool> {
     clippy::result_large_err,
     reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really our fault"
 )]
-pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
+pub fn update_if_applicable(version: Version) -> axoupdater::AxoupdateResult<bool> {
     if !bypass_updates() {
         if is_updates_disabled() {
             if ui::updates_disabled::show_simple_updates_are_disabled_window()
@@ -189,7 +195,7 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
                 return Ok(false);
             }
         } else {
-            match is_update_available() {
+            match is_update_available(version.clone()) {
                 Ok(is_update_available) => {
                     if is_update_available {
                         #[cfg(target_os = "windows")]
@@ -206,7 +212,7 @@ pub fn update_if_applicable() -> axoupdater::AxoupdateResult<bool> {
                         }
 
                         // show update window and perform upgrade or cancel it
-                        if let Ok(did_update) = ui::show_simple_update_window() {
+                        if let Ok(did_update) = ui::show_simple_update_window(version) {
                             if did_update {
                                 log::info!("Update performed... Closing");
                                 return Ok(true);
@@ -284,8 +290,8 @@ fn is_updates_disabled() -> bool {
     clippy::result_large_err,
     reason = "This function is only called once, so performance doesn't really suffer, Besides this lint is due to the axoupdater library, not really our fault"
 )]
-fn is_update_available() -> axoupdater::AxoupdateResult<bool> {
-    let mut updater = PlotinatorUpdater::new()?;
+fn is_update_available(version: Version) -> axoupdater::AxoupdateResult<bool> {
+    let mut updater = PlotinatorUpdater::new(version)?;
 
     if cfg!(debug_assertions) {
         if FORCE_UPGRADE {
@@ -353,7 +359,8 @@ mod tests {
 
     #[test]
     fn test_is_update_available() {
-        let _check_update = is_update_available().unwrap();
+        let update_available = is_update_available(semver::Version::new(1, 0, 0)).unwrap();
+        assert!(update_available);
     }
 
     #[test]
@@ -362,13 +369,18 @@ mod tests {
     every time you run the test. So it is only run in CI by default (in the nextest 'ci' profile."#]
     fn test_plotinator_updater() -> TestResult {
         let tmp_dir = tempdir()?;
-        let updater = PlotinatorUpdater::new();
+        let updater = PlotinatorUpdater::new(semver::Version::new(1, 0, 0));
         assert!(updater.is_ok());
         let mut updater = updater.unwrap();
         updater.set_install_dir(tmp_dir.path());
 
         // Test update check functionality
-        let _update_needed = updater.is_update_needed().unwrap();
+        let update_needed = updater.is_update_needed().unwrap();
+        assert_eq!(
+            update_needed,
+            CheckUpdateResult::UpdateAvailable,
+            "Expected update available when version is 1.0.0"
+        );
 
         // Test Updating
         updater.always_update(true);
