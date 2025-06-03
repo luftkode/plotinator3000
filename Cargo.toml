@@ -30,7 +30,7 @@ homepage = "https://github.com/luftkode/plotinator3000"
 
 [workspace.dependencies]
 test_util.path = "crates/test_util"
-skytem_logs.path = "crates/skytem_logs"
+plotinator-logs.path = "crates/plotinator-logs"
 plotinator-log-if.path = "crates/plotinator-log-if"
 plotinator-plot-util.path = "crates/plotinator-plot-util"
 plotinator-hdf5.path = "crates/plotinator-hdf5"
@@ -68,7 +68,7 @@ tempfile = "3.19.1"
 reqwest = "0.12.18"
 
 [dependencies]
-skytem_logs.workspace = true
+plotinator-logs.workspace = true
 plotinator-log-if.workspace = true
 plotinator-plot-util.workspace = true
 plotinator-hdf5.workspace = true

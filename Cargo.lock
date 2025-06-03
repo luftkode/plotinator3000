@@ -3509,6 +3509,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "plotinator-logs"
+version = "1.14.2"
+dependencies = [
+ "byteorder",
+ "chrono",
+ "derive_more",
+ "egui_plot",
+ "getset",
+ "log",
+ "plotinator-log-if",
+ "plotinator-plot-util",
+ "serde",
+ "serde-big-array",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
+ "test_util",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "plotinator-macros"
 version = "1.14.2"
 
@@ -3566,6 +3586,7 @@ dependencies = [
  "mimalloc",
  "plotinator-hdf5",
  "plotinator-log-if",
+ "plotinator-logs",
  "plotinator-macros",
  "plotinator-mqtt",
  "plotinator-plot-util",
@@ -3576,7 +3597,6 @@ dependencies = [
  "rfd",
  "semver",
  "serde",
- "skytem_logs",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "tempfile",
@@ -4467,26 +4487,6 @@ name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
-
-[[package]]
-name = "skytem_logs"
-version = "1.14.2"
-dependencies = [
- "byteorder",
- "chrono",
- "derive_more",
- "egui_plot",
- "getset",
- "log",
- "plotinator-log-if",
- "plotinator-plot-util",
- "serde",
- "serde-big-array",
- "strum 0.27.1",
- "strum_macros 0.27.1",
- "test_util",
- "thiserror 2.0.12",
-]
 
 [[package]]
 name = "slab"

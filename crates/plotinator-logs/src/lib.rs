@@ -32,8 +32,8 @@ pub fn parse_unique_description(raw_uniq_desc: &[u8]) -> String {
 /// ```ignore
 /// use std::fs::File;
 /// use std::io::{self, BufReader, ErrorKind};
-/// use skytem_logs::{mbed_motor_control::pid::{header::PidLogHeader, entry::PidLogEntry}, parse_and_display_log_entries};
-/// use crate::skytem_logs::mbed_motor_control::mbed_header::MbedMotorControlLogHeader;
+/// use plotinator_logs::{mbed_motor_control::pid::{header::PidLogHeader, entry::PidLogEntry}, parse_and_display_log_entries};
+/// use crate::plotinator-logs::mbed_motor_control::mbed_header::MbedMotorControlLogHeader;
 ///
 /// fn main() -> std::io::Result<()> {
 ///     // Open the log file
