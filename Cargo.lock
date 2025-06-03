@@ -3591,6 +3591,7 @@ dependencies = [
  "env_logger",
  "getset",
  "log",
+ "memmap2",
  "mimalloc",
  "plotinator-hdf5",
  "plotinator-log-if",

@@ -12,7 +12,7 @@ use plotinator_logs::{
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
-    io::{self, BufReader},
+    io::{self},
     path::Path,
 };
 
@@ -20,6 +20,80 @@ use std::{
 #[cfg(not(target_arch = "wasm32"))]
 mod hdf5;
 pub(crate) mod logs;
+
+/// Contains all supported logs in a single vector.
+#[derive(Default, Deserialize, Serialize)]
+pub struct LoadedFiles {
+    loaded: Vec<SupportedFormat>,
+}
+
+impl LoadedFiles {
+    /// Return a vector of immutable references to all logs
+    pub(crate) fn loaded(&self) -> &[SupportedFormat] {
+        &self.loaded
+    }
+
+    /// Take all the `loaded_files` currently stored and return them as a list
+    pub(crate) fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
+        self.loaded.drain(..).collect()
+    }
+
+    pub(crate) fn parse_path(&mut self, path: &Path) -> io::Result<()> {
+        if path.is_dir() {
+            self.parse_directory(path)?;
+        } else if is_zip_file(path) {
+            #[cfg(not(target_arch = "wasm32"))]
+            self.parse_zip_file(path)?;
+        } else {
+            self.loaded.push(SupportedFormat::parse_from_path(path)?);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.loaded.push(SupportedFormat::parse_from_buf(buf)?);
+        Ok(())
+    }
+
+    fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                if let Err(e) = self.parse_directory(&path) {
+                    log::warn!("{e}");
+                }
+            } else if is_zip_file(&path) {
+                #[cfg(not(target_arch = "wasm32"))]
+                self.parse_zip_file(&path)?;
+            } else {
+                match SupportedFormat::parse_from_path(&path) {
+                    Ok(l) => self.loaded.push(l),
+                    Err(e) => log::warn!("{e}"),
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
+        let file = fs::File::open(path)?;
+        let mut archive = zip::ZipArchive::new(file)?;
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            if file.is_file() {
+                let mut contents = Vec::new();
+                io::Read::read_to_end(&mut file, &mut contents)?;
+                if let Ok(log) = SupportedFormat::parse_from_buf(&contents) {
+                    self.loaded.push(log);
+                }
+            }
+        }
+        Ok(())
+    }
+}
 
 /// Represents a supported format, which can be any of the supported format types.
 ///
@@ -108,7 +182,7 @@ impl SupportedFormat {
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "Got a byte buffer but did not recognize the format",
+                "Unrecognized format",
             ));
         };
         log::debug!("Got: {}", log.descriptive_name());
@@ -123,50 +197,16 @@ impl SupportedFormat {
         let total_bytes = file.metadata()?.len() as usize;
         log::debug!("Parsing content of length: {total_bytes}");
 
-        let mut reader = BufReader::new(file);
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
             Self::parse_hdf5_from_path(path)?
-        } else if PidLog::file_is_valid(path) {
-            let (log, parsed_bytes) = PidLog::from_reader(&mut reader)?;
-            log::debug!("Read: {parsed_bytes} bytes");
-            (
-                log,
-                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else if StatusLog::file_is_valid(path) {
-            let (log, parsed_bytes) = StatusLog::from_reader(&mut reader)?;
-            (
-                log,
-                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else if GeneratorLog::file_is_generator_log(path).unwrap_or(false) {
-            let (log, parsed_bytes) = GeneratorLog::from_reader(&mut reader)?;
-            (
-                log,
-                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else if NavSysSps::file_is_valid(path) {
-            let (log, parsed_bytes) = NavSysSps::from_reader(&mut reader)?;
-            (
-                log,
-                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else if Wasp200Sps::file_is_valid(path) {
-            let (log, parsed_bytes) = Wasp200Sps::from_reader(&mut reader)?;
-            (
-                log,
-                ParseInfo::new(ParsedBytes(parsed_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
         } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Unrecognized format",
-            ));
+            #[allow(
+                unsafe_code,
+                reason = "If the user manages to drop a file and then delete that file before we are done parsing it then they deserve it"
+            )]
+            // SAFETY: It's safe as long as the underlying file is not modified before this function returns
+            let mmap: memmap2::Mmap = unsafe { memmap2::Mmap::map(&file)? };
+            Self::parse_from_buf(&mmap[..])?
         };
         log::debug!("Got: {}", log.descriptive_name());
         Ok(log)
@@ -272,80 +312,6 @@ impl Plotable for SupportedFormat {
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF(hdf) => hdf.metadata(),
         }
-    }
-}
-
-/// Contains all supported logs in a single vector.
-#[derive(Default, Deserialize, Serialize)]
-pub struct LoadedFiles {
-    loaded: Vec<SupportedFormat>,
-}
-
-impl LoadedFiles {
-    /// Return a vector of immutable references to all logs
-    pub(crate) fn loaded(&self) -> &[SupportedFormat] {
-        &self.loaded
-    }
-
-    /// Take all the `loaded_files` currently stored and return them as a list
-    pub(crate) fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
-        self.loaded.drain(..).collect()
-    }
-
-    pub(crate) fn parse_path(&mut self, path: &Path) -> io::Result<()> {
-        if path.is_dir() {
-            self.parse_directory(path)?;
-        } else if is_zip_file(path) {
-            #[cfg(not(target_arch = "wasm32"))]
-            self.parse_zip_file(path)?;
-        } else {
-            self.loaded.push(SupportedFormat::parse_from_path(path)?);
-        }
-        Ok(())
-    }
-
-    pub(crate) fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.loaded.push(SupportedFormat::parse_from_buf(buf)?);
-        Ok(())
-    }
-
-    fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                if let Err(e) = self.parse_directory(&path) {
-                    log::warn!("{e}");
-                }
-            } else if is_zip_file(&path) {
-                #[cfg(not(target_arch = "wasm32"))]
-                self.parse_zip_file(&path)?;
-            } else {
-                match SupportedFormat::parse_from_path(&path) {
-                    Ok(l) => self.loaded.push(l),
-                    Err(e) => log::warn!("{e}"),
-                }
-            }
-        }
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
-        let file = fs::File::open(path)?;
-        let mut archive = zip::ZipArchive::new(file)?;
-
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i)?;
-            if file.is_file() {
-                let mut contents = Vec::new();
-                io::Read::read_to_end(&mut file, &mut contents)?;
-                if let Ok(log) = SupportedFormat::parse_from_buf(&contents) {
-                    self.loaded.push(log);
-                }
-            }
-        }
-        Ok(())
     }
 }
 
