@@ -3,9 +3,9 @@ use egui::{Color32, Key, Response, RichText};
 use egui_phosphor::regular;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
-use plot_util::{MipMapConfiguration, PlotValues, Plots};
 use plot_visibility_config::PlotVisibilityConfig;
 use serde::{Deserialize, Serialize};
+use skytem_plot_util::{MipMapConfiguration, PlotValues, Plots};
 
 use crate::util::theme_color;
 
@@ -307,7 +307,7 @@ impl PlotSettings {
                 }
             }
         }
-        let set_plot_highlight = |plot_data: &mut plot_util::PlotData| {
+        let set_plot_highlight = |plot_data: &mut skytem_plot_util::PlotData| {
             for pd in plot_data.plots_as_mut() {
                 *pd.get_highlight_mut() = ids_to_highlight.contains(&pd.log_id());
             }
@@ -336,7 +336,7 @@ impl PlotSettings {
         }
 
         // Remove plots with matching log IDs from all plot types
-        let remove_matching_plots = |plot_data: &mut plot_util::PlotData| {
+        let remove_matching_plots = |plot_data: &mut skytem_plot_util::PlotData| {
             // Remove from plot values
             plot_data
                 .plots_as_mut()

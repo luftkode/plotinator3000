@@ -1,5 +1,5 @@
 [package]
-name = "plot_util"
+name = "skytem-plot-util"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

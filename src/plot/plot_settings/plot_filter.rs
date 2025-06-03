@@ -1,5 +1,5 @@
 use egui::{Response, RichText};
-use plot_util::PlotValues;
+use skytem_plot_util::PlotValues;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
