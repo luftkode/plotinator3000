@@ -35,7 +35,7 @@ skytem-log-if.path = "crates/skytem-log-if"
 skytem-plot-util.path = "crates/skytem-plot-util"
 skytem_hdf5.path = "crates/skytem_hdf5"
 plotinator_mqtt.path = "crates/plotinator_mqtt"
-plotinator_macros.path = "crates/plotinator_macros"
+plotinator-macros.path = "crates/plotinator-macros"
 egui = { version = "0.31", features = ["rayon", "callstack"] }
 egui_plot = { version = "0.31", features = ["serde"] }
 log = "0.4"
@@ -73,7 +73,7 @@ skytem-log-if.workspace = true
 skytem-plot-util.workspace = true
 skytem_hdf5.workspace = true
 test_util.workspace = true
-plotinator_macros.workspace = true
+plotinator-macros.workspace = true
 egui_plot.workspace = true
 log.workspace = true
 serde.workspace = true

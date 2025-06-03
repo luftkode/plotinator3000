@@ -12,7 +12,7 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-plotinator_macros.workspace = true
+plotinator-macros.workspace = true
 test_util.workspace = true
 skytem-plot-util.workspace = true
 skytem-log-if.workspace = true

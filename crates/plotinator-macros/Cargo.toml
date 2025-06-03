@@ -1,5 +1,5 @@
 [package]
-name = "plotinator_macros"
+name = "plotinator-macros"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

@@ -3475,6 +3475,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "plotinator-macros"
+version = "1.14.2"
+
+[[package]]
 name = "plotinator3000"
 version = "1.14.2"
 dependencies = [
@@ -3491,7 +3495,7 @@ dependencies = [
  "getset",
  "log",
  "mimalloc",
- "plotinator_macros",
+ "plotinator-macros",
  "plotinator_mqtt",
  "profiling",
  "puffin",
@@ -3516,17 +3520,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "plotinator_macros"
-version = "1.14.2"
-
-[[package]]
 name = "plotinator_mqtt"
 version = "1.14.2"
 dependencies = [
  "anyhow",
  "egui_plot",
  "log",
- "plotinator_macros",
+ "plotinator-macros",
  "rumqttc",
  "serde",
  "serde_json",
@@ -4456,7 +4456,7 @@ dependencies = [
  "log",
  "ndarray",
  "num-traits",
- "plotinator_macros",
+ "plotinator-macros",
  "serde",
  "serde-big-array",
  "skytem-log-if",
