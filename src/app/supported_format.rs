@@ -24,8 +24,8 @@ pub enum SupportedFormat {
     Log(SupportedLog),
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
-    #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF...")]
-    HDF(hdf5::SupportedHdf5Format),
+    #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF5")]
+    HDF5(hdf5::SupportedHdf5Format),
 }
 
 impl SupportedFormat {
@@ -62,7 +62,7 @@ impl SupportedFormat {
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
         let h5file = hdf5::SupportedHdf5Format::from_path(path)?;
-        Ok(Self::HDF(h5file))
+        Ok(Self::HDF5(h5file))
     }
 
     #[cfg(not(feature = "hdf5"))]
@@ -98,7 +98,7 @@ impl SupportedFormat {
             Self::Log(l) => Some(l.parse_info()),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
-            Self::HDF(_) => None,
+            Self::HDF5(_) => None,
         }
     }
 }
@@ -110,7 +110,7 @@ impl Plotable for SupportedFormat {
 
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
-            Self::HDF(hdf) => hdf.raw_plots(),
+            Self::HDF5(hdf) => hdf.raw_plots(),
         }
     }
 
@@ -119,7 +119,7 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.first_timestamp(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
-            Self::HDF(hdf) => hdf.first_timestamp(),
+            Self::HDF5(hdf) => hdf.first_timestamp(),
         }
     }
 
@@ -128,7 +128,7 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.descriptive_name(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
-            Self::HDF(hdf) => hdf.descriptive_name(),
+            Self::HDF5(hdf) => hdf.descriptive_name(),
         }
     }
 
@@ -137,7 +137,7 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.labels(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
-            Self::HDF(hdf) => hdf.labels(),
+            Self::HDF5(hdf) => hdf.labels(),
         }
     }
 
@@ -146,7 +146,7 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.metadata(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
-            Self::HDF(hdf) => hdf.metadata(),
+            Self::HDF5(hdf) => hdf.metadata(),
         }
     }
 }
