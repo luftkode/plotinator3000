@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Move supported format definitions to separate crate
 - Move updater to separate crate
 
+### Dependencies
+
+- `cargo-bins/cargo-binstall`: 1.12.5 → 1.12.6 ([#253](https://github.com/luftkode/plotinator3000/pull/253))
+
 ## [1.14.2]
 
 ### Fixed
