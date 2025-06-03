@@ -3475,6 +3475,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "plotinator-log-if"
+version = "1.14.2"
+dependencies = [
+ "chrono",
+ "log",
+ "serde",
+]
+
+[[package]]
 name = "plotinator-macros"
 version = "1.14.2"
 
@@ -3495,6 +3504,7 @@ dependencies = [
  "getset",
  "log",
  "mimalloc",
+ "plotinator-log-if",
  "plotinator-macros",
  "plotinator_mqtt",
  "profiling",
@@ -3504,7 +3514,6 @@ dependencies = [
  "rfd",
  "semver",
  "serde",
- "skytem-log-if",
  "skytem-plot-util",
  "skytem_hdf5",
  "skytem_logs",
@@ -4417,15 +4426,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 
 [[package]]
-name = "skytem-log-if"
-version = "1.14.2"
-dependencies = [
- "chrono",
- "log",
- "serde",
-]
-
-[[package]]
 name = "skytem-plot-util"
 version = "1.14.2"
 dependencies = [
@@ -4434,12 +4434,12 @@ dependencies = [
  "egui_plot",
  "log",
  "num-traits",
+ "plotinator-log-if",
  "pretty_assertions",
  "profiling",
  "puffin",
  "puffin_http",
  "serde",
- "skytem-log-if",
  "testresult",
 ]
 
@@ -4456,10 +4456,10 @@ dependencies = [
  "log",
  "ndarray",
  "num-traits",
+ "plotinator-log-if",
  "plotinator-macros",
  "serde",
  "serde-big-array",
- "skytem-log-if",
  "skytem-plot-util",
  "strum 0.27.1",
  "strum_macros 0.27.1",
@@ -4478,9 +4478,9 @@ dependencies = [
  "egui_plot",
  "getset",
  "log",
+ "plotinator-log-if",
  "serde",
  "serde-big-array",
- "skytem-log-if",
  "skytem-plot-util",
  "strum 0.27.1",
  "strum_macros 0.27.1",

@@ -1,6 +1,6 @@
 use core::fmt;
 
-use skytem_log_if::log::LogEntry as _;
+use plotinator_log_if::log::LogEntry as _;
 use serde::{Deserialize, Serialize};
 use v1::StatusLogEntryV1;
 use v2::StatusLogEntryV2;

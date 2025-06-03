@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use skytem_log_if::prelude::*;
 use parse_info::ParseInfo;
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use skytem_logs::{
     generator::GeneratorLog,

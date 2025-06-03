@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use skytem_log_if::prelude::*;
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use skytem_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
 

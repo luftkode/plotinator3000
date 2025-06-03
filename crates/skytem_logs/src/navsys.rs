@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use entries::NavSysSpsEntry;
 use header::NavSysSpsHeader;
-use skytem_log_if::{parseable::Parseable, prelude::*};
+use plotinator_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
 pub(crate) mod entries;

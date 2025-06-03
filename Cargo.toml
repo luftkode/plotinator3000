@@ -31,7 +31,7 @@ homepage = "https://github.com/luftkode/plotinator3000"
 [workspace.dependencies]
 test_util.path = "crates/test_util"
 skytem_logs.path = "crates/skytem_logs"
-skytem-log-if.path = "crates/skytem-log-if"
+plotinator-log-if.path = "crates/plotinator-log-if"
 skytem-plot-util.path = "crates/skytem-plot-util"
 skytem_hdf5.path = "crates/skytem_hdf5"
 plotinator_mqtt.path = "crates/plotinator_mqtt"
@@ -69,7 +69,7 @@ reqwest = "0.12.18"
 
 [dependencies]
 skytem_logs.workspace = true
-skytem-log-if.workspace = true
+plotinator-log-if.workspace = true
 skytem-plot-util.workspace = true
 skytem_hdf5.workspace = true
 test_util.workspace = true

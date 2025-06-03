@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
 use serde::{Deserialize, Serialize};
-use skytem_log_if::prelude::RawPlot;
+use plotinator_log_if::prelude::RawPlot;
 
 use crate::mipmap::{MipMap2DPlotPoints, MipMapStrategy};
 

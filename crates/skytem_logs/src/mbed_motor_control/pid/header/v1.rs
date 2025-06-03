@@ -1,6 +1,6 @@
 use std::{fmt, io};
 
-use skytem_log_if::log::GitMetadata;
+use plotinator_log_if::log::GitMetadata;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 

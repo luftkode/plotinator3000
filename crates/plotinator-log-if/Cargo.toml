@@ -1,5 +1,5 @@
 [package]
-name = "skytem-log-if"
+name = "plotinator-log-if"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

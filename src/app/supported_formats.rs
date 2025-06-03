@@ -2,8 +2,8 @@ use logs::{
     SupportedLog,
     parse_info::{ParseInfo, ParsedBytes, TotalBytes},
 };
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
-use skytem_log_if::prelude::*;
 use skytem_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},

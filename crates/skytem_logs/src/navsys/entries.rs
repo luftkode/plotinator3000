@@ -1,6 +1,6 @@
 use gps::Gps;
 use he::AltimeterEntry;
-use skytem_log_if::log::LogEntry;
+use plotinator_log_if::log::LogEntry;
 use mag::MagSensor;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, str::FromStr as _};
@@ -122,7 +122,7 @@ impl LogEntry for NavSysSpsEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use skytem_log_if::util::parse_to_vec;
+    use plotinator_log_if::util::parse_to_vec;
 
     const TEST_ENTRIES: &str = "HE1 2024 10 03 12 52 42 448 99999.99
 TL2 2024 10 03 12 52 42 542 2.34 0.58

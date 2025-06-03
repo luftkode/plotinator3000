@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt as _;
 
 use byteorder::LittleEndian;
 use chrono::{NaiveDateTime, ParseResult};
-use skytem_log_if::prelude::*;
+use plotinator_log_if::prelude::*;
 
 use std::{
     fmt::Display,
