@@ -33,7 +33,7 @@ impl BifrostLoopCurrent {
     /// # Errors
     ///
     /// If opening the file or any validity check fails.
-    pub fn open_bifrost_current_dataset<P: AsRef<Path>>(path: P) -> io::Result<Dataset> {
+    pub fn open_bifrost_current_dataset(path: impl AsRef<Path>) -> io::Result<Dataset> {
         let hdf5_file = hdf5::File::open(&path)?;
 
         let Ok(current_data_set) = hdf5_file.dataset(Self::DATASET_NAME) else {
@@ -77,7 +77,7 @@ impl BifrostLoopCurrent {
         Ok(current_data_set)
     }
 
-    pub fn from_path<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+    pub fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
         let current_dataset = Self::open_bifrost_current_dataset(path)?;
 
         let dataset_description = read_string_attribute(&current_dataset.attr("description")?)?;
