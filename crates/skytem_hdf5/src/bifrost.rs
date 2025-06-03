@@ -2,7 +2,7 @@ use super::stream_descriptor::StreamDescriptor;
 use chrono::Datelike as _;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use hdf5::Dataset;
-use log_if::prelude::*;
+use skytem_log_if::prelude::*;
 use num_traits::ToPrimitive as _;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};

@@ -1,11 +1,11 @@
 use crate::mbed_motor_control::mbed_config::MbedConfig as _;
 use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader as _;
-use log_if::log::LogEntry as _;
+use skytem_log_if::log::LogEntry as _;
 use std::io::Read as _;
 
 use crate::{mbed_motor_control::mbed_header::SIZEOF_UNIQ_DESC, parse_unique_description};
 use chrono::{DateTime, Utc};
-use log_if::{parseable::Parseable, prelude::*};
+use skytem_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::{fmt, fs, io, path::Path};
 

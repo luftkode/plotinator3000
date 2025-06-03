@@ -1,5 +1,5 @@
 [package]
-name = "log_if"
+name = "skytem-log-if"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

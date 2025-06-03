@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use log_if::{parseable::Parseable, prelude::*};
+use skytem_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::io::Read as _;
 use std::{fmt, fs, io, path::Path};

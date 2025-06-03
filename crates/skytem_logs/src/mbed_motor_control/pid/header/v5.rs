@@ -8,7 +8,7 @@ use crate::mbed_motor_control::{
     },
 };
 
-use log_if::log::GitMetadata;
+use skytem_log_if::log::GitMetadata;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 

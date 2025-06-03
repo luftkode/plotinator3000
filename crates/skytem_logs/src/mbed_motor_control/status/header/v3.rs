@@ -6,7 +6,7 @@ use crate::mbed_motor_control::{
     },
 };
 
-use log_if::prelude::*;
+use skytem_log_if::prelude::*;
 use serde_big_array::BigArray;
 use std::{fmt, io};
 

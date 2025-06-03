@@ -5,7 +5,7 @@ use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
 use egui_notify::Toasts;
 use egui_phosphor::regular;
-use log_if::prelude::Plotable as _;
+use skytem_log_if::prelude::Plotable as _;
 
 use file_dialog as fd;
 use supported_formats::{LoadedFiles, SupportedFormat};

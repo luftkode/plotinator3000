@@ -6,7 +6,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use log_if::{parseable::Parseable, prelude::*};
+use skytem_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::entries::he::AltimeterEntry;

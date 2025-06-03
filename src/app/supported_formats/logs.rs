@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use log_if::prelude::*;
+use skytem_log_if::prelude::*;
 use parse_info::ParseInfo;
 use serde::{Deserialize, Serialize};
 use skytem_logs::{

@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt as _;
 
 use byteorder::LittleEndian;
 use chrono::{NaiveDateTime, ParseResult};
-use log_if::prelude::*;
+use skytem_log_if::prelude::*;
 
 use std::{
     fmt::Display,

@@ -1,6 +1,6 @@
 use egui::{Modifiers, Vec2};
-use log_if::prelude::*;
 use plot_util::{Plots, StoredPlotLabels};
+use skytem_log_if::prelude::*;
 
 use crate::app::supported_formats::SupportedFormat;
 

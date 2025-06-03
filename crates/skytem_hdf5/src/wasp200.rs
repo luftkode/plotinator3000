@@ -1,7 +1,7 @@
 use chrono::TimeZone as _;
 use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
-use log_if::prelude::*;
+use skytem_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 

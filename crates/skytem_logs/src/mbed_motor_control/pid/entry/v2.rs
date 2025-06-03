@@ -4,7 +4,7 @@ use crate::util::parse_timestamp;
 
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt as _;
-use log_if::log::LogEntry;
+use skytem_log_if::log::LogEntry;
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PidLogEntryV2 {

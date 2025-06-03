@@ -2704,15 +2704,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
-name = "log_if"
-version = "1.14.2"
-dependencies = [
- "chrono",
- "log",
- "serde",
-]
-
-[[package]]
 name = "lru-slab"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3491,13 +3482,13 @@ dependencies = [
  "egui",
  "egui_plot",
  "log",
- "log_if",
  "num-traits",
  "pretty_assertions",
  "profiling",
  "puffin",
  "puffin_http",
  "serde",
+ "skytem-log-if",
  "testresult",
 ]
 
@@ -3517,7 +3508,6 @@ dependencies = [
  "env_logger",
  "getset",
  "log",
- "log_if",
  "mimalloc",
  "plot_util",
  "plotinator_macros",
@@ -3529,6 +3519,7 @@ dependencies = [
  "rfd",
  "semver",
  "serde",
+ "skytem-log-if",
  "skytem_hdf5",
  "skytem_logs",
  "strum 0.27.1",
@@ -4444,6 +4435,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 
 [[package]]
+name = "skytem-log-if"
+version = "1.14.2"
+dependencies = [
+ "chrono",
+ "log",
+ "serde",
+]
+
+[[package]]
 name = "skytem_hdf5"
 version = "1.14.2"
 dependencies = [
@@ -4454,13 +4454,13 @@ dependencies = [
  "getset",
  "hdf5-metno",
  "log",
- "log_if",
  "ndarray",
  "num-traits",
  "plot_util",
  "plotinator_macros",
  "serde",
  "serde-big-array",
+ "skytem-log-if",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "test_util",
@@ -4478,10 +4478,10 @@ dependencies = [
  "egui_plot",
  "getset",
  "log",
- "log_if",
  "plot_util",
  "serde",
  "serde-big-array",
+ "skytem-log-if",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "test_util",

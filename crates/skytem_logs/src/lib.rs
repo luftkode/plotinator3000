@@ -1,6 +1,6 @@
 use std::io;
 
-use log_if::prelude::*;
+use skytem_log_if::prelude::*;
 
 pub mod generator;
 pub mod mbed_motor_control;

@@ -7,8 +7,8 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
-use log_if::{log::LogEntry, parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
+use skytem_log_if::{log::LogEntry, parseable::Parseable, prelude::*};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {

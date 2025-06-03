@@ -4,7 +4,7 @@ use crate::mbed_motor_control::mbed_header::{
     ProjectVersionData, StartupTimestamp, UniqueDescriptionData,
 };
 
-use log_if::prelude::*;
+use skytem_log_if::prelude::*;
 use serde_big_array::BigArray;
 use std::{
     fmt,
