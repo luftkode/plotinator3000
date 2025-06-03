@@ -128,10 +128,6 @@ mimalloc = "0.1.46"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"
 
-# windows
-[target.'cfg(target_os = "windows")'.dependencies]
-elevated-command.workspace = true
-
 [features]
 default = ["selfupdater", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5"]
