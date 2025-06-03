@@ -4,13 +4,13 @@ use click_delta::ClickDelta;
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
 use plotinator_plot_util::{Plots, plots::MaxPlotBounds};
+use plotinator_supported_formats::SupportedFormat;
 use serde::{Deserialize, Serialize};
 
 use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
 
-use crate::app::supported_format::SupportedFormat;
 mod axis_config;
 mod click_delta;
 mod plot_graphics;

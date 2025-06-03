@@ -1,11 +1,10 @@
+use plotinator_supported_formats::SupportedFormat;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{self},
     path::Path,
 };
-
-use crate::app::supported_format::SupportedFormat;
 
 /// Contains all supported logs in a single vector.
 #[derive(Default, Deserialize, Serialize)]

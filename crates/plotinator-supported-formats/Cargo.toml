@@ -1,0 +1,30 @@
+[package]
+name = "plotinator-supported-formats"
+description = "Entry points for adding new supported formats"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[features]
+default = ["hdf5"]
+hdf5 = []
+
+[dependencies]
+plotinator-log-if = { workspace = true }
+plotinator-logs = { workspace = true }
+plotinator-hdf5 = { workspace = true }
+serde = { workspace = true }
+memmap2 = { workspace = true }
+log = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+plotinator-test-util = { workspace = true }
+
+
+[lints]
+workspace = true

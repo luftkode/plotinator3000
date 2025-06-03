@@ -3568,6 +3568,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "plotinator-supported-formats"
+version = "1.14.2"
+dependencies = [
+ "chrono",
+ "log",
+ "memmap2",
+ "plotinator-hdf5",
+ "plotinator-log-if",
+ "plotinator-logs",
+ "plotinator-test-util",
+ "serde",
+]
+
+[[package]]
 name = "plotinator-test-util"
 version = "1.14.2"
 dependencies = [
@@ -3599,6 +3613,7 @@ dependencies = [
  "plotinator-macros",
  "plotinator-mqtt",
  "plotinator-plot-util",
+ "plotinator-supported-formats",
  "plotinator-test-util",
  "profiling",
  "puffin",

@@ -2,10 +2,7 @@ use chrono::NaiveDateTime;
 use egui::{Color32, Key, RichText, TextEdit};
 use egui_phosphor::regular;
 
-use crate::{
-    app::{WARN_ON_UNPARSED_BYTES_THRESHOLD, supported_format::logs::parse_info::ParseInfo},
-    util::format_data_size,
-};
+use crate::{app::WARN_ON_UNPARSED_BYTES_THRESHOLD, util::format_data_size};
 
 use super::date_settings::LoadedLogSettings;
 
@@ -134,7 +131,7 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name
     }
 }
 
-fn show_parse_info(ui: &mut egui::Ui, parse_info: ParseInfo) {
+fn show_parse_info(ui: &mut egui::Ui, parse_info: plotinator_supported_formats::ParseInfo) {
     let parse_info_str = format!(
         "Parsed {parsed}/{total}",
         parsed = format_data_size(parse_info.parsed_bytes()),

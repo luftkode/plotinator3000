@@ -1,4 +1,4 @@
-use logs::{SupportedLog, parse_info::ParseInfo};
+use logs::SupportedLog;
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -11,6 +11,8 @@ use std::{
 #[cfg(not(target_arch = "wasm32"))]
 mod hdf5;
 pub(crate) mod logs;
+
+pub use logs::parse_info::ParseInfo;
 
 /// Represents a supported format, which can be any of the supported format types.
 ///
@@ -32,7 +34,7 @@ impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     ///
     /// This is how content is made available in a browser.
-    pub(super) fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
+    pub fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
         let log = SupportedLog::parse_from_buf(content)?;
         Ok(Self::Log(log))
     }
@@ -40,7 +42,7 @@ impl SupportedFormat {
     /// Attempts to parse a log from a file path.
     ///
     /// This is how it is made available on native.
-    pub(crate) fn parse_from_path(path: &Path) -> io::Result<Self> {
+    pub fn parse_from_path(path: &Path) -> io::Result<Self> {
         let file = fs::File::open(path)?;
 
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
