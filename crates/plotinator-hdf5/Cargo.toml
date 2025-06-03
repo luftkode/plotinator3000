@@ -1,0 +1,37 @@
+[package]
+name = "plotinator-hdf5"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+plotinator-macros.workspace = true
+plotinator-test-util.workspace = true
+plotinator-plot-util.workspace = true
+plotinator-log-if.workspace = true
+egui_plot.workspace = true
+serde.workspace = true
+serde-big-array.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
+byteorder.workspace = true
+chrono.workspace = true
+getset.workspace = true
+derive_more.workspace = true
+log.workspace = true
+num-traits.workspace = true
+toml.workspace = true
+ndarray = "0.16.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+hdf5 = { package = "hdf5-metno", version = "0.10.1", features = ["static"] }
+
+[dev-dependencies]
+testresult.workspace = true

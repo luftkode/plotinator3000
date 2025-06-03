@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
-use log_if::prelude::*;
 use parse_info::ParseInfo;
-use serde::{Deserialize, Serialize};
-use skytem_logs::{
+use plotinator_log_if::prelude::*;
+use plotinator_logs::{
     generator::GeneratorLog,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
     navsys::NavSysSps,
     wasp200::Wasp200Sps,
 };
+use serde::{Deserialize, Serialize};
 
 pub(crate) mod parse_info;
 

@@ -1,6 +1,6 @@
 use egui::{Modifiers, Vec2};
-use log_if::prelude::*;
-use plot_util::{Plots, StoredPlotLabels};
+use plotinator_log_if::prelude::*;
+use plotinator_plot_util::{Plots, StoredPlotLabels};
 
 use crate::app::supported_formats::SupportedFormat;
 

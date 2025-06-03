@@ -1,0 +1,16 @@
+[package]
+name = "plotinator-test-util"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+paste.workspace = true
+testresult.workspace = true
+
+[lints]
+workspace = true

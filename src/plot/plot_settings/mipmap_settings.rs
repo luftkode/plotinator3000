@@ -1,6 +1,6 @@
 use egui::{Response, RichText};
 use egui_phosphor::regular;
-use plot_util::MipMapConfiguration;
+use plotinator_plot_util::MipMapConfiguration;
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
@@ -49,8 +49,8 @@ impl MipMapSettings {
         .response
     }
 
-    /// Return the current configuration as a [`plot_util::MipMapSetting`].
-    pub fn configuration(&self) -> plot_util::MipMapConfiguration {
+    /// Return the current configuration as a [`plotinator_plot_util::MipMapSetting`].
+    pub fn configuration(&self) -> plotinator_plot_util::MipMapConfiguration {
         if self.enabled {
             if self.auto_set {
                 MipMapConfiguration::Auto

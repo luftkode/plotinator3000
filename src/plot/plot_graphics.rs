@@ -1,6 +1,6 @@
 use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
-use plot_util::{PlotData, Plots};
+use plotinator_plot_util::{PlotData, Plots};
 
 use crate::plot::{PlotMode, util};
 
@@ -207,7 +207,7 @@ fn fill_plot<'p>(
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
 
-    plot_util::plot_lines(
+    plotinator_plot_util::plot_lines(
         plot_ui,
         plot_settings.apply_filters(plot_data.plots()),
         line_width,
@@ -215,7 +215,7 @@ fn fill_plot<'p>(
         plot_ui.ctx().used_size().x as usize,
     );
 
-    plot_util::plot_labels(plot_ui, plot_data, &plot_settings.log_id_filter());
+    plotinator_plot_util::plot_labels(plot_ui, plot_data, &plot_settings.log_id_filter());
 }
 
 /// Builds and configures a Plot UI (layout) with the specified settings.

@@ -63,7 +63,13 @@ pub fn fill_mqtt_plots(
                 // height and width of the bounds is greater than 0.0
                 continue;
             }
-            plot_util::plot_raw_mqtt(plot_ui, &mp.topic, &mp.data, line_width, x_bounds.clone());
+            plotinator_plot_util::plot_raw_mqtt(
+                plot_ui,
+                &mp.topic,
+                &mp.data,
+                line_width,
+                x_bounds.clone(),
+            );
         }
     });
 }
