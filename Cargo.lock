@@ -3475,6 +3475,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "plotinator-hdf5"
+version = "1.14.2"
+dependencies = [
+ "byteorder",
+ "chrono",
+ "derive_more",
+ "egui_plot",
+ "getset",
+ "hdf5-metno",
+ "log",
+ "ndarray",
+ "num-traits",
+ "plotinator-log-if",
+ "plotinator-macros",
+ "plotinator-plot-util",
+ "serde",
+ "serde-big-array",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
+ "test_util",
+ "testresult",
+ "toml",
+]
+
+[[package]]
 name = "plotinator-log-if"
 version = "1.14.2"
 dependencies = [
@@ -3539,6 +3564,7 @@ dependencies = [
  "getset",
  "log",
  "mimalloc",
+ "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-macros",
  "plotinator-mqtt",
@@ -3550,7 +3576,6 @@ dependencies = [
  "rfd",
  "semver",
  "serde",
- "skytem_hdf5",
  "skytem_logs",
  "strum 0.27.1",
  "strum_macros 0.27.1",
@@ -4442,31 +4467,6 @@ name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
-
-[[package]]
-name = "skytem_hdf5"
-version = "1.14.2"
-dependencies = [
- "byteorder",
- "chrono",
- "derive_more",
- "egui_plot",
- "getset",
- "hdf5-metno",
- "log",
- "ndarray",
- "num-traits",
- "plotinator-log-if",
- "plotinator-macros",
- "plotinator-plot-util",
- "serde",
- "serde-big-array",
- "strum 0.27.1",
- "strum_macros 0.27.1",
- "test_util",
- "testresult",
- "toml",
-]
 
 [[package]]
 name = "skytem_logs"

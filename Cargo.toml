@@ -33,7 +33,7 @@ test_util.path = "crates/test_util"
 skytem_logs.path = "crates/skytem_logs"
 plotinator-log-if.path = "crates/plotinator-log-if"
 plotinator-plot-util.path = "crates/plotinator-plot-util"
-skytem_hdf5.path = "crates/skytem_hdf5"
+plotinator-hdf5.path = "crates/plotinator-hdf5"
 plotinator-mqtt.path = "crates/plotinator-mqtt"
 plotinator-macros.path = "crates/plotinator-macros"
 egui = { version = "0.31", features = ["rayon", "callstack"] }
@@ -71,7 +71,7 @@ reqwest = "0.12.18"
 skytem_logs.workspace = true
 plotinator-log-if.workspace = true
 plotinator-plot-util.workspace = true
-skytem_hdf5.workspace = true
+plotinator-hdf5.workspace = true
 test_util.workspace = true
 plotinator-macros.workspace = true
 egui_plot.workspace = true

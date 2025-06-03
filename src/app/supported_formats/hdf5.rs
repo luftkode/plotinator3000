@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
+use plotinator_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
-use skytem_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
 
 /// Represents a supported HDF5 format, which can be any of the supported HDF5 format types.
 ///

@@ -1,5 +1,5 @@
 [package]
-name = "skytem_hdf5"
+name = "plotinator-hdf5"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

@@ -18,7 +18,7 @@ use std::{
 
 #[cfg(feature = "hdf5")]
 #[cfg(not(target_arch = "wasm32"))]
-mod hdf;
+mod hdf5;
 pub(crate) mod logs;
 
 /// Represents a supported format, which can be any of the supported format types.
@@ -34,7 +34,7 @@ pub enum SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF...")]
-    HDF(hdf::SupportedHdfFormat),
+    HDF(hdf5::SupportedHdfFormat),
 }
 
 impl From<(PidLog, ParseInfo)> for SupportedFormat {
@@ -124,7 +124,7 @@ impl SupportedFormat {
         log::debug!("Parsing content of length: {total_bytes}");
 
         let mut reader = BufReader::new(file);
-        let log: Self = if skytem_hdf5::path_has_hdf5_extension(path) {
+        let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
             Self::parse_hdf5_from_path(path)?
         } else if PidLog::file_is_valid(path) {
             let (log, parsed_bytes) = PidLog::from_reader(&mut reader)?;
@@ -175,7 +175,7 @@ impl SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
-        use skytem_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
+        use plotinator_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
         // Attempt to parse it has an hdf5 file
         if let Ok(bifrost_loop_current) = BifrostLoopCurrent::from_path(path) {
             Ok(Self::HDF(bifrost_loop_current.into()))
