@@ -181,7 +181,7 @@ impl SupportedFormat {
     /// Returns [`None`] if there's no meaningful parsing information such as with HDF5 files.
     #[allow(
         clippy::unnecessary_wraps,
-        reason = "HDF5 files are not supported on web (yet?) and the lint is triggered when compiling for web since then only logs are supported which always have parse info"
+        reason = "HDF5 files are not supported on web and the lint is triggered when compiling for web since then only logs are supported which always have parse info"
     )]
     pub fn parse_info(&self) -> Option<ParseInfo> {
         match self {
