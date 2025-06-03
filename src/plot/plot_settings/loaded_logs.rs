@@ -3,7 +3,7 @@ use egui::{Color32, Key, RichText, TextEdit};
 use egui_phosphor::regular;
 
 use crate::{
-    app::{WARN_ON_UNPARSED_BYTES_THRESHOLD, supported_formats::logs::parse_info::ParseInfo},
+    app::{WARN_ON_UNPARSED_BYTES_THRESHOLD, supported_format::logs::parse_info::ParseInfo},
     util::format_data_size,
 };
 

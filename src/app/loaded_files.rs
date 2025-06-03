@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 
-use crate::app::supported_formats::SupportedFormat;
+use crate::app::supported_format::SupportedFormat;
 
 /// Contains all supported logs in a single vector.
 #[derive(Default, Deserialize, Serialize)]

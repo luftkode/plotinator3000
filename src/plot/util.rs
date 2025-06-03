@@ -2,7 +2,7 @@ use egui::{Modifiers, Vec2};
 use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{Plots, StoredPlotLabels};
 
-use crate::app::supported_formats::SupportedFormat;
+use crate::app::supported_format::SupportedFormat;
 
 use super::plot_settings::{PlotSettings, date_settings::LoadedLogSettings};
 
