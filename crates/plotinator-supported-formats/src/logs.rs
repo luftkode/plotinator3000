@@ -1,7 +1,7 @@
 use std::io;
 
 use chrono::{DateTime, Utc};
-use parse_info::ParseInfo;
+use parse_info::{ParseInfo, ParsedBytes, TotalBytes};
 use plotinator_log_if::prelude::*;
 use plotinator_logs::{
     generator::GeneratorLog,
@@ -10,8 +10,6 @@ use plotinator_logs::{
     wasp200::Wasp200Sps,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::app::supported_format::logs::parse_info::{ParsedBytes, TotalBytes};
 
 pub(crate) mod parse_info;
 

@@ -1,9 +1,8 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use egui::RichText;
 use plotinator_plot_util::{PlotData, Plots};
+use plotinator_supported_formats::ParseInfo;
 use serde::{Deserialize, Serialize};
-
-use crate::app::supported_format::logs::parse_info::ParseInfo;
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoadedLogMetadata {
