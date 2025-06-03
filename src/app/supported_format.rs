@@ -1,14 +1,5 @@
-use logs::{
-    SupportedLog,
-    parse_info::{ParseInfo, ParsedBytes, TotalBytes},
-};
+use logs::{SupportedLog, parse_info::ParseInfo};
 use plotinator_log_if::prelude::*;
-use plotinator_logs::{
-    generator::GeneratorLog,
-    mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
-    navsys::NavSysSps,
-    wasp200::Wasp200Sps,
-};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -37,82 +28,13 @@ pub enum SupportedFormat {
     HDF(hdf5::SupportedHdf5Format),
 }
 
-impl From<(PidLog, ParseInfo)> for SupportedFormat {
-    fn from(value: (PidLog, ParseInfo)) -> Self {
-        Self::Log(SupportedLog::from(value))
-    }
-}
-
-impl From<(StatusLog, ParseInfo)> for SupportedFormat {
-    fn from(value: (StatusLog, ParseInfo)) -> Self {
-        Self::Log(SupportedLog::from(value))
-    }
-}
-
-impl From<(GeneratorLog, ParseInfo)> for SupportedFormat {
-    fn from(value: (GeneratorLog, ParseInfo)) -> Self {
-        Self::Log(SupportedLog::from(value))
-    }
-}
-
-impl From<(NavSysSps, ParseInfo)> for SupportedFormat {
-    fn from(value: (NavSysSps, ParseInfo)) -> Self {
-        Self::Log(SupportedLog::from(value))
-    }
-}
-
-impl From<(Wasp200Sps, ParseInfo)> for SupportedFormat {
-    fn from(value: (Wasp200Sps, ParseInfo)) -> Self {
-        Self::Log(SupportedLog::from(value))
-    }
-}
-
 impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     ///
     /// This is how content is made available in a browser.
     pub(super) fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
-        let total_bytes = content.len();
-        log::debug!("Parsing content of length: {total_bytes}");
-        let log: Self = if let Ok((pidlog, read_bytes)) = PidLog::try_from_buf(content) {
-            log::debug!("Read: {read_bytes} bytes");
-            (
-                pidlog,
-                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else if let Ok((statuslog, read_bytes)) = StatusLog::try_from_buf(content) {
-            (
-                statuslog,
-                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(read_bytes)),
-            )
-                .into()
-        } else if let Ok((genlog, read_bytes)) = GeneratorLog::try_from_buf(content) {
-            (
-                genlog,
-                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else if let Ok((navsyssps_log, read_bytes)) = NavSysSps::try_from_buf(content) {
-            (
-                navsyssps_log,
-                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else if let Ok((wasp200sps, read_bytes)) = Wasp200Sps::try_from_buf(content) {
-            (
-                wasp200sps,
-                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
-            )
-                .into()
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Unrecognized format",
-            ));
-        };
-        log::debug!("Got: {}", log.descriptive_name());
-        Ok(log)
+        let log = SupportedLog::parse_from_buf(content)?;
+        Ok(Self::Log(log))
     }
 
     /// Attempts to parse a log from a file path.
@@ -232,6 +154,7 @@ impl Plotable for SupportedFormat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use plotinator_logs::mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog};
     use plotinator_test_util::*;
 
     #[test]

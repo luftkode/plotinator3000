@@ -1,3 +1,5 @@
+use std::io;
+
 use chrono::{DateTime, Utc};
 use parse_info::ParseInfo;
 use plotinator_log_if::prelude::*;
@@ -8,6 +10,8 @@ use plotinator_logs::{
     wasp200::Wasp200Sps,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::app::supported_format::logs::parse_info::{ParsedBytes, TotalBytes};
 
 pub(crate) mod parse_info;
 
@@ -32,6 +36,50 @@ impl SupportedLog {
             | Self::Generator(_, parse_info)
             | Self::Wasp200Sps(_, parse_info) => *parse_info,
         }
+    }
+
+    pub(crate) fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
+        let total_bytes = content.len();
+        log::debug!("Parsing content of length: {total_bytes}");
+        let log: Self = if let Ok((pidlog, read_bytes)) = PidLog::try_from_buf(content) {
+            log::debug!("Read: {read_bytes} bytes");
+            (
+                pidlog,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
+        } else if let Ok((statuslog, read_bytes)) = StatusLog::try_from_buf(content) {
+            (
+                statuslog,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(read_bytes)),
+            )
+                .into()
+        } else if let Ok((genlog, read_bytes)) = GeneratorLog::try_from_buf(content) {
+            (
+                genlog,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
+        } else if let Ok((navsyssps_log, read_bytes)) = NavSysSps::try_from_buf(content) {
+            (
+                navsyssps_log,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
+        } else if let Ok((wasp200sps, read_bytes)) = Wasp200Sps::try_from_buf(content) {
+            (
+                wasp200sps,
+                ParseInfo::new(ParsedBytes(read_bytes), TotalBytes(total_bytes)),
+            )
+                .into()
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Unrecognized format",
+            ));
+        };
+        log::debug!("Got: {}", log.descriptive_name());
+        Ok(log)
     }
 }
 
