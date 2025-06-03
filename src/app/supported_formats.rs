@@ -357,7 +357,7 @@ fn is_zip_file(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     #[test]
     fn test_supported_logs_dyn_vec() -> TestResult {

@@ -216,7 +216,7 @@ impl FromStr for Gps {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     const TEST_ENTRY_GP1: &str = "GP1 2024 10 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 WGS84 0.0 0.8 1.3 1.5 0.2";
     const TEST_ENTRY_GP2: &str = "GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1.2 1.5 -0.1";

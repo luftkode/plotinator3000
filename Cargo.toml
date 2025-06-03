@@ -29,7 +29,7 @@ repository = "https://github.com/luftkode/plotinator3000"
 homepage = "https://github.com/luftkode/plotinator3000"
 
 [workspace.dependencies]
-test_util.path = "crates/test_util"
+plotinator-test-util.path = "crates/plotinator-test-util"
 plotinator-logs.path = "crates/plotinator-logs"
 plotinator-log-if.path = "crates/plotinator-log-if"
 plotinator-plot-util.path = "crates/plotinator-plot-util"
@@ -72,7 +72,7 @@ plotinator-logs.workspace = true
 plotinator-log-if.workspace = true
 plotinator-plot-util.workspace = true
 plotinator-hdf5.workspace = true
-test_util.workspace = true
+plotinator-test-util.workspace = true
 plotinator-macros.workspace = true
 egui_plot.workspace = true
 log.workspace = true

@@ -374,7 +374,7 @@ impl FromStr for GeneratorLogEntry {
 mod tests {
     use super::*;
     use chrono::NaiveDate;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     #[test]
     fn test_deserialize() -> TestResult {

@@ -430,7 +430,7 @@ impl GitMetadata for NavSysSps {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     // Example Navsys.sps data with a header and some data taken from the middle of an actual Navsys.sps log
     // these logs are very long so we don't want to add a real file to the repo test data

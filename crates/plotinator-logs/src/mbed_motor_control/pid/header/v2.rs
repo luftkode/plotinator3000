@@ -168,7 +168,7 @@ impl fmt::Display for PidLogHeaderV2 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     use io::Read as _;
 

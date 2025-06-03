@@ -384,7 +384,7 @@ impl fmt::Display for PidLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     use crate::parse_and_display_log_entries;
 

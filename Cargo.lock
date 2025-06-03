@@ -3490,11 +3490,11 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-macros",
  "plotinator-plot-util",
+ "plotinator-test-util",
  "serde",
  "serde-big-array",
  "strum 0.27.1",
  "strum_macros 0.27.1",
- "test_util",
  "testresult",
  "toml",
 ]
@@ -3520,11 +3520,11 @@ dependencies = [
  "log",
  "plotinator-log-if",
  "plotinator-plot-util",
+ "plotinator-test-util",
  "serde",
  "serde-big-array",
  "strum 0.27.1",
  "strum_macros 0.27.1",
- "test_util",
  "thiserror 2.0.12",
 ]
 
@@ -3540,12 +3540,12 @@ dependencies = [
  "egui_plot",
  "log",
  "plotinator-macros",
+ "plotinator-test-util",
  "rumqttc",
  "serde",
  "serde_json",
  "strum 0.27.1",
  "strum_macros 0.27.1",
- "test_util",
  "testresult",
 ]
 
@@ -3564,6 +3564,14 @@ dependencies = [
  "puffin",
  "puffin_http",
  "serde",
+ "testresult",
+]
+
+[[package]]
+name = "plotinator-test-util"
+version = "1.14.2"
+dependencies = [
+ "paste",
  "testresult",
 ]
 
@@ -3590,6 +3598,7 @@ dependencies = [
  "plotinator-macros",
  "plotinator-mqtt",
  "plotinator-plot-util",
+ "plotinator-test-util",
  "profiling",
  "puffin",
  "puffin_http",
@@ -3600,7 +3609,6 @@ dependencies = [
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "tempfile",
- "test_util",
  "testresult",
  "tokio",
  "wasm-bindgen-futures",
@@ -4716,14 +4724,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "test_util"
-version = "1.14.2"
-dependencies = [
- "paste",
- "testresult",
 ]
 
 [[package]]

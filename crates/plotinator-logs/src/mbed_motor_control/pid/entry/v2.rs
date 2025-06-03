@@ -94,7 +94,7 @@ impl fmt::Display for PidLogEntryV2 {
 
 #[cfg(test)]
 mod tests {
-    use test_util::*;
+    use plotinator_test_util::*;
 
     use super::*;
     use std::io::Cursor;

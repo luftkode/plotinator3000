@@ -94,7 +94,7 @@ impl FromStr for AltimeterEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     const TEST_ENTRY_HE1: &str = "HE1 2024 10 03 12 52 42 448 99999.99";
     const TEST_ENTRY_HE2: &str = "HE2 2024 10 03 12 52 42 557 123.99";

@@ -19,7 +19,7 @@ plotinator-macros.workspace = true
 anyhow.workspace = true
 
 [dev-dependencies]
-test_util.workspace = true
+plotinator-test-util.workspace = true
 testresult.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

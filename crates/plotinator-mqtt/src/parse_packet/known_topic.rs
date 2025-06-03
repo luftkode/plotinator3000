@@ -143,7 +143,7 @@ mod tests {
 
     use super::*;
     use serde_json::json;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     #[test]
     fn test_enum_parse_packet() -> TestResult {

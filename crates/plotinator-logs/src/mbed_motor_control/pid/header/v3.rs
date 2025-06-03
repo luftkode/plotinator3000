@@ -169,7 +169,7 @@ impl fmt::Display for PidLogHeaderV3 {
 mod tests {
     use super::*;
     use io::Read as _;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     #[test]
     fn test_deserialize() -> TestResult {

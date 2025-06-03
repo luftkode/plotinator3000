@@ -450,7 +450,7 @@ fn parse_timestamps_with_state_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     use crate::{
         mbed_motor_control::status::entry::{v1::MotorState, v2, v4},

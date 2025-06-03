@@ -198,7 +198,7 @@ impl Wasp200 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::test_file_defs::wasp200::*;
+    use plotinator_test_util::test_file_defs::wasp200::*;
     use testresult::TestResult;
 
     #[test]

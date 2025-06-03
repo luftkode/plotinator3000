@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 plotinator-macros.workspace = true
-test_util.workspace = true
+plotinator-test-util.workspace = true
 plotinator-plot-util.workspace = true
 plotinator-log-if.workspace = true
 egui_plot.workspace = true

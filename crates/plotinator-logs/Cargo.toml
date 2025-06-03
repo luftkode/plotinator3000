@@ -27,4 +27,4 @@ log.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-test_util.workspace = true
+plotinator-test-util.workspace = true

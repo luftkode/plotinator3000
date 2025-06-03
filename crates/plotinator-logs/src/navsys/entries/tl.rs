@@ -86,7 +86,7 @@ impl FromStr for InclinometerEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     const TEST_ENTRY_TL1: &str = "TL1 2024 10 03 12 52 42 838 2.15 0.24";
     const TEST_ENTRY_TL2: &str = "TL2 2024 10 03 12 52 42 542 2.34 0.58";

@@ -164,7 +164,7 @@ impl fmt::Display for StatusLogHeaderV3 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::*;
+    use plotinator_test_util::*;
 
     use crate::mbed_motor_control::mbed_config::MbedConfig as _;
 
