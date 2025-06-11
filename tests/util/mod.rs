@@ -68,6 +68,7 @@ impl HarnessWrapper {
         if std::env::var("CI").is_ok_and(|v| v == "true") {
             // Only macos runners have access to a GPU
             if is_macos {
+                eprintln!("Using CI mac OS threshold: {}", threshold.0);
                 let opt = egui_kittest::SnapshotOptions::new().threshold(threshold.0);
                 self.harness.snapshot_options(&self.name, &opt);
             }
