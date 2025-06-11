@@ -71,5 +71,5 @@ fn test_snapshot_drop_load_hdf5_bifrost_current() {
     harness.run();
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
-    harness.save_snapshot_with_threshold(CiThreshold(52.0));
+    harness.save_snapshot_with_threshold(CiThreshold(10.0));
 }
