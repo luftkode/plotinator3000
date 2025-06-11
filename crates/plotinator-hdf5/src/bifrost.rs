@@ -7,7 +7,7 @@ use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
-use crate::util::{read_any_attribute_to_string, read_string_attribute};
+use crate::util::{log_all_attributes, read_string_attribute};
 
 impl SkytemHdf5 for BifrostLoopCurrent {
     fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
@@ -26,12 +26,6 @@ impl SkytemHdf5 for BifrostLoopCurrent {
                 ),
             ));
         };
-
-        for a in current_dataset.attr_names()? {
-            let attr = current_dataset.attr(&a)?;
-            let attr_val_as_string = read_any_attribute_to_string(&attr)?;
-            eprintln!("Attr: {attr_val_as_string}");
-        }
 
         let data_3: ndarray::Array3<f32> = current_dataset.read()?;
 
@@ -62,59 +56,83 @@ impl SkytemHdf5 for BifrostLoopCurrent {
             .to_f64()
             .expect("Failed converting timestamp to f64");
 
-        let mut polarity0_currents: Vec<[f64; 2]> = Vec::new();
-        let mut polarity1_currents: Vec<[f64; 2]> = Vec::new();
-
-        let nanosec_multiplier = 1_000_000_000.0;
-        // Assumes one timestamp per second
-        let sample_step_size_approx: f64 = 1.0 * nanosec_multiplier
-            / (samples_per_ts
-                .to_f64()
-                .expect("Failed converting usize to f64"));
-        let mut timestamp_idx = 0;
-        let mut sample_idx = 0;
-
-        for d in data_3.rows() {
-            let offset_from_start = (timestamp_idx as f64) * nanosec_multiplier
-                + (sample_idx as f64) * sample_step_size_approx;
-
-            let offset_ts = starting_timestamp_ns + offset_from_start;
-
-            sample_idx += 1;
-            if sample_idx == samples_per_ts {
-                sample_idx = 0;
-                timestamp_idx += 1;
-            }
-            if d.len() != 2 {
-                log::error!(
-                    "Expected bifrost hm_current row length of 2, got: {}",
-                    d.len()
-                );
-                continue;
-            }
-
-            polarity0_currents.push([offset_ts, d[0].into()]);
-            polarity1_currents.push([offset_ts, d[1].into()]);
-        }
-
-        let plot_polarity0 = RawPlot::new(
-            "+ Polarity [A]".to_owned(),
-            polarity0_currents.clone(),
-            ExpectedPlotRange::OneToOneHundred,
-        );
-        let plot_polarity1 = RawPlot::new(
-            "- Polarity [A]".to_owned(),
-            polarity1_currents.clone(),
-            ExpectedPlotRange::OneToOneHundred,
-        );
+        let raw_plots = process_points_to_rawplots(starting_timestamp_ns, &data_3);
 
         Ok(Self {
             starting_timestamp_utc: first_january_this_year,
             dataset_description,
-            raw_plots: vec![plot_polarity0, plot_polarity1],
+            raw_plots,
             metadata,
         })
     }
+}
+
+// Process the data points, meanings distributing as a timeseries and turning them into the raw plots that are compatible with the GUI
+fn process_points_to_rawplots(
+    starting_timestamp_ns: f64,
+    current_data: &ndarray::Array3<f32>,
+) -> Vec<RawPlot> {
+    let (_, samples_per_ts, _) = current_data.dim();
+    let mut polarity0_currents: Vec<[f64; 2]> = Vec::new();
+    let mut polarity1_currents: Vec<[f64; 2]> = Vec::new();
+    let mut combined_currents: Vec<[f64; 2]> = Vec::new();
+
+    let nanosec_multiplier = 1_000_000_000.0;
+    // Assumes one timestamp per second
+    let sample_step_size_approx: f64 = 1.0 * nanosec_multiplier
+        / (samples_per_ts
+            .to_f64()
+            .expect("Failed converting usize to f64"));
+    let mut timestamp_idx = 0;
+    let mut sample_idx = 0;
+
+    for d in current_data.rows() {
+        let offset_from_start = (timestamp_idx as f64) * nanosec_multiplier
+            + (sample_idx as f64) * sample_step_size_approx;
+
+        let offset_ts = starting_timestamp_ns + offset_from_start;
+
+        sample_idx += 1;
+        if sample_idx == samples_per_ts {
+            sample_idx = 0;
+            timestamp_idx += 1;
+        }
+        if d.len() != 2 {
+            log::error!(
+                "Expected bifrost hm_current row length of 2, got: {}",
+                d.len()
+            );
+            continue;
+        }
+
+        let mut p0 = [offset_ts, d[0].into()];
+        let mut p1 = [offset_ts, d[1].into()];
+        polarity0_currents.push(p0);
+        polarity1_currents.push(p1);
+        p0[1] = p0[1].abs();
+        p1[0] += sample_step_size_approx / 2.;
+        p1[1] = p1[1].abs();
+
+        combined_currents.push(p0);
+        combined_currents.push(p1);
+    }
+
+    let plot_polarity0 = RawPlot::new(
+        "+ Polarity [A]".to_owned(),
+        polarity0_currents,
+        ExpectedPlotRange::OneToOneHundred,
+    );
+    let plot_polarity1 = RawPlot::new(
+        "- Polarity [A]".to_owned(),
+        polarity1_currents,
+        ExpectedPlotRange::OneToOneHundred,
+    );
+    let plot_combined = RawPlot::new(
+        "Combined [A]".to_owned(),
+        combined_currents,
+        ExpectedPlotRange::OneToOneHundred,
+    );
+    vec![plot_polarity0, plot_polarity1, plot_combined]
 }
 
 impl Plotable for BifrostLoopCurrent {
@@ -176,6 +194,7 @@ impl BifrostLoopCurrent {
                 ),
             ));
         };
+        log_all_attributes(&current_data_set);
 
         if current_data_set.ndim() != Self::DATASET_DIMENSIONS {
             return Err(io::Error::new(
