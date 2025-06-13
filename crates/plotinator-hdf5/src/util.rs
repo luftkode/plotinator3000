@@ -156,7 +156,7 @@ pub(crate) fn read_any_attribute_to_string(attr: &Attribute) -> hdf5::Result<Str
     }
 }
 
-/// Convenience to open a dataset and return an io::Error if the dataset is not in the HDF5 file or if it doesn't have the expected dimension
+/// Convenience to open a dataset and return an `io::Error` if the dataset is not in the HDF5 file or if it doesn't have the expected dimension
 pub(crate) fn open_dataset(
     hdf5_file: &hdf5::File,
     name: &str,
