@@ -3,6 +3,7 @@ plotinator_macros::non_wasm_modules!(
     pub(crate) mod stream_descriptor;
     pub mod bifrost;
     pub mod wasp200;
+    pub mod frame_altimeters;
 );
 
 // File extensions we recognize as hdf5 files.
