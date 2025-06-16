@@ -7,7 +7,9 @@ use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
-use crate::util::{log_all_attributes, read_string_attribute};
+use crate::util::{
+    assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute,
+};
 
 impl SkytemHdf5 for BifrostLoopCurrent {
     fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
@@ -184,44 +186,11 @@ impl BifrostLoopCurrent {
     pub fn open_bifrost_current_dataset(path: impl AsRef<Path>) -> io::Result<Dataset> {
         let hdf5_file = hdf5::File::open(&path)?;
 
-        let Ok(current_data_set) = hdf5_file.dataset(Self::DATASET_NAME) else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!(
-                    "No {dataset_name} dataset in {fname}",
-                    dataset_name = Self::DATASET_NAME,
-                    fname = path.as_ref().display()
-                ),
-            ));
-        };
+        let current_data_set =
+            open_dataset(&hdf5_file, Self::DATASET_NAME, Self::DATASET_DIMENSIONS)?;
         log_all_attributes(&current_data_set);
 
-        if current_data_set.ndim() != Self::DATASET_DIMENSIONS {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected {ndim} dimensions in dataset {dataset_name}",
-                    dataset_name = Self::DATASET_NAME,
-                    ndim = Self::DATASET_DIMENSIONS
-                ),
-            ));
-        }
-
-        let dataset_attributes = current_data_set.attr_names()?;
-
-        if !dataset_attributes.contains(&"description".to_owned()) {
-            let comma_separated_attr_list = dataset_attributes
-                .iter()
-                .map(|a| a.to_string())
-                .collect::<Vec<String>>()
-                .join(", ");
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected 'description' among dataset attributes, but attributes do not contain 'description'. Attributes in dataset: {comma_separated_attr_list}",
-                ),
-            ));
-        }
+        assert_description_in_attrs(&current_data_set)?;
 
         Ok(current_data_set)
     }
