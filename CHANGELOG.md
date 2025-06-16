@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `zip`: 4.0.0 → 4.1.0 ([#267](https://github.com/luftkode/plotinator3000/pull/267))
 - `reqwest`: 0.12.19 → 0.12.20 ([#267](https://github.com/luftkode/plotinator3000/pull/267))
+- `cargo-bins/cargo-binstall`: 1.12.7 → 1.13.0 ([#269](https://github.com/luftkode/plotinator3000/pull/269))
 
 ## [1.14.3]
 
