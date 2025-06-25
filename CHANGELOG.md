@@ -10,11 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 
 - `reqwest`: 0.12.19 → 0.12.20 ([#267](https://github.com/luftkode/plotinator3000/pull/267))
-- `cargo-bins/cargo-binstall`: 1.12.7 → 1.13.0 ([#269](https://github.com/luftkode/plotinator3000/pull/269))
 - `getset`: 0.1.5 → 0.1.6 ([#271](https://github.com/luftkode/plotinator3000/pull/271))
 - `zip`: 4.0.0 → 4.2.0 ([#271](https://github.com/luftkode/plotinator3000/pull/271))
 - `profiling`: 1.0.16 → 1.0.17 ([#271](https://github.com/luftkode/plotinator3000/pull/271))
 - `mimalloc`: 0.1.46 → 0.1.47 ([#271](https://github.com/luftkode/plotinator3000/pull/271))
+- `cargo-bins/cargo-binstall`: 1.12.7 → 1.14.1 ([#270](https://github.com/luftkode/plotinator3000/pull/270))
+- `crambl/dependabot-changelog-writer`: 1.1.4 → 1.2.0 ([#270](https://github.com/luftkode/plotinator3000/pull/270))
 
 ## [1.14.3]
 
