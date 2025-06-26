@@ -1,7 +1,28 @@
+use std::io;
+
 use hdf5::{
-    Attribute,
+    Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
+
+/// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
+pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
+    let attrs = ds.attr_names()?;
+    if !attrs.contains(&"description".to_owned()) {
+        let comma_separated_attr_list = attrs
+            .iter()
+            .map(|a| a.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "Expected 'description' among dataset attributes, but attributes do not contain 'description'. Attributes in dataset: {comma_separated_attr_list}",
+            ),
+        ));
+    }
+    Ok(())
+}
 
 /// Logs all dataset attributes at INFO verbosity
 ///
@@ -133,4 +154,28 @@ pub(crate) fn read_any_attribute_to_string(attr: &Attribute) -> hdf5::Result<Str
             "Unsupported attribute type: {type_descriptor}"
         ))),
     }
+}
+
+/// Convenience to open a dataset and return an `io::Error` if the dataset is not in the HDF5 file or if it doesn't have the expected dimension
+pub(crate) fn open_dataset(
+    hdf5_file: &hdf5::File,
+    name: &str,
+    expect_dim: usize,
+) -> io::Result<Dataset> {
+    let Ok(dataset) = hdf5_file.dataset(name) else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("No {name} dataset in {}", hdf5_file.filename()),
+        ));
+    };
+    if dataset.ndim() != expect_dim {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "Expected {expect_dim} dimensions in dataset {name}, got: {}",
+                dataset.ndim()
+            ),
+        ));
+    }
+    Ok(dataset)
 }
