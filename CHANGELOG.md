@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Initial support for the new `njord-ins` HDF5 file
 - Support for the new `frame-altimeter` HDF5 file
 - Refactor HDF5 to have much less boilerplate
 

@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use plotinator_hdf5::frame_altimeters::FrameAltimeters;
+use plotinator_hdf5::njord_ins::NjordIns;
 use plotinator_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -80,5 +81,6 @@ macro_rules! define_supported_hdf5_formats {
 define_supported_hdf5_formats! {
     BifrostLoopCurrent => BifrostLoopCurrent,
     Wasp200Height => Wasp200,
-    FrameAltimeters => FrameAltimeters
+    FrameAltimeters => FrameAltimeters,
+    NjordIns => NjordIns
 }
