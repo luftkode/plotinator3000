@@ -52,4 +52,5 @@ pub mod bifrost_current;
 pub mod frame_altimeters;
 pub mod legacy_generator;
 pub mod mbed_motor_control;
+pub mod njord_ins;
 pub mod wasp200;
