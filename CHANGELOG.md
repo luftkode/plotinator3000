@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `profiling`: 1.0.16 → 1.0.17 ([#271](https://github.com/luftkode/plotinator3000/pull/271))
 - `mimalloc`: 0.1.46 → 0.1.47 ([#271](https://github.com/luftkode/plotinator3000/pull/271))
 - `cargo-bins/cargo-binstall`: 1.12.7 → 1.14.1 ([#270](https://github.com/luftkode/plotinator3000/pull/270))
-- `crambl/dependabot-changelog-writer`: 1.1.4 → 1.2.0 ([#270](https://github.com/luftkode/plotinator3000/pull/270))
+- `crambl/dependabot-changelog-writer`: 1.1.4 → 1.3.0 ([#272](https://github.com/luftkode/plotinator3000/pull/272))
 
 ## [1.14.3]
 
