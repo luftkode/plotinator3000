@@ -1,7 +1,5 @@
 mod util;
-use plotinator_test_util::{
-    bifrost_current::bifrost_current, mbed_pid_v6_regular, mbed_status_v6_regular,
-};
+use plotinator_test_util::{bifrost_current, mbed_pid_v6_regular, mbed_status_v6_regular};
 use util::*;
 
 #[test]
