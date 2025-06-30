@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Support for the new `frame-altimeter` HDF5 file
+- Refactor HDF5 to have much less boilerplate
+
 ## [1.14.3]
 
 ### Changed

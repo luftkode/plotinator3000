@@ -206,7 +206,8 @@ mod tests {
     #[test]
     fn test_read_frame_altimeters() -> TestResult {
         let frame_altimeters = FrameAltimeters::from_path(frame_altimeters())?;
-
+        assert_eq!(frame_altimeters.metadata.len(), 48);
+        assert_eq!(frame_altimeters.raw_plots.len(), 2);
         assert_eq!(frame_altimeters.raw_plots[0].points().len(), 1091);
 
         Ok(())
