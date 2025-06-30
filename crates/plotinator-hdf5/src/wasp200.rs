@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
 use crate::stream_descriptor::StreamDescriptor;
-use crate::util::{log_all_attributes, read_any_attribute_to_string, read_string_attribute};
+use crate::util::{
+    assert_description_in_attrs, log_all_attributes, open_dataset, read_any_attribute_to_string,
+    read_string_attribute,
+};
 
 impl SkytemHdf5 for Wasp200 {
     fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
@@ -88,66 +91,20 @@ pub struct Wasp200 {
 }
 
 impl Wasp200 {
+    const HEIGHT_DATASET: &str = "height";
+    const TIMESTAMP_DATASET: &str = "timestamp";
+    const EXPECT_DIMENSION: usize = 2;
+
     fn open_wasp200_datasets(path: impl AsRef<Path>) -> io::Result<(Dataset, Dataset)> {
         let hdf5_file = hdf5::File::open(&path)?;
 
-        let height_dataset_name = "height";
-        let expect_height_dataset_ndim = 2;
-        let Ok(height_dataset) = hdf5_file.dataset(height_dataset_name) else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!(
-                    "No {height_dataset_name} dataset in {fname}",
-                    fname = path.as_ref().display()
-                ),
-            ));
-        };
+        let height_dataset =
+            open_dataset(&hdf5_file, Self::HEIGHT_DATASET, Self::EXPECT_DIMENSION)?;
 
-        if height_dataset.ndim() != expect_height_dataset_ndim {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected {expect_height_dataset_ndim} dimensions in dataset {height_dataset_name}"
-                ),
-            ));
-        }
+        assert_description_in_attrs(&height_dataset)?;
 
-        let dataset_attributes = height_dataset.attr_names()?;
-
-        if !dataset_attributes.contains(&"description".to_owned()) {
-            let comma_separated_attr_list = dataset_attributes
-                .iter()
-                .map(|a| a.to_string())
-                .collect::<Vec<String>>()
-                .join(", ");
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected 'description' among dataset attributes, but attributes do not contain 'description'. Attributes in dataset: {comma_separated_attr_list}",
-                ),
-            ));
-        }
-
-        let timestamp_dataset_name = "timestamp";
-        let expect_timestamp_dataset_ndim = 2;
-        let Ok(timestamp_dataset) = hdf5_file.dataset(timestamp_dataset_name) else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!(
-                    "No {timestamp_dataset_name} dataset in {fname}",
-                    fname = path.as_ref().display()
-                ),
-            ));
-        };
-
-        if timestamp_dataset.ndim() != expect_timestamp_dataset_ndim {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected {expect_timestamp_dataset_ndim} dimensions in dataset {timestamp_dataset_name}"
-                ),
-            ));
-        }
+        let timestamp_dataset =
+            open_dataset(&hdf5_file, Self::TIMESTAMP_DATASET, Self::EXPECT_DIMENSION)?;
         Ok((height_dataset, timestamp_dataset))
     }
 
@@ -159,7 +116,7 @@ impl Wasp200 {
             read_string_attribute(&height_dataset.attr("description")?)?;
         let height_stream_descriptor = StreamDescriptor::try_from(height_dataset)?;
         let timestamp_dataset_description =
-            read_string_attribute(&height_dataset.attr("description")?)?;
+            read_string_attribute(&time_dataset.attr("description")?)?;
         let timestamp_stream_descriptor = StreamDescriptor::try_from(time_dataset)?;
 
         let mut metadata = vec![(
@@ -204,7 +161,7 @@ mod tests {
     use testresult::TestResult;
 
     #[test]
-    fn test_read_bifrost_current() -> TestResult {
+    fn test_read_wasp200_height() -> TestResult {
         let wasp200 = Wasp200::from_path(wasp200())?;
 
         assert_eq!(wasp200.raw_plots[0].points().len(), 70971);
