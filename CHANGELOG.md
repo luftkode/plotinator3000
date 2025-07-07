@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `tokio`: 1.45.1 → 1.46.1 ([#274](https://github.com/luftkode/plotinator3000/pull/274))
+- `reqwest`: 0.12.20 → 0.12.22 ([#274](https://github.com/luftkode/plotinator3000/pull/274))
+
 ## [1.15.0]
 
 ### Added
