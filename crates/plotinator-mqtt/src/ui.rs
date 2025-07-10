@@ -1,54 +1,35 @@
-use egui::Color32;
-use egui::RichText;
-use egui::ScrollArea;
-use egui::Ui;
-use plotinator_mqtt::{BrokerStatus, broker_validator::ValidatorStatus};
-use plotinator_mqtt::{MqttConfigWindow, MqttDataReceiver};
+use std::sync::{Arc, atomic::AtomicBool};
 
-use crate::util::theme_color;
+use crate::{
+    BrokerStatus, MqttDataReceiver,
+    broker_validator::{BrokerValidator, ValidatorStatus},
+    data_receiver::spawn_mqtt_listener,
+    topic_discoverer::TopicDiscoverer,
+};
+use egui::{Color32, RichText, ScrollArea, Ui};
+use plotinator_ui_util::theme_color;
 
-/// Shows the MQTT configuration window and returns a receiver channel if connect was clicked
-pub fn show_mqtt_window(
-    ctx: &egui::Context,
-    mqtt_cfg_window_open: &mut bool,
-    mqtt_cfg_window: &mut MqttConfigWindow,
-) -> Option<MqttDataReceiver> {
-    let mut data_receiver: Option<MqttDataReceiver> = None;
-    let mut connect_clicked = false;
-    egui::Window::new("MQTT Configuration")
-        .open(mqtt_cfg_window_open)
-        .scroll([false, true])
-        .show(ctx, |ui| {
-            ui.columns(2, |columns| {
-                show_broker_config_column(&mut columns[0], mqtt_cfg_window);
-                show_subscribed_topics_column(
-                    &mut columns[1],
-                    mqtt_cfg_window,
-                    &mut connect_clicked,
-                    &mut data_receiver,
-                );
-            });
-        });
-    // 4. Cleanup when window closes
-    if (!*mqtt_cfg_window_open || connect_clicked) && mqtt_cfg_window.discovery_active() {
-        mqtt_cfg_window.stop_topic_discovery();
-    }
-    data_receiver
-}
-
-fn show_broker_config_column(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
-    ui.group(|ui| {
+pub(crate) fn show_broker_config_column(
+    ui: &mut Ui,
+    broker_host: &mut String,
+    broker_port: &mut String,
+    text_input_topic: &mut String,
+    selected_topics: &mut Vec<String>,
+    topic_discoverer: &mut TopicDiscoverer,
+    broker_validator: &mut BrokerValidator,
+) {
+    ui.group(|ui: &mut Ui| {
         ui.label("MQTT Broker Address");
         ui.horizontal(|ui| {
-            ui.text_edit_singleline(mqtt_cfg_window.broker_host_as_mut())
+            ui.text_edit_singleline(broker_host)
                 .on_hover_text("IP address, hostname, or mDNS (.local)");
             ui.label(":");
-            ui.text_edit_singleline(mqtt_cfg_window.broker_port_as_mut())
+            ui.text_edit_singleline(broker_port)
                 .on_hover_text("1883 is the default MQTT broker port");
         });
 
-        match mqtt_cfg_window.validator_status() {
-            ValidatorStatus::Inactive => show_broker_status(ui, mqtt_cfg_window.broker_status()),
+        match broker_validator.status() {
+            ValidatorStatus::Inactive => show_broker_status(ui, broker_validator.broker_status()),
             ValidatorStatus::Connecting => {
                 ui.horizontal(|ui| {
                     ui.spinner();
@@ -63,43 +44,66 @@ fn show_broker_config_column(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow
             }
         }
 
-        mqtt_cfg_window.poll_broker_status();
+        broker_validator.poll_broker_status(broker_host, broker_port);
 
         ui.label("Topics:");
         ui.horizontal(|ui| {
-            ui.text_edit_singleline(mqtt_cfg_window.text_input_topic_as_mut());
-            if ui.button("Add").clicked() {
-                mqtt_cfg_window.add_text_input_topic();
+            ui.text_edit_singleline(text_input_topic);
+            if ui.button("Add").clicked()
+                && !text_input_topic.is_empty()
+                && !selected_topics.contains(text_input_topic)
+            {
+                selected_topics.push(text_input_topic.clone());
+                text_input_topic.clear();
             }
         });
 
-        show_discovered_topics_section(ui, mqtt_cfg_window);
+        show_discovered_topics_section(
+            ui,
+            topic_discoverer,
+            broker_validator,
+            selected_topics,
+            broker_host,
+            broker_port,
+        );
     });
 }
 
-fn show_subscribed_topics_column(
+#[allow(
+    clippy::too_many_arguments,
+    reason = "TODO: at least the broker host/port should be grouped..."
+)]
+pub(crate) fn show_subscribed_topics_column(
     ui: &mut Ui,
-    mqtt_cfg_window: &mut MqttConfigWindow,
+    broker_reachable_and_some_selected_topics: bool,
     connect_clicked: &mut bool,
     data_receiver: &mut Option<MqttDataReceiver>,
+    stop_flag: &mut Arc<AtomicBool>,
+    selected_topics: &mut Vec<String>,
+    broker_host: &str,
+    broker_port: &str,
 ) {
     ui.group(|ui| {
-        let is_connect_valid = mqtt_cfg_window.broker_status().reachable()
-            && !mqtt_cfg_window.selected_topics().is_empty();
         ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
             if ui
                 .add_enabled(
-                    is_connect_valid,
+                    broker_reachable_and_some_selected_topics,
                     egui::Button::new(RichText::new("Connect").strong())
                         .min_size([120.0, 30.0].into()),
                 )
                 .clicked()
             {
                 *connect_clicked = true;
-                *data_receiver = Some(mqtt_cfg_window.spawn_mqtt_listener());
+                let data_receiver_instance = spawn_mqtt_listener(
+                    stop_flag,
+                    broker_host.to_owned(),
+                    broker_port.to_owned(),
+                    selected_topics,
+                );
+                *data_receiver = Some(data_receiver_instance);
             }
         });
-        show_subscribed_topics(ui, mqtt_cfg_window);
+        show_subscribed_topics(ui, selected_topics);
     });
 }
 
@@ -135,7 +139,7 @@ fn draw_reachable_label(ui: &mut Ui, version: Option<&str>) {
     );
 }
 
-fn show_active_discovery_status(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
+fn show_active_discovery_status(ui: &mut Ui, topic_discoverer: &mut TopicDiscoverer) {
     if ui
         .button(format!(
             "{} Stop Discovery",
@@ -143,7 +147,7 @@ fn show_active_discovery_status(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWin
         ))
         .clicked()
     {
-        mqtt_cfg_window.stop_topic_discovery();
+        topic_discoverer.stop();
     }
     // Show discovery status
     ui.horizontal(|ui| {
@@ -155,24 +159,24 @@ fn show_active_discovery_status(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWin
     });
 
     // Process incoming topics
-    if let Err(e) = mqtt_cfg_window.poll_discovered_topics() {
+    if let Err(e) = topic_discoverer.poll_discovered_topics() {
         ui.colored_label(Color32::RED, e);
     }
 }
 
-fn show_subscribed_topics(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
-    let subscribed_topics = mqtt_cfg_window.selected_topics().len();
-    let label_txt = if subscribed_topics == 0 {
+fn show_subscribed_topics(ui: &mut Ui, selected_topics: &mut Vec<String>) {
+    let num_subscribed_topics = selected_topics.len();
+    let label_txt = if num_subscribed_topics == 0 {
         RichText::new("Select topics to subscribe to before connecting").color(theme_color(
             ui,
             Color32::YELLOW,
             Color32::ORANGE,
         ))
     } else {
-        RichText::new(format!("Subscribed Topics ({subscribed_topics}):"))
+        RichText::new(format!("Subscribed Topics ({num_subscribed_topics}):"))
     };
     ui.label(label_txt);
-    for topic in mqtt_cfg_window.selected_topics_as_mut() {
+    for topic in selected_topics.iter_mut() {
         ui.horizontal(|ui| {
             if ui
                 .button(RichText::new(egui_phosphor::regular::TRASH))
@@ -185,20 +189,19 @@ fn show_subscribed_topics(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
             }
         });
     }
-    mqtt_cfg_window.remove_empty_selected_topics();
+    selected_topics.retain(|t| !t.is_empty());
 }
 
-fn show_discovered_topics_list(
-    ui: &mut Ui,
-    mqtt_cfg_window: &mut MqttConfigWindow,
-    topics: &[String],
-) {
+fn show_discovered_topics_list(ui: &mut Ui, selected_topics: &mut Vec<String>, topics: &[String]) {
     ScrollArea::vertical().max_height(800.0).show(ui, |ui| {
         for topic in topics {
-            if !mqtt_cfg_window.selected_topics_contains(topic) {
+            if !selected_topics.contains(topic) {
                 ui.horizontal(|ui| {
-                    if ui.selectable_label(false, topic).clicked() {
-                        mqtt_cfg_window.add_selected_topic(topic.to_string());
+                    if ui.selectable_label(false, topic).clicked()
+                        && !topic.is_empty()
+                        && !selected_topics.contains(topic)
+                    {
+                        selected_topics.push(topic.clone());
                     }
                 });
             }
@@ -206,11 +209,17 @@ fn show_discovered_topics_list(
     });
 }
 
-fn show_discovered_topics_section(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigWindow) {
+fn show_discovered_topics_section(
+    ui: &mut Ui,
+    topic_discoverer: &mut TopicDiscoverer,
+    broker_validator: &BrokerValidator,
+    selected_topics: &mut Vec<String>,
+    broker_host: &str,
+    broker_port: &str,
+) {
     let discover_enabled =
-        mqtt_cfg_window.broker_status().reachable() && !mqtt_cfg_window.discovery_active();
-
-    if !mqtt_cfg_window.discovery_active()
+        broker_validator.broker_status().reachable() && !topic_discoverer.active();
+    if !topic_discoverer.active()
         && ui
             .add_enabled(
                 discover_enabled,
@@ -222,27 +231,29 @@ fn show_discovered_topics_section(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigW
             .on_hover_text("Continuously find topics (subscribes to #)")
             .clicked()
     {
-        mqtt_cfg_window.start_topic_discovery();
+        if let Ok(port) = broker_port.parse::<u16>() {
+            topic_discoverer.start(broker_host.to_owned(), port);
+        }
     }
 
-    if mqtt_cfg_window.discovery_active() {
-        show_active_discovery_status(ui, mqtt_cfg_window);
+    if topic_discoverer.active() {
+        show_active_discovery_status(ui, topic_discoverer);
     }
 
     // Display discovered topics
-    let discovered_topics = mqtt_cfg_window.discovered_topics().len();
+    let discovered_topics = topic_discoverer.discovered_topics().len();
     if discovered_topics > 0 {
         ui.separator();
         ui.label(format!("Discovered Topics ({discovered_topics})"));
 
         show_discovered_topics_list(
             ui,
-            mqtt_cfg_window,
-            &mqtt_cfg_window.discovered_topics_sorted(),
+            selected_topics,
+            &topic_discoverer.discovered_topics_sorted(),
         );
     }
 
-    let discovered_sys_topics = mqtt_cfg_window.discovered_sys_topics().len();
+    let discovered_sys_topics = topic_discoverer.discovered_sys_topics().len();
     if discovered_sys_topics > 0 {
         ui.collapsing(
             format!("Broker sys topics ({discovered_sys_topics})"),
@@ -250,8 +261,8 @@ fn show_discovered_topics_section(ui: &mut Ui, mqtt_cfg_window: &mut MqttConfigW
                 ui.separator();
                 show_discovered_topics_list(
                     ui,
-                    mqtt_cfg_window,
-                    &mqtt_cfg_window.discovered_sys_topics_sorted(),
+                    selected_topics,
+                    &topic_discoverer.discovered_sys_topics_sorted(),
                 );
             },
         );

@@ -10,9 +10,11 @@ use crate::{
     broker_validator::{BrokerStatus, BrokerValidator, ValidatorStatus},
     data_receiver::MqttDataReceiver,
     topic_discoverer::TopicDiscoverer,
+    ui::{show_broker_config_column, show_subscribed_topics_column},
 };
 
 pub struct MqttConfigWindow {
+    pub is_open: bool,
     broker_host: String,
     broker_port: String,
     text_input_topic: String,
@@ -23,6 +25,59 @@ pub struct MqttConfigWindow {
 }
 
 impl MqttConfigWindow {
+    pub fn ui(&mut self, ui: &mut egui::Ui) -> Option<MqttDataReceiver> {
+        let Self {
+            is_open,
+            broker_host,
+            broker_port,
+            text_input_topic,
+            selected_topics,
+            broker_validator,
+            topic_discoverer,
+            mqtt_stop_flag,
+        } = self;
+
+        let mut data_receiver: Option<MqttDataReceiver> = None;
+        let mut connect_clicked = false;
+        egui::Window::new("MQTT Configuration")
+            .open(is_open)
+            .scroll([false, true])
+            .show(ui.ctx(), |ui| {
+                ui.columns(2, |columns| {
+                    show_broker_config_column(
+                        &mut columns[0],
+                        broker_host,
+                        broker_port,
+                        text_input_topic,
+                        selected_topics,
+                        topic_discoverer,
+                        broker_validator,
+                    );
+                    let broker_reachable_and_some_selected_topics =
+                        broker_validator.broker_status().reachable() && !selected_topics.is_empty();
+                    show_subscribed_topics_column(
+                        &mut columns[1],
+                        broker_reachable_and_some_selected_topics,
+                        &mut connect_clicked,
+                        &mut data_receiver,
+                        mqtt_stop_flag,
+                        selected_topics,
+                        broker_host,
+                        broker_port,
+                    );
+                });
+            });
+        // 4. Cleanup when window closes
+        if connect_clicked {
+            *is_open = false;
+        }
+        if !*is_open && topic_discoverer.active() {
+            topic_discoverer.stop();
+        }
+
+        data_receiver
+    }
+
     /// Returns a reference to the selected topics of this [`MqttConfigWindow`].
     pub fn selected_topics(&self) -> &[String] {
         &self.selected_topics
@@ -132,33 +187,12 @@ impl MqttConfigWindow {
         self.broker_validator
             .poll_broker_status(&self.broker_host, &self.broker_port);
     }
-
-    pub fn spawn_mqtt_listener(&mut self) -> MqttDataReceiver {
-        self.reset_stop_flag();
-        let broker_host = self.broker_host().to_owned();
-        let broker_port = self.broker_port.parse::<u16>().expect("Invalid port");
-        let topics = self.selected_topics().to_owned();
-        let (tx, rx) = std::sync::mpsc::channel();
-        let thread_stop_flag = self.get_stop_flag();
-        std::thread::Builder::new()
-            .name("mqtt-listener".into())
-            .spawn(move || {
-                crate::mqtt_listener::mqtt_listener(
-                    &tx,
-                    broker_host,
-                    broker_port,
-                    topics,
-                    &thread_stop_flag,
-                );
-            })
-            .expect("Failed spawning MQTT listener thread");
-        MqttDataReceiver::new(rx, self.selected_topics().to_owned())
-    }
 }
 
 impl Default for MqttConfigWindow {
     fn default() -> Self {
         Self {
+            is_open: true,
             broker_host: "127.0.0.1".into(),
             broker_port: "1883".into(),
             selected_topics: Default::default(),

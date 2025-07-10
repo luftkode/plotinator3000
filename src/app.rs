@@ -279,7 +279,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                     ctx.request_repaint_after(Duration::from_millis(50));
                 }
                 // Show MQTT configuration window if needed
-                app.mqtt.show_connect_window(ctx);
+                app.mqtt.show_connect_window(ui);
             }
             collapsible_instructions(ui);
         });

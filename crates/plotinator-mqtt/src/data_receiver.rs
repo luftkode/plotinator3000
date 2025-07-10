@@ -1,9 +1,33 @@
-use std::sync::mpsc::Receiver;
+use std::sync::{Arc, atomic::AtomicBool, mpsc::Receiver};
 
 use crate::{
-    data::{listener::MqttData, plot::MqttPlotData},
     MqttPlotPoints,
+    data::{listener::MqttData, plot::MqttPlotData},
 };
+
+pub fn spawn_mqtt_listener(
+    stop_flag: &mut Arc<AtomicBool>,
+    broker_host: String,
+    broker_port: String,
+    topics: &[String],
+) -> MqttDataReceiver {
+    let stop_flag_clone = Arc::clone(stop_flag);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let topics_clone = topics.to_owned();
+    std::thread::Builder::new()
+        .name("mqtt-listener".into())
+        .spawn(move || {
+            crate::mqtt_listener::mqtt_listener(
+                &tx,
+                broker_host,
+                broker_port.parse().expect("invalid broker port"),
+                topics_clone,
+                &stop_flag_clone,
+            );
+        })
+        .expect("Failed spawning MQTT listener thread");
+    MqttDataReceiver::new(rx, topics.to_owned())
+}
 
 pub struct MqttDataReceiver {
     subscribed_topics: Vec<String>,
