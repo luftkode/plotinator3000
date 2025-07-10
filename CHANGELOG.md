@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- MQTT Connect window saves broker addr and allows easily re-configuring the connection
+
 ### Dependencies
 
 - `tokio`: 1.45.1 → 1.46.1 ([#274](https://github.com/luftkode/plotinator3000/pull/274))
 - `reqwest`: 0.12.20 → 0.12.22 ([#274](https://github.com/luftkode/plotinator3000/pull/274))
+- `toml` to latest `0.9.1`
 
 ## [1.15.0]
 

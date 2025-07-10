@@ -1,8 +1,9 @@
 use rumqttc::{Client, Event, MqttOptions, Packet, QoS};
 use std::{
     sync::{
+        Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc, Arc,
+        mpsc,
     },
     time::Duration,
 };
@@ -33,7 +34,10 @@ pub fn mqtt_listener(
         match notification {
             Ok(event) => {
                 if let Event::Incoming(Packet::Publish(publish)) = event {
-                    handle_event_packet(tx, publish);
+                    if let Err(e) = handle_event_packet(tx, publish) {
+                        log::error!("{e}, shutting down MQTT listener...");
+                        break;
+                    }
                 }
             }
 
@@ -57,14 +61,16 @@ fn setup_client(broker_host: String, broker_port: u16) -> (rumqttc::Client, rumq
     Client::new(mqttoptions, 10000)
 }
 
-fn handle_event_packet(tx: &mpsc::Sender<MqttData>, packet: rumqttc::Publish) {
+fn handle_event_packet(
+    tx: &mpsc::Sender<MqttData>,
+    packet: rumqttc::Publish,
+) -> anyhow::Result<()> {
     let topic = packet.topic;
     let payload = String::from_utf8_lossy(&packet.payload);
     log::debug!("Received on topic={topic}, payload={payload}");
 
     if let Some(mqtt_plot_point) = crate::parse_packet::parse_packet(&topic, &payload) {
-        if let Err(e) = tx.send(mqtt_plot_point) {
-            log::error!("{e}");
-        }
+        tx.send(mqtt_plot_point)?; // This is only gonna error if the receiver dropped the channel, meaning it stopped listening so we should shut down
     }
+    Ok(())
 }

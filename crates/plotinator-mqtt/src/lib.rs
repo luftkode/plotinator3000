@@ -8,6 +8,7 @@ non_wasm_modules!(
     pub mod data_receiver;
     pub mod mqtt_cfg_window;
     pub mod data;
+    pub(crate) mod ui;
 );
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::{

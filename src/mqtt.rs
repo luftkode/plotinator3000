@@ -1,12 +1,9 @@
 use plotinator_mqtt::{MqttConfigWindow, MqttDataReceiver, MqttPlotPoints};
 
-pub mod mqtt_window;
-
 #[derive(Default)]
 pub struct Mqtt {
     pub mqtt_data_receiver: Option<MqttDataReceiver>,
     mqtt_config_window: Option<MqttConfigWindow>,
-    mqtt_cfg_window_open: bool,
     // auto scale plot bounds (MQTT only)
     pub set_auto_bounds: bool,
 }
@@ -18,8 +15,11 @@ impl Mqtt {
     }
 
     pub fn connect(&mut self) {
-        self.mqtt_config_window = Some(plotinator_mqtt::MqttConfigWindow::default());
-        self.mqtt_cfg_window_open = true;
+        if let Some(win) = &mut self.mqtt_config_window {
+            win.is_open = true;
+        } else {
+            self.mqtt_config_window = Some(plotinator_mqtt::MqttConfigWindow::default());
+        }
     }
 
     pub fn poll_data(&mut self) {
@@ -30,11 +30,9 @@ impl Mqtt {
     }
 
     pub fn window_open(&self) -> bool {
-        self.mqtt_cfg_window_open
-    }
-
-    pub fn window_open_mut(&mut self) -> &mut bool {
-        &mut self.mqtt_cfg_window_open
+        self.mqtt_config_window
+            .as_ref()
+            .is_some_and(|win| win.is_open)
     }
 
     pub fn plots(mqtt_data_receiver: Option<&MqttDataReceiver>) -> &[MqttPlotPoints] {
@@ -80,14 +78,10 @@ impl Mqtt {
         }
     }
 
-    pub fn show_connect_window(&mut self, ctx: &egui::Context) {
-        if self.mqtt_data_receiver.is_none() {
-            if let Some(config) = &mut self.mqtt_config_window {
-                if let Some(data_receiver) = crate::mqtt::mqtt_window::show_mqtt_window(
-                    ctx,
-                    &mut self.mqtt_cfg_window_open,
-                    config,
-                ) {
+    pub fn show_connect_window(&mut self, ui: &mut egui::Ui) {
+        if let Some(mqtt_config_window) = &mut self.mqtt_config_window {
+            if mqtt_config_window.is_open || self.mqtt_data_receiver.is_none() {
+                if let Some(data_receiver) = mqtt_config_window.ui(ui) {
                     self.mqtt_data_receiver = Some(data_receiver);
                     self.set_auto_bounds = true;
                 }

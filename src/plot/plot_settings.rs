@@ -5,9 +5,8 @@ use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
 use plotinator_plot_util::{MipMapConfiguration, PlotValues, Plots};
+use plotinator_ui_util::theme_color;
 use serde::{Deserialize, Serialize};
-
-use crate::util::theme_color;
 
 pub mod date_settings;
 mod loaded_logs;
