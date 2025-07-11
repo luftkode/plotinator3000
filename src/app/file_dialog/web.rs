@@ -9,10 +9,11 @@ use serde::Serialize;
 use crate::{
     app::{
         LoadedFiles,
-        file_dialog::{
-            MAGIC_HEADER_PLOT_DATA, MAGIC_HEADER_PLOT_UI_STATE, MagicFileContent,
-            try_parse_magic_fil_from_buf,
+        custom_files::{
+            CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
+            try_parse_custom_file_from_buf,
         },
+        file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
     },
     plot::LogPlotUi,
 };
@@ -52,8 +53,8 @@ impl WebFileDialog {
         Self::save_data_to_file(
             plot_ui,
             "Save Plot UI State",
-            "plotinator3k_plotui.state",
-            MAGIC_HEADER_PLOT_UI_STATE,
+            "plotinator3k_plotui.p3k",
+            CUSTOM_HEADER_PLOT_UI_STATE,
         );
     }
 
@@ -63,18 +64,18 @@ impl WebFileDialog {
             Self::save_data_to_file(
                 plot_files,
                 "Save Plot Data",
-                "plotinator3k.data",
-                MAGIC_HEADER_PLOT_DATA,
+                "plotinator3k.p3k",
+                CUSTOM_HEADER_PLOT_DATA,
             );
         }
     }
 
-    /// Generic function to save serializable data with a magic header for web.
+    /// Generic function to save serializable data with a custom header for web.
     fn save_data_to_file<T: Serialize + ?Sized>(
         data: &T,
         title: &str,
         default_file_name: &str,
-        magic_header: &str,
+        custom_header: &str,
     ) {
         let serialized_data = match serde_json::to_string(data) {
             Ok(s) => s,
@@ -84,8 +85,8 @@ impl WebFileDialog {
             }
         };
 
-        let mut contents = String::with_capacity(serialized_data.len() + magic_header.len());
-        contents.push_str(magic_header);
+        let mut contents = String::with_capacity(serialized_data.len() + custom_header.len());
+        contents.push_str(custom_header);
         contents.push_str(&serialized_data);
         let contents_bytes = contents.into_bytes();
 
@@ -110,15 +111,15 @@ impl WebFileDialog {
         if let Ok(file_web_content) = self.file_receiver.try_recv() {
             log::debug!("Received file: {}", file_web_content.name);
             let raw_contents = &file_web_content.contents;
-            match try_parse_magic_fil_from_buf(raw_contents) {
-                Some(MagicFileContent::PlotData(plot_data)) => {
+            match try_parse_custom_file_from_buf(raw_contents) {
+                Some(CustomFileContent::PlotData(plot_data)) => {
                     log::info!(
                         "Loading {} plot data files from web contents",
                         plot_data.len()
                     );
                     loaded_files.loaded.extend(plot_data);
                 }
-                Some(MagicFileContent::PlotUi(plot_ui)) => {
+                Some(CustomFileContent::PlotUi(plot_ui)) => {
                     log::info!("Loading plot UI state from web contents");
                     return Ok(Some(plot_ui));
                 }
@@ -132,7 +133,9 @@ impl WebFileDialog {
     }
 
     fn open_dialog(ctx: egui::Context, sender: Sender<WebFileContents>) {
-        let task = rfd::AsyncFileDialog::new().pick_files();
+        let task = rfd::AsyncFileDialog::new()
+            .add_filter(FILE_FILTER_NAME, FILE_FILTER_EXTENSIONS)
+            .pick_files();
 
         execute(async move {
             let files = task.await;

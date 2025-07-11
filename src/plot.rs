@@ -38,8 +38,6 @@ pub enum PlotType {
 pub struct LogPlotUi {
     // We also store the raw files so they are easy to export
     stored_plot_files: Vec<SupportedFormat>,
-    #[serde(skip)]
-    init: bool,
     legend_cfg: Legend,
     line_width: f32,
     axis_config: AxisConfig,
@@ -53,7 +51,6 @@ pub struct LogPlotUi {
 impl Default for LogPlotUi {
     fn default() -> Self {
         Self {
-            init: false,
             legend_cfg: Default::default(),
             line_width: 1.5,
             axis_config: Default::default(),
@@ -81,6 +78,7 @@ impl LogPlotUi {
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
+        first_frame: &mut bool,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt: &mut crate::mqtt::Mqtt,
@@ -89,7 +87,6 @@ impl LogPlotUi {
         puffin::profile_scope!("Plot_UI");
 
         let Self {
-            init,
             legend_cfg,
             line_width,
             axis_config,
@@ -124,9 +121,12 @@ impl LogPlotUi {
 
         let mut reset_plot_bounds = false;
         // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
-        if plot_settings.cached_plots_invalidated() || !*init {
-            *max_bounds = MaxPlotBounds::default();
+        if *first_frame {
             plots.build_plots();
+            *first_frame = false;
+        } else if plot_settings.cached_plots_invalidated() {
+            plots.build_plots();
+            *max_bounds = MaxPlotBounds::default();
             plots.calc_all_plot_max_bounds(max_bounds);
             reset_plot_bounds = true;
         } else if !loaded_files.is_empty() {
@@ -149,22 +149,19 @@ impl LogPlotUi {
         #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]
         let mode = PlotMode::Logs(plots);
 
-        let response = ui
-            .vertical(|ui| {
-                plot_graphics::paint_plots(
-                    ui,
-                    reset_plot_bounds,
-                    plot_settings,
-                    legend_cfg,
-                    axis_config,
-                    link_group.expect("uninitialized link group id"),
-                    *line_width,
-                    click_delta,
-                    mode,
-                );
-            })
-            .response;
-        *init = true;
-        response
+        ui.vertical(|ui| {
+            plot_graphics::paint_plots(
+                ui,
+                reset_plot_bounds,
+                plot_settings,
+                legend_cfg,
+                axis_config,
+                link_group.expect("uninitialized link group id"),
+                *line_width,
+                click_delta,
+                mode,
+            );
+        })
+        .response
     }
 }

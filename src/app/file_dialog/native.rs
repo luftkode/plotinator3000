@@ -2,10 +2,8 @@ use std::{fs, io, path::PathBuf};
 
 use crate::{
     app::{
-        file_dialog::{
-            MAGIC_HEADER_PLOT_DATA, MAGIC_HEADER_PLOT_UI_STATE, MagicFileContent,
-            try_parse_magic_file,
-        },
+        custom_files::{CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent, try_parse_custom_file},
+        file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
         loaded_files::LoadedFiles,
     },
     plot::LogPlotUi,
@@ -21,7 +19,10 @@ pub struct NativeFileDialog {
 impl NativeFileDialog {
     /// Opens a native file dialog to pick multiple files.
     pub(crate) fn open(&mut self) {
-        if let Some(paths) = rfd::FileDialog::new().pick_files() {
+        if let Some(paths) = rfd::FileDialog::new()
+            .add_filter(FILE_FILTER_NAME, FILE_FILTER_EXTENSIONS)
+            .pick_files()
+        {
             self.picked_files.extend(paths);
         }
     }
@@ -31,8 +32,8 @@ impl NativeFileDialog {
         Self::save_data_to_file(
             plot_ui,
             "Save Plot UI State",
-            "plotinator3k_plotui.state",
-            MAGIC_HEADER_PLOT_UI_STATE,
+            "plotinator3k_plotui.p3k",
+            CUSTOM_HEADER_PLOT_UI_STATE,
         );
     }
 
@@ -42,18 +43,18 @@ impl NativeFileDialog {
             Self::save_data_to_file(
                 plot_files,
                 "Save Plot Data",
-                "plotinator3k.data",
-                MAGIC_HEADER_PLOT_DATA,
+                "plotinator3k.p3k",
+                CUSTOM_HEADER_PLOT_UI_STATE,
             );
         }
     }
 
-    /// Generic function to save serializable data with a magic header.
+    /// Generic function to save serializable data with a custom header.
     fn save_data_to_file<T: Serialize + ?Sized>(
         data: &T,
         title: &str,
         default_file_name: &str,
-        magic_header: &str,
+        custom_header: &str,
     ) {
         if let Some(path) = rfd::FileDialog::new()
             .set_title(title)
@@ -64,8 +65,8 @@ impl NativeFileDialog {
             match serde_json::to_string(data) {
                 Ok(serialized_data) => {
                     let mut contents =
-                        String::with_capacity(serialized_data.len() + magic_header.len());
-                    contents.push_str(magic_header);
+                        String::with_capacity(serialized_data.len() + custom_header.len());
+                    contents.push_str(custom_header);
                     contents.push_str(&serialized_data);
                     if let Err(e) = fs::write(&path, contents) {
                         log::error!("Failed to write to file {path:?}: {e}");
@@ -85,12 +86,12 @@ impl NativeFileDialog {
         loaded_files: &mut LoadedFiles,
     ) -> io::Result<Option<Box<LogPlotUi>>> {
         for pf in self.picked_files.drain(..) {
-            match try_parse_magic_file(&pf)? {
-                Some(MagicFileContent::PlotData(plot_data)) => {
+            match try_parse_custom_file(&pf)? {
+                Some(CustomFileContent::PlotData(plot_data)) => {
                     log::info!("Loading {} plot data files from {pf:?}", plot_data.len());
                     loaded_files.loaded.extend(plot_data);
                 }
-                Some(MagicFileContent::PlotUi(plot_ui)) => {
+                Some(CustomFileContent::PlotUi(plot_ui)) => {
                     log::info!("Loading plot UI state from {pf:?}");
                     return Ok(Some(plot_ui));
                 }

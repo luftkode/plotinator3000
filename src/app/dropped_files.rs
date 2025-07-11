@@ -2,7 +2,7 @@ use std::io;
 
 use crate::{
     app::{
-        file_dialog::{MagicFileContent, try_parse_magic_fil_from_buf, try_parse_magic_file},
+        custom_files::{CustomFileContent, try_parse_custom_file, try_parse_custom_file_from_buf},
         loaded_files::LoadedFiles,
     },
     plot::LogPlotUi,
@@ -24,15 +24,15 @@ pub(crate) fn handle_dropped_files(
     }) {
         for dfile in dropped_files {
             if let Some(content) = dfile.bytes.as_ref() {
-                match try_parse_magic_fil_from_buf(content) {
-                    Some(MagicFileContent::PlotData(plot_data)) => {
+                match try_parse_custom_file_from_buf(content) {
+                    Some(CustomFileContent::PlotData(plot_data)) => {
                         log::info!(
                             "Loading {} plot data files from web contents",
                             plot_data.len()
                         );
                         loaded_files.loaded.extend(plot_data);
                     }
-                    Some(MagicFileContent::PlotUi(plot_ui)) => {
+                    Some(CustomFileContent::PlotUi(plot_ui)) => {
                         log::info!("Loading plot UI state from web contents");
                         return Ok(Some(plot_ui));
                     }
@@ -42,12 +42,12 @@ pub(crate) fn handle_dropped_files(
                     }
                 }
             } else if let Some(path) = &dfile.path {
-                match try_parse_magic_file(path)? {
-                    Some(MagicFileContent::PlotData(plot_data)) => {
+                match try_parse_custom_file(path)? {
+                    Some(CustomFileContent::PlotData(plot_data)) => {
                         log::info!("Loading {} plot data files from {path:?}", plot_data.len());
                         loaded_files.loaded.extend(plot_data);
                     }
-                    Some(MagicFileContent::PlotUi(plot_ui)) => {
+                    Some(CustomFileContent::PlotUi(plot_ui)) => {
                         log::info!("Loading plot UI state from {path:?}");
                         return Ok(Some(plot_ui));
                     }
