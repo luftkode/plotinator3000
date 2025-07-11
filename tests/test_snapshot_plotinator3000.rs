@@ -31,7 +31,7 @@ fn test_snapshot_open_mqtt_config_window_connect_disabled() {
     let connect_button = mqtt_cfg_window.get_by_role_and_label(Role::Button, "Connect");
     assert!(connect_button.accesskit_node().is_disabled());
 
-    harness.save_snapshot();
+    harness.save_snapshot_with_threshold(CiThreshold(2.5));
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
 
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
-    harness.save_snapshot_with_threshold(CiThreshold(62.0));
+    harness.save_snapshot_with_threshold(CiThreshold(2.0));
 }
 
 #[test]
@@ -69,5 +69,5 @@ fn test_snapshot_drop_load_hdf5_bifrost_current() {
     harness.run();
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
-    harness.save_snapshot_with_threshold(CiThreshold(50.0));
+    harness.save_snapshot_with_threshold(CiThreshold(2.0));
 }

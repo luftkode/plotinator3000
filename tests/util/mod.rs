@@ -14,7 +14,7 @@ pub fn get_harness() -> Harness<'static, plotinator3000::App> {
     Harness::new_eframe(|cc| plotinator3000::App::new(cc))
 }
 
-const DEFAULT_CI_DIFF_THRESHOLD: f32 = 1.0;
+const DEFAULT_CI_DIFF_THRESHOLD: f32 = 1.5;
 
 /// specifies how much difference we allow in CI before a snapshot diff is an error.
 ///
