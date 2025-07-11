@@ -3,9 +3,10 @@
     reason = "This is test utilities so things like PathBuf is fine, we won't deploy this code anywhere"
 )]
 pub use egui::{DroppedFile, Event, Pos2, Rect, accesskit::Role};
+pub use egui_kittest::{Harness, kittest::Queryable as _};
 pub use egui_kittest::{
-    Harness,
-    kittest::{Node, Queryable as _},
+    Node,
+    kittest::{NodeT as _, Queryable as _},
 };
 pub use std::path::PathBuf;
 

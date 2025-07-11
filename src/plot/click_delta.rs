@@ -2,7 +2,7 @@ use std::ops::RangeInclusive;
 
 use egui::{Color32, RichText};
 use egui_plot::{Line, MarkerShape, PlotBounds, PlotPoint, PlotPoints, PlotUi, Points};
-use plotinator_ui_util::{plot_theme_color, theme_color};
+use plotinator_ui_util::plot_theme_color;
 use serde::{Deserialize, Serialize};
 
 use super::PlotType;

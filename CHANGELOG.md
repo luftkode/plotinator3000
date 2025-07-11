@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update egui to `0.32.0` which brings a bunch of features and major improvement
 - Dragging axes now zooms according to which way its dragged
+- Less wasted space between plot areas
+- Better text rendering, etc. etc.
 
 ## [1.16.0]
 
