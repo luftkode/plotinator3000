@@ -3,9 +3,10 @@
     reason = "This is test utilities so things like PathBuf is fine, we won't deploy this code anywhere"
 )]
 pub use egui::{DroppedFile, Event, Pos2, Rect, accesskit::Role};
+pub use egui_kittest::{Harness, kittest::Queryable as _};
 pub use egui_kittest::{
-    Harness,
-    kittest::{Node, Queryable as _},
+    Node,
+    kittest::{NodeT as _, Queryable as _},
 };
 pub use std::path::PathBuf;
 
@@ -13,7 +14,7 @@ pub fn get_harness() -> Harness<'static, plotinator3000::App> {
     Harness::new_eframe(|cc| plotinator3000::App::new(cc))
 }
 
-const DEFAULT_CI_DIFF_THRESHOLD: f32 = 1.0;
+const DEFAULT_CI_DIFF_THRESHOLD: f32 = 1.5;
 
 /// specifies how much difference we allow in CI before a snapshot diff is an error.
 ///

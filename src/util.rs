@@ -36,8 +36,13 @@ pub fn format_label_ns(plot_name: &str, val: &PlotPoint) -> String {
         log::warn!("Timestamp value out of range: {time_s}");
         return "out of range".to_owned();
     };
+    let opt_plot_name = if plot_name.is_empty() {
+        String::new()
+    } else {
+        format!("{plot_name}\n")
+    };
     format!(
-        "{plot_name}\ny: {y:.4}\n{h:02}:{m:02}:{s:02}.{subsec_ms:03}",
+        "{opt_plot_name}y: {y:.4}\n{h:02}:{m:02}:{s:02}.{subsec_ms:03}",
         y = val.y,
         h = dt.hour(),
         m = dt.minute(),

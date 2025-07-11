@@ -83,8 +83,7 @@ fn plot_with_mipmapping<'p>(
             None => filter_plot_points(plot_points_minmax, x_bounds),
         };
 
-        let line = Line::new(plot_points_minmax)
-            .name(plot_vals.label())
+        let line = Line::new(plot_vals.label(), plot_points_minmax)
             .color(plot_vals.get_color())
             .highlight(plot_vals.get_highlight());
 
@@ -106,7 +105,7 @@ pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_fil
             if plot_labels.get_highlight() {
                 txt = txt.strong();
             }
-            let txt = egui_plot::Text::new(point, txt);
+            let txt = egui_plot::Text::new("", point, txt);
             plot_ui.text(txt);
         }
     }
@@ -123,9 +122,8 @@ fn plot_raw<'p>(
     let plot_points = plot_vals.raw_plot_points();
     let filtered_points = filter_plot_points(plot_points, x_bounds);
 
-    let line = Line::new(filtered_points)
+    let line = Line::new(plot_vals.label(), filtered_points)
         .width(line_width)
-        .name(plot_vals.label())
         .color(plot_vals.get_color())
         .highlight(plot_vals.get_highlight());
     plot_ui.line(line);
@@ -143,7 +141,7 @@ pub fn plot_raw_mqtt<'p>(
 
     let filtered_points = filter_plot_points(plot_points, x_bounds);
 
-    let line = Line::new(filtered_points).width(line_width).name(label);
+    let line = Line::new(label, filtered_points).width(line_width);
     plot_ui.line(line);
 }
 

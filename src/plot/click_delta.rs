@@ -1,7 +1,8 @@
 use std::ops::RangeInclusive;
 
-use egui::Color32;
+use egui::{Color32, RichText};
 use egui_plot::{Line, MarkerShape, PlotBounds, PlotPoint, PlotPoints, PlotUi, Points};
+use plotinator_ui_util::plot_theme_color;
 use serde::{Deserialize, Serialize};
 
 use super::PlotType;
@@ -40,19 +41,24 @@ impl ClickDelta {
         self.second_click = None;
     }
 
-    pub fn get_delta_text(a: [f64; 2], b: [f64; 2], plot_bounds: PlotBounds) -> egui_plot::Text {
+    pub fn get_delta_text_point(
+        a: [f64; 2],
+        b: [f64; 2],
+        plot_bounds: PlotBounds,
+    ) -> (PlotPoint, String) {
         let [x1, y1] = a;
         let [x2, y2] = b;
         let delta_x = Self::delta_x(x1, x2);
         let delta_y = y2 - y1;
-        let delta_formatted = crate::util::format_delta_xy(delta_x, delta_y);
+        let raw_text = crate::util::format_delta_xy(delta_x, delta_y);
         let x_offset = Self::calc_text_x_offset(x2, plot_bounds.range_x());
         let y_offset = Self::calc_text_y_offset(y2, plot_bounds.range_y());
         let dist_x = x2 - x1;
         let label_x = x1 + dist_x / 2. + x_offset;
         let label_y = y1 + delta_y / 2. + y_offset;
         let label_point = PlotPoint::new(label_x, label_y);
-        egui_plot::Text::new(label_point, delta_formatted).highlight(true)
+
+        (label_point, raw_text)
     }
 
     pub fn plot_type(&self) -> Option<PlotType> {
@@ -63,8 +69,8 @@ impl ClickDelta {
         match (self.first_click, self.second_click) {
             (None, None) => None,
             (None, Some(_)) => unreachable!("Second click populated when first is empty"),
-            (Some(fp), None) => Some(Points::new(fp)),
-            (Some(fp), Some(sp)) => Some(Points::new(vec![fp, sp])),
+            (Some(fp), None) => Some(Points::new("", fp)),
+            (Some(fp), Some(sp)) => Some(Points::new("", vec![fp, sp])),
         }
     }
 
@@ -124,14 +130,15 @@ impl ClickDelta {
                     (Some(fpoint), None) => {
                         if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
                             let pcoord = [pointer_coord.x, pointer_coord.y];
-                            let delta_line = Line::new(PlotPoints::new([fpoint, pcoord].into()))
-                                .color(delta_color);
+                            let delta_line =
+                                Line::new("", PlotPoints::new([fpoint, pcoord].into()))
+                                    .color(delta_color);
 
                             Self::ui_delta_line(plot_ui, delta_line, fpoint, pcoord);
                         }
                     }
                     (Some(fpoint), Some(spoint)) => {
-                        let delta_line = Line::new(PlotPoints::new([fpoint, spoint].into()))
+                        let delta_line = Line::new("", PlotPoints::new([fpoint, spoint].into()))
                             .color(delta_color)
                             .name("Δ Click")
                             .style(egui_plot::LineStyle::Dashed { length: 10.0 });
@@ -144,8 +151,13 @@ impl ClickDelta {
     }
 
     fn ui_delta_line<'a>(plot_ui: &mut PlotUi<'a>, delta_line: Line<'a>, a: [f64; 2], b: [f64; 2]) {
-        let delta_text = Self::get_delta_text(a, b, plot_ui.plot_bounds());
-        plot_ui.text(delta_text);
+        let label_bg_color = plot_theme_color(plot_ui, Color32::BLACK, Color32::WHITE);
+        let (label_point, delta_text) = Self::get_delta_text_point(a, b, plot_ui.plot_bounds());
+        let txt = RichText::new(delta_text)
+            .strong()
+            .background_color(label_bg_color);
+        let delta_txt_item = egui_plot::Text::new("", label_point, txt).highlight(true);
+        plot_ui.text(delta_txt_item);
         plot_ui.add(delta_line);
     }
 

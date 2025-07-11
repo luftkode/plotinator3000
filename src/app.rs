@@ -207,7 +207,7 @@ fn collapsible_instructions(ui: &mut egui::Ui) {
 
 fn show_top_panel(app: &mut App, ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-        egui::menu::bar(ui, |ui| {
+        egui::MenuBar::new().ui(ui, |ui| {
             if ui
                 .button(RichText::new(format!(
                     "{icon} Reset",
