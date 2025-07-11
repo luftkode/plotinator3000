@@ -36,6 +36,8 @@ pub enum PlotType {
 
 #[derive(Deserialize, Serialize)]
 pub struct LogPlotUi {
+    // We also store the raw files so they are easy to export
+    stored_plot_files: Vec<SupportedFormat>,
     #[serde(skip)]
     init: bool,
     legend_cfg: Legend,
@@ -60,11 +62,16 @@ impl Default for LogPlotUi {
             max_bounds: MaxPlotBounds::default(),
             link_group: None,
             click_delta: ClickDelta::default(),
+            stored_plot_files: vec![],
         }
     }
 }
 
 impl LogPlotUi {
+    pub fn stored_plot_files(&self) -> &[SupportedFormat] {
+        &self.stored_plot_files
+    }
+
     pub fn plot_count(&self) -> usize {
         self.plots.percentage().plots().len()
             + self.plots.one_to_hundred().plots().len()
@@ -91,6 +98,7 @@ impl LogPlotUi {
             max_bounds,
             link_group,
             click_delta,
+            stored_plot_files,
         } = self;
 
         if link_group.is_none() {
@@ -101,6 +109,7 @@ impl LogPlotUi {
 
         for log in loaded_files {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);
+            stored_plot_files.push(log.clone());
         }
 
         if !loaded_files.is_empty() {

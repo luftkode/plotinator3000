@@ -108,6 +108,8 @@ egui-phosphor.workspace = true
 egui-notify = { git = "https://github.com/UnknownSuperficialNight/egui-notify", rev = "31d6e57041dd98f87bb7b494bb064599bba385ec" }
 tokio.workspace = true
 memmap2.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
 
 
 [dev-dependencies]

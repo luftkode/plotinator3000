@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
-use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
+use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular;
 use plotinator_log_if::prelude::Plotable as _;
@@ -242,6 +242,39 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 #[cfg(not(target_arch = "wasm32"))]
                 app.native_file_dialog.open();
             }
+
+            ui.menu_button(
+                RichText::new(format!(
+                    "{icon} Save",
+                    icon = egui_phosphor::regular::FLOPPY_DISK
+                )),
+                |ui| {
+                    // Option to export the entire UI state for later restoration
+                    if ui.button("Plot UI State").clicked() {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        file_dialog::native::NativeFileDialog::save_plot_ui(&app.plot);
+                        #[cfg(target_arch = "wasm32")]
+                        file_dialog::web::WebFileDialog::save_plot_ui(&app.plot);
+
+                        ui.close_kind(UiKind::Menu);
+                    }
+
+                    // Option to export just the raw plot data
+                    if ui.button("Plot Data").clicked() {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        file_dialog::native::NativeFileDialog::save_plot_data(
+                            app.plot.stored_plot_files(),
+                        );
+                        #[cfg(target_arch = "wasm32")]
+                        file_dialog::web::WebFileDialog::save_plot_data(
+                            app.plot.stored_plot_files(),
+                        );
+                        // The actual export logic for the plot data would be triggered here.
+                        ui.close_kind(UiKind::Menu);
+                    }
+                },
+            );
+
             ui.label(RichText::new(regular::TEXT_T));
             if ui
                 .add(

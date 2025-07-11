@@ -3637,6 +3637,7 @@ dependencies = [
 name = "plotinator3000"
 version = "1.17.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "eframe",
  "egui",
@@ -3665,6 +3666,7 @@ dependencies = [
  "rfd",
  "semver",
  "serde",
+ "serde_json",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "tempfile",

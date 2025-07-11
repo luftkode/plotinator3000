@@ -9,7 +9,7 @@ use std::{
 /// Contains all supported logs in a single vector.
 #[derive(Default, Deserialize, Serialize)]
 pub struct LoadedFiles {
-    loaded: Vec<SupportedFormat>,
+    pub(crate) loaded: Vec<SupportedFormat>,
 }
 
 impl LoadedFiles {
