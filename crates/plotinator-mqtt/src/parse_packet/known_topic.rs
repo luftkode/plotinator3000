@@ -142,8 +142,8 @@ mod tests {
     use std::str::FromStr as _;
 
     use super::*;
-    use serde_json::json;
     use plotinator_test_util::*;
+    use serde_json::json;
 
     #[test]
     fn test_enum_parse_packet() -> TestResult {

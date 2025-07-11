@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.16.0]
+
+### Added
+
+- MQTT Connection now clearly indicates status and attempts to reconnect
+
 ### Changed
 
 - MQTT Connect window saves broker addr and allows easily re-configuring the connection

@@ -88,4 +88,16 @@ impl Mqtt {
             }
         }
     }
+
+    pub(crate) fn active_and_connected(&self) -> bool {
+        self.mqtt_data_receiver
+            .as_ref()
+            .is_some_and(|receiver| receiver.connected())
+    }
+
+    pub(crate) fn active_but_disconnected(&self) -> bool {
+        self.mqtt_data_receiver
+            .as_ref()
+            .is_some_and(|receiver| !receiver.connected())
+    }
 }
