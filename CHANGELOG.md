@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.17.0]
+
+### Fixed
+
+- Click delta text now has a contrasted background color, making it easy to read
+
+### Changed
+
+- Update egui to `0.32.0` which brings a bunch of features and major improvement
+- Dragging axes now zooms according to which way its dragged
+
 ## [1.16.0]
 
 ### Added
