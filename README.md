@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/luftkode/plotinator3000/releases" title="Latest Stable GitHub Release">
-      <img src="https://img.shields.io/github/release/luftkode/plotinator3000/all.svg?style=flat&logo=github&logoColor=white&colorB=blue&label=Latest Release" alt="GitHub release"></a>
+      <img src="https://img.shields.io/github/release/luftkode/plotinator3000/all.svg?style=flat&logo=github&logoColor=white&colorB=blue&label=Latest%20Release" alt="GitHub release"></a>
   <a href="https://github.com/luftkode/plotinator3000/actions/workflows/CI.yml"><img src="https://github.com/luftkode/plotinator3000/actions/workflows/CI.yml/badge.svg" alt="CodeFactor" /></a>
 </div>
 <div align="center">
