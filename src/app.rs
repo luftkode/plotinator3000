@@ -270,7 +270,25 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             {
-                if ui.button("MQTT connect").clicked() {
+                let mqtt_connect_button_txt = if app.mqtt.active_and_connected() {
+                    RichText::new(format!(
+                        "{} MQTT connect",
+                        egui_phosphor::regular::WIFI_HIGH
+                    ))
+                    .color(Color32::GREEN)
+                } else if app.mqtt.active_but_disconnected() {
+                    RichText::new(format!(
+                        "{} MQTT connect",
+                        egui_phosphor::regular::WIFI_SLASH
+                    ))
+                    .color(Color32::RED)
+                } else {
+                    RichText::new("MQTT connect".to_owned())
+                };
+                if app.mqtt.active_but_disconnected() {
+                    ui.spinner();
+                }
+                if ui.button(mqtt_connect_button_txt).clicked() {
                     app.mqtt.connect();
                 }
 

@@ -97,7 +97,7 @@ pub(crate) fn show_subscribed_topics_column(
                 let data_receiver_instance = spawn_mqtt_listener(
                     stop_flag,
                     broker_host.to_owned(),
-                    broker_port.to_owned(),
+                    broker_port.parse().expect("invalid port"),
                     selected_topics,
                 );
                 *data_receiver = Some(data_receiver_instance);

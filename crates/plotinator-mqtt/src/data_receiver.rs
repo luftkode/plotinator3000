@@ -2,46 +2,60 @@ use std::sync::{Arc, atomic::AtomicBool, mpsc::Receiver};
 
 use crate::{
     MqttPlotPoints,
+    client::MqttClient,
     data::{listener::MqttData, plot::MqttPlotData},
 };
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum ConnectionState {
+    Connected,
+    Disconnected,
+}
+
+#[derive(Debug)]
+pub(crate) enum MqttMessage {
+    ConnectionState(ConnectionState),
+    Data(MqttData),
+}
 
 pub fn spawn_mqtt_listener(
     stop_flag: &mut Arc<AtomicBool>,
     broker_host: String,
-    broker_port: String,
+    broker_port: u16,
     topics: &[String],
 ) -> MqttDataReceiver {
-    let stop_flag_clone = Arc::clone(stop_flag);
     let (tx, rx) = std::sync::mpsc::channel();
-    let topics_clone = topics.to_owned();
-    std::thread::Builder::new()
-        .name("mqtt-listener".into())
-        .spawn(move || {
-            crate::mqtt_listener::mqtt_listener(
-                &tx,
-                broker_host,
-                broker_port.parse().expect("invalid broker port"),
-                topics_clone,
-                &stop_flag_clone,
-            );
-        })
-        .expect("Failed spawning MQTT listener thread");
+    let client = MqttClient::new(
+        Arc::clone(stop_flag),
+        broker_host,
+        broker_port,
+        topics.to_owned(),
+        tx.clone(),
+    );
+    client.spawn();
     MqttDataReceiver::new(rx, topics.to_owned())
 }
 
 pub struct MqttDataReceiver {
     subscribed_topics: Vec<String>,
     mqtt_plot_data: MqttPlotData,
-    recv: Receiver<MqttData>,
+    recv: Receiver<MqttMessage>,
+    state: ConnectionState,
 }
 
 impl MqttDataReceiver {
-    pub(crate) fn new(recv: Receiver<MqttData>, subscribed_topics: Vec<String>) -> Self {
+    pub(crate) fn new(recv: Receiver<MqttMessage>, subscribed_topics: Vec<String>) -> Self {
         Self {
             subscribed_topics,
             mqtt_plot_data: MqttPlotData::default(),
             recv,
+            state: ConnectionState::Disconnected,
         }
+    }
+
+    /// Returns true if the listener is connected to the MQTT broker
+    pub fn connected(&self) -> bool {
+        self.state == ConnectionState::Connected
     }
 
     pub fn plots(&self) -> &[MqttPlotPoints] {
@@ -49,9 +63,12 @@ impl MqttDataReceiver {
     }
 
     pub fn poll(&mut self) {
-        while let Ok(mqtt_data) = self.recv.try_recv() {
-            log::debug!("Got MqttData: {mqtt_data:?}");
-            self.mqtt_plot_data.insert_data(mqtt_data);
+        while let Ok(mqtt_msg) = self.recv.try_recv() {
+            log::debug!("Got MQTT Message: {mqtt_msg:?}");
+            match mqtt_msg {
+                MqttMessage::ConnectionState(connection_state) => self.state = connection_state,
+                MqttMessage::Data(mqtt_data) => self.mqtt_plot_data.insert_data(mqtt_data),
+            }
         }
     }
 
