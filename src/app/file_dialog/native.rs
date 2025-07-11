@@ -1,14 +1,10 @@
-use std::{
-    fs,
-    io::{self, Read as _, Seek as _},
-    path::PathBuf,
-};
+use std::{fs, io, path::PathBuf};
 
 use crate::{
     app::{
         file_dialog::{
             MAGIC_HEADER_PLOT_DATA, MAGIC_HEADER_PLOT_UI_STATE, MagicFileContent,
-            deserialize_magic_content_from_bytes, parse_magic_header_from_bytes,
+            try_parse_magic_file,
         },
         loaded_files::LoadedFiles,
     },
@@ -88,7 +84,6 @@ impl NativeFileDialog {
         &mut self,
         loaded_files: &mut LoadedFiles,
     ) -> io::Result<Option<Box<LogPlotUi>>> {
-        let mut loaded_plot_ui = None;
         for pf in self.picked_files.drain(..) {
             match try_parse_magic_file(&pf)? {
                 Some(MagicFileContent::PlotData(plot_data)) => {
@@ -97,7 +92,7 @@ impl NativeFileDialog {
                 }
                 Some(MagicFileContent::PlotUi(plot_ui)) => {
                     log::info!("Loading plot UI state from {pf:?}");
-                    loaded_plot_ui = Some(plot_ui);
+                    return Ok(Some(plot_ui));
                 }
                 None => {
                     log::info!("Parsing regular file: {pf:?}");
@@ -105,39 +100,6 @@ impl NativeFileDialog {
                 }
             }
         }
-        Ok(loaded_plot_ui)
-    }
-}
-
-/// Attempts to parse a file that might contain a Plotinator3000 magic header.
-fn try_parse_magic_file(path: &PathBuf) -> io::Result<Option<MagicFileContent>> {
-    let mut file = fs::File::open(path)?;
-    let max_header_len = MAGIC_HEADER_PLOT_DATA
-        .len()
-        .max(MAGIC_HEADER_PLOT_UI_STATE.len());
-    let mut header_buf = vec![0u8; max_header_len];
-
-    // Attempt to read the header. If it's too short, it's not a magic file.
-    if file.read_exact(&mut header_buf).is_err() {
-        return Ok(None);
-    }
-
-    let Some((magic_header_len, is_plot_ui)) = parse_magic_header_from_bytes(&header_buf) else {
-        return Ok(None);
-    };
-
-    // Seek past the magic header to the actual data
-    file.seek(io::SeekFrom::Start(magic_header_len as u64))?;
-
-    let mut data_bytes = Vec::new();
-    #[allow(clippy::verbose_file_reads, reason = "false positive?")]
-    file.read_to_end(&mut data_bytes)?; // Read the rest of the file into bytes
-
-    match deserialize_magic_content_from_bytes(&data_bytes, is_plot_ui) {
-        Ok(content) => Ok(Some(content)),
-        Err(e) => {
-            log::error!("Failed to deserialize magic file content from {path:?}: {e}");
-            Ok(None)
-        }
+        Ok(None)
     }
 }

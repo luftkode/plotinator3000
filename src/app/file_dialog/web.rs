@@ -11,7 +11,7 @@ use crate::{
         LoadedFiles,
         file_dialog::{
             MAGIC_HEADER_PLOT_DATA, MAGIC_HEADER_PLOT_UI_STATE, MagicFileContent,
-            deserialize_magic_content_from_bytes, parse_magic_header_from_bytes,
+            try_parse_magic_fil_from_buf,
         },
     },
     plot::LogPlotUi,
@@ -107,11 +107,10 @@ impl WebFileDialog {
         &self,
         loaded_files: &mut LoadedFiles,
     ) -> io::Result<Option<Box<LogPlotUi>>> {
-        let mut loaded_plot_ui = None;
         if let Ok(file_web_content) = self.file_receiver.try_recv() {
             log::debug!("Received file: {}", file_web_content.name);
             let raw_contents = &file_web_content.contents;
-            match try_parse_magic_file(raw_contents) {
+            match try_parse_magic_fil_from_buf(raw_contents) {
                 Some(MagicFileContent::PlotData(plot_data)) => {
                     log::info!(
                         "Loading {} plot data files from web contents",
@@ -121,7 +120,7 @@ impl WebFileDialog {
                 }
                 Some(MagicFileContent::PlotUi(plot_ui)) => {
                     log::info!("Loading plot UI state from web contents");
-                    loaded_plot_ui = Some(plot_ui);
+                    return Ok(Some(plot_ui));
                 }
                 None => {
                     log::info!("Parsing regular file from web contents");
@@ -129,7 +128,7 @@ impl WebFileDialog {
                 }
             }
         }
-        Ok(loaded_plot_ui)
+        Ok(None)
     }
 
     fn open_dialog(ctx: egui::Context, sender: Sender<WebFileContents>) {
@@ -149,19 +148,5 @@ impl WebFileDialog {
                 }
             }
         });
-    }
-}
-
-/// Attempts to parse a file that might contain a Plotinator3000 magic header.
-fn try_parse_magic_file(raw_contents: &[u8]) -> Option<MagicFileContent> {
-    let (magic_header_len, is_plot_ui) = parse_magic_header_from_bytes(raw_contents)?;
-
-    let raw_contents_without_header = &raw_contents[magic_header_len..];
-    match deserialize_magic_content_from_bytes(raw_contents_without_header, is_plot_ui) {
-        Ok(content) => Some(content),
-        Err(e) => {
-            log::error!("Failed to deserialize magic file content from web contents: {e}");
-            None
-        }
     }
 }
