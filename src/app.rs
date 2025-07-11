@@ -284,6 +284,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                         #[cfg(not(target_arch = "wasm32"))]
                         file_dialog::native::NativeFileDialog::save_plot_data(
                             app.plot.stored_plot_files(),
+                            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                             app.mqtt.mqtt_plot_data.as_ref(),
                         );
                         #[cfg(target_arch = "wasm32")]
