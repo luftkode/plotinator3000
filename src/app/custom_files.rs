@@ -39,6 +39,9 @@ pub(crate) fn try_parse_custom_file_from_buf(raw_contents: &[u8]) -> Option<Cust
 
 /// Attempts to parse a file that might contain a Plotinator3000 custom header.
 pub(crate) fn try_parse_custom_file(path: &Path) -> io::Result<Option<CustomFileContent>> {
+    if !path.is_file() {
+        return Ok(None);
+    }
     let mut file = fs::File::open(path)?;
     let max_header_len = CUSTOM_HEADER_PLOT_DATA
         .len()
