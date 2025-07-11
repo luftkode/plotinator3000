@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
-use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference};
+use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular;
 use plotinator_log_if::prelude::Plotable as _;
@@ -11,9 +11,9 @@ use file_dialog as fd;
 use loaded_files::LoadedFiles;
 use plotinator_supported_formats::SupportedFormat;
 
+pub(crate) mod custom_files;
 mod dropped_files;
 mod file_dialog;
-
 pub mod loaded_files;
 mod util;
 
@@ -26,6 +26,9 @@ pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
+    // Set on the very first frame of starting the app
+    #[serde(skip)]
+    first_frame: bool,
     #[serde(skip)]
     toasts: Toasts,
 
@@ -54,6 +57,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
+            first_frame: true,
             toasts: Toasts::default(),
             loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
@@ -106,20 +110,7 @@ impl eframe::App for App {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        #[cfg(target_arch = "wasm32")]
-        if let Err(e) = self
-            .web_file_dialog
-            .poll_received_files(&mut self.loaded_files)
-        {
-            self.error_message = Some(e.to_string());
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Err(e) = self
-            .native_file_dialog
-            .parse_picked_files(&mut self.loaded_files)
-        {
-            self.error_message = Some(e.to_string());
-        }
+        self.poll_picked_files();
 
         if !self.font_size_init {
             configure_text_styles(ctx, self.font_size);
@@ -131,6 +122,7 @@ impl eframe::App for App {
             notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
             self.plot.ui(
                 ui,
+                &mut self.first_frame,
                 &self.loaded_files.take_loaded_files(),
                 &mut self.toasts,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
@@ -142,8 +134,10 @@ impl eframe::App for App {
                 util::draw_empty_state(ui);
             }
 
-            if let Err(e) = handle_dropped_files(ctx, &mut self.loaded_files) {
-                self.error_message = Some(e.to_string());
+            match handle_dropped_files(ctx, &mut self.loaded_files) {
+                Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
+                Err(e) => self.error_message = Some(e.to_string()),
+                Ok(None) => (),
             }
 
             self.show_error(ui);
@@ -156,6 +150,11 @@ impl eframe::App for App {
 }
 
 impl App {
+    fn load_new_plot_ui_state(&mut self, new: Box<LogPlotUi>) {
+        self.first_frame = true; // Necessary to reset some caching
+        self.plot = *new;
+    }
+
     fn show_error(&mut self, ui: &egui::Ui) {
         if let Some(error) = self.error_message.clone() {
             egui::Window::new(RichText::new("⚠").size(40.0).color(Color32::RED))
@@ -186,6 +185,27 @@ impl App {
                         ui.add_space(20.0);
                     });
                 });
+        }
+    }
+
+    fn poll_picked_files(&mut self) {
+        #[cfg(target_arch = "wasm32")]
+        match self
+            .web_file_dialog
+            .poll_received_files(&mut self.loaded_files)
+        {
+            Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
+            Err(e) => self.error_message = Some(e.to_string()),
+            Ok(None) => (),
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        match self
+            .native_file_dialog
+            .parse_picked_files(&mut self.loaded_files)
+        {
+            Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
+            Err(e) => self.error_message = Some(e.to_string()),
+            Ok(None) => (),
         }
     }
 }
@@ -242,6 +262,39 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 #[cfg(not(target_arch = "wasm32"))]
                 app.native_file_dialog.open();
             }
+
+            ui.menu_button(
+                RichText::new(format!(
+                    "{icon} Save",
+                    icon = egui_phosphor::regular::FLOPPY_DISK
+                )),
+                |ui| {
+                    // Option to export the entire UI state for later restoration
+                    if ui.button("Plot UI State").clicked() {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        file_dialog::native::NativeFileDialog::save_plot_ui(&app.plot);
+                        #[cfg(target_arch = "wasm32")]
+                        file_dialog::web::WebFileDialog::save_plot_ui(&app.plot);
+
+                        ui.close_kind(UiKind::Menu);
+                    }
+
+                    // Option to export just the raw plot data
+                    if ui.button("Plot Data").clicked() {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        file_dialog::native::NativeFileDialog::save_plot_data(
+                            app.plot.stored_plot_files(),
+                            app.mqtt.mqtt_plot_data.as_ref(),
+                        );
+                        #[cfg(target_arch = "wasm32")]
+                        file_dialog::web::WebFileDialog::save_plot_data(
+                            app.plot.stored_plot_files(),
+                        );
+                        ui.close_kind(UiKind::Menu);
+                    }
+                },
+            );
+
             ui.label(RichText::new(regular::TEXT_T));
             if ui
                 .add(
@@ -269,39 +322,42 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             }
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            {
-                let mqtt_connect_button_txt = if app.mqtt.active_and_connected() {
-                    RichText::new(format!(
-                        "{} MQTT connect",
-                        egui_phosphor::regular::WIFI_HIGH
-                    ))
-                    .color(Color32::GREEN)
-                } else if app.mqtt.active_but_disconnected() {
-                    RichText::new(format!(
-                        "{} MQTT connect",
-                        egui_phosphor::regular::WIFI_SLASH
-                    ))
-                    .color(Color32::RED)
-                } else {
-                    RichText::new("MQTT connect".to_owned())
-                };
-                if app.mqtt.active_but_disconnected() {
-                    ui.spinner();
-                }
-                if ui.button(mqtt_connect_button_txt).clicked() {
-                    app.mqtt.connect();
-                }
-
-                if app.mqtt.listener_active() {
-                    app.mqtt.poll_data();
-                    ctx.request_repaint_after(Duration::from_millis(50));
-                }
-                // Show MQTT configuration window if needed
-                app.mqtt.show_connect_window(ui);
-            }
+            show_mqtt_connect_button(app, ctx, ui);
             collapsible_instructions(ui);
         });
     });
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+fn show_mqtt_connect_button(app: &mut App, ctx: &egui::Context, ui: &mut egui::Ui) {
+    let mqtt_connect_button_txt = if app.mqtt.active_and_connected() {
+        RichText::new(format!(
+            "{} MQTT connect",
+            egui_phosphor::regular::WIFI_HIGH
+        ))
+        .color(Color32::GREEN)
+    } else if app.mqtt.active_but_disconnected() {
+        RichText::new(format!(
+            "{} MQTT connect",
+            egui_phosphor::regular::WIFI_SLASH
+        ))
+        .color(Color32::RED)
+    } else {
+        RichText::new("MQTT connect".to_owned())
+    };
+    if app.mqtt.active_but_disconnected() {
+        ui.spinner();
+    }
+    if ui.button(mqtt_connect_button_txt).clicked() {
+        app.mqtt.connect();
+    }
+
+    if app.mqtt.listener_active() {
+        app.mqtt.poll_data();
+        ctx.request_repaint_after(Duration::from_millis(50));
+    }
+    // Show MQTT configuration window if needed
+    app.mqtt.show_connect_window(ui);
 }
 
 fn configure_text_styles(ctx: &egui::Context, font_size: f32) {

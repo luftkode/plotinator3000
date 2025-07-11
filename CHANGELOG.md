@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.18.0]
+
+### Added
+
+- Ability to export Plot data as special `p3k` plotinator3000 files (includes data collected with MQTT)
+- Ability to export the whole plot ui state (including plot data) as special `p3k` plotinator3000 files.
+- Supported files filter for file dialogs
+
 ## [1.17.0]
 
 ### Fixed

@@ -17,6 +17,7 @@ hdf5 = []
 plotinator-log-if = { workspace = true }
 plotinator-logs = { workspace = true }
 plotinator-hdf5 = { workspace = true }
+plotinator-mqtt = { workspace = true }
 serde = { workspace = true }
 memmap2 = { workspace = true }
 log = { workspace = true }

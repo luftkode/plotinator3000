@@ -3493,7 +3493,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plotinator-hdf5"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "byteorder",
  "chrono",
@@ -3518,7 +3518,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-log-if"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "chrono",
  "log",
@@ -3527,7 +3527,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-logs"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "byteorder",
  "chrono",
@@ -3547,17 +3547,19 @@ dependencies = [
 
 [[package]]
 name = "plotinator-macros"
-version = "1.17.0"
+version = "1.18.0"
 
 [[package]]
 name = "plotinator-mqtt"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "egui",
  "egui-phosphor",
  "egui_plot",
  "log",
+ "plotinator-log-if",
  "plotinator-macros",
  "plotinator-test-util",
  "plotinator-ui-util",
@@ -3571,7 +3573,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-plot-util"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "chrono",
  "egui",
@@ -3589,7 +3591,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-supported-formats"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "chrono",
  "log",
@@ -3597,13 +3599,14 @@ dependencies = [
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-logs",
+ "plotinator-mqtt",
  "plotinator-test-util",
  "serde",
 ]
 
 [[package]]
 name = "plotinator-test-util"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "paste",
  "testresult",
@@ -3611,7 +3614,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-ui-util"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "egui",
  "egui_plot",
@@ -3619,7 +3622,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-updater"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
  "axoupdater",
  "eframe",
@@ -3635,8 +3638,9 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "1.17.0"
+version = "1.18.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "eframe",
  "egui",
@@ -3665,6 +3669,7 @@ dependencies = [
  "rfd",
  "semver",
  "serde",
+ "serde_json",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "tempfile",

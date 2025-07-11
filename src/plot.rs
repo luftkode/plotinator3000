@@ -36,8 +36,8 @@ pub enum PlotType {
 
 #[derive(Deserialize, Serialize)]
 pub struct LogPlotUi {
-    #[serde(skip)]
-    init: bool,
+    // We also store the raw files so they are easy to export
+    stored_plot_files: Vec<SupportedFormat>,
     legend_cfg: Legend,
     line_width: f32,
     axis_config: AxisConfig,
@@ -51,7 +51,6 @@ pub struct LogPlotUi {
 impl Default for LogPlotUi {
     fn default() -> Self {
         Self {
-            init: false,
             legend_cfg: Default::default(),
             line_width: 1.5,
             axis_config: Default::default(),
@@ -60,11 +59,16 @@ impl Default for LogPlotUi {
             max_bounds: MaxPlotBounds::default(),
             link_group: None,
             click_delta: ClickDelta::default(),
+            stored_plot_files: vec![],
         }
     }
 }
 
 impl LogPlotUi {
+    pub fn stored_plot_files(&self) -> &[SupportedFormat] {
+        &self.stored_plot_files
+    }
+
     pub fn plot_count(&self) -> usize {
         self.plots.percentage().plots().len()
             + self.plots.one_to_hundred().plots().len()
@@ -74,6 +78,7 @@ impl LogPlotUi {
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
+        first_frame: &mut bool,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt: &mut crate::mqtt::Mqtt,
@@ -82,7 +87,6 @@ impl LogPlotUi {
         puffin::profile_scope!("Plot_UI");
 
         let Self {
-            init,
             legend_cfg,
             line_width,
             axis_config,
@@ -91,6 +95,7 @@ impl LogPlotUi {
             max_bounds,
             link_group,
             click_delta,
+            stored_plot_files,
         } = self;
 
         if link_group.is_none() {
@@ -101,6 +106,7 @@ impl LogPlotUi {
 
         for log in loaded_files {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);
+            stored_plot_files.push(log.clone());
         }
 
         if !loaded_files.is_empty() {
@@ -115,9 +121,12 @@ impl LogPlotUi {
 
         let mut reset_plot_bounds = false;
         // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
-        if plot_settings.cached_plots_invalidated() || !*init {
-            *max_bounds = MaxPlotBounds::default();
+        if *first_frame {
             plots.build_plots();
+            *first_frame = false;
+        } else if plot_settings.cached_plots_invalidated() {
+            plots.build_plots();
+            *max_bounds = MaxPlotBounds::default();
             plots.calc_all_plot_max_bounds(max_bounds);
             reset_plot_bounds = true;
         } else if !loaded_files.is_empty() {
@@ -130,7 +139,7 @@ impl LogPlotUi {
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         let mode = {
             mqtt.show_waiting_for_initial_data(ui);
-            let mqtt_plots = crate::mqtt::Mqtt::plots(mqtt.mqtt_data_receiver.as_ref());
+            let mqtt_plots = crate::mqtt::Mqtt::plots(mqtt.mqtt_plot_data.as_ref());
             if mqtt_plots.is_empty() {
                 PlotMode::Logs(plots)
             } else {
@@ -140,22 +149,19 @@ impl LogPlotUi {
         #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]
         let mode = PlotMode::Logs(plots);
 
-        let response = ui
-            .vertical(|ui| {
-                plot_graphics::paint_plots(
-                    ui,
-                    reset_plot_bounds,
-                    plot_settings,
-                    legend_cfg,
-                    axis_config,
-                    link_group.expect("uninitialized link group id"),
-                    *line_width,
-                    click_delta,
-                    mode,
-                );
-            })
-            .response;
-        *init = true;
-        response
+        ui.vertical(|ui| {
+            plot_graphics::paint_plots(
+                ui,
+                reset_plot_bounds,
+                plot_settings,
+                legend_cfg,
+                axis_config,
+                link_group.expect("uninitialized link group id"),
+                *line_width,
+                click_delta,
+                mode,
+            );
+        })
+        .response
     }
 }

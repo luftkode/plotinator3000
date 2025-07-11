@@ -1,7 +1,6 @@
 use std::sync::{Arc, atomic::AtomicBool, mpsc::Receiver};
 
 use crate::{
-    MqttPlotPoints,
     client::MqttClient,
     data::{listener::MqttData, plot::MqttPlotData},
 };
@@ -38,7 +37,6 @@ pub fn spawn_mqtt_listener(
 
 pub struct MqttDataReceiver {
     subscribed_topics: Vec<String>,
-    mqtt_plot_data: MqttPlotData,
     recv: Receiver<MqttMessage>,
     state: ConnectionState,
 }
@@ -47,7 +45,6 @@ impl MqttDataReceiver {
     pub(crate) fn new(recv: Receiver<MqttMessage>, subscribed_topics: Vec<String>) -> Self {
         Self {
             subscribed_topics,
-            mqtt_plot_data: MqttPlotData::default(),
             recv,
             state: ConnectionState::Disconnected,
         }
@@ -58,16 +55,12 @@ impl MqttDataReceiver {
         self.state == ConnectionState::Connected
     }
 
-    pub fn plots(&self) -> &[MqttPlotPoints] {
-        self.mqtt_plot_data.plots()
-    }
-
-    pub fn poll(&mut self) {
+    pub fn poll(&mut self, mqtt_plot_data: &mut MqttPlotData) {
         while let Ok(mqtt_msg) = self.recv.try_recv() {
             log::debug!("Got MQTT Message: {mqtt_msg:?}");
             match mqtt_msg {
                 MqttMessage::ConnectionState(connection_state) => self.state = connection_state,
-                MqttMessage::Data(mqtt_data) => self.mqtt_plot_data.insert_data(mqtt_data),
+                MqttMessage::Data(mqtt_data) => mqtt_plot_data.insert_data(mqtt_data),
             }
         }
     }

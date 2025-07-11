@@ -1,5 +1,6 @@
 use logs::SupportedLog;
 use plotinator_log_if::prelude::*;
+use plotinator_mqtt::SerializableMqttPlotData;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -28,6 +29,7 @@ pub enum SupportedFormat {
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF5")]
     HDF5(hdf5::SupportedHdf5Format),
+    MqttData(SerializableMqttPlotData),
 }
 
 impl SupportedFormat {
@@ -101,6 +103,7 @@ impl SupportedFormat {
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(_) => None,
+            Self::MqttData(_) => None,
         }
     }
 }
@@ -113,6 +116,7 @@ impl Plotable for SupportedFormat {
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.raw_plots(),
+            Self::MqttData(mqtt) => mqtt.raw_plots(),
         }
     }
 
@@ -122,6 +126,7 @@ impl Plotable for SupportedFormat {
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.first_timestamp(),
+            Self::MqttData(mqtt) => mqtt.first_timestamp(),
         }
     }
 
@@ -131,6 +136,7 @@ impl Plotable for SupportedFormat {
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.descriptive_name(),
+            Self::MqttData(mqtt) => mqtt.descriptive_name(),
         }
     }
 
@@ -140,6 +146,7 @@ impl Plotable for SupportedFormat {
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.labels(),
+            Self::MqttData(mqtt) => mqtt.labels(),
         }
     }
 
@@ -149,6 +156,7 @@ impl Plotable for SupportedFormat {
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.metadata(),
+            Self::MqttData(mqtt) => mqtt.metadata(),
         }
     }
 }
