@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.18.1]
 
+### Changed
+
+- Parse custom plot data files from zip archives as well
+- Update `toml` to latest
+- Update `zip` to latest
+
 ### Fixed
 
 - Erroneous attempts at opening dropped directories as files

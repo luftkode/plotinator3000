@@ -63,6 +63,8 @@ impl LoadedFiles {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
+        use super::custom_files;
+        use custom_files::CustomFileContent;
         let file = fs::File::open(path)?;
         let mut archive = zip::ZipArchive::new(file)?;
 
@@ -71,8 +73,16 @@ impl LoadedFiles {
             if file.is_file() {
                 let mut contents = Vec::new();
                 io::Read::read_to_end(&mut file, &mut contents)?;
-                if let Ok(log) = SupportedFormat::parse_from_buf(&contents) {
-                    self.loaded.push(log);
+                match super::custom_files::try_parse_custom_file_from_buf(&contents) {
+                    Some(CustomFileContent::PlotUi(_)) => log::warn!(
+                        "Ignoring custom Plot UI file found in Zip file, this would override all current loaded logs..."
+                    ),
+                    Some(CustomFileContent::PlotData(plotdata)) => self.loaded.extend(plotdata),
+                    None => {
+                        if let Ok(log) = SupportedFormat::parse_from_buf(&contents) {
+                            self.loaded.push(log);
+                        }
+                    }
                 }
             }
         }
