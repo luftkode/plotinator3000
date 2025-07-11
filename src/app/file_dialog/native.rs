@@ -13,7 +13,7 @@ use crate::{
 };
 use plotinator_mqtt::data::plot::MqttPlotData;
 use plotinator_supported_formats::SupportedFormat;
-use serde::Serialize; // Add this import for the generic save function
+use serde::Serialize;
 
 #[derive(Debug, Default)]
 pub struct NativeFileDialog {

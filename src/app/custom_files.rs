@@ -59,7 +59,7 @@ pub(crate) fn try_parse_custom_file(path: &Path) -> io::Result<Option<CustomFile
 
     let mut data_bytes = Vec::new();
     #[allow(clippy::verbose_file_reads, reason = "false positive?")]
-    file.read_to_end(&mut data_bytes)?; // Read the rest of the file into bytes
+    file.read_to_end(&mut data_bytes)?;
 
     match deserialize_custom_content_from_bytes(&data_bytes, is_plot_ui) {
         Ok(content) => Ok(Some(content)),
@@ -79,7 +79,7 @@ pub(crate) fn parse_custom_header_from_bytes(bytes: &[u8]) -> Option<(usize, boo
     } else {
         bytes
     };
-    let header_str = String::from_utf8_lossy(maybe_header_bytes); // Use lossy for robustness
+    let header_str = String::from_utf8_lossy(maybe_header_bytes);
 
     if header_str.starts_with(CUSTOM_HEADER_PLOT_DATA) {
         Some((CUSTOM_HEADER_PLOT_DATA.len(), false))
@@ -97,7 +97,7 @@ pub(crate) fn deserialize_custom_content_from_bytes(
     json_bytes: &[u8],
     is_plot_ui: bool,
 ) -> anyhow::Result<CustomFileContent> {
-    let json_str = String::from_utf8_lossy(json_bytes); // Ensure valid UTF-8 for JSON parsing
+    let json_str = String::from_utf8_lossy(json_bytes);
 
     let content = if is_plot_ui {
         let log_plot_ui = serde_json::from_str::<LogPlotUi>(&json_str)?;
