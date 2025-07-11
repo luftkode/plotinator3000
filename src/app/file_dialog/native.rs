@@ -2,12 +2,16 @@ use std::{fs, io, path::PathBuf};
 
 use crate::{
     app::{
-        custom_files::{CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent, try_parse_custom_file},
+        custom_files::{
+            CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
+            try_parse_custom_file,
+        },
         file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
         loaded_files::LoadedFiles,
     },
     plot::LogPlotUi,
 };
+use plotinator_mqtt::data::plot::MqttPlotData;
 use plotinator_supported_formats::SupportedFormat;
 use serde::Serialize; // Add this import for the generic save function
 
@@ -38,14 +42,30 @@ impl NativeFileDialog {
     }
 
     /// Saves the plot data to a file.
-    pub(crate) fn save_plot_data(plot_files: &[SupportedFormat]) {
+    pub(crate) fn save_plot_data(
+        plot_files: &[SupportedFormat],
+        mqtt_plots: Option<&MqttPlotData>,
+    ) {
+        let title = "Save Plot Data";
+
         if !plot_files.is_empty() {
             Self::save_data_to_file(
                 plot_files,
                 "Save Plot Data",
                 "plotinator3k.p3k",
-                CUSTOM_HEADER_PLOT_UI_STATE,
+                CUSTOM_HEADER_PLOT_DATA,
             );
+        } else if mqtt_plots.is_some() {
+            if let Some(mqtt_plot_data) = mqtt_plots {
+                let supported_formats: Vec<SupportedFormat> =
+                    vec![SupportedFormat::MqttData(mqtt_plot_data.clone().into())];
+                Self::save_data_to_file(
+                    &supported_formats,
+                    title,
+                    "mqtt_potinator3k.p3k",
+                    CUSTOM_HEADER_PLOT_DATA,
+                );
+            }
         }
     }
 

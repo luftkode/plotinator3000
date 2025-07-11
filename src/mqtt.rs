@@ -1,9 +1,12 @@
-use plotinator_mqtt::{MqttConfigWindow, MqttDataReceiver, MqttPlotPoints};
+use plotinator_mqtt::{
+    MqttConfigWindow, MqttDataReceiver, MqttPlotPoints, data::plot::MqttPlotData,
+};
 
 #[derive(Default)]
 pub struct Mqtt {
     pub mqtt_data_receiver: Option<MqttDataReceiver>,
     mqtt_config_window: Option<MqttConfigWindow>,
+    pub mqtt_plot_data: Option<MqttPlotData>,
     // auto scale plot bounds (MQTT only)
     pub set_auto_bounds: bool,
 }
@@ -12,6 +15,7 @@ impl Mqtt {
     pub fn reset(&mut self) {
         self.mqtt_data_receiver = None;
         self.mqtt_config_window = None;
+        self.mqtt_plot_data = None;
     }
 
     pub fn connect(&mut self) {
@@ -23,10 +27,13 @@ impl Mqtt {
     }
 
     pub fn poll_data(&mut self) {
+        if self.mqtt_plot_data.is_none() {
+            self.mqtt_plot_data = Some(MqttPlotData::default());
+        }
         self.mqtt_data_receiver
             .as_mut()
             .expect("Attempted to poll when no listener is active")
-            .poll();
+            .poll(self.mqtt_plot_data.as_mut().expect("unsound condition"));
     }
 
     pub fn window_open(&self) -> bool {
@@ -35,8 +42,8 @@ impl Mqtt {
             .is_some_and(|win| win.is_open)
     }
 
-    pub fn plots(mqtt_data_receiver: Option<&MqttDataReceiver>) -> &[MqttPlotPoints] {
-        mqtt_data_receiver
+    pub fn plots(mqtt_plot_data: Option<&MqttPlotData>) -> &[MqttPlotPoints] {
+        mqtt_plot_data
             .as_ref()
             .map(|mdc| mdc.plots())
             .unwrap_or_default()
@@ -50,11 +57,13 @@ impl Mqtt {
     ///
     /// One topic needs at least 2 points for us to have anything to plot
     fn waiting_for_initial_data(&self) -> bool {
-        if let Some(r) = &self.mqtt_data_receiver {
-            for p in r.plots() {
-                if p.data.len() > 1 {
-                    // A topic has more than 1 plot point so we are no longer waiting
-                    return false;
+        if self.mqtt_data_receiver.is_some() {
+            if let Some(mqtt_plot_data) = &self.mqtt_plot_data {
+                for p in mqtt_plot_data.plots() {
+                    if p.data.len() > 1 {
+                        // A topic has more than 1 plot point so we are no longer waiting
+                        return false;
+                    }
                 }
             }
             // We are receiving MQTT data but no topic has 2 plot points or more

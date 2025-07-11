@@ -139,7 +139,7 @@ impl LogPlotUi {
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         let mode = {
             mqtt.show_waiting_for_initial_data(ui);
-            let mqtt_plots = crate::mqtt::Mqtt::plots(mqtt.mqtt_data_receiver.as_ref());
+            let mqtt_plots = crate::mqtt::Mqtt::plots(mqtt.mqtt_plot_data.as_ref());
             if mqtt_plots.is_empty() {
                 PlotMode::Logs(plots)
             } else {

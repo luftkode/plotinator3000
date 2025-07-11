@@ -3554,10 +3554,12 @@ name = "plotinator-mqtt"
 version = "1.18.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "egui",
  "egui-phosphor",
  "egui_plot",
  "log",
+ "plotinator-log-if",
  "plotinator-macros",
  "plotinator-test-util",
  "plotinator-ui-util",
@@ -3597,6 +3599,7 @@ dependencies = [
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-logs",
+ "plotinator-mqtt",
  "plotinator-test-util",
  "serde",
 ]
