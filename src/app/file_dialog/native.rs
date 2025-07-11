@@ -11,7 +11,6 @@ use crate::{
     },
     plot::LogPlotUi,
 };
-use plotinator_mqtt::data::plot::MqttPlotData;
 use plotinator_supported_formats::SupportedFormat;
 use serde::Serialize;
 
@@ -44,18 +43,24 @@ impl NativeFileDialog {
     /// Saves the plot data to a file.
     pub(crate) fn save_plot_data(
         plot_files: &[SupportedFormat],
-        mqtt_plots: Option<&MqttPlotData>,
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt_plots: Option<
+            &plotinator_mqtt::MqttPlotData,
+        >,
     ) {
         let title = "Save Plot Data";
 
         if !plot_files.is_empty() {
             Self::save_data_to_file(
                 plot_files,
-                "Save Plot Data",
+                title,
                 "plotinator3k.p3k",
                 CUSTOM_HEADER_PLOT_DATA,
             );
-        } else if mqtt_plots.is_some() {
+            return;
+        }
+
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+        if mqtt_plots.is_some() {
             if let Some(mqtt_plot_data) = mqtt_plots {
                 let supported_formats: Vec<SupportedFormat> =
                     vec![SupportedFormat::MqttData(mqtt_plot_data.clone().into())];
