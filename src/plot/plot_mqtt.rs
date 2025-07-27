@@ -1,25 +1,21 @@
-use egui::Vec2;
+use egui::{Color32, Vec2};
 use egui_plot::{Plot, PlotBounds};
+use plotinator_plot_util::draw_series::SeriesDrawMode;
 
 use crate::plot::{PlotType, util};
 
 use super::click_delta::ClickDelta;
 
 /// Iterates through and fills/paints all plots with their respective data.
-///
-/// # Arguments
-///
-/// * `gui` - The egui UI to paint on.
-/// * `reset_plot_bounds` - whether plot bounds should be reset.
-/// * `line_width` - The width of plot lines.
-/// * `click_delta` - State relating to pointer clicks on plots
+#[allow(clippy::too_many_arguments)]
 pub fn fill_mqtt_plots(
     gui: &mut egui::Ui,
     reset_plot_bounds: bool,
+    series_draw_mode: SeriesDrawMode,
     line_width: f32,
     click_delta: &mut ClickDelta,
     mqtt_plot_area: Plot<'_>,
-    mqtt_plots: &[plotinator_mqtt::MqttPlotPoints],
+    mqtt_plots: &[(plotinator_mqtt::MqttPlotPoints, Color32)],
     set_auto_bounds: &mut bool,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
@@ -55,7 +51,7 @@ pub fn fill_mqtt_plots(
 
         click_delta.ui(plot_ui, PlotType::Hundreds);
         let x_bounds = plot_ui.plot_bounds().range_x();
-        for mp in mqtt_plots {
+        for (mp, color) in mqtt_plots {
             if mp.data.len() < 2 {
                 // We don't plot less than two points. It's mostly because when the
                 // plotting starts, the auto-bounds causes a crash due to auto sizing
@@ -67,7 +63,9 @@ pub fn fill_mqtt_plots(
                 plot_ui,
                 &mp.topic,
                 &mp.data,
+                *color,
                 line_width,
+                series_draw_mode,
                 x_bounds.clone(),
             );
         }
@@ -75,10 +73,10 @@ pub fn fill_mqtt_plots(
 }
 
 pub fn get_mqtt_auto_scaled_plot_bounds(
-    mqtt_plots: &[plotinator_mqtt::MqttPlotPoints],
+    mqtt_plots: &[(plotinator_mqtt::MqttPlotPoints, Color32)],
 ) -> Option<PlotBounds> {
     let mut max_bounds: Option<PlotBounds> = None;
-    for mp in mqtt_plots {
+    for (mp, _) in mqtt_plots {
         let mp_first_point = mp
             .data
             .first()

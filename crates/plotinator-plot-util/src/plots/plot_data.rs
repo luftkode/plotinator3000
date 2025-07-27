@@ -1,3 +1,4 @@
+// plots/plot_data.rs
 use std::ops::RangeInclusive;
 
 use chrono::{DateTime, Utc};
@@ -77,13 +78,7 @@ impl PlotData {
     }
 
     fn auto_color(&mut self) -> Color32 {
-        // source: https://docs.rs/egui_plot/0.29.0/src/egui_plot/plot_ui.rs.html#21
-        // should be replaced/updated if they improve their implementation or provide a public API for this
-        let i = self.next_auto_color_idx;
-        self.next_auto_color_idx += 1;
-        let golden_ratio = (5.0_f32.sqrt() - 1.0) / 2.0; // 0.61803398875
-        let h = i as f32 * golden_ratio;
-        egui::epaint::Hsva::new(h, 0.85, 0.5, 1.0).into() // TODO(emilk): OkLab or some other perspective color space
+        plotinator_ui_util::auto_color(&mut self.next_auto_color_idx)
     }
 
     pub fn calc_max_bounds(&mut self) {

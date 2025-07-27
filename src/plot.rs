@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 use click_delta::ClickDelta;
+#[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+use egui::Color32;
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
 use plotinator_plot_util::{Plots, plots::MaxPlotBounds};
@@ -24,7 +26,10 @@ mod x_axis_formatter;
 pub enum PlotMode<'a> {
     Logs(&'a mut Plots),
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    MQTT(&'a [plotinator_mqtt::MqttPlotPoints], &'a mut bool),
+    MQTT(
+        &'a [(plotinator_mqtt::MqttPlotPoints, Color32)],
+        &'a mut bool,
+    ),
 }
 
 #[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -34,34 +39,17 @@ pub enum PlotType {
     Thousands,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct LogPlotUi {
     // We also store the raw files so they are easy to export
     stored_plot_files: Vec<SupportedFormat>,
     legend_cfg: Legend,
-    line_width: f32,
     axis_config: AxisConfig,
     plots: Plots,
     plot_settings: PlotSettings,
     max_bounds: MaxPlotBounds, // The maximum bounds for the plot, used for resetting zoom
     link_group: Option<Id>,
     click_delta: ClickDelta,
-}
-
-impl Default for LogPlotUi {
-    fn default() -> Self {
-        Self {
-            legend_cfg: Default::default(),
-            line_width: 1.5,
-            axis_config: Default::default(),
-            plots: Plots::default(),
-            plot_settings: PlotSettings::default(),
-            max_bounds: MaxPlotBounds::default(),
-            link_group: None,
-            click_delta: ClickDelta::default(),
-            stored_plot_files: vec![],
-        }
-    }
 }
 
 impl LogPlotUi {
@@ -88,7 +76,6 @@ impl LogPlotUi {
 
         let Self {
             legend_cfg,
-            line_width,
             axis_config,
             plots,
             plot_settings,
@@ -102,7 +89,7 @@ impl LogPlotUi {
             link_group.replace(ui.id().with("linked_plots"));
         }
 
-        plot_ui::show_settings_grid(ui, line_width, axis_config, plot_settings);
+        plot_ui::show_settings_grid(ui, axis_config, plot_settings);
 
         for log in loaded_files {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);
@@ -157,7 +144,6 @@ impl LogPlotUi {
                 legend_cfg,
                 axis_config,
                 link_group.expect("uninitialized link group id"),
-                *line_width,
                 click_delta,
                 mode,
             );

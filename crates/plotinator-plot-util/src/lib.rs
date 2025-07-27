@@ -2,8 +2,10 @@ pub mod mipmap;
 
 use std::ops::RangeInclusive;
 
-use egui_plot::{Line, PlotPoint, PlotPoints};
+use egui::Color32;
+use egui_plot::{PlotPoint, PlotPoints};
 
+pub mod draw_series;
 pub(crate) mod filter;
 pub mod plots;
 
@@ -11,6 +13,8 @@ pub use plots::{
     Plots,
     plot_data::{PlotData, PlotValues, StoredPlotLabels},
 };
+
+use crate::draw_series::SeriesDrawMode;
 
 /// An instance of a `MipMap` configuration for a given frame
 #[derive(Debug, Clone, Copy)]
@@ -25,6 +29,7 @@ pub fn plot_lines<'pv>(
     plots: impl Iterator<Item = &'pv PlotValues>,
     line_width: f32,
     mipmap_cfg: MipMapConfiguration,
+    series_draw_mode: SeriesDrawMode,
     plots_width_pixels: usize,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
@@ -33,7 +38,13 @@ pub fn plot_lines<'pv>(
     for plot_vals in plots {
         match mipmap_cfg {
             MipMapConfiguration::Disabled => {
-                plot_raw(plot_ui, plot_vals, line_width, x_plot_bounds.clone());
+                plot_raw(
+                    plot_ui,
+                    plot_vals,
+                    line_width,
+                    series_draw_mode,
+                    x_plot_bounds.clone(),
+                );
             }
             MipMapConfiguration::Auto => {
                 let (level, idx_range) =
@@ -43,6 +54,7 @@ pub fn plot_lines<'pv>(
                     plot_ui,
                     plot_vals,
                     line_width,
+                    series_draw_mode,
                     level,
                     x_plot_bounds.clone(),
                     idx_range,
@@ -53,6 +65,7 @@ pub fn plot_lines<'pv>(
                     plot_ui,
                     plot_vals,
                     line_width,
+                    series_draw_mode,
                     level,
                     x_plot_bounds.clone(),
                     None,
@@ -66,6 +79,7 @@ fn plot_with_mipmapping<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     plot_vals: &'p PlotValues,
     line_width: f32,
+    series_draw_mode: SeriesDrawMode,
     mipmap_lvl: usize,
     x_bounds: RangeInclusive<f64>,
     // if the range is already known then we can skip filtering
@@ -77,14 +91,20 @@ fn plot_with_mipmapping<'p>(
     let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
     if plot_points_minmax.is_empty() {
         // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
-        plot_raw(plot_ui, plot_vals, line_width, x_bounds);
+        plot_raw(plot_ui, plot_vals, line_width, series_draw_mode, x_bounds);
     } else {
         let plot_points_minmax = match known_idx_range {
             Some((start, end)) => PlotPoints::Borrowed(&plot_points_minmax[start..end]),
             None => filter::filter_plot_points(plot_points_minmax, x_bounds),
         };
 
-        plot_line(plot_ui, plot_vals, plot_points_minmax, line_width);
+        plot_line(
+            plot_ui,
+            plot_vals,
+            plot_points_minmax,
+            line_width,
+            series_draw_mode,
+        );
     }
 }
 
@@ -92,43 +112,53 @@ fn plot_raw<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     plot_vals: &'p PlotValues,
     line_width: f32,
+    series_draw_mode: SeriesDrawMode,
     x_bounds: RangeInclusive<f64>,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
     let plot_points = plot_vals.raw_plot_points();
     let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
-    plot_line(plot_ui, plot_vals, filtered_points, line_width);
+    plot_line(
+        plot_ui,
+        plot_vals,
+        filtered_points,
+        line_width,
+        series_draw_mode,
+    );
 }
 
-// Final stop for constructing a line series and handing it over to `egui_plot`
 fn plot_line<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     plot_vals: &'p PlotValues,
     series: impl Into<PlotPoints<'p>>,
     width: f32,
+    series_draw_mode: SeriesDrawMode,
 ) {
-    let line = Line::new(plot_vals.label(), series)
-        .width(width)
-        .color(plot_vals.get_color())
-        .highlight(plot_vals.get_highlight());
-    plot_ui.line(line);
+    series_draw_mode.draw_series(
+        plot_ui,
+        series.into(),
+        width,
+        plot_vals.label(),
+        plot_vals.get_color(),
+        plot_vals.get_highlight(),
+    );
 }
 
 pub fn plot_raw_mqtt_line<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     label: &str,
     plot_points: &'p [PlotPoint],
+    color: Color32,
     line_width: f32,
+    series_draw_mode: SeriesDrawMode,
     x_bounds: RangeInclusive<f64>,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
 
     let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
-
-    let line = Line::new(label, filtered_points).width(line_width);
-    plot_ui.line(line);
+    series_draw_mode.draw_series(plot_ui, filtered_points, line_width, label, color, false);
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {

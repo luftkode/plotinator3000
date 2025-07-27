@@ -1,19 +1,18 @@
 use egui::{Key, RichText};
-use egui_phosphor::regular;
+use egui_phosphor::regular::GEAR;
 
 use super::{axis_config::AxisConfig, plot_settings::PlotSettings};
 
 // filter settings should be refactored out to be a standalone thing, maybe together with loaded_logs_ui
 pub fn show_settings_grid(
     ui: &mut egui::Ui,
-    line_width: &mut f32,
     axis_cfg: &mut AxisConfig,
     plot_settings: &mut PlotSettings,
 ) {
     ui.horizontal_wrapped(|ui| {
         plot_settings.show(ui);
         ui.label("|");
-        let axis_cfg_str = RichText::new(format!("{icon} Axis", icon = regular::GEAR));
+        let axis_cfg_str = RichText::new(format!("{GEAR} Axis"));
         if ui.button(axis_cfg_str.clone()).clicked() {
             axis_cfg.ui_visible = !axis_cfg.ui_visible;
         }
@@ -29,11 +28,5 @@ pub fn show_settings_grid(
         if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
             axis_cfg.ui_visible = false;
         }
-        ui.label("Line width");
-        ui.add(
-            egui::DragValue::new(line_width)
-                .speed(0.02)
-                .range(0.5..=20.0),
-        );
     });
 }

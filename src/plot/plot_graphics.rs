@@ -32,7 +32,6 @@ pub fn paint_plots(
     legend_cfg: &Legend,
     axis_cfg: &AxisConfig,
     link_group: egui::Id,
-    line_width: f32,
     click_delta: &mut ClickDelta,
     mode: PlotMode<'_>,
 ) {
@@ -96,7 +95,6 @@ pub fn paint_plots(
                 ui,
                 reset_plot_bounds,
                 plot_components_list,
-                line_width,
                 plot_settings,
                 click_delta,
             );
@@ -114,7 +112,8 @@ pub fn paint_plots(
             crate::plot::plot_mqtt::fill_mqtt_plots(
                 ui,
                 reset_plot_bounds,
-                line_width,
+                plot_settings.line_plot_settings().draw_mode(),
+                plot_settings.line_plot_settings().line_width(),
                 click_delta,
                 mqtt_plot,
                 mqtt_plots,
@@ -138,7 +137,6 @@ fn fill_log_plots(
     gui: &mut egui::Ui,
     reset_plot_bounds: bool,
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
-    line_width: f32,
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
 ) {
@@ -150,6 +148,9 @@ fn fill_log_plots(
 
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
+            if plot_settings.highlight(ptype) {
+                plotinator_ui_util::highlight_plot_rect(plot_ui);
+            }
             if plot_ui.response().hovered() {
                 if let Some(final_zoom_factor) = final_zoom_factor {
                     plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
@@ -185,7 +186,7 @@ fn fill_log_plots(
             }
             click_delta.ui(plot_ui, ptype);
 
-            fill_plot(plot_ui, plot, line_width, plot_settings);
+            fill_plot(plot_ui, plot, plot_settings);
         });
     }
 }
@@ -201,17 +202,19 @@ fn fill_log_plots(
 fn fill_plot<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     plot_data: &'p PlotData,
-    line_width: f32,
     plot_settings: &'p PlotSettings,
 ) {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     puffin::profile_function!();
 
+    let line_plot_settings = plot_settings.line_plot_settings();
+
     plotinator_plot_util::plot_lines(
         plot_ui,
         plot_settings.apply_filters(plot_data.plots()),
-        line_width,
+        line_plot_settings.line_width(),
         plot_settings.mipmap_cfg(),
+        line_plot_settings.draw_mode(),
         plot_ui.ctx().used_size().x as usize,
     );
 

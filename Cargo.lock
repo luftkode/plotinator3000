@@ -3571,11 +3571,14 @@ dependencies = [
  "log",
  "num-traits",
  "plotinator-log-if",
+ "plotinator-ui-util",
  "pretty_assertions",
  "profiling",
  "puffin",
  "puffin_http",
  "serde",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
  "testresult",
 ]
 
