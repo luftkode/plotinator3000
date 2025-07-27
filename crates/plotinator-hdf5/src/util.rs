@@ -9,11 +9,7 @@ use hdf5::{
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
     let attrs = ds.attr_names()?;
     if !attrs.contains(&"description".to_owned()) {
-        let comma_separated_attr_list = attrs
-            .iter()
-            .map(|a| a.to_string())
-            .collect::<Vec<String>>()
-            .join(", ");
+        let comma_separated_attr_list = attrs.join(", ");
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
