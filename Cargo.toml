@@ -103,9 +103,7 @@ egui.workspace = true
 eframe.workspace = true
 rfd = "0.15"
 egui-phosphor.workspace = true
-# TODO: use egui-notify 0.20.0 when this is merged: https://github.com/ItsEthra/egui-notify/pull/43
-#egui-notify = "0.20.0"
-egui-notify = { git = "https://github.com/UnknownSuperficialNight/egui-notify", rev = "31d6e57041dd98f87bb7b494bb064599bba385ec" }
+egui-notify = "0.20.0"
 tokio.workspace = true
 memmap2.workspace = true
 serde_json.workspace = true
