@@ -84,12 +84,51 @@ fn plot_with_mipmapping<'p>(
             None => filter::filter_plot_points(plot_points_minmax, x_bounds),
         };
 
-        let line = Line::new(plot_vals.label(), plot_points_minmax)
-            .color(plot_vals.get_color())
-            .highlight(plot_vals.get_highlight());
-
-        plot_ui.line(line.width(line_width));
+        plot_line(plot_ui, plot_vals, plot_points_minmax, line_width);
     }
+}
+
+fn plot_raw<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot_vals: &'p PlotValues,
+    line_width: f32,
+    x_bounds: RangeInclusive<f64>,
+) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
+    let plot_points = plot_vals.raw_plot_points();
+    let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
+    plot_line(plot_ui, plot_vals, filtered_points, line_width);
+}
+
+// Final stop for constructing a line series and handing it over to `egui_plot`
+fn plot_line<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    plot_vals: &'p PlotValues,
+    series: impl Into<PlotPoints<'p>>,
+    width: f32,
+) {
+    let line = Line::new(plot_vals.label(), series)
+        .width(width)
+        .color(plot_vals.get_color())
+        .highlight(plot_vals.get_highlight());
+    plot_ui.line(line);
+}
+
+pub fn plot_raw_mqtt_line<'p>(
+    plot_ui: &mut egui_plot::PlotUi<'p>,
+    label: &str,
+    plot_points: &'p [PlotPoint],
+    line_width: f32,
+    x_bounds: RangeInclusive<f64>,
+) {
+    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    puffin::profile_function!();
+
+    let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
+
+    let line = Line::new(label, filtered_points).width(line_width);
+    plot_ui.line(line);
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
@@ -110,38 +149,4 @@ pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_fil
             plot_ui.text(txt);
         }
     }
-}
-
-fn plot_raw<'p>(
-    plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot_vals: &'p PlotValues,
-    line_width: f32,
-    x_bounds: RangeInclusive<f64>,
-) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
-    let plot_points = plot_vals.raw_plot_points();
-    let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
-
-    let line = Line::new(plot_vals.label(), filtered_points)
-        .width(line_width)
-        .color(plot_vals.get_color())
-        .highlight(plot_vals.get_highlight());
-    plot_ui.line(line);
-}
-
-pub fn plot_raw_mqtt<'p>(
-    plot_ui: &mut egui_plot::PlotUi<'p>,
-    label: &str,
-    plot_points: &'p [PlotPoint],
-    line_width: f32,
-    x_bounds: RangeInclusive<f64>,
-) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
-
-    let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
-
-    let line = Line::new(label, filtered_points).width(line_width);
-    plot_ui.line(line);
 }

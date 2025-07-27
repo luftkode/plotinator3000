@@ -63,7 +63,7 @@ pub fn fill_mqtt_plots(
                 // height and width of the bounds is greater than 0.0
                 continue;
             }
-            plotinator_plot_util::plot_raw_mqtt(
+            plotinator_plot_util::plot_raw_mqtt_line(
                 plot_ui,
                 &mp.topic,
                 &mp.data,
