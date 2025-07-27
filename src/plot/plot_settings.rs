@@ -8,11 +8,17 @@ use plotinator_plot_util::{MipMapConfiguration, PlotValues, Plots};
 use plotinator_ui_util::theme_color;
 use serde::{Deserialize, Serialize};
 
+use crate::plot::{
+    axis_config::{AxisConfig, show_axis_settings},
+    plot_settings::series_plot_settings::SeriesPlotSettings,
+};
+
 pub mod date_settings;
 mod loaded_logs;
 pub mod mipmap_settings;
 mod plot_filter;
 mod plot_visibility_config;
+pub mod series_plot_settings;
 
 #[derive(PartialEq, Deserialize, Serialize)]
 struct PlotSettingsUi {
@@ -58,23 +64,28 @@ pub struct PlotSettings {
     ps_ui: PlotSettingsUi,
     loaded_log_settings: Vec<LoadedLogSettings>,
     mipmap_settings: MipMapSettings,
+    series_plot_settings: SeriesPlotSettings,
     apply_deletions: bool,
 }
 
 impl PlotSettings {
-    pub fn show(&mut self, ui: &mut egui::Ui) {
+    pub fn show(&mut self, ui: &mut egui::Ui, axis_cfg: &mut AxisConfig) {
         if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(theme_color(
                 ui,
                 Color32::RED,
                 Color32::DARK_RED,
             )));
+            show_axis_settings(ui, axis_cfg);
+            self.series_plot_settings.show(ui);
         } else {
             self.show_loaded_files(ui);
             self.ui_plot_filter_settings(ui);
             self.mipmap_settings.show(ui);
+            show_axis_settings(ui, axis_cfg);
+            self.series_plot_settings.show(ui);
+            self.visibility.toggle_visibility_ui(ui);
         }
-        self.visibility.toggle_visibility_ui(ui);
     }
 
     fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui) {
@@ -317,6 +328,23 @@ impl PlotSettings {
         set_plot_highlight(plots.percentage_mut());
         set_plot_highlight(plots.one_to_hundred_mut());
         set_plot_highlight(plots.thousands_mut());
+
+        // If hovering on any of the buttons where a plot area's visibility can be toggled, highlight all plots in that area.
+        let set_all_plots_highlighted = |plot_data: &mut plotinator_plot_util::PlotData| {
+            for pd in plot_data.plots_as_mut() {
+                *pd.get_highlight_mut() = true;
+            }
+            for pl in plot_data.plot_labels_as_mut() {
+                *pl.get_highlight_mut() = true;
+            }
+        };
+        if self.visibility.hovered_display_percentage() {
+            set_all_plots_highlighted(plots.percentage_mut());
+        } else if self.visibility.hovered_display_to_hundreds() {
+            set_all_plots_highlighted(plots.one_to_hundred_mut());
+        } else if self.visibility.hovered_display_thousands() {
+            set_all_plots_highlighted(plots.thousands_mut());
+        }
     }
 
     // Remove log settings and plots that match their ID if they are marked for deletion
@@ -369,5 +397,18 @@ impl PlotSettings {
     /// Returns the current `MipMap` settings as a [`MipMapConfiguration`]
     pub fn mipmap_cfg(&self) -> MipMapConfiguration {
         self.mipmap_settings.configuration()
+    }
+
+    /// Returns the current [`LinePlotSettings`]
+    pub fn line_plot_settings(&self) -> SeriesPlotSettings {
+        self.series_plot_settings
+    }
+
+    pub(crate) fn highlight(&self, ptype: super::PlotType) -> bool {
+        match ptype {
+            super::PlotType::Percentage => self.visibility.hovered_display_percentage(),
+            super::PlotType::Hundreds => self.visibility.hovered_display_to_hundreds(),
+            super::PlotType::Thousands => self.visibility.hovered_display_thousands(),
+        }
     }
 }

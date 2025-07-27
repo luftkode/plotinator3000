@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Select between 3 modes for drawing a point series: Line plot, scatter plot, and line plot with point emphasis
+- When hovering over plot area visibility buttons, the area the button couples to is highlighted.
+
 ### Dependencies
 
 - `rfd`: 0.15.3 → 0.15.4 ([#283](https://github.com/luftkode/plotinator3000/pull/283))

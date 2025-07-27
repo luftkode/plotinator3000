@@ -1,4 +1,5 @@
 use chrono::DateTime;
+use egui::Color32;
 use egui_plot::PlotPoint;
 use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
 
@@ -11,22 +12,24 @@ use super::listener::{MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayloa
 /// This is the basis for all line plots from MQTT data
 #[derive(Default, Clone)]
 pub struct MqttPlotData {
-    pub(crate) mqtt_plot_data: Vec<MqttPlotPoints>,
+    pub(crate) mqtt_plot_data: Vec<(MqttPlotPoints, Color32)>,
+    next_auto_color_idx: usize,
 }
 
 impl MqttPlotData {
     pub(crate) fn insert_inner_data(&mut self, data: MqttTopicData) {
-        if let Some(mp) = self
+        if let Some((mp, _)) = self
             .mqtt_plot_data
             .iter_mut()
-            .find(|mp| mp.topic == data.topic())
+            .find(|(mp, _)| mp.topic == data.topic())
         {
             match data.payload {
                 TopicPayload::Point(plot_point) => mp.data.push(plot_point),
                 TopicPayload::Points(mut plot_points) => mp.data.append(&mut plot_points),
             }
         } else {
-            self.mqtt_plot_data.push(data.into());
+            let color = plotinator_ui_util::auto_color(&mut self.next_auto_color_idx);
+            self.mqtt_plot_data.push((data.into(), color));
         }
     }
 
@@ -41,7 +44,7 @@ impl MqttPlotData {
         }
     }
 
-    pub fn plots(&self) -> &[MqttPlotPoints] {
+    pub fn plots(&self) -> &[(MqttPlotPoints, Color32)] {
         &self.mqtt_plot_data
     }
 }
@@ -72,7 +75,7 @@ impl From<MqttTopicData> for MqttPlotPoints {
 impl From<MqttPlotData> for SerializableMqttPlotData {
     fn from(original: MqttPlotData) -> Self {
         let mut first_timestamp = None;
-        for p in &original.mqtt_plot_data {
+        for (p, _) in &original.mqtt_plot_data {
             if p.data.len() < 2 {
                 continue; // we can't plot data with less than two points
             }
@@ -94,7 +97,7 @@ impl From<MqttPlotData> for SerializableMqttPlotData {
         let raw_plots: Vec<RawPlot> = original
             .mqtt_plot_data
             .into_iter()
-            .filter_map(|m| m.try_into().ok())
+            .filter_map(|(m, _)| m.try_into().ok())
             .collect();
 
         for rp in &raw_plots {

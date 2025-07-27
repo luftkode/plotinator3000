@@ -1,4 +1,6 @@
+use egui::Key;
 use egui_phosphor::regular;
+use egui_phosphor::regular::GEAR;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct AxisConfig {
@@ -18,6 +20,25 @@ impl Default for AxisConfig {
             show_grid: false,
             ui_visible: false,
         }
+    }
+}
+
+pub(crate) fn show_axis_settings(ui: &mut egui::Ui, axis_cfg: &mut AxisConfig) {
+    let axis_cfg_str = format!("{GEAR} Axis");
+    if ui.button(axis_cfg_str.clone()).clicked() {
+        axis_cfg.ui_visible = !axis_cfg.ui_visible;
+    }
+    if axis_cfg.ui_visible {
+        let mut open: bool = axis_cfg.ui_visible;
+        egui::Window::new(axis_cfg_str)
+            .open(&mut open)
+            .show(ui.ctx(), |ui| {
+                axis_cfg.toggle_axis_cfg_ui(ui);
+            });
+        axis_cfg.ui_visible = open;
+    }
+    if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
+        axis_cfg.ui_visible = false;
     }
 }
 

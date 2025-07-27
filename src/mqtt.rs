@@ -1,3 +1,4 @@
+use egui::Color32;
 use plotinator_mqtt::{
     MqttConfigWindow, MqttDataReceiver, MqttPlotPoints, data::plot::MqttPlotData,
 };
@@ -42,7 +43,7 @@ impl Mqtt {
             .is_some_and(|win| win.is_open)
     }
 
-    pub fn plots(mqtt_plot_data: Option<&MqttPlotData>) -> &[MqttPlotPoints] {
+    pub fn plots(mqtt_plot_data: Option<&MqttPlotData>) -> &[(MqttPlotPoints, Color32)] {
         mqtt_plot_data
             .as_ref()
             .map(|mdc| mdc.plots())
@@ -59,7 +60,7 @@ impl Mqtt {
     fn waiting_for_initial_data(&self) -> bool {
         if self.mqtt_data_receiver.is_some() {
             if let Some(mqtt_plot_data) = &self.mqtt_plot_data {
-                for p in mqtt_plot_data.plots() {
+                for (p, _) in mqtt_plot_data.plots() {
                     if p.data.len() > 1 {
                         // A topic has more than 1 plot point so we are no longer waiting
                         return false;
