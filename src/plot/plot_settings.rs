@@ -8,7 +8,10 @@ use plotinator_plot_util::{MipMapConfiguration, PlotValues, Plots};
 use plotinator_ui_util::theme_color;
 use serde::{Deserialize, Serialize};
 
-use crate::plot::plot_settings::series_plot_settings::SeriesPlotSettings;
+use crate::plot::{
+    axis_config::{AxisConfig, show_axis_settings},
+    plot_settings::series_plot_settings::SeriesPlotSettings,
+};
 
 pub mod date_settings;
 mod loaded_logs;
@@ -66,20 +69,23 @@ pub struct PlotSettings {
 }
 
 impl PlotSettings {
-    pub fn show(&mut self, ui: &mut egui::Ui) {
+    pub fn show(&mut self, ui: &mut egui::Ui, axis_cfg: &mut AxisConfig) {
         if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(theme_color(
                 ui,
                 Color32::RED,
                 Color32::DARK_RED,
             )));
+            show_axis_settings(ui, axis_cfg);
+            self.series_plot_settings.show(ui);
         } else {
             self.show_loaded_files(ui);
             self.ui_plot_filter_settings(ui);
             self.mipmap_settings.show(ui);
+            show_axis_settings(ui, axis_cfg);
+            self.series_plot_settings.show(ui);
+            self.visibility.toggle_visibility_ui(ui);
         }
-        self.series_plot_settings.show(ui);
-        self.visibility.toggle_visibility_ui(ui);
     }
 
     fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui) {

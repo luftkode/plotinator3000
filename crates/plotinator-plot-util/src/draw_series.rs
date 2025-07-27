@@ -98,7 +98,6 @@ impl SeriesDrawMode {
             return false;
         }
 
-        // For emphasis mode, check if points are spaced widely enough to draw markers.
         let dx = self.rhombus_radius() * dvalue_dpos[0];
 
         // A single point can always be emphasized.

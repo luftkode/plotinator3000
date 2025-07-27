@@ -98,12 +98,13 @@ fn plot_with_mipmapping<'p>(
             None => filter::filter_plot_points(plot_points_minmax, x_bounds),
         };
 
-        plot_line(
+        series_draw_mode.draw_series(
             plot_ui,
-            plot_vals,
             plot_points_minmax,
             line_width,
-            series_draw_mode,
+            plot_vals.label(),
+            plot_vals.get_color(),
+            plot_vals.get_highlight(),
         );
     }
 }
@@ -119,26 +120,10 @@ fn plot_raw<'p>(
     puffin::profile_function!();
     let plot_points = plot_vals.raw_plot_points();
     let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
-    plot_line(
-        plot_ui,
-        plot_vals,
-        filtered_points,
-        line_width,
-        series_draw_mode,
-    );
-}
-
-fn plot_line<'p>(
-    plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot_vals: &'p PlotValues,
-    series: impl Into<PlotPoints<'p>>,
-    width: f32,
-    series_draw_mode: SeriesDrawMode,
-) {
     series_draw_mode.draw_series(
         plot_ui,
-        series.into(),
-        width,
+        filtered_points,
+        line_width,
         plot_vals.label(),
         plot_vals.get_color(),
         plot_vals.get_highlight(),
