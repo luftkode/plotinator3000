@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.20.0]
+
+### Added
+
+- Allow configuring the radius of scatter plot point indicators via the `width` setting.
+
+### Changed
+
+- Tweaks to improve the configurability of the new draw modes.
+
 ## [1.19.0]
 
 ### Added
