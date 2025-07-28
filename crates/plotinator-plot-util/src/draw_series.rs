@@ -3,15 +3,20 @@ use egui_plot::{Line, PlotPoint, PlotPoints, Polygon};
 use serde::{Deserialize, Serialize};
 
 /// Defines how a plot series should be rendered.
-#[derive(Deserialize, Serialize, Default, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Debug)]
 pub enum SeriesDrawMode {
     /// Draw a line connecting points, with rhombuses on each point if they are not too dense.
-    #[default]
-    LineWithEmphasis,
+    LineWithEmphasis { width: f32 },
     /// Draw only the connecting line.
-    Line,
+    Line { width: f32 },
     /// Draw only rhombuses on each point.
-    Scatter,
+    Scatter { width: f32 },
+}
+
+impl Default for SeriesDrawMode {
+    fn default() -> Self {
+        Self::LineWithEmphasis { width: 1.5 }
+    }
 }
 
 impl SeriesDrawMode {
@@ -20,7 +25,6 @@ impl SeriesDrawMode {
         &self,
         plot_ui: &mut egui_plot::PlotUi<'p>,
         points: PlotPoints<'p>,
-        width: f32,
         label: &str,
         color: Color32,
         highlight: bool,
@@ -43,23 +47,16 @@ impl SeriesDrawMode {
                 let left = [point.x - dx, point.y];
                 let rhombus_vertices = vec![top, right, bottom, left];
 
-                // Use the adjustable width from the UI if we're displaying a scatter plot
-                let stroke_width = if draw_rhombus {
-                    width
-                } else {
-                    (width - 0.5).max(1.0)
-                };
-
                 let rhombus = Polygon::new(label, rhombus_vertices)
                     .allow_hover(false) // Make it non-interactive (otherwise cursor might snap to a polygon point, which misleads them to believe it's an actual data point)
-                    .stroke(egui::Stroke::new(stroke_width, color));
+                    .stroke(egui::Stroke::new(self.polygon_stroke_width(), color));
 
                 plot_ui.polygon(rhombus);
             }
         }
 
         let line = Line::new(label, points)
-            .width(width)
+            .width(self.line_width())
             .color(color)
             .highlight(highlight);
 
@@ -74,19 +71,37 @@ impl SeriesDrawMode {
 
     const fn draw_line(&self) -> bool {
         match self {
-            Self::LineWithEmphasis | Self::Line => true,
-            Self::Scatter => false,
+            Self::LineWithEmphasis { .. } | Self::Line { .. } => true,
+            Self::Scatter { .. } => false,
         }
     }
 
     fn draw_rhombus(&self) -> bool {
-        *self == Self::Scatter
+        matches!(self, Self::Scatter { .. })
     }
 
-    const fn rhombus_radius(&self) -> f64 {
+    fn polygon_stroke_width(&self) -> f32 {
         match self {
-            Self::LineWithEmphasis | Self::Line => 2.0,
-            Self::Scatter => 4.0,
+            // If the line gets quite thick, we want the polygons to scale as well so we can still see point emphasis
+            Self::LineWithEmphasis { width } => (width - 0.5).max(1.0),
+            Self::Line { .. } => 0.0,
+            Self::Scatter { .. } => 1.5, // We scale the rhombus radius instead of the thickness
+        }
+    }
+
+    fn line_width(&self) -> f32 {
+        match self {
+            Self::LineWithEmphasis { width } | Self::Line { width } => *width,
+            // A line width of zero hides the line plot, but allows the scatter plot to work in the same way as the line plot in terms of
+            // auto bounds, and lets users see the values of individual data points by hovering near the polygons
+            Self::Scatter { .. } => 0.0,
+        }
+    }
+
+    fn rhombus_radius(&self) -> f64 {
+        match self {
+            Self::LineWithEmphasis { .. } | Self::Line { .. } => 1.5,
+            Self::Scatter { width } => (*width).into(),
         }
     }
 
@@ -94,7 +109,7 @@ impl SeriesDrawMode {
     ///
     /// Only applies in emphasis mode
     fn emphasize_points(&self, points: &[PlotPoint], dvalue_dpos: [f64; 2]) -> bool {
-        if !(*self == Self::LineWithEmphasis) {
+        if !matches!(self, Self::LineWithEmphasis { .. }) {
             return false;
         }
 
