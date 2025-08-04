@@ -14,7 +14,7 @@ pub(crate) mod pilot_display;
 /// which allows recognizing and parsing them appropriately
 #[derive(EnumString, Display)]
 pub(crate) enum KnownTopic {
-    #[strum(serialize = "dt/blackbird/sky-ubx/x/coordinate")]
+    #[strum(serialize = "dt/blackbird/sky-ubx/x/coordinates")]
     PilotDisplayCoordinates,
     #[strum(serialize = "dt/blackbird/pd-backend/remaining-distance")]
     PilotDisplayRemainingDistance,
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_parse_pilot_display_coordinate_packet() -> TestResult {
-        let known_topic = KnownTopic::from_str("dt/blackbird/pigeon/x/coordinates")?;
+        let known_topic = KnownTopic::from_str("dt/blackbird/sky-ubx/x/coordinates")?;
         let payload = json!({
             "lon": 10.1473,"lat": 56.2179
         })
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_parse_pilot_display_remaining_distance_packet() -> TestResult {
-        let known_topic = KnownTopic::from_str("dt/skynav/heli/backend/remaining-distance")?;
+        let known_topic = KnownTopic::from_str("dt/blackbird/pd-backend/remaining-distance")?;
         let payload = json!({
             "distance": 1560.514601457434
         })
