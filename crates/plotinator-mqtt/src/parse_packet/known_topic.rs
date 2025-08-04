@@ -14,6 +14,15 @@ pub(crate) mod pilot_display;
 /// which allows recognizing and parsing them appropriately
 #[derive(EnumString, Display)]
 pub(crate) enum KnownTopic {
+    #[strum(serialize = "dt/blackbird/sky-ubx/x/coordinates")]
+    PilotDisplayCoordinates,
+    #[strum(serialize = "dt/blackbird/pd-backend/remaining-distance")]
+    PilotDisplayRemainingDistance,
+    #[strum(serialize = "$SYS/broker/uptime")]
+    SYSBrokerUptime,
+    // We cannot meaningfully plot this, but we use it to show the version when choosing a broker to connect to
+    #[strum(serialize = "$SYS/broker/version")]
+    SYSBrokerVersion,
     #[strum(serialize = "debug/sensors/temperature")]
     DebugSensorsTemperature,
     #[strum(serialize = "debug/sensors/humidity")]
@@ -24,15 +33,6 @@ pub(crate) enum KnownTopic {
     DebugSensorsMag,
     #[strum(serialize = "debug/sensors/gps")]
     DebugSensorsGps,
-    #[strum(serialize = "dt/blackbird/pigeon/x/coordinates")]
-    PilotDisplayCoordinates,
-    #[strum(serialize = "dt/skynav/heli/backend/remaining-distance")]
-    PilotDisplayRemainingDistance,
-    #[strum(serialize = "$SYS/broker/uptime")]
-    SYSBrokerUptime,
-    // We cannot meaningfully plot this, but we use it to show the version when choosing a broker to connect to
-    #[strum(serialize = "$SYS/broker/version")]
-    SYSBrokerVersion,
 }
 
 /// Debug packet with a single value
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_parse_pilot_display_coordinate_packet() -> TestResult {
-        let known_topic = KnownTopic::from_str("dt/blackbird/pigeon/x/coordinates")?;
+        let known_topic = KnownTopic::from_str("dt/blackbird/sky-ubx/x/coordinates")?;
         let payload = json!({
             "lon": 10.1473,"lat": 56.2179
         })
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_parse_pilot_display_remaining_distance_packet() -> TestResult {
-        let known_topic = KnownTopic::from_str("dt/skynav/heli/backend/remaining-distance")?;
+        let known_topic = KnownTopic::from_str("dt/blackbird/pd-backend/remaining-distance")?;
         let payload = json!({
             "distance": 1560.514601457434
         })

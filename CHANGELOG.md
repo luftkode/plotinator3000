@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-### Dependencies
+## [1.20.1]
 
-- `cargo-bins/cargo-binstall`: 1.14.1 → 1.14.3 ([#288](https://github.com/luftkode/plotinator3000/pull/288))
+### Changed
+
+- Update known MQTT topics
 
 ## [1.20.0]
 

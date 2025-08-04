@@ -16,7 +16,7 @@ pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttData> {
             }
         }
     } else {
-        log::warn!("Unknown topic: {topic}, attempting to parse as f64");
+        log::debug!("Unknown topic: {topic}, attempting to parse as f64");
         parse_unknown_topic(topic, payload)
     }
 }
