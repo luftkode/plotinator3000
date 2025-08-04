@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `tokio`: 1.47.0 → 1.47.1 ([#290](https://github.com/luftkode/plotinator3000/pull/290))
+- `serde_json`: 1.0.141 → 1.0.142 ([#290](https://github.com/luftkode/plotinator3000/pull/290))
+- `toml`: 0.9.2 → 0.9.4 ([#290](https://github.com/luftkode/plotinator3000/pull/290))
+
 ## [1.20.1]
 
 ### Changed
