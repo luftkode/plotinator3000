@@ -27,7 +27,6 @@ pub enum MipMapConfiguration {
 pub fn plot_lines<'pv>(
     plot_ui: &mut egui_plot::PlotUi<'pv>,
     plots: impl Iterator<Item = &'pv PlotValues>,
-    line_width: f32,
     mipmap_cfg: MipMapConfiguration,
     series_draw_mode: SeriesDrawMode,
     plots_width_pixels: usize,
@@ -38,13 +37,7 @@ pub fn plot_lines<'pv>(
     for plot_vals in plots {
         match mipmap_cfg {
             MipMapConfiguration::Disabled => {
-                plot_raw(
-                    plot_ui,
-                    plot_vals,
-                    line_width,
-                    series_draw_mode,
-                    x_plot_bounds.clone(),
-                );
+                plot_raw(plot_ui, plot_vals, series_draw_mode, x_plot_bounds.clone());
             }
             MipMapConfiguration::Auto => {
                 let (level, idx_range) =
@@ -53,7 +46,6 @@ pub fn plot_lines<'pv>(
                 plot_with_mipmapping(
                     plot_ui,
                     plot_vals,
-                    line_width,
                     series_draw_mode,
                     level,
                     x_plot_bounds.clone(),
@@ -64,7 +56,6 @@ pub fn plot_lines<'pv>(
                 plot_with_mipmapping(
                     plot_ui,
                     plot_vals,
-                    line_width,
                     series_draw_mode,
                     level,
                     x_plot_bounds.clone(),
@@ -78,7 +69,7 @@ pub fn plot_lines<'pv>(
 fn plot_with_mipmapping<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     plot_vals: &'p PlotValues,
-    line_width: f32,
+
     series_draw_mode: SeriesDrawMode,
     mipmap_lvl: usize,
     x_bounds: RangeInclusive<f64>,
@@ -91,7 +82,7 @@ fn plot_with_mipmapping<'p>(
     let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
     if plot_points_minmax.is_empty() {
         // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
-        plot_raw(plot_ui, plot_vals, line_width, series_draw_mode, x_bounds);
+        plot_raw(plot_ui, plot_vals, series_draw_mode, x_bounds);
     } else {
         let plot_points_minmax = match known_idx_range {
             Some((start, end)) => PlotPoints::Borrowed(&plot_points_minmax[start..end]),
@@ -101,7 +92,6 @@ fn plot_with_mipmapping<'p>(
         series_draw_mode.draw_series(
             plot_ui,
             plot_points_minmax,
-            line_width,
             plot_vals.label(),
             plot_vals.get_color(),
             plot_vals.get_highlight(),
@@ -112,7 +102,7 @@ fn plot_with_mipmapping<'p>(
 fn plot_raw<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
     plot_vals: &'p PlotValues,
-    line_width: f32,
+
     series_draw_mode: SeriesDrawMode,
     x_bounds: RangeInclusive<f64>,
 ) {
@@ -123,7 +113,6 @@ fn plot_raw<'p>(
     series_draw_mode.draw_series(
         plot_ui,
         filtered_points,
-        line_width,
         plot_vals.label(),
         plot_vals.get_color(),
         plot_vals.get_highlight(),
@@ -135,7 +124,6 @@ pub fn plot_raw_mqtt_line<'p>(
     label: &str,
     plot_points: &'p [PlotPoint],
     color: Color32,
-    line_width: f32,
     series_draw_mode: SeriesDrawMode,
     x_bounds: RangeInclusive<f64>,
 ) {
@@ -143,7 +131,7 @@ pub fn plot_raw_mqtt_line<'p>(
     puffin::profile_function!();
 
     let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
-    series_draw_mode.draw_series(plot_ui, filtered_points, line_width, label, color, false);
+    series_draw_mode.draw_series(plot_ui, filtered_points, label, color, false);
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {

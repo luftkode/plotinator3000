@@ -12,7 +12,6 @@ pub fn fill_mqtt_plots(
     gui: &mut egui::Ui,
     reset_plot_bounds: bool,
     series_draw_mode: SeriesDrawMode,
-    line_width: f32,
     click_delta: &mut ClickDelta,
     mqtt_plot_area: Plot<'_>,
     mqtt_plots: &[(plotinator_mqtt::MqttPlotPoints, Color32)],
@@ -64,7 +63,6 @@ pub fn fill_mqtt_plots(
                 &mp.topic,
                 &mp.data,
                 *color,
-                line_width,
                 series_draw_mode,
                 x_bounds.clone(),
             );

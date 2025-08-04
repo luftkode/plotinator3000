@@ -14,6 +14,15 @@ pub(crate) mod pilot_display;
 /// which allows recognizing and parsing them appropriately
 #[derive(EnumString, Display)]
 pub(crate) enum KnownTopic {
+    #[strum(serialize = "dt/blackbird/sky-ubx/x/coordinate")]
+    PilotDisplayCoordinates,
+    #[strum(serialize = "dt/blackbird/pd-backend/remaining-distance")]
+    PilotDisplayRemainingDistance,
+    #[strum(serialize = "$SYS/broker/uptime")]
+    SYSBrokerUptime,
+    // We cannot meaningfully plot this, but we use it to show the version when choosing a broker to connect to
+    #[strum(serialize = "$SYS/broker/version")]
+    SYSBrokerVersion,
     #[strum(serialize = "debug/sensors/temperature")]
     DebugSensorsTemperature,
     #[strum(serialize = "debug/sensors/humidity")]
@@ -24,15 +33,6 @@ pub(crate) enum KnownTopic {
     DebugSensorsMag,
     #[strum(serialize = "debug/sensors/gps")]
     DebugSensorsGps,
-    #[strum(serialize = "dt/blackbird/pigeon/x/coordinates")]
-    PilotDisplayCoordinates,
-    #[strum(serialize = "dt/skynav/heli/backend/remaining-distance")]
-    PilotDisplayRemainingDistance,
-    #[strum(serialize = "$SYS/broker/uptime")]
-    SYSBrokerUptime,
-    // We cannot meaningfully plot this, but we use it to show the version when choosing a broker to connect to
-    #[strum(serialize = "$SYS/broker/version")]
-    SYSBrokerVersion,
 }
 
 /// Debug packet with a single value

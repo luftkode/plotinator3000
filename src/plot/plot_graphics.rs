@@ -113,7 +113,6 @@ pub fn paint_plots(
                 ui,
                 reset_plot_bounds,
                 plot_settings.line_plot_settings().draw_mode(),
-                plot_settings.line_plot_settings().line_width(),
                 click_delta,
                 mqtt_plot,
                 mqtt_plots,
@@ -212,7 +211,6 @@ fn fill_plot<'p>(
     plotinator_plot_util::plot_lines(
         plot_ui,
         plot_settings.apply_filters(plot_data.plots()),
-        line_plot_settings.line_width(),
         plot_settings.mipmap_cfg(),
         line_plot_settings.draw_mode(),
         plot_ui.ctx().used_size().x as usize,
