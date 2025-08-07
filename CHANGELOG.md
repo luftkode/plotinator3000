@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.20.2]
+
+### Changed
+
+- Move back to original `cargo-dist` project instead of the `uv` fork now that the original is maintained again
+
 ### Dependencies
 
 - `tokio`: 1.47.0 → 1.47.1 ([#290](https://github.com/luftkode/plotinator3000/pull/290))
