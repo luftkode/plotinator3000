@@ -68,9 +68,6 @@ All the boilerplate and workflows etc. is pulled from [this eframe template](htt
 
 [cargo-dist](https://github.com/axodotdev/cargo-dist) handles the complexities of setting up build/releases for various platforms.
 
-> [!IMPORTANT]
-> [uv](https://github.com/astral-sh/uv) also uses `cargo-dist` and since the original project ran out of funding, the [uv fork](https://github.com/astral-sh/cargo-dist) is used instead
-
 Generating the first instance of CI for the release workflow is done via
 
 ```shell
@@ -78,7 +75,7 @@ dist init
 ```
 ... And then following the instructions/prompts.
 
-A (very complicated) [release.yml](.github/workflows/release.yml) is generated and metadata is added to [dist-workspace.toml](dist-workspace.toml), if distributing for windows, a [main.wxs](wix/main.wxs) is also generated. To update these with changes to the project, simply rerun `dist init`, don't edit the workflow manually, there's section on CI customizations in their docs, but as of this writing the site is down, Astral (uv authors) will probably host the docs again at some point.
+A (very complicated) [release.yml](.github/workflows/release.yml) is generated and metadata is added to [dist-workspace.toml](dist-workspace.toml), if distributing for windows, a [main.wxs](wix/main.wxs) is also generated. To update these with changes to the project, simply rerun `dist init`, don't edit the workflow manually, there's section on CI customizations in [their docs](https://axodotdev.github.io/cargo-dist/).
 
 When developing/trouble shooting the release pipeline adding `pr-run-mode = "upload"` like this
 
