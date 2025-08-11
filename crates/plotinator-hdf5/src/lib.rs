@@ -5,6 +5,7 @@ plotinator_macros::non_wasm_modules!(
     pub mod wasp200;
     pub mod frame_altimeters;
     pub mod frame_inclinometers;
+    pub mod frame_magnetometer;
     pub mod njord_ins;
 );
 
