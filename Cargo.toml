@@ -60,7 +60,7 @@ chrono = { version = "0.4.40", features = ["serde"] }
 getset = "0.1.6"
 derive_more = { version = "2", features = ["full"] }
 num-traits = "0.2.19"
-toml = "0.9.4"
+toml = "0.9.5"
 thiserror = "2.0"
 semver = "1.0.26"
 elevated-command = "1.1"
