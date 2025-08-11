@@ -54,11 +54,11 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     env:
-      RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
+      RUST_LOG: "" # Otherwise audit-check errors on attempting to parse the logging output
     steps:
       - uses: actions/checkout@v4
       - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.14.3
+        uses: cargo-bins/cargo-binstall@v1.14.4
       - name: Install Cargo audit
         run: cargo binstall cargo-audit
       - name: Run Audit
