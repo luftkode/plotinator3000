@@ -4,6 +4,7 @@ plotinator_macros::non_wasm_modules!(
     pub mod bifrost;
     pub mod wasp200;
     pub mod frame_altimeters;
+    pub mod frame_inclinometers;
     pub mod njord_ins;
 );
 

@@ -119,6 +119,24 @@ fn list_supported_hdf5_formats(ui: &mut egui::Ui) {
                 link: "https://github.com/luftkode/njord-altimeter",
                 subitems: None,
             },
+            LogFormat {
+                title: "Njord INS",
+                description: "Angle, position, speed, etc.",
+                link: "https://github.com/luftkode/njord-ins",
+                subitems: None,
+            },
+            LogFormat {
+                title: "Frame Altimeters",
+                description: "Height measurements",
+                link: "https://github.com/luftkode/frame-altimeter",
+                subitems: None,
+            },
+            LogFormat {
+                title: "Frame Inclinometers",
+                description: "Frame Pitch and Roll in degrees",
+                link: "https://github.com/luftkode/frame-inclinometer",
+                subitems: None,
+            },
         ];
         draw_log_formats(ui, &log_formats);
     }
