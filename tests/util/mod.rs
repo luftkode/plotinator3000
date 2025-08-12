@@ -41,12 +41,28 @@ impl HarnessWrapper {
         }
     }
 
+    /// Run until
+    /// - all animations are done
+    /// - no more repaints are requested
+    ///
+    /// Returns the number of frames that were run.
     pub fn run(&mut self) -> u64 {
         self.harness.run()
     }
 
+    /// Run a frame for each queued event (or a single frame if there are no events).
+    /// This will call the app closure with each queued event and
+    /// update the Harness.
     pub fn step(&mut self) {
         self.harness.step();
+    }
+
+    /// Run a number of steps.
+    /// Equivalent to calling `step` x times.
+    pub fn run_steps(&mut self, steps: usize) {
+        for _ in 0..steps {
+            self.step();
+        }
     }
 
     /// Save a named snapshot, ensure that contents are fitted before taking the snapshot
@@ -113,5 +129,19 @@ impl HarnessWrapper {
     pub fn get_mqtt_configuration_window(&self) -> Node<'_> {
         self.harness
             .get_by_role_and_label(Role::Window, "MQTT Configuration")
+    }
+
+    pub fn get_loaded_files_button(&self) -> Node<'_> {
+        // Query for a button that contain "Loaded files" in the label, as the label dynamically changes depending on how many loaded files there are
+        self.harness.get_by(|n| {
+            n.role() == Role::Button && n.label().is_some_and(|l| l.contains("Loaded files"))
+        })
+    }
+
+    pub fn get_loaded_files_window(&self) -> Node<'_> {
+        // Query for a window that contain "Loaded files" in the label, as the label dynamically changes depending on how many loaded files there are
+        self.harness.get_by(|n| {
+            n.role() == Role::Window && n.label().is_some_and(|l| l.contains("Loaded files"))
+        })
     }
 }
