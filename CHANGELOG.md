@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for `Frame Inclinometers` HDF5 files
 
+### Changed
+
+- The log metadata in the loaded files window is scrollable, to support cases where log files have a lot of metadata
+
 ### dependencies
 
 - run `cargo update`
