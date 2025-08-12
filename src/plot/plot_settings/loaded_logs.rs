@@ -68,6 +68,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
 }
 
 fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name_date: &str) {
+    // State of window bound to the 'X'-button that closes the window
     let mut open = true;
     egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
         .collapsible(false)
@@ -76,7 +77,7 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name
         .default_size([450.0, 400.0]) // Set a reasonable default size
         .anchor(egui::Align2::LEFT_TOP, egui::Vec2::ZERO)
         .show(ui.ctx(), |ui| {
-            // **1. Create a panel at the bottom for the date controls.**
+            // Create a panel at the bottom for the date controls.
             // This reserves space for the controls first.
             egui::TopBottomPanel::bottom("date_controls_panel")
                 .resizable(false)

@@ -71,3 +71,52 @@ fn test_snapshot_drop_load_hdf5_bifrost_current() {
     // a higher diff from GPU to GPU
     harness.save_snapshot_with_threshold(CiThreshold(2.0));
 }
+
+#[test]
+fn test_snapshot_open_loaded_files() {
+    let mut harness = HarnessWrapper::new("open_loaded_files");
+    harness.drop_file(mbed_status_v6_regular());
+    harness.drop_file(mbed_pid_v6_regular());
+    harness.run();
+    // Experience shows that another two steps are required before the loaded files button is rendered
+    harness.run_steps(2);
+
+    // Check that we can now click the loaded files button
+    let loaded_files_button = harness.get_loaded_files_button();
+    assert!(loaded_files_button.accesskit_node().is_clickable());
+
+    // Click and render the loaded files window
+    loaded_files_button.click();
+    harness.step();
+
+    harness.save_snapshot_with_threshold(CiThreshold(6.0));
+}
+
+#[test]
+fn test_snapshot_open_loaded_files_open_log_window() {
+    let mut harness = HarnessWrapper::new("open_loaded_files_click_mbed_PID");
+    harness.drop_file(mbed_status_v6_regular());
+    harness.drop_file(mbed_pid_v6_regular());
+    harness.run();
+    // Experience shows that another two steps are required before the loaded files button is rendered
+    harness.run_steps(2);
+    // Check that we can now click the loaded files button
+    let loaded_files_button = harness.get_loaded_files_button();
+    assert!(loaded_files_button.accesskit_node().is_clickable());
+
+    // Click and render the loaded files window
+    loaded_files_button.click();
+    harness.run_steps(2);
+
+    // Get the Mbed PID button from the loaded logs window and click it
+    let loaded_files_window = harness.get_loaded_files_window();
+    let loaded_mbed_pid_button = loaded_files_window
+        .get_by(|n| n.role() == Role::Button && n.label().is_some_and(|l| l.contains("Mbed PID")));
+
+    assert!(loaded_mbed_pid_button.accesskit_node().is_clickable());
+
+    loaded_mbed_pid_button.click();
+    harness.step();
+
+    harness.save_snapshot_with_threshold(CiThreshold(6.0));
+}
