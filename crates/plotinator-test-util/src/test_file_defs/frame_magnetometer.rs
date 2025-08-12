@@ -3,5 +3,5 @@ use std::path::PathBuf;
 
 define_binary_test_file!(
     frame_magnetometer,
-    "frame_magnetometer/20250808_105133_frame-magnetometers.h5"
+    "frame_magnetometer/20250812_110254_frame-magnetometer.h5"
 );

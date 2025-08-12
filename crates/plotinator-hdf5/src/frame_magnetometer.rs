@@ -32,9 +32,9 @@ pub struct GpsTimestamph5 {
     /// The mag system time at arrival of the PPS signal
     #[hdf5(rename = "sys-timestamp-at-pps")]
     pub sys_timestamps_at_pps: u64,
-    /// UTC timestamp in hhmmss (sometimes with ms fraction)
+    /// GPS time in nanoseconds since the unix epoch
     #[hdf5(rename = "gps-timestamp")]
-    pub gps_timestamp: f64,
+    pub gps_timestamp: u64,
 }
 
 impl SkytemHdf5 for FrameMagnetometer {
@@ -52,7 +52,7 @@ impl SkytemHdf5 for FrameMagnetometer {
         log_all_attributes(&magdata_ds);
         log_all_attributes(&gps_timestamps_ds);
         let magdata: ndarray::Array2<Magdatah5> = magdata_ds.read()?;
-        let gps_timestamps: ndarray::Array2<GpsTimestamph5> = magdata_ds.read()?;
+        let gps_timestamps: ndarray::Array2<GpsTimestamph5> = gps_timestamps_ds.read()?;
         debug_assert_eq!(
             magdata.nrows(),
             gps_timestamps.nrows(),
@@ -70,10 +70,16 @@ impl SkytemHdf5 for FrameMagnetometer {
         // used to calculate clock drift
         let mut base_mag_sys_ts_delta: Option<i64> = None;
 
-        for ((md, gps), ts) in magdata.iter().zip(gps_timestamps).zip(timestamps) {
+        for ((md, gps_row), ts) in magdata
+            .iter()
+            .zip(gps_timestamps.outer_iter())
+            .zip(timestamps)
+        {
             let tenth_of_pico_teslas: f64 = (md.mag_value as u32).into();
             let nano_t = tenth_of_pico_teslas / 10_000.;
             mag_vals.push([ts, nano_t]);
+
+            eprintln!("md={md:?}");
 
             let first_sys_ts: i64 = md.sys_timestamps as i64;
             let first_mag_ts: i64 = md.mag_timestamp as i64;
@@ -87,35 +93,41 @@ impl SkytemHdf5 for FrameMagnetometer {
                 mag_clk_drift.push([ts, 0.]);
             }
 
-            if gps.gps_timestamp != 0. {
-                eprintln!("gps_timestamp={}", gps.gps_timestamp);
-                gps_sys_delta.push([ts, ts - gps.gps_timestamp]);
+            // It's set to 0 if this entry doesn't actually contain a GPS timestamp
+            let gps = &gps_row[0];
+            if gps.gps_timestamp != 0 {
+                eprintln!("md.sys_timestamps={}", md.sys_timestamps);
+                eprintln!("gps.gps_timestamp={}", gps.gps_timestamp);
+                let delta: i64 = md.sys_timestamps as i64 - gps.gps_timestamp as i64;
+                eprintln!("delta={delta}");
+                gps_sys_delta.push([ts, delta as f64]);
             }
         }
 
-        let mag_rawplot = RawPlot::new(
-            "Mag [nT]".to_owned(),
-            mag_vals,
-            ExpectedPlotRange::Thousands,
-        );
-        let mag_clk_drift_rawplot = RawPlot::new(
-            "Mag Clk drift [ms]".to_owned(),
-            mag_clk_drift,
-            ExpectedPlotRange::Thousands,
-        );
-
-        let gps_sys_delta_rawplot = RawPlot::new(
-            "GPS Time Δ [ns]".to_owned(),
-            gps_sys_delta,
-            ExpectedPlotRange::Thousands,
-        );
+        let raw_plots = vec![
+            RawPlot::new(
+                "Mag [nT]".to_owned(),
+                mag_vals,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "Mag Clk drift [ms]".to_owned(),
+                mag_clk_drift,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "GPS Time Δ [ns]".to_owned(),
+                gps_sys_delta,
+                ExpectedPlotRange::Thousands,
+            ),
+        ];
 
         let metadata = Self::extract_metadata(&magdata_ds, &gps_timestamps_ds)?;
 
         Ok(Self {
             starting_timestamp_utc: first_timestamp,
             dataset_description: "Frame inclinometers".to_owned(),
-            raw_plots: vec![mag_rawplot, mag_clk_drift_rawplot, gps_sys_delta_rawplot],
+            raw_plots,
             metadata,
         })
     }
@@ -151,11 +163,10 @@ pub struct FrameMagnetometer {
     metadata: Vec<(String, String)>,
 }
 
-type SensorDatasets = (Dataset, Dataset, Dataset);
-
 const MAGDATA_DATASET: &str = "mag-data";
 const GPS_TIMESTAMP_DATASET: &str = "gps-timestamp";
 const EXPECT_DIMENSIONS: usize = 2;
+
 impl FrameMagnetometer {
     fn process_timestamps(
         timestamp_data: &ndarray::Array2<Magdatah5>,
@@ -203,7 +214,9 @@ mod tests {
         let frame_magnetometer = FrameMagnetometer::from_path(frame_magnetometer())?;
         assert_eq!(frame_magnetometer.metadata.len(), 22);
         assert_eq!(frame_magnetometer.raw_plots.len(), 3);
-        assert_eq!(frame_magnetometer.raw_plots[0].points().len(), 1200);
+        assert_eq!(frame_magnetometer.raw_plots[0].points().len(), 40213);
+        assert_eq!(frame_magnetometer.raw_plots[1].points().len(), 40213);
+        assert_eq!(frame_magnetometer.raw_plots[2].points().len(), 763);
 
         Ok(())
     }
