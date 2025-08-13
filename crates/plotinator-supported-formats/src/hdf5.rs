@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use plotinator_hdf5::frame_altimeters::FrameAltimeters;
 use plotinator_hdf5::frame_inclinometers::FrameInclinometers;
+use plotinator_hdf5::frame_magnetometer::FrameMagnetometer;
 use plotinator_hdf5::njord_ins::NjordIns;
 use plotinator_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
 use plotinator_log_if::prelude::*;
@@ -84,5 +85,6 @@ define_supported_hdf5_formats! {
     Wasp200Height => Wasp200,
     FrameAltimeters => FrameAltimeters,
     FrameInclinometers => FrameInclinometers,
+    FrameMagnetometer => FrameMagnetometer,
     NjordIns => NjordIns
 }
