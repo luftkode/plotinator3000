@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt, fs,
     io::{self, BufReader},
     path::Path,
@@ -26,10 +27,14 @@ impl MagSps {
             return false;
         };
         let mut reader = BufReader::new(file);
+        Self::is_reader_valid(&mut reader)
+    }
+
+    fn is_reader_valid(reader: &mut impl io::BufRead) -> bool {
         // If 3 lines can be read successfully then it's valid
-        MagSensor::from_reader(&mut reader).is_ok()
-            && MagSensor::from_reader(&mut reader).is_ok()
-            && MagSensor::from_reader(&mut reader).is_ok()
+        MagSensor::from_reader(reader).is_ok()
+            && MagSensor::from_reader(reader).is_ok()
+            && MagSensor::from_reader(reader).is_ok()
     }
 }
 
@@ -88,17 +93,28 @@ impl Parseable for MagSps {
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let (entries, bytes_read): (Vec<MagSensor>, usize) = parse_to_vec(reader);
 
-        let mut raw_points_altitude: Vec<[f64; 2]> = Vec::new();
+        // Group entries by sensor ID
+        let mut sensor_groups: HashMap<u8, Vec<[f64; 2]>> = HashMap::new();
 
-        for e in &entries {
-            raw_points_altitude.push([e.timestamp_ns(), e.field_nanotesla()]);
+        for entry in &entries {
+            let sensor_id = entry.id; // ID is a u8
+            let mag_points = sensor_groups.entry(sensor_id).or_insert_with(Vec::new);
+            mag_points.push([entry.timestamp_ns(), entry.field_nanotesla()]);
         }
 
-        let mut raw_plots = vec![RawPlot::new(
-            "B-field [nT]".into(),
-            raw_points_altitude,
-            ExpectedPlotRange::Thousands,
-        )];
+        // Create plots for each sensor
+        let mut raw_plots = Vec::new();
+        for (sensor_id, mag_points) in sensor_groups {
+            if !mag_points.is_empty() {
+                raw_plots.push(RawPlot::new(
+                    format!("Sensor {} B-field [nT]", sensor_id),
+                    mag_points,
+                    ExpectedPlotRange::Thousands,
+                ));
+            }
+        }
+
+        // Filter out empty plots and log warnings
         raw_plots.retain(|rp| {
             if rp.points().is_empty() {
                 log::warn!("{} has no data", rp.name());
@@ -113,7 +129,7 @@ impl Parseable for MagSps {
 
     fn is_buf_valid(buf: &[u8]) -> bool {
         let mut reader = BufReader::new(buf);
-        MagSensor::from_reader(&mut reader).is_ok()
+        Self::is_reader_valid(&mut reader)
     }
 }
 
@@ -155,6 +171,12 @@ mod tests {
     #[test]
     fn test_mag_sps_file_is_valid() {
         let is_valid = MagSps::file_is_valid(&frame_magnetometer_sps());
+        assert!(is_valid);
+    }
+
+    #[test]
+    fn test_mag_sps_buf_is_valid() {
+        let is_valid = MagSps::is_buf_valid(FRAME_MAGNETOMETER_SPS_BYTES);
         assert!(is_valid);
     }
 

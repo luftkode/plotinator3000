@@ -11,7 +11,7 @@ pub(crate) struct NavSysSpsHeader {
     version: u32,
     first_timestamp: DateTime<Utc>,
     software_rev: String,
-    tilt_sensor_id: String,
+    tilt_sensor_id: TiltSensorID,
     calibration_data_1: CalibrationData,
     calibration_data_2: CalibrationData,
 }
@@ -27,7 +27,7 @@ impl NavSysSpsHeader {
         &self.software_rev
     }
     pub(crate) fn tilt_sensor_id(&self) -> &str {
-        &self.tilt_sensor_id
+        &self.tilt_sensor_id.id
     }
 }
 
@@ -36,10 +36,32 @@ impl fmt::Display for NavSysSpsHeader {
         writeln!(f, "Version: {}", self.version)?;
         writeln!(f, "Timestamp: {}", self.first_timestamp)?;
         writeln!(f, "Software Revision: {}", self.software_rev)?;
-        writeln!(f, "Tilt sensor ID: {}", self.tilt_sensor_id)?;
+        writeln!(f, "{}", self.tilt_sensor_id)?;
         writeln!(f, "#1 Calibration Data: {}", self.calibration_data_1)?;
         writeln!(f, "#2 Calibration Data: {}", self.calibration_data_2)?;
         Ok(())
+    }
+}
+
+#[derive(Debug, Display, Clone, PartialEq, Deserialize, Serialize)]
+#[display("Tilt Sensor ID: {id}")]
+pub(crate) struct TiltSensorID {
+    id: String,
+}
+
+impl TiltSensorID {
+    pub(crate) fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+        let mut line = String::new();
+        let bytes_read = reader.read_line(&mut line)?;
+        let tilt_sensor_id = line
+            .split("TiltSensorID : ")
+            .nth(1)
+            .ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "Invalid tilt sensor ID format")
+            })?
+            .trim()
+            .to_owned();
+        Ok((Self { id: tilt_sensor_id }, bytes_read))
     }
 }
 
@@ -50,7 +72,7 @@ Angle Y: {angle_y}
 Angle offset X: {angle_offset_x}
 Angle X: {angle_x}"
 )]
-struct CalibrationData {
+pub(crate) struct CalibrationData {
     angle_offset_y: f64,
     angle_y: f64,
     angle_offset_x: f64,
@@ -58,7 +80,7 @@ struct CalibrationData {
 }
 
 impl CalibrationData {
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    pub(crate) fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut bytes_read = 0;
         let mut line = String::new();
 
@@ -146,16 +168,8 @@ impl NavSysSpsHeader {
             .to_owned();
 
         // Parse tilt sensor ID
-        line.clear();
-        bytes_read += reader.read_line(&mut line)?;
-        let tilt_sensor_id = line
-            .split("TiltSensorID : ")
-            .nth(1)
-            .ok_or_else(|| {
-                io::Error::new(io::ErrorKind::InvalidData, "Invalid tilt sensor ID format")
-            })?
-            .trim()
-            .to_owned();
+        let (tilt_sensor_id, bytes_tl_id) = TiltSensorID::from_reader(reader)?;
+        bytes_read += bytes_tl_id;
 
         // Parse both calibration data sets
         let (calibration_data_1, bytes_cal_1) = CalibrationData::from_reader(reader)?;
@@ -180,6 +194,7 @@ impl NavSysSpsHeader {
 mod tests {
     use super::*;
     use plotinator_test_util::*;
+    use pretty_assertions::assert_str_eq;
 
     const TEST_HEADER_STR: &str = "VER 3
 MRK 2024 10 03 12 52 42 401 Navsys software rev: Build: 2.0.0.6
@@ -207,7 +222,7 @@ MRK 2024 10 03 12 52 42 432 CalAng 2 X: 3.30737";
                 .and_utc()
         );
         assert_eq!(header.software_rev, "Build: 2.0.0.6");
-        assert_eq!(header.tilt_sensor_id, "1459_1458");
+        assert_eq!(header.tilt_sensor_id.id, "1459_1458");
 
         // Check calibration data 1
         assert_eq!(header.calibration_data_1.angle_offset_y, 0.4950);
@@ -233,7 +248,7 @@ MRK 2024 10 03 12 52 42 432 CalAng 2 X: 3.30737";
         let expected_string_format = r#"Version: 3
 Timestamp: 2024-10-03 12:52:42.401 UTC
 Software Revision: Build: 2.0.0.6
-Tilt sensor ID: 1459_1458
+Tilt Sensor ID: 1459_1458
 #1 Calibration Data: Angle offset Y: 0.495
 Angle Y: 3.26488
 Angle offset X: 0.5099
@@ -243,7 +258,7 @@ Angle Y: 3.34307
 Angle offset X: 0.5047
 Angle X: 3.30737
 "#;
-        assert_eq!(header.to_string(), expected_string_format);
+        assert_str_eq!(header.to_string(), expected_string_format);
 
         Ok(())
     }

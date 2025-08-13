@@ -11,7 +11,7 @@ use plotinator_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
 pub(crate) mod entries;
-mod header;
+pub(crate) mod header;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct NavSysSps {
