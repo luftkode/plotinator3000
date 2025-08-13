@@ -5,6 +5,7 @@ use parse_info::{ParseInfo, ParsedBytes, TotalBytes};
 use plotinator_log_if::prelude::*;
 use plotinator_logs::{
     generator::GeneratorLog,
+    mag_sps::MagSps,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
     navsys::NavSysSps,
     wasp200::Wasp200Sps,
@@ -102,4 +103,5 @@ define_supported_log_formats! {
     Generator => GeneratorLog,
     NavSysSps => NavSysSps,
     Wasp200Sps => Wasp200Sps,
+    MagSps => MagSps,
 }

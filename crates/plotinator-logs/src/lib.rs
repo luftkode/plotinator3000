@@ -3,6 +3,7 @@ use std::io;
 use plotinator_log_if::prelude::*;
 
 pub mod generator;
+pub mod mag_sps;
 pub mod mbed_motor_control;
 pub mod navsys;
 pub mod util;
