@@ -258,7 +258,12 @@ mod tests {
         let mut frame_inclinometers_sps = FRAME_INCLINOMETERS_SPS_BYTES;
         let (magsps, bytes_read) =
             InclinometerSps::from_reader(&mut frame_inclinometers_sps).unwrap();
-        assert_eq!(bytes_read, 2985);
+        // Windows counts newlines differently so the byte count differs
+        if cfg!(target_os = "windows") {
+            assert_eq!(bytes_read, 3058);
+        } else {
+            assert_eq!(bytes_read, 2985);
+        }
         assert_eq!(magsps.entries.len(), 64);
     }
 }

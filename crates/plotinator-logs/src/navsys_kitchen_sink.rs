@@ -484,7 +484,11 @@ mod tests {
         let mut test_data = NAVSYS_SPS_KITCHEN_SINK_BYTES;
         let (navsys, bytes_read) = NavSysSpsKitchenSink::from_reader(&mut test_data)?;
 
-        assert_eq!(bytes_read, 15119);
+        if cfg!(target_os = "windows") {
+            assert_eq!(bytes_read, 15556);
+        } else {
+            assert_eq!(bytes_read, 15119);
+        }
         assert_eq!(navsys.entries.len(), 437);
 
         Ok(())
