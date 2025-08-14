@@ -7,6 +7,7 @@ pub mod inclinometer_sps;
 pub mod mag_sps;
 pub mod mbed_motor_control;
 pub mod navsys;
+pub mod navsys_kitchen_sink;
 pub mod util;
 pub mod wasp200;
 

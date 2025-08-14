@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use gps::Gps;
 use he::AltimeterEntry;
 use mag::MagSensor;
@@ -35,20 +36,34 @@ impl fmt::Display for NavSysSpsEntry {
     }
 }
 
+impl NavSysSpsEntry {
+    pub(crate) fn timestamp(&self) -> DateTime<Utc> {
+        match self {
+            Self::HE1(he) | Self::HE2(he) | Self::HE3(he) | Self::HEx(he) => he.timestamp(),
+            Self::TL1(tl) | Self::TL2(tl) => tl.timestamp(),
+            Self::GP1(gps) | Self::GP2(gps) => gps.timestamp(),
+            Self::MA1(ma) => ma.timestamp(),
+        }
+    }
+}
+
 impl LogEntry for NavSysSpsEntry {
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
         let mut line = String::new();
         let bytes_read = reader.read_line(&mut line)?;
         // just a sanity check, it is definitely invalid if it is less than 10 characters
         if line.len() < 10 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={}",
-                    line.len(),
-                    line
-                ),
-            ));
+            if line.is_empty() {
+                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "End of File"));
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(
+                        "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={line}",
+                        line.len()
+                    ),
+                ));
+            }
         }
         let first_three_chars = &line[..3];
         let entry: Self = match first_three_chars {
@@ -82,7 +97,7 @@ impl LogEntry for NavSysSpsEntry {
                     Self::GP2(gps)
                 }
             }
-            "MA1" => {
+            m if m.starts_with("MA") => {
                 let mag = MagSensor::from_str(&line)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
                 debug_assert_eq!(

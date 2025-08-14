@@ -6,10 +6,9 @@ use plotinator_log_if::prelude::*;
 use plotinator_logs::{
     generator::GeneratorLog,
     inclinometer_sps::InclinometerSps,
-    mag_sps::MagSps,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
     navsys::NavSysSps,
-    wasp200::Wasp200Sps,
+    navsys_kitchen_sink::NavSysSpsKitchenSink,
 };
 use serde::{Deserialize, Serialize};
 
@@ -110,7 +109,6 @@ define_supported_log_formats! {
     MbedStatus => StatusLog,
     Generator => GeneratorLog,
     NavSysSps => NavSysSps,
-    Wasp200Sps => Wasp200Sps,
-    MagSps => MagSps,
+    NavSysSpsKitchenSink => NavSysSpsKitchenSink,
     InclinometerSps => InclinometerSps,
 }

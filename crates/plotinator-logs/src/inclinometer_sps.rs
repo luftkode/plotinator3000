@@ -59,13 +59,17 @@ impl LogEntry for InclinometerEntry {
         let bytes_read = reader.read_line(&mut line)?;
         // just a sanity check, it is definitely invalid if it is less than 10 characters
         if line.len() < 10 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={line}",
-                    line.len()
-                ),
-            ));
+            if line.is_empty() {
+                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "End of File"));
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(
+                        "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={line}",
+                        line.len()
+                    ),
+                ));
+            }
         }
         let entry =
             Self::from_str(&line).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
@@ -114,7 +118,8 @@ impl Parseable for InclinometerSps {
         bytes_read += bytes_read_entries;
 
         // Group entries by sensor ID
-        let mut sensor_groups: HashMap<u8, (Vec<[f64; 2]>, Vec<[f64; 2]>)> = HashMap::new();
+        type PitchRollTuple = (Vec<[f64; 2]>, Vec<[f64; 2]>);
+        let mut sensor_groups: HashMap<u8, PitchRollTuple> = HashMap::new();
 
         for entry in &entries {
             let sensor_id = entry.id;
@@ -200,7 +205,7 @@ impl Plotable for InclinometerSps {
         let metadata: Vec<(String, String)> = vec![
             (
                 "TiltSensor ID".into(),
-                self.tilt_sensor_id.to_owned().to_string(),
+                self.tilt_sensor_id.clone().to_string(),
             ),
             (
                 "#1 Calibration Data".into(),

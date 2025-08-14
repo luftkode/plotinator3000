@@ -50,13 +50,17 @@ impl LogEntry for MagSensor {
         let bytes_read = reader.read_line(&mut line)?;
         // just a sanity check, it is definitely invalid if it is less than 10 characters
         if line.len() < 10 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={line}",
-                    line.len()
-                ),
-            ));
+            if line.is_empty() {
+                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "End of File"));
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(
+                        "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={line}",
+                        line.len()
+                    ),
+                ));
+            }
         }
         let entry =
             Self::from_str(&line).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
@@ -98,7 +102,7 @@ impl Parseable for MagSps {
 
         for entry in &entries {
             let sensor_id = entry.id; // ID is a u8
-            let mag_points = sensor_groups.entry(sensor_id).or_insert_with(Vec::new);
+            let mag_points = sensor_groups.entry(sensor_id).or_default();
             mag_points.push([entry.timestamp_ns(), entry.field_nanotesla()]);
         }
 
@@ -107,7 +111,7 @@ impl Parseable for MagSps {
         for (sensor_id, mag_points) in sensor_groups {
             if !mag_points.is_empty() {
                 raw_plots.push(RawPlot::new(
-                    format!("Sensor {} B-field [nT]", sensor_id),
+                    format!("Sensor {sensor_id} B-field [nT]"),
                     mag_points,
                     ExpectedPlotRange::Thousands,
                 ));
@@ -196,7 +200,12 @@ mod tests {
     fn test_deserialize_mag_sps_file() {
         let mut frame_mag_sps = FRAME_MAGNETOMETER_SPS_BYTES;
         let (magsps, bytes_read) = MagSps::from_reader(&mut frame_mag_sps).unwrap();
-        assert_eq!(bytes_read, 10599);
         assert_eq!(magsps.entries.len(), 273);
+        // Windows treats newlines as /r/n
+        if cfg!(target_os = "windows") {
+            assert_eq!(bytes_read, 10872);
+        } else {
+            assert_eq!(bytes_read, 10599);
+        }
     }
 }
