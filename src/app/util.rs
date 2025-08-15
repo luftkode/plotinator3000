@@ -142,6 +142,12 @@ fn list_supported_hdf5_formats(ui: &mut egui::Ui) {
                 link: "https://github.com/luftkode/frame-inclinometer",
                 subitems: None,
             },
+            LogFormat {
+                title: "Frame Magnetometer",
+                description: "B-field measurements",
+                link: "https://github.com/luftkode/frame-magnetometer",
+                subitems: None,
+            },
         ];
         draw_log_formats(ui, &log_formats);
     }
