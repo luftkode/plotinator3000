@@ -5,9 +5,10 @@ use parse_info::{ParseInfo, ParsedBytes, TotalBytes};
 use plotinator_log_if::prelude::*;
 use plotinator_logs::{
     generator::GeneratorLog,
+    inclinometer_sps::InclinometerSps,
     mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
     navsys::NavSysSps,
-    wasp200::Wasp200Sps,
+    navsys_kitchen_sink::NavSysSpsKitchenSink,
 };
 use serde::{Deserialize, Serialize};
 
@@ -35,15 +36,22 @@ macro_rules! define_supported_log_formats {
                 log::debug!("Parsing content of length: {total_bytes}");
 
                 $(
-                    if let Ok((log_data, read_bytes)) = <$ty>::try_from_buf(content) {
-                        log::debug!("Read: {read_bytes} bytes");
-                        let parse_info = ParseInfo::new(
-                            ParsedBytes(read_bytes),
-                            TotalBytes(total_bytes)
-                        );
-                        let log = Self::$variant(log_data, parse_info);
-                        log::debug!("Got: {}", log.descriptive_name());
-                        return Ok(log);
+                    log::debug!("Attempting to parse as {}", stringify!($ty));
+                    match <$ty>::try_from_buf(content) {
+                        Ok((log_data, read_bytes)) => {
+                            log::debug!("Successfully parsed as {}", stringify!($ty));
+                            log::debug!("Read: {read_bytes} bytes");
+                            let parse_info = ParseInfo::new(
+                                ParsedBytes(read_bytes),
+                                TotalBytes(total_bytes)
+                            );
+                            let log = Self::$variant(log_data, parse_info);
+                            log::debug!("Got: {}", log.descriptive_name());
+                            return Ok(log);
+                        }
+                        Err(e) => {
+                            log::debug!("Failed to parse as {}: {e}", stringify!($ty));
+                        }
                     }
                 )*
 
@@ -101,5 +109,6 @@ define_supported_log_formats! {
     MbedStatus => StatusLog,
     Generator => GeneratorLog,
     NavSysSps => NavSysSps,
-    Wasp200Sps => Wasp200Sps,
+    NavSysSpsKitchenSink => NavSysSpsKitchenSink,
+    InclinometerSps => InclinometerSps,
 }

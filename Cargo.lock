@@ -3532,6 +3532,7 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-plot-util",
  "plotinator-test-util",
+ "pretty_assertions",
  "serde",
  "serde-big-array",
  "strum 0.27.2",

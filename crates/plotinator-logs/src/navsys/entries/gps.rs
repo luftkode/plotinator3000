@@ -37,6 +37,10 @@ pub struct Gps {
 }
 
 impl Gps {
+    pub(crate) fn timestamp(&self) -> DateTime<Utc> {
+        self.timestamp
+    }
+
     pub(crate) fn timestamp_ns(&self) -> f64 {
         self.timestamp
             .timestamp_nanos_opt()
@@ -317,5 +321,13 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
         let gps_time_delta_ms = gps.gps_time_delta_ms();
         assert_eq!(gps_time_delta_ms, -6.);
         Ok(())
+    }
+
+    #[test]
+    fn test_gps_from_str_certus() {
+        let certus_sps = "GP1 2025 06 30 11 38 11 400 56.21767 10.14784 11:38:11.400 0 WGS84 0.0 0.0 0.0 0.0 59.6";
+        let navsys_sps = "GP1 2024 10 03 12 52 42 994 5347.57959 933.01392 12:52:43.000 16 WGS84 0.0 0.8 1.3 1.5 0.2";
+        assert!(Gps::from_str(navsys_sps).is_ok());
+        assert!(Gps::from_str(certus_sps).is_ok());
     }
 }

@@ -42,14 +42,17 @@ impl LogEntry for AltimeterEntry {
         let bytes_read = reader.read_line(&mut line)?;
         // just a sanity check, it is definitely invalid if it is less than 10 characters
         if line.len() < 10 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={}",
-                    line.len(),
-                    line
-                ),
-            ));
+            if line.is_empty() {
+                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "End of File"));
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(
+                        "Expected NavSysSps entry line but line is too short to be a NavSysSps entry. Line length={}, content={line}",
+                        line.len()
+                    ),
+                ));
+            }
         }
         let entry =
             Self::from_str(&line).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;

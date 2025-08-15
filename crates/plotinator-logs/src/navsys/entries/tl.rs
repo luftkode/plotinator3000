@@ -17,6 +17,10 @@ pub struct InclinometerEntry {
 }
 
 impl InclinometerEntry {
+    pub(crate) fn timestamp(&self) -> DateTime<Utc> {
+        self.timestamp
+    }
+
     pub(crate) fn timestamp_ns(&self) -> f64 {
         self.timestamp
             .timestamp_nanos_opt()

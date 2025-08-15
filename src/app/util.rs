@@ -90,7 +90,12 @@ pub fn draw_empty_state(gui: &mut egui::Ui) {
                                 description:
                                     "Navsys.sps logs with data from GPS, Magsensor, Altimeter, etc.",
                                 link: "https://github.com/luftkode/navsys",
-                                subitems: None,
+                                subitems: Some(&[
+                                    SubLogFormat {
+                                        title: "Kitchen sinks of Navsys entries",
+                                        description: "Navsys-like files with any kind of data that could be present in Navsys.sps files. For example a file with only Mag data."
+                                    }
+                                ]),
                             },
                         ];
 
@@ -114,8 +119,8 @@ fn list_supported_hdf5_formats(ui: &mut egui::Ui) {
                 subitems: None,
             },
             LogFormat {
-                title: "Wasp 200 Altitude",
-                description: "Height measurements",
+                title: "Njord Altimeter",
+                description: "Height measurements from the Njord Altimeter",
                 link: "https://github.com/luftkode/njord-altimeter",
                 subitems: None,
             },
