@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.21.0]
+
 ### Added
 
 - Support for `Frame Inclinometers` HDF5 files
