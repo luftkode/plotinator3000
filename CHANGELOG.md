@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.21.1]
+
 ### Fixed
 
+- Recognize navsys entries with ID 3 for `navsys kitchen sink`, and fallback to "x" for any IDs above 3
 - Allow `frame-altimeters` HDF5 files to only have data from one altimeter
 
 ## [1.21.0]
