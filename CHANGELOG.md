@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `egui`: 0.32.0 → 0.32.1 ([#304](https://github.com/luftkode/plotinator3000/pull/304))
+- `eframe`: 0.32.0 → 0.32.1 ([#304](https://github.com/luftkode/plotinator3000/pull/304))
+- `thiserror`: 2.0.12 → 2.0.15 ([#304](https://github.com/luftkode/plotinator3000/pull/304))
+- `anyhow`: 1.0.98 → 1.0.99 ([#304](https://github.com/luftkode/plotinator3000/pull/304))
+- `reqwest`: 0.12.22 → 0.12.23 ([#304](https://github.com/luftkode/plotinator3000/pull/304))
+
 ## [1.21.0]
 
 ### Added
