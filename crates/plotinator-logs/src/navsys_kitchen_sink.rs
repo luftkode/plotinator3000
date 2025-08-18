@@ -62,27 +62,51 @@ impl NavSysSpsKitchenSink {
         let mut raw_hex_points_invalid_value: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl1_points_pitch: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl2_points_pitch: Vec<[f64; 2]> = Vec::new();
+        let mut raw_tl3_points_pitch: Vec<[f64; 2]> = Vec::new();
+        let mut raw_tlx_points_pitch: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl1_points_roll: Vec<[f64; 2]> = Vec::new();
         let mut raw_tl2_points_roll: Vec<[f64; 2]> = Vec::new();
+        let mut raw_tl3_points_roll: Vec<[f64; 2]> = Vec::new();
+        let mut raw_tlx_points_roll: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_latitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_latitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_latitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_latitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_longitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_longitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_longitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_longitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_gps_time_delta_ms: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_gps_time_delta_ms: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_gps_time_delta_ms: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_gps_time_delta_ms: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_num_satellites: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_num_satellites: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_num_satellites: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_num_satellites: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_speed_kmh: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_speed_kmh: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_speed_kmh: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_speed_kmh: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_hdop: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_hdop: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_hdop: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_hdop: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_vdop: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_vdop: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_vdop: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_vdop: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_pdop: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_pdop: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_pdop: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_pdop: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp1_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_gp2_points_altitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gp3_points_altitude: Vec<[f64; 2]> = Vec::new();
+        let mut raw_gpx_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_mag1_points: Vec<[f64; 2]> = Vec::new();
+        let mut raw_mag2_points: Vec<[f64; 2]> = Vec::new();
+        let mut raw_magx_points: Vec<[f64; 2]> = Vec::new();
 
         for entry in entries {
             match entry {
@@ -130,6 +154,14 @@ impl NavSysSpsKitchenSink {
                     raw_tl2_points_pitch.push([e.timestamp_ns(), e.pitch_angle_degrees()]);
                     raw_tl2_points_roll.push([e.timestamp_ns(), e.roll_angle_degrees()]);
                 }
+                NavSysSpsEntry::TL3(e) => {
+                    raw_tl3_points_pitch.push([e.timestamp_ns(), e.pitch_angle_degrees()]);
+                    raw_tl3_points_roll.push([e.timestamp_ns(), e.roll_angle_degrees()]);
+                }
+                NavSysSpsEntry::TLx(e) => {
+                    raw_tlx_points_pitch.push([e.timestamp_ns(), e.pitch_angle_degrees()]);
+                    raw_tlx_points_roll.push([e.timestamp_ns(), e.roll_angle_degrees()]);
+                }
                 NavSysSpsEntry::GP1(e) => {
                     let ts = e.timestamp_ns();
                     raw_gp1_points_latitude.push([ts, e.latitude()]);
@@ -154,8 +186,38 @@ impl NavSysSpsKitchenSink {
                     raw_gp2_points_pdop.push([ts, e.pdop().into()]);
                     raw_gp2_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
                 }
+                NavSysSpsEntry::GP3(e) => {
+                    let ts = e.timestamp_ns();
+                    raw_gp3_points_latitude.push([ts, e.latitude()]);
+                    raw_gp3_points_longitude.push([ts, e.longitude()]);
+                    raw_gp3_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
+                    raw_gp3_points_num_satellites.push([ts, e.num_satellites().into()]);
+                    raw_gp3_points_speed_kmh.push([ts, e.speed_kmh().into()]);
+                    raw_gp3_points_hdop.push([ts, e.hdop().into()]);
+                    raw_gp3_points_vdop.push([ts, e.vdop().into()]);
+                    raw_gp3_points_pdop.push([ts, e.pdop().into()]);
+                    raw_gp3_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                }
+                NavSysSpsEntry::GPx(e) => {
+                    let ts = e.timestamp_ns();
+                    raw_gpx_points_latitude.push([ts, e.latitude()]);
+                    raw_gpx_points_longitude.push([ts, e.longitude()]);
+                    raw_gpx_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
+                    raw_gpx_points_num_satellites.push([ts, e.num_satellites().into()]);
+                    raw_gpx_points_speed_kmh.push([ts, e.speed_kmh().into()]);
+                    raw_gpx_points_hdop.push([ts, e.hdop().into()]);
+                    raw_gpx_points_vdop.push([ts, e.vdop().into()]);
+                    raw_gpx_points_pdop.push([ts, e.pdop().into()]);
+                    raw_gpx_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                }
                 NavSysSpsEntry::MA1(e) => {
                     raw_mag1_points.push([e.timestamp_ns(), e.field_nanotesla()]);
+                }
+                NavSysSpsEntry::MA2(e) => {
+                    raw_mag2_points.push([e.timestamp_ns(), e.field_nanotesla()]);
+                }
+                NavSysSpsEntry::MAx(e) => {
+                    raw_magx_points.push([e.timestamp_ns(), e.field_nanotesla()]);
                 }
             }
         }
@@ -212,6 +274,16 @@ impl NavSysSpsKitchenSink {
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
+                "TL3 Pitch".into(),
+                raw_tl3_points_pitch,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "TLx Pitch".into(),
+                raw_tlx_points_pitch,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
                 "TL1 Roll".into(),
                 raw_tl1_points_roll,
                 ExpectedPlotRange::OneToOneHundred,
@@ -219,6 +291,16 @@ impl NavSysSpsKitchenSink {
             RawPlot::new(
                 "TL2 Roll".into(),
                 raw_tl2_points_roll,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "TL3 Roll".into(),
+                raw_tl3_points_roll,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "TLx Roll".into(),
+                raw_tlx_points_roll,
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
@@ -232,6 +314,16 @@ impl NavSysSpsKitchenSink {
                 ExpectedPlotRange::Thousands,
             ),
             RawPlot::new(
+                "GP3 Latitude".into(),
+                raw_gp3_points_latitude,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "GPx Latitude".into(),
+                raw_gpx_points_latitude,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
                 "GP1 Longitude".into(),
                 raw_gp1_points_longitude,
                 ExpectedPlotRange::Thousands,
@@ -239,6 +331,16 @@ impl NavSysSpsKitchenSink {
             RawPlot::new(
                 "GP2 Longitude".into(),
                 raw_gp2_points_longitude,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "GP3 Longitude".into(),
+                raw_gp3_points_longitude,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "GPx Longitude".into(),
+                raw_gpx_points_longitude,
                 ExpectedPlotRange::Thousands,
             ),
             RawPlot::new(
@@ -252,6 +354,16 @@ impl NavSysSpsKitchenSink {
                 ExpectedPlotRange::Thousands,
             ),
             RawPlot::new(
+                "GP3 Time delta [ms]".into(),
+                raw_gp3_points_gps_time_delta_ms,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "GPx Time delta [ms]".into(),
+                raw_gpx_points_gps_time_delta_ms,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
                 "GP1 Satelittes".into(),
                 raw_gp1_points_num_satellites,
                 ExpectedPlotRange::OneToOneHundred,
@@ -259,6 +371,16 @@ impl NavSysSpsKitchenSink {
             RawPlot::new(
                 "GP2 Satelittes".into(),
                 raw_gp2_points_num_satellites,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GP3 Satelittes".into(),
+                raw_gp3_points_num_satellites,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GPx Satelittes".into(),
+                raw_gpx_points_num_satellites,
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
@@ -272,6 +394,16 @@ impl NavSysSpsKitchenSink {
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
+                "GP3 Speed [km/h]".into(),
+                raw_gp3_points_speed_kmh,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GPx Speed [km/h]".into(),
+                raw_gpx_points_speed_kmh,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
                 "GP1 HDOP".into(),
                 raw_gp1_points_hdop,
                 ExpectedPlotRange::OneToOneHundred,
@@ -279,6 +411,16 @@ impl NavSysSpsKitchenSink {
             RawPlot::new(
                 "GP2 HDOP".into(),
                 raw_gp2_points_hdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GP3 HDOP".into(),
+                raw_gp3_points_hdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GPx HDOP".into(),
+                raw_gpx_points_hdop,
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
@@ -292,6 +434,16 @@ impl NavSysSpsKitchenSink {
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
+                "GP3 VDOP".into(),
+                raw_gp3_points_vdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GPx VDOP".into(),
+                raw_gpx_points_vdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
                 "GP1 PDOP".into(),
                 raw_gp1_points_pdop,
                 ExpectedPlotRange::OneToOneHundred,
@@ -299,6 +451,16 @@ impl NavSysSpsKitchenSink {
             RawPlot::new(
                 "GP2 PDOP".into(),
                 raw_gp2_points_pdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GP3 PDOP".into(),
+                raw_gp3_points_pdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GPx PDOP".into(),
+                raw_gpx_points_pdop,
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
@@ -312,8 +474,28 @@ impl NavSysSpsKitchenSink {
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
+                "GP3 Altitude [m]".into(),
+                raw_gp3_points_altitude,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "GPx Altitude [m]".into(),
+                raw_gpx_points_altitude,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
                 "MA1 B-field [nT]".into(),
                 raw_mag1_points,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "MA2 B-field [nT]".into(),
+                raw_mag2_points,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                "MAx B-field [nT]".into(),
+                raw_magx_points,
                 ExpectedPlotRange::Thousands,
             ),
         ];

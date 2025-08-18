@@ -146,6 +146,7 @@ impl NavSysSps {
                 NavSysSpsEntry::MA1(e) => {
                     raw_mag1_points.push([e.timestamp_ns(), e.field_nanotesla()]);
                 }
+                _ => log::error!("Ignoring unknown navsys.sps entry: {entry}"),
             }
         }
 

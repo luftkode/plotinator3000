@@ -38,9 +38,19 @@ impl SkytemHdf5 for FrameAltimeters {
         let timestamp1_data: ndarray::Array2<i64> = timestamp1_dataset.read_2d()?;
         let timestamp2_data: ndarray::Array2<i64> = timestamp2_dataset.read_2d()?;
 
-        let (timestamps1, first_timestamp1) = Self::process_timestamps(&timestamp1_data);
-        let (timestamps2, first_timestamp2) = Self::process_timestamps(&timestamp2_data);
-        let total_starting_timestamp = std::cmp::min(first_timestamp1, first_timestamp2);
+        let (timestamps1, first_timestamp1_opt) = Self::process_timestamps(&timestamp1_data);
+        let (timestamps2, first_timestamp2_opt) = Self::process_timestamps(&timestamp2_data);
+
+        let total_starting_timestamp = match (first_timestamp1_opt, first_timestamp2_opt) {
+            (None, None) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Both timestamp datasets are empty",
+                ));
+            }
+            (Some(ts), None) | (None, Some(ts)) => ts,
+            (Some(ts1), Some(ts2)) => ts1.min(ts2),
+        };
 
         let mut height1_with_ts: Vec<[f64; 2]> = Vec::new();
         for (height, ts) in heights1.iter().zip(timestamps1) {
@@ -69,10 +79,14 @@ impl SkytemHdf5 for FrameAltimeters {
             &timestamp2_dataset,
         )?;
 
+        let mut raw_plots = vec![rawplot1, rawplot2];
+
+        raw_plots.retain(|rp| rp.points().len() > 2);
+
         Ok(Self {
             starting_timestamp_utc: total_starting_timestamp,
             dataset_description: "Frame altimeters".to_owned(),
-            raw_plots: vec![rawplot1, rawplot2],
+            raw_plots,
             metadata,
         })
     }
@@ -139,9 +153,12 @@ impl FrameAltimeters {
         ))
     }
 
-    fn process_timestamps(timestamp_data: &ndarray::Array2<i64>) -> (Vec<f64>, DateTime<Utc>) {
-        let first = timestamp_data.first().expect("Empty timestamps");
-        let first_timestamp: DateTime<Utc> = chrono::Utc.timestamp_nanos(*first).to_utc();
+    fn process_timestamps(
+        timestamp_data: &ndarray::Array2<i64>,
+    ) -> (Vec<f64>, Option<DateTime<Utc>>) {
+        let first_timestamp = timestamp_data
+            .first()
+            .map(|ts| chrono::Utc.timestamp_nanos(*ts).to_utc());
 
         let mut timestamps = vec![];
         for t in timestamp_data {
