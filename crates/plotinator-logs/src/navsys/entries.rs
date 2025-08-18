@@ -20,18 +20,24 @@ pub enum NavSysSpsEntry {
     HEx(AltimeterEntry), // fallback for none of the other HEs
     TL1(InclinometerEntry),
     TL2(InclinometerEntry),
+    TL3(InclinometerEntry), // Njord INS
+    TLx(InclinometerEntry), // Fallback
     GP1(Gps),
     GP2(Gps),
+    GP3(Gps), // Njord INS
+    GPx(Gps), // Fallback
     MA1(MagSensor),
+    MA2(MagSensor),
+    MAx(MagSensor), // Fallback
 }
 
 impl fmt::Display for NavSysSpsEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::HE1(he) | Self::HE2(he) | Self::HE3(he) | Self::HEx(he) => write!(f, "{he}"),
-            Self::TL1(tl) | Self::TL2(tl) => write!(f, "{tl}"),
-            Self::GP1(gps) | Self::GP2(gps) => write!(f, "{gps}"),
-            Self::MA1(ma) => write!(f, "{ma}"),
+            Self::TL1(tl) | Self::TL2(tl) | Self::TL3(tl) | Self::TLx(tl) => write!(f, "{tl}"),
+            Self::GP1(gps) | Self::GP2(gps) | Self::GP3(gps) | Self::GPx(gps) => write!(f, "{gps}"),
+            Self::MA1(ma) | Self::MA2(ma) | Self::MAx(ma) => write!(f, "{ma}"),
         }
     }
 }
@@ -40,9 +46,9 @@ impl NavSysSpsEntry {
     pub(crate) fn timestamp(&self) -> DateTime<Utc> {
         match self {
             Self::HE1(he) | Self::HE2(he) | Self::HE3(he) | Self::HEx(he) => he.timestamp(),
-            Self::TL1(tl) | Self::TL2(tl) => tl.timestamp(),
-            Self::GP1(gps) | Self::GP2(gps) => gps.timestamp(),
-            Self::MA1(ma) => ma.timestamp(),
+            Self::TL1(tl) | Self::TL2(tl) | Self::TL3(tl) | Self::TLx(tl) => tl.timestamp(),
+            Self::GP1(gps) | Self::GP2(gps) | Self::GP3(gps) | Self::GPx(gps) => gps.timestamp(),
+            Self::MA1(ma) | Self::MA2(ma) | Self::MAx(ma) => ma.timestamp(),
         }
     }
 }
@@ -77,41 +83,35 @@ impl LogEntry for NavSysSpsEntry {
                     _ => Self::HEx(he),
                 }
             }
-            "TL1" | "TL2" => {
+            tl if tl.starts_with("TL") => {
                 let tl = InclinometerEntry::from_str(&line)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-                debug_assert!(tl.id == 1 || tl.id == 2);
-                if tl.id == 1 {
-                    Self::TL1(tl)
-                } else {
-                    Self::TL2(tl)
+                match tl.id {
+                    1 => Self::TL1(tl),
+                    2 => Self::TL2(tl),
+                    3 => Self::TL3(tl),
+                    _ => Self::TLx(tl),
                 }
             }
-            "GP1" | "GP2" => {
+            gp if gp.starts_with("GP") => {
                 let gps = Gps::from_str(&line)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-                debug_assert!(gps.id == 1 || gps.id == 2);
-                if gps.id == 1 {
-                    Self::GP1(gps)
-                } else {
-                    Self::GP2(gps)
+
+                match gps.id {
+                    1 => Self::GP1(gps),
+                    2 => Self::GP2(gps),
+                    3 => Self::GP3(gps),
+                    _ => Self::GPx(gps),
                 }
             }
             m if m.starts_with("MA") => {
                 let mag = MagSensor::from_str(&line)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-                debug_assert_eq!(
-                    mag.id, 1,
-                    "Expected navsys data to only contain magsensor with ID 1, got: ID{}",
-                    mag.id
-                );
-                if mag.id == 1 {
-                    Self::MA1(mag)
-                } else {
-                    unreachable!(
-                        "Expected navsys data to only contain magsensor with ID 1, got: ID{}",
-                        mag.id
-                    )
+
+                match mag.id {
+                    1 => Self::MA1(mag),
+                    2 => Self::MA2(mag),
+                    _ => Self::MAx(mag),
                 }
             }
             _ => {
@@ -127,9 +127,9 @@ impl LogEntry for NavSysSpsEntry {
     fn timestamp_ns(&self) -> f64 {
         match self {
             Self::HE1(he) | Self::HE2(he) | Self::HE3(he) | Self::HEx(he) => he.timestamp_ns(),
-            Self::TL1(tl) | Self::TL2(tl) => tl.timestamp_ns(),
-            Self::GP1(gps) | Self::GP2(gps) => gps.timestamp_ns(),
-            Self::MA1(ma) => ma.timestamp_ns(),
+            Self::TL1(tl) | Self::TL2(tl) | Self::TL3(tl) | Self::TLx(tl) => tl.timestamp_ns(),
+            Self::GP1(gps) | Self::GP2(gps) | Self::GP3(gps) | Self::GPx(gps) => gps.timestamp_ns(),
+            Self::MA1(ma) | Self::MA2(ma) | Self::MAx(ma) => ma.timestamp_ns(),
         }
     }
 }

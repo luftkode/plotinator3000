@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed
+
+- Allow `frame-altimeters` HDF5 files to only have data from one altimeter
+
 ## [1.21.0]
 
 ### Added
