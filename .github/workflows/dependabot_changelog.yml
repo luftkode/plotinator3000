@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: crambl/dependabot-changelog-writer@a4b6e4aa40aa3d07139e5090a2748eb1f1c7671c
       with:
         push-token: ${{ secrets.PAT_WITH_REPO_SCOPE }}
