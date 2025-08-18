@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#303](https://github.com/luftkode/plotinator3000/pull/303))
+- `actions/download-artifact`: 4 → 5 ([#303](https://github.com/luftkode/plotinator3000/pull/303))
+
 ## [1.21.0]
 
 ### Added
