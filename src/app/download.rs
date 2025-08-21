@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use egui::Key;
 use egui_notify::Toasts;
 use plotinator_download::{
     DATA_BINDER_PORT, DownloadMessage, TS_IP, endpoint::Endpoint, manager::DownloadManager,
@@ -31,6 +32,9 @@ impl DownloadUi {
     pub(super) fn show_download_window(&mut self, ctx: &egui::Context) {
         if !self.show {
             return;
+        }
+        if ctx.input(|i| i.key_pressed(Key::Escape)) {
+            self.show = false;
         }
         if self.download_manager.in_progress() {
             ctx.request_repaint_after(Duration::from_millis(50));
