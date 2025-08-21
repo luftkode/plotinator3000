@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.22.0]
+
+### Added
+
+- **Experimental** download latest data files from TS
+
+### Fixed
+
+- Sps kitchen sink did not recognize inclinometer calibration values as valid entries
+
 ## [1.21.1]
 
 ### Fixed
