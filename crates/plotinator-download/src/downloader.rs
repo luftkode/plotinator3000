@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::time::Duration;
 
-use crate::app::download::DownloadMessage;
+use reqwest::Url;
 
-pub(crate) const ENDPOINT_DOWNLOAD_LATEST: &str = "/api/download/latest";
-pub(crate) const ENDPOINT_DOWNLOAD_TODAY: &str = "/api/download/today";
+use crate::DownloadMessage;
+use crate::endpoint::Endpoint;
 
 struct DownloadProgress {
     tx: Sender<DownloadMessage>,
@@ -45,9 +45,9 @@ pub(crate) fn download_zip(
     host: &str,
     port: &str,
     tx: Sender<DownloadMessage>,
-    endpoint: &str,
+    endpoint: Endpoint,
 ) -> anyhow::Result<String> {
-    let url = format!("http://{host}:{port}{endpoint}");
+    let url: Url = format!("http://{host}:{port}{endpoint}").parse()?;
 
     // Use a client with very long timeouts to allow time for zip generation
     let client = reqwest::blocking::Client::builder()
@@ -55,7 +55,7 @@ pub(crate) fn download_zip(
         .connect_timeout(Duration::from_secs(20)) // 20 seconds to establish connection
         .build()?;
 
-    let mut response = client.get(&url).send()?;
+    let mut response = client.get(url).send()?;
 
     anyhow::ensure!(
         response.status().is_success(),

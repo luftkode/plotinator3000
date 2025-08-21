@@ -39,6 +39,7 @@ plotinator-mqtt.path = "crates/plotinator-mqtt"
 plotinator-macros.path = "crates/plotinator-macros"
 plotinator-supported-formats.path = "crates/plotinator-supported-formats"
 plotinator-updater.path = "crates/plotinator-updater"
+plotinator-download.path = "crates/plotinator-download"
 egui = { version = "0.32", features = ["rayon", "callstack"] }
 eframe = { version = "0.32", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
@@ -70,6 +71,7 @@ rumqttc = "0.24.0"
 memmap2 = "0.9.7"
 tokio = "1.47.1"
 reqwest = "0.12.23"
+dirs = "6.0.0"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
@@ -92,6 +94,7 @@ plotinator-test-util.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-macros.workspace = true
 plotinator-supported-formats.workspace = true
+plotinator-download.workspace = true
 egui_plot.workspace = true
 log.workspace = true
 serde.workspace = true
@@ -109,7 +112,6 @@ tokio.workspace = true
 memmap2.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
-dirs = "6.0.0"
 reqwest = { workspace = true, features = ["blocking"] }
 
 

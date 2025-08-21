@@ -1,14 +1,11 @@
 use std::time::Duration;
 
-use crate::{
-    app::download::{DownloadManager, DownloadMessage},
-    plot::LogPlotUi,
-    util::format_data_size,
-};
+use crate::{plot::LogPlotUi, util::format_data_size};
 use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular;
+use plotinator_download::{DownloadMessage, manager::DownloadManager};
 use plotinator_log_if::prelude::Plotable as _;
 
 use file_dialog as fd;

@@ -3515,6 +3515,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "plotinator-download"
+version = "1.22.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dirs",
+ "log",
+ "pretty_assertions",
+ "reqwest",
+ "strum 0.27.2",
+ "strum_macros 0.27.2",
+]
+
+[[package]]
 name = "plotinator-hdf5"
 version = "1.22.0"
 dependencies = [
@@ -3669,7 +3683,6 @@ version = "1.22.0"
 dependencies = [
  "anyhow",
  "chrono",
- "dirs",
  "eframe",
  "egui",
  "egui-notify",
@@ -3681,6 +3694,7 @@ dependencies = [
  "log",
  "memmap2",
  "mimalloc",
+ "plotinator-download",
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-logs",

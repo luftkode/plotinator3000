@@ -1,0 +1,24 @@
+[package]
+name = "plotinator-download"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+strum.workspace = true
+strum_macros.workspace = true
+anyhow.workspace = true
+log.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+reqwest = { workspace = true, features = ["blocking"] }
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+
+[lints]
+workspace = true
