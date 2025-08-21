@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{plot::LogPlotUi, util::format_data_size};
+use crate::plot::LogPlotUi;
 use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference, UiKind};
 use egui_notify::Toasts;
@@ -10,6 +10,7 @@ use plotinator_log_if::prelude::Plotable as _;
 
 use file_dialog as fd;
 use loaded_files::LoadedFiles;
+use plotinator_strfmt::format_data_size;
 use plotinator_supported_formats::SupportedFormat;
 
 pub(crate) mod custom_files;

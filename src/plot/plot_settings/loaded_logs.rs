@@ -1,8 +1,9 @@
 use chrono::NaiveDateTime;
 use egui::{Color32, Key, RichText, TextEdit};
 use egui_phosphor::regular;
+use plotinator_strfmt::format_data_size;
 
-use crate::{app::WARN_ON_UNPARSED_BYTES_THRESHOLD, util::format_data_size};
+use crate::app::WARN_ON_UNPARSED_BYTES_THRESHOLD;
 
 use super::date_settings::LoadedLogSettings;
 

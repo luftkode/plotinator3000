@@ -1,7 +1,6 @@
-use std::time::Duration;
-
 use chrono::{DateTime, Timelike as _};
 use egui_plot::PlotPoint;
+use std::time::Duration;
 
 pub const NANOS_PER_SEC: u32 = 1_000_000_000;
 pub const SECS_PER_DAY: u32 = 24 * 60 * 60;

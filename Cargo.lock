@@ -3522,6 +3522,7 @@ dependencies = [
  "chrono",
  "dirs",
  "log",
+ "plotinator-strfmt",
  "pretty_assertions",
  "reqwest",
  "strum 0.27.2",
@@ -3631,6 +3632,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "plotinator-strfmt"
+version = "1.22.0"
+dependencies = [
+ "chrono",
+ "egui_plot",
+ "log",
+]
+
+[[package]]
 name = "plotinator-supported-formats"
 version = "1.22.0"
 dependencies = [
@@ -3701,6 +3711,7 @@ dependencies = [
  "plotinator-macros",
  "plotinator-mqtt",
  "plotinator-plot-util",
+ "plotinator-strfmt",
  "plotinator-supported-formats",
  "plotinator-test-util",
  "plotinator-ui-util",
