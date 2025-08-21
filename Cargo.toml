@@ -119,8 +119,10 @@ anyhow.workspace = true
 [dev-dependencies]
 testresult.workspace = true
 tempfile.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 # For GUI and GUI snapshot tests
-egui_kittest = { version = "0.32.0", features = [
+egui_kittest = { version = "0.32.1", features = [
     "eframe",
     "snapshot",
     "wgpu",
