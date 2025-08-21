@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::{Read as _, Write as _};
 use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::time::Duration;

@@ -96,7 +96,6 @@ plotinator-test-util.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-macros.workspace = true
 plotinator-supported-formats.workspace = true
-plotinator-download.workspace = true
 plotinator-strfmt.workspace = true
 egui_plot.workspace = true
 log.workspace = true
@@ -115,7 +114,6 @@ tokio.workspace = true
 memmap2.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
-reqwest = { workspace = true, features = ["blocking"] }
 
 
 [dev-dependencies]
@@ -132,10 +130,11 @@ egui_kittest = { version = "0.32.0", features = [
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.11"
-zip = "4.3.0"
 plotinator-updater = { workspace = true, optional = true }
 plotinator-mqtt = { workspace = true, optional = true }
+plotinator-download.workspace = true
+env_logger = "0.11"
+zip = "4.3.0"
 profiling = { workspace = true, optional = true }
 puffin = { workspace = true, optional = true }
 puffin_http = { workspace = true, optional = true }

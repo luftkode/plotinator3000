@@ -8,7 +8,8 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 
-[dependencies]
+# The downloader is only for native
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 plotinator-strfmt.workspace = true
 strum.workspace = true
 strum_macros.workspace = true

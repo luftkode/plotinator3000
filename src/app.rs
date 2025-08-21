@@ -1,11 +1,12 @@
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::app::download::DownloadUi;
 use crate::plot::LogPlotUi;
 use dropped_files::handle_dropped_files;
 use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular;
-use plotinator_download::{DownloadMessage, manager::DownloadManager};
 use plotinator_log_if::prelude::Plotable as _;
 
 use file_dialog as fd;
@@ -19,6 +20,7 @@ mod file_dialog;
 pub mod loaded_files;
 mod util;
 
+#[cfg(not(target_arch = "wasm32"))]
 mod download;
 
 /// if a log is loaded from content that exceeds this many unparsed bytes:
@@ -42,10 +44,6 @@ pub struct App {
     font_size_init: bool,
     error_message: Option<String>,
 
-    // Download configuration
-    download_host: String,
-    download_port: String,
-
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     #[serde(skip)]
     mqtt: crate::mqtt::Mqtt,
@@ -61,9 +59,9 @@ pub struct App {
     #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
     keep_repainting: bool,
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
-    download_manager: DownloadManager,
-    show_download_window: bool,
+    download_ui: DownloadUi,
 }
 
 impl Default for App {
@@ -76,8 +74,6 @@ impl Default for App {
             font_size: Self::DEFAULT_FONT_SIZE,
             font_size_init: false,
             error_message: None,
-            download_host: "192.168.1.60".to_string(),
-            download_port: "9091".to_string(),
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt: crate::mqtt::Mqtt::default(),
@@ -91,8 +87,8 @@ impl Default for App {
             #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
             keep_repainting: true,
 
-            download_manager: DownloadManager::new(),
-            show_download_window: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            download_ui: DownloadUi::default(),
         }
     }
 }
@@ -128,7 +124,10 @@ impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.poll_picked_files();
-        self.poll_download_messages(ctx);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        self.download_ui
+            .poll_download_messages(ctx, &mut self.toasts);
 
         if !self.font_size_init {
             configure_text_styles(ctx, self.font_size);
@@ -163,7 +162,9 @@ impl eframe::App for App {
                 egui::warn_if_debug_build(ui);
             });
         });
-        download::show_download_window(self, ctx);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        self.download_ui.show_download_window(ctx);
 
         self.toasts.show(ctx);
     }
@@ -228,32 +229,6 @@ impl App {
             Ok(None) => (),
         }
     }
-
-    fn poll_download_messages(&mut self, ctx: &egui::Context) {
-        for msg in self.download_manager.poll() {
-            match msg {
-                DownloadMessage::Success { filename } => {
-                    self.toasts
-                        .success(format!("Downloaded: {filename}"))
-                        .duration(Some(Duration::from_secs(5)));
-                }
-                DownloadMessage::Error(err) => {
-                    self.toasts
-                        .error(format!("Download failed: {err}"))
-                        .duration(Some(Duration::from_secs(10)));
-                }
-                DownloadMessage::Progress {
-                    downloaded_bytes,
-                    total_bytes,
-                } => {
-                    self.download_manager
-                        .update_progress(downloaded_bytes, total_bytes);
-                }
-                DownloadMessage::Finished => {}
-            }
-            ctx.request_repaint();
-        }
-    }
 }
 
 fn collapsible_instructions(ui: &mut egui::Ui) {
@@ -271,6 +246,10 @@ fn collapsible_instructions(ui: &mut egui::Ui) {
     });
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "There's a lot of buttons, just don't put other logic here"
+)]
 fn show_top_panel(app: &mut App, ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
@@ -342,6 +321,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 },
             );
 
+            #[cfg(not(target_arch = "wasm32"))]
             if ui
                 .button(RichText::new(format!(
                     "{icon} Download",
@@ -349,7 +329,7 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 )))
                 .clicked()
             {
-                app.show_download_window = true;
+                app.download_ui.show = true;
             }
 
             ui.label(RichText::new(regular::TEXT_T));

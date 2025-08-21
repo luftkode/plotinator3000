@@ -33,7 +33,7 @@ impl DownloadManager {
         }
         self.in_progress = true;
         self.progress = 0.0;
-        self.status_text = "Connecting...".to_string();
+        self.status_text = "Connecting...".to_owned();
 
         let tx = self.tx.clone();
         thread::Builder::new()
@@ -85,5 +85,11 @@ impl DownloadManager {
 
     pub fn status_text(&self) -> &str {
         &self.status_text
+    }
+}
+
+impl Default for DownloadManager {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -3719,7 +3719,6 @@ dependencies = [
  "profiling",
  "puffin",
  "puffin_http",
- "reqwest",
  "rfd",
  "semver",
  "serde",
