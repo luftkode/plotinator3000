@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.22.0]
+
+### Added
+
+- **Experimental** download latest data files from TS
+
+### Fixed
+
+- `frame-inclinometer` would show `pitch (old)` to indicate the old incorrect calculation, but that actually implies to `roll` and not `pitch`
+- Sps kitchen sink did not recognize inclinometer calibration values as valid entries
+
 ## [1.21.1]
 
 ### Fixed

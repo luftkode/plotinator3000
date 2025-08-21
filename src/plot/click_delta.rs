@@ -50,7 +50,7 @@ impl ClickDelta {
         let [x2, y2] = b;
         let delta_x = Self::delta_x(x1, x2);
         let delta_y = y2 - y1;
-        let raw_text = crate::util::format_delta_xy(delta_x, delta_y);
+        let raw_text = plotinator_strfmt::format_delta_xy(delta_x, delta_y);
         let x_offset = Self::calc_text_x_offset(x2, plot_bounds.range_x());
         let y_offset = Self::calc_text_y_offset(y2, plot_bounds.range_y());
         let dist_x = x2 - x1;

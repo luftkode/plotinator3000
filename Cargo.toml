@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.21.1"
+version = "1.22.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -39,6 +39,9 @@ plotinator-mqtt.path = "crates/plotinator-mqtt"
 plotinator-macros.path = "crates/plotinator-macros"
 plotinator-supported-formats.path = "crates/plotinator-supported-formats"
 plotinator-updater.path = "crates/plotinator-updater"
+plotinator-download.path = "crates/plotinator-download"
+plotinator-strfmt.path = "crates/plotinator-strfmt"
+
 egui = { version = "0.32", features = ["rayon", "callstack"] }
 eframe = { version = "0.32", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
@@ -69,6 +72,9 @@ anyhow = "1.0.99"
 rumqttc = "0.24.0"
 memmap2 = "0.9.7"
 tokio = "1.47.1"
+reqwest = { version = "0.12.23", default-features = false}
+dirs = "6.0.0"
+
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
     "profile-with-puffin",
@@ -80,7 +86,6 @@ puffin_http = "0.16"
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3.19.1"
-reqwest = "0.12.23"
 
 [dependencies]
 plotinator-logs.workspace = true
@@ -91,6 +96,7 @@ plotinator-test-util.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-macros.workspace = true
 plotinator-supported-formats.workspace = true
+plotinator-strfmt.workspace = true
 egui_plot.workspace = true
 log.workspace = true
 serde.workspace = true
@@ -124,10 +130,11 @@ egui_kittest = { version = "0.32.0", features = [
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.11"
-zip = "4.3.0"
 plotinator-updater = { workspace = true, optional = true }
 plotinator-mqtt = { workspace = true, optional = true }
+plotinator-download.workspace = true
+env_logger = "0.11"
+zip = "4.3.0"
 profiling = { workspace = true, optional = true }
 puffin = { workspace = true, optional = true }
 puffin_http = { workspace = true, optional = true }

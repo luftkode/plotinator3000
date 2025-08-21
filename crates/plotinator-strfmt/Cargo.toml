@@ -1,0 +1,18 @@
+[package]
+name = "plotinator-strfmt"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+log.workspace = true
+chrono.workspace = true
+egui_plot.workspace = true
+
+
+[lints]
+workspace = true

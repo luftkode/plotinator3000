@@ -29,11 +29,16 @@ impl NavSysSpsKitchenSink {
         let Ok(file) = fs::File::open(path) else {
             return false;
         };
-        let mut reader = BufReader::new(file);
-
+        let mut reader = BufReader::new(&file);
         let valid_tilt_sensor = Self::is_reader_valid_tilt_sensor(&mut reader);
 
-        MagSps::file_is_valid(path) || Wasp200Sps::file_is_valid(path) || valid_tilt_sensor
+        let mut reader = BufReader::new(file);
+        let valid_tilt_sensor_cal_vals = Self::is_reader_valid_tilt_sensor_cal_vals(&mut reader);
+
+        MagSps::file_is_valid(path)
+            || Wasp200Sps::file_is_valid(path)
+            || valid_tilt_sensor
+            || valid_tilt_sensor_cal_vals
     }
 
     fn is_reader_valid_tilt_sensor(reader: &mut impl io::BufRead) -> bool {
@@ -41,6 +46,23 @@ impl NavSysSpsKitchenSink {
         InclinometerEntry::from_reader(reader).is_ok()
             && InclinometerEntry::from_reader(reader).is_ok()
             && InclinometerEntry::from_reader(reader).is_ok()
+    }
+
+    fn is_reader_valid_tilt_sensor_cal_vals(reader: impl io::BufRead) -> bool {
+        let mut valid_lines = 0;
+        for l in reader.lines() {
+            let Ok(l) = l else {
+                return false;
+            };
+            if l.starts_with("MRK") {
+                valid_lines += 1;
+            }
+
+            if valid_lines == 3 {
+                return true;
+            }
+        }
+        false
     }
 
     #[allow(
@@ -617,7 +639,13 @@ impl Parseable for NavSysSpsKitchenSink {
     fn is_buf_valid(buf: &[u8]) -> bool {
         let mut reader = BufReader::new(buf);
         let is_valid_tilt_sensor = Self::is_reader_valid_tilt_sensor(&mut reader);
-        MagSps::is_buf_valid(buf) || Wasp200Sps::is_buf_valid(buf) || is_valid_tilt_sensor
+        let mut reader = BufReader::new(buf);
+        let valid_tilt_sensor_cal_vals = Self::is_reader_valid_tilt_sensor_cal_vals(&mut reader);
+
+        MagSps::is_buf_valid(buf)
+            || Wasp200Sps::is_buf_valid(buf)
+            || is_valid_tilt_sensor
+            || valid_tilt_sensor_cal_vals
     }
 }
 

@@ -48,8 +48,8 @@ impl SkytemHdf5 for FrameInclinometers {
 
         let mut pitch1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
         let mut pitch2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-        let mut old_pitch1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-        let mut old_pitch2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+        let mut old_roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+        let mut old_roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
         let mut roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
         let mut roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
 
@@ -61,12 +61,12 @@ impl SkytemHdf5 for FrameInclinometers {
             let pitch = attitudes_row[0];
             let roll = attitudes_row[1];
 
-            // The old pitch that is incorrectly calculated
-            let old_pitch = angles_row[0];
+            // The old roll that is incorrectly calculated
+            let old_roll = angles_row[1];
 
             pitch1_with_ts.push([*timestamp, pitch as f64]);
             roll1_with_ts.push([*timestamp, roll as f64]);
-            old_pitch1_with_ts.push([*timestamp, old_pitch as f64]);
+            old_roll1_with_ts.push([*timestamp, old_roll as f64]);
         }
 
         for ((angles_row, attitudes_row), timestamp) in angles2
@@ -77,12 +77,12 @@ impl SkytemHdf5 for FrameInclinometers {
             let pitch = attitudes_row[0];
             let roll = attitudes_row[1];
 
-            // The old pitch that is incorrectly calculated
-            let old_pitch = angles_row[0];
+            // The old roll that is incorrectly calculated
+            let old_roll = angles_row[1];
 
             pitch2_with_ts.push([*timestamp, pitch as f64]);
             roll2_with_ts.push([*timestamp, roll as f64]);
-            old_pitch2_with_ts.push([*timestamp, old_pitch as f64]);
+            old_roll2_with_ts.push([*timestamp, old_roll as f64]);
         }
 
         let pitch1_rawplot = RawPlot::new(
@@ -105,14 +105,14 @@ impl SkytemHdf5 for FrameInclinometers {
             roll2_with_ts,
             ExpectedPlotRange::OneToOneHundred,
         );
-        let old_pitch1_rawplot = RawPlot::new(
-            "Pitch-1 (Old) °".to_owned(),
-            old_pitch1_with_ts,
+        let old_roll1_rawplot = RawPlot::new(
+            "Roll-1 (Old) °".to_owned(),
+            old_roll1_with_ts,
             ExpectedPlotRange::OneToOneHundred,
         );
-        let old_pitch2_rawplot = RawPlot::new(
-            "Pitch-2 (Old) °".to_owned(),
-            old_pitch2_with_ts,
+        let old_roll2_rawplot = RawPlot::new(
+            "Roll-2 (Old) °".to_owned(),
+            old_roll2_with_ts,
             ExpectedPlotRange::OneToOneHundred,
         );
 
@@ -133,8 +133,8 @@ impl SkytemHdf5 for FrameInclinometers {
                 pitch2_rawplot,
                 roll1_rawplot,
                 roll2_rawplot,
-                old_pitch1_rawplot,
-                old_pitch2_rawplot,
+                old_roll1_rawplot,
+                old_roll2_rawplot,
             ],
             metadata,
         })

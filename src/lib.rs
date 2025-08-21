@@ -32,4 +32,3 @@ pub mod mqtt;
 pub mod plot;
 #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
 pub mod profiling;
-pub mod util;
