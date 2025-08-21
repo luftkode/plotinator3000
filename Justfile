@@ -35,11 +35,11 @@ export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATE
 check-all: check check-wasm
 
 [doc("Quickly check if it compiles without compiling (native target)"), group("Check"), no-exit-message]
-check *ARGS:
+check *ARGS="--workspace":
     cargo {{check}} {{ ARGS }}
 
 [group("Web"), group("Check"), doc("Quickly check if the WASM target compiles without compiling"), no-exit-message]
-check-wasm: (check "--target wasm32-unknown-unknown")
+check-wasm: (check "--workspace --target wasm32-unknown-unknown")
 
 # Get trunk: https://trunkrs.dev/guide/introduction.html
 [group("Web"), doc("serve as a local webserver with hot reloading and logging enabled (requires trunk)")]
