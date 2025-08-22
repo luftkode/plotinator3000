@@ -69,7 +69,12 @@ pub struct PlotSettings {
 }
 
 impl PlotSettings {
-    pub fn show(&mut self, ui: &mut egui::Ui, axis_cfg: &mut AxisConfig) {
+    pub fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+        axis_cfg: &mut AxisConfig,
+        plots: &plotinator_plot_util::Plots,
+    ) {
         if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(theme_color(
                 ui,
@@ -80,7 +85,7 @@ impl PlotSettings {
             self.series_plot_settings.show(ui);
         } else {
             self.show_loaded_files(ui);
-            self.ui_plot_filter_settings(ui);
+            self.ui_plot_filter_settings(ui, plots);
             self.mipmap_settings.show(ui);
             show_axis_settings(ui, axis_cfg);
             self.series_plot_settings.show(ui);
@@ -88,13 +93,13 @@ impl PlotSettings {
         }
     }
 
-    fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui) {
+    fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
         self.ps_ui.ui_toggle_show_filter(ui);
         if self.ps_ui.show_filter_settings {
             egui::Window::new(self.ps_ui.filter_settings_text())
                 .open(&mut self.ps_ui.show_filter_settings)
                 .show(ui.ctx(), |ui| {
-                    self.plot_name_filter.show(ui);
+                    self.plot_name_filter.show(ui, plots);
                 });
             if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
                 self.ps_ui.show_filter_settings = false;
@@ -319,7 +324,9 @@ impl PlotSettings {
         }
         let set_plot_highlight = |plot_data: &mut plotinator_plot_util::PlotData| {
             for pd in plot_data.plots_as_mut() {
-                *pd.get_highlight_mut() = ids_to_highlight.contains(&pd.log_id());
+                let should_highlight = ids_to_highlight.contains(&pd.log_id())
+                    || self.plot_name_filter.should_highlight(pd.name());
+                *pd.get_highlight_mut() = should_highlight;
             }
             for pl in plot_data.plot_labels_as_mut() {
                 *pl.get_highlight_mut() = ids_to_highlight.contains(&pl.log_id());
@@ -338,6 +345,7 @@ impl PlotSettings {
                 *pl.get_highlight_mut() = true;
             }
         };
+
         if self.visibility.hovered_display_percentage() {
             set_all_plots_highlighted(plots.percentage_mut());
         } else if self.visibility.hovered_display_to_hundreds() {

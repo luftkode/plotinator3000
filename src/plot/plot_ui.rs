@@ -5,8 +5,9 @@ pub fn show_settings_grid(
     ui: &mut egui::Ui,
     axis_cfg: &mut AxisConfig,
     plot_settings: &mut PlotSettings,
+    plots: &plotinator_plot_util::Plots,
 ) {
     ui.horizontal_wrapped(|ui| {
-        plot_settings.show(ui, axis_cfg);
+        plot_settings.show(ui, axis_cfg, plots);
     });
 }
