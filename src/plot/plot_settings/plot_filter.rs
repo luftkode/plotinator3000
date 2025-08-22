@@ -1,4 +1,4 @@
-use egui::{Response, RichText};
+use egui::RichText;
 use plotinator_plot_util::PlotValues;
 use serde::{Deserialize, Serialize};
 
@@ -117,12 +117,11 @@ impl PlotNameFilter {
             count
         };
 
-        // Scrollable area for plot toggles in single column
+        // Scrollable area for plot toggles
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
-            .max_height(400.0)
             .show(ui, |ui| {
-                for plot in self.plots.iter_mut() {
+                for plot in &mut self.plots {
                     let dataset_count = count_plot_occurrences(plot.name());
                     let plot_name = plot.name().to_owned();
 
