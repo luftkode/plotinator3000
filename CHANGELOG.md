@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Improve filter window UI
 - Highlights plots that are effected by a filter label when hovering the given label
 
 ## [1.22.1]

@@ -69,7 +69,12 @@ pub struct PlotSettings {
 }
 
 impl PlotSettings {
-    pub fn show(&mut self, ui: &mut egui::Ui, axis_cfg: &mut AxisConfig) {
+    pub fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+        axis_cfg: &mut AxisConfig,
+        plots: &plotinator_plot_util::Plots,
+    ) {
         if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(theme_color(
                 ui,
@@ -80,7 +85,7 @@ impl PlotSettings {
             self.series_plot_settings.show(ui);
         } else {
             self.show_loaded_files(ui);
-            self.ui_plot_filter_settings(ui);
+            self.ui_plot_filter_settings(ui, plots);
             self.mipmap_settings.show(ui);
             show_axis_settings(ui, axis_cfg);
             self.series_plot_settings.show(ui);
@@ -88,13 +93,13 @@ impl PlotSettings {
         }
     }
 
-    fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui) {
+    fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
         self.ps_ui.ui_toggle_show_filter(ui);
         if self.ps_ui.show_filter_settings {
             egui::Window::new(self.ps_ui.filter_settings_text())
                 .open(&mut self.ps_ui.show_filter_settings)
                 .show(ui.ctx(), |ui| {
-                    self.plot_name_filter.show(ui);
+                    self.plot_name_filter.show(ui, plots);
                 });
             if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
                 self.ps_ui.show_filter_settings = false;

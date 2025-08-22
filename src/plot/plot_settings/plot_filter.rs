@@ -60,32 +60,84 @@ impl PlotNameFilter {
     }
 
     /// Shows the window where users can toggle plot visibility based on plot labels
-    pub fn show(&mut self, ui: &mut egui::Ui) {
+    pub fn show(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
         let mut enable_all = false;
         let mut disable_all = false;
-        egui::Grid::new("global_filter_settings").show(ui, |ui| {
-            if ui
-                .button(RichText::new("Show all").strong().heading())
-                .clicked()
-            {
+
+        // Header with global controls and stats
+        ui.horizontal(|ui| {
+            if ui.button(RichText::new("Show all").strong()).clicked() {
                 enable_all = true;
             }
-            if ui
-                .button(RichText::new("Hide all").strong().heading())
-                .clicked()
-            {
+            if ui.button(RichText::new("Hide all").strong()).clicked() {
                 disable_all = true;
             }
+            ui.separator();
+            let shown_count = self.plots.iter().filter(|p| p.show()).count();
+            let total_count = self.plots.len();
+            ui.label(format!("Shown: {shown_count}/{total_count} plot types"));
         });
+
+        ui.separator();
+
         if enable_all {
             self.set_show_all();
         } else if disable_all {
             self.set_hide_all();
         }
 
-        for plot in &mut self.plots {
-            plot.hovered = plot.show_as_toggle_value(ui).hovered();
-        }
+        // Helper function to count occurrences of a plot name across all datasets
+        let count_plot_occurrences = |plot_name: &str| -> usize {
+            let mut count = 0;
+
+            // Count in percentage plots
+            count += plots
+                .percentage()
+                .plots()
+                .iter()
+                .filter(|p| p.name() == plot_name)
+                .count();
+
+            // Count in hundreds plots
+            count += plots
+                .one_to_hundred()
+                .plots()
+                .iter()
+                .filter(|p| p.name() == plot_name)
+                .count();
+
+            // Count in thousands plots
+            count += plots
+                .thousands()
+                .plots()
+                .iter()
+                .filter(|p| p.name() == plot_name)
+                .count();
+
+            count
+        };
+
+        // Scrollable area for plot toggles in single column
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .max_height(400.0)
+            .show(ui, |ui| {
+                for plot in self.plots.iter_mut() {
+                    let dataset_count = count_plot_occurrences(plot.name());
+                    let plot_name = plot.name().to_owned();
+
+                    ui.horizontal(|ui| {
+                        plot.hovered = ui.toggle_value(&mut plot.show, plot_name).hovered();
+                        if dataset_count > 0 {
+                            ui.label(
+                                RichText::new(format!("({dataset_count})"))
+                                    .small()
+                                    .color(ui.visuals().weak_text_color()),
+                            );
+                        }
+                    });
+                }
+            });
     }
 }
 
@@ -120,9 +172,5 @@ impl PlotNameShow {
 
     pub fn set_show(&mut self, show: bool) {
         self.show = show;
-    }
-
-    pub fn show_as_toggle_value(&mut self, ui: &mut egui::Ui) -> Response {
-        ui.toggle_value(&mut self.show, self.name.clone())
     }
 }
