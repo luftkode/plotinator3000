@@ -19,6 +19,14 @@ impl PlotNameFilter {
         self.plots.iter().any(|p| p.name() == plot_name)
     }
 
+    /// Returns whether a plot with the given name should be highlighted (is hovered)
+    pub fn should_highlight(&self, plot_name: &str) -> bool {
+        self.plots
+            .iter()
+            .find(|p| p.name() == plot_name)
+            .is_some_and(|p| p.is_hovered())
+    }
+
     /// Takes in a slice of [`PlotValues`] and a function that filters based on log id
     /// and returns an iterator that yields all the [`PlotValues`] that should be shown
     ///
@@ -76,7 +84,7 @@ impl PlotNameFilter {
         }
 
         for plot in &mut self.plots {
-            plot.show_as_toggle_value(ui);
+            plot.hovered = plot.show_as_toggle_value(ui).hovered();
         }
     }
 }
@@ -85,11 +93,17 @@ impl PlotNameFilter {
 pub struct PlotNameShow {
     name: String,
     show: bool,
+    // On hover: Highlight the line plots that match the name
+    hovered: bool,
 }
 
 impl PlotNameShow {
     pub fn new(name: String, show: bool) -> Self {
-        Self { name, show }
+        Self {
+            name,
+            show,
+            hovered: false,
+        }
     }
 
     pub fn name(&self) -> &str {
@@ -98,6 +112,10 @@ impl PlotNameShow {
 
     pub fn show(&self) -> bool {
         self.show
+    }
+
+    pub fn is_hovered(&self) -> bool {
+        self.hovered
     }
 
     pub fn set_show(&mut self, show: bool) {

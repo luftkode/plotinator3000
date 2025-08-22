@@ -319,7 +319,9 @@ impl PlotSettings {
         }
         let set_plot_highlight = |plot_data: &mut plotinator_plot_util::PlotData| {
             for pd in plot_data.plots_as_mut() {
-                *pd.get_highlight_mut() = ids_to_highlight.contains(&pd.log_id());
+                let should_highlight = ids_to_highlight.contains(&pd.log_id())
+                    || self.plot_name_filter.should_highlight(pd.name());
+                *pd.get_highlight_mut() = should_highlight;
             }
             for pl in plot_data.plot_labels_as_mut() {
                 *pl.get_highlight_mut() = ids_to_highlight.contains(&pl.log_id());
@@ -338,6 +340,7 @@ impl PlotSettings {
                 *pl.get_highlight_mut() = true;
             }
         };
+
         if self.visibility.hovered_display_percentage() {
             set_all_plots_highlighted(plots.percentage_mut());
         } else if self.visibility.hovered_display_to_hundreds() {
