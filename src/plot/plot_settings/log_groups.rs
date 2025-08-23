@@ -101,6 +101,7 @@ pub(crate) fn show_log_groups(
 
 /// Renders a single log without grouping overhead - more concise display
 fn show_single_log(ui: &mut Ui, log_setting: &mut LoadedLogSettings) {
+    *log_setting.cursor_hovering_on_mut() = false;
     loaded_logs::show_log_date_settings_ui(ui, log_setting);
     ui.end_row();
 }
