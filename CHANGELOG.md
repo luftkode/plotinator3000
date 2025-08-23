@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Sort loaded logs alphabetically
+- Show loaded logs start datetime as `YYYY-MM-DD HH:MM:SS`
+
 ## [1.23.0]
 
 - Apply highlighting to polygons in scatter plots in the same way as it is applied in line plots

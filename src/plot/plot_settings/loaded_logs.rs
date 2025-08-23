@@ -12,7 +12,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
     // we detect hover on any of the elements on the line for the given log
     *loaded_log.cursor_hovering_on_mut() = false;
 
-    let log_name_date = loaded_log.log_label();
+    let log_name_id = loaded_log.log_label();
     let check_box_text = RichText::new(if loaded_log.show_log() {
         regular::EYE
     } else {
@@ -23,7 +23,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
         *loaded_log.cursor_hovering_on_mut() = true;
     }
 
-    let log_button_text = RichText::new(log_name_date.clone());
+    let log_button_text = RichText::new(log_name_id.clone());
     let log_button_text = if loaded_log.show_log() {
         log_button_text.strong()
     } else {
@@ -38,7 +38,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
         *loaded_log.cursor_hovering_on_mut() = true;
     }
 
-    let ui_date_label = ui.label(loaded_log.start_date().naive_utc().to_string());
+    let ui_date_label = ui.label(loaded_log.starte_date_formatted());
     if ui_date_label.hovered() {
         *loaded_log.cursor_hovering_on_mut() = true;
     }
@@ -64,7 +64,7 @@ pub fn log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSetting
             .to_string();
     }
     if loaded_log.clicked() {
-        log_settings_window(ui, loaded_log, &log_name_date);
+        log_settings_window(ui, loaded_log, &log_name_id);
     }
 }
 
