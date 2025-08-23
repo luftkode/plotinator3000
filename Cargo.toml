@@ -74,6 +74,7 @@ tokio = "1.47.1"
 reqwest = { version = "0.12.23", default-features = false }
 dirs = "6.0.0"
 smallvec = "1.15.1"
+tempfile = "3.19.1"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
@@ -85,7 +86,6 @@ puffin_http = "0.16"
 # Dev dependencies
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
-tempfile = "3.19.1"
 
 [dependencies]
 plotinator-logs.workspace = true
@@ -115,7 +115,7 @@ memmap2.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
 smallvec.workspace = true
-
+tempfile.workspace = true
 
 [dev-dependencies]
 testresult.workspace = true
