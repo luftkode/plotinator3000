@@ -6,6 +6,11 @@ pub use app::App;
 use semver::Version;
 mod app;
 
+/// if a log is loaded from content that exceeds this many unparsed bytes:
+/// - Show a toasts warning notification
+/// - Show warnings in the UI when viewing parse info for the loaded log
+pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
+
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 pub const APP_OWNER: &str = "luftkode";
 
