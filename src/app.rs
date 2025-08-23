@@ -1,32 +1,22 @@
-use std::time::Duration;
-
 #[cfg(not(target_arch = "wasm32"))]
 use crate::app::download::DownloadUi;
 use crate::plot::LogPlotUi;
 use dropped_files::handle_dropped_files;
-use egui::{Color32, Hyperlink, RichText, TextStyle, ThemePreference, UiKind};
+use egui::{RichText, UiKind};
 use egui_notify::Toasts;
-use egui_phosphor::regular;
-use plotinator_log_if::prelude::Plotable as _;
 
 use file_dialog as fd;
 use loaded_files::LoadedFiles;
-use plotinator_strfmt::format_data_size;
-use plotinator_supported_formats::SupportedFormat;
 
 pub(crate) mod custom_files;
 mod dropped_files;
 mod file_dialog;
 pub mod loaded_files;
+mod misc;
 mod util;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod download;
-
-/// if a log is loaded from content that exceeds this many unparsed bytes:
-/// - Show a toasts warning notification
-/// - Show warnings in the UI when viewing parse info for the loaded log
-pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -46,7 +36,7 @@ pub struct App {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     #[serde(skip)]
-    mqtt: crate::mqtt::Mqtt,
+    pub(crate) mqtt: crate::mqtt::Mqtt,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -130,13 +120,13 @@ impl eframe::App for App {
             .poll_download_messages(ctx, &mut self.toasts);
 
         if !self.font_size_init {
-            configure_text_styles(ctx, self.font_size);
+            misc::configure_text_styles(ctx, self.font_size);
         }
 
         show_top_panel(self, ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
+            misc::notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
             self.plot.ui(
                 ui,
                 &mut self.first_frame,
@@ -157,10 +147,8 @@ impl eframe::App for App {
                 Ok(None) => (),
             }
 
-            self.show_error(ui);
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                egui::warn_if_debug_build(ui);
-            });
+            misc::show_error(ui, self);
+            misc::show_warn_on_debug_build(ui);
         });
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -174,39 +162,6 @@ impl App {
     fn load_new_plot_ui_state(&mut self, new: Box<LogPlotUi>) {
         self.first_frame = true; // Necessary to reset some caching
         self.plot = *new;
-    }
-
-    fn show_error(&mut self, ui: &egui::Ui) {
-        if let Some(error) = self.error_message.clone() {
-            egui::Window::new(RichText::new("⚠").size(40.0).color(Color32::RED))
-                .auto_sized()
-                .collapsible(false)
-                .resizable(false)
-                .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
-                .show(ui.ctx(), |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.add_space(10.0);
-                        ui.label(RichText::new(&error).text_style(TextStyle::Body).strong());
-                        ui.add_space(20.0);
-
-                        let button_text = RichText::new("OK")
-                            .text_style(TextStyle::Heading)
-                            .size(18.0)
-                            .strong();
-
-                        let button_size = egui::Vec2::new(80.0, 40.0);
-                        if ui
-                            .add_sized(button_size, egui::Button::new(button_text))
-                            .on_hover_text("Click to dismiss the error")
-                            .clicked()
-                            || ui.input(|i| i.key_pressed(egui::Key::Enter))
-                        {
-                            self.error_message = None;
-                        }
-                        ui.add_space(20.0);
-                    });
-                });
-        }
     }
 
     fn poll_picked_files(&mut self) {
@@ -231,21 +186,6 @@ impl App {
     }
 }
 
-fn collapsible_instructions(ui: &mut egui::Ui) {
-    ui.collapsing("Instructions", |ui| {
-        ui.label("Pan: Drag, or scroll (+ shift = horizontal).");
-        ui.label("Box zooming: Right click + drag.");
-        if cfg!(target_os = "macos") {
-            ui.label("X-axis zoom: CTRL/⌘ + scroll.");
-            ui.label("Y-axis zoom: CTRL/⌘ + ALT + scroll.");
-        } else {
-            ui.label("X-axis zoom: CTRL + scroll.");
-            ui.label("Y-axis zoom: CTRL + ALT + scroll.");
-        }
-        ui.label("Reset view: double-click.");
-    });
-}
-
 #[allow(
     clippy::too_many_lines,
     reason = "There's a lot of buttons, just don't put other logic here"
@@ -253,28 +193,7 @@ fn collapsible_instructions(ui: &mut egui::Ui) {
 fn show_top_panel(app: &mut App, ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
-            if ui
-                .button(RichText::new(format!(
-                    "{icon} Reset",
-                    icon = egui_phosphor::regular::TRASH
-                )))
-                .clicked()
-            {
-                if app.plot.plot_count() == 0 {
-                    app.toasts
-                        .warning("No loaded plots...")
-                        .duration(Some(std::time::Duration::from_secs(3)));
-                } else {
-                    app.toasts
-                        .info("All loaded logs removed...")
-                        .duration(Some(std::time::Duration::from_secs(3)));
-                }
-                app.loaded_files = LoadedFiles::default();
-                app.plot = LogPlotUi::default();
-
-                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                app.mqtt.reset();
-            }
+            misc::show_app_reset_button(ui, app);
             if ui
                 .button(RichText::new(format!(
                     "{icon} Open File",
@@ -322,34 +241,11 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             );
 
             #[cfg(not(target_arch = "wasm32"))]
-            if ui
-                .button(RichText::new(format!(
-                    "{icon} Download",
-                    icon = egui_phosphor::regular::DOWNLOAD_SIMPLE
-                )))
-                .clicked()
-            {
-                app.download_ui.show = true;
-            }
+            misc::not_wasm_show_download_button(ui, app);
 
-            ui.label(RichText::new(regular::TEXT_T));
-            if ui
-                .add(
-                    egui::DragValue::new(&mut app.font_size)
-                        .speed(0.1)
-                        .range(8.0..=32.0)
-                        .suffix("px"),
-                )
-                .changed()
-            {
-                configure_text_styles(ctx, app.font_size);
-            }
-
-            show_theme_toggle_buttons(ui);
-            ui.add(Hyperlink::from_label_and_url(
-                "Homepage",
-                "https://github.com/luftkode/plotinator3000",
-            ));
+            misc::show_font_size_drag_value(ui, ctx, app);
+            misc::show_theme_toggle_buttons(ui);
+            misc::show_homepage_link(ui);
 
             #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
             crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut app.keep_repainting);
@@ -359,99 +255,8 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             }
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            show_mqtt_connect_button(app, ctx, ui);
-            collapsible_instructions(ui);
+            crate::mqtt::show_mqtt_connect_button(app, ctx, ui);
+            misc::collapsible_instructions(ui);
         });
     });
-}
-
-#[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-fn show_mqtt_connect_button(app: &mut App, ctx: &egui::Context, ui: &mut egui::Ui) {
-    let mqtt_connect_button_txt = if app.mqtt.active_and_connected() {
-        RichText::new(format!(
-            "{} MQTT connect",
-            egui_phosphor::regular::WIFI_HIGH
-        ))
-        .color(Color32::GREEN)
-    } else if app.mqtt.active_but_disconnected() {
-        RichText::new(format!(
-            "{} MQTT connect",
-            egui_phosphor::regular::WIFI_SLASH
-        ))
-        .color(Color32::RED)
-    } else {
-        RichText::new("MQTT connect".to_owned())
-    };
-    if app.mqtt.active_but_disconnected() {
-        ui.spinner();
-    }
-    if ui.button(mqtt_connect_button_txt).clicked() {
-        app.mqtt.connect();
-    }
-
-    if app.mqtt.listener_active() {
-        app.mqtt.poll_data();
-        ctx.request_repaint_after(Duration::from_millis(50));
-    }
-    // Show MQTT configuration window if needed
-    app.mqtt.show_connect_window(ui);
-}
-
-fn configure_text_styles(ctx: &egui::Context, font_size: f32) {
-    let mut style = (*ctx.style()).clone();
-    for font_id in style.text_styles.values_mut() {
-        font_id.size = font_size;
-    }
-    ctx.set_style(style);
-}
-
-/// Displays a toasts notification if logs are added with the names of all added logs
-fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]) {
-    if !logs.is_empty() {
-        let mut log_names_str = String::new();
-        for l in logs {
-            log_names_str.push('\n');
-            log_names_str.push('\t');
-            log_names_str.push_str(l.descriptive_name());
-        }
-        toasts
-            .info(format!(
-                "{} log{} added{log_names_str}",
-                logs.len(),
-                if logs.len() == 1 { "" } else { "s" }
-            ))
-            .duration(Some(Duration::from_secs(2)));
-        for l in logs {
-            if let Some(parse_info) = l.parse_info() {
-                log::debug!(
-                    "Unparsed bytes for {remainder}:{log_name}",
-                    remainder = parse_info.remainder_bytes(),
-                    log_name = l.descriptive_name()
-                );
-                if parse_info.remainder_bytes() > WARN_ON_UNPARSED_BYTES_THRESHOLD {
-                    toasts
-                        .warning(format!(
-                    "Could only parse {parsed}/{total} for {log_name}\n{remainder} remain unparsed",
-                    parsed = format_data_size(parse_info.parsed_bytes()),
-                    total = format_data_size(parse_info.total_bytes()),
-                    log_name = l.descriptive_name(),
-                    remainder = format_data_size(parse_info.remainder_bytes())
-                ))
-                        .duration(Some(Duration::from_secs(30)));
-                }
-            }
-        }
-    }
-}
-
-fn show_theme_toggle_buttons(ui: &mut egui::Ui) {
-    let mut theme_preference = ui.ctx().options(|opt| opt.theme_preference);
-
-    ui.horizontal(|ui| {
-        ui.selectable_value(&mut theme_preference, ThemePreference::Light, "☀");
-        ui.selectable_value(&mut theme_preference, ThemePreference::Dark, "🌙 ");
-        ui.selectable_value(&mut theme_preference, ThemePreference::System, "💻");
-    });
-
-    ui.ctx().set_theme(theme_preference);
 }
