@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use egui::RichText;
 use plotinator_plot_util::PlotValues;
 use serde::{Deserialize, Serialize};
@@ -5,6 +7,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameFilter {
     plots: Vec<PlotNameShow>,
+    // Cache for grouped plots - not serialized since it's derived data
+    #[serde(skip)]
+    grouped_plots_cache: BTreeMap<String, Vec<usize>>,
+    // Track if plots have been modified to invalidate cache
+    #[serde(skip)]
+    cache_valid: bool,
 }
 
 impl PlotNameFilter {
@@ -12,11 +20,15 @@ impl PlotNameFilter {
         self.plots.push(plot_name_show);
         // sort in alphabetical order
         self.plots.sort_unstable_by(|a, b| a.name().cmp(b.name()));
+        // Invalidate cache since plots have changed
+        self.invalidate_cache();
     }
 
-    /// Returns whether the filter already contains a plot with the given name
-    pub fn contains_name(&self, plot_name: &str) -> bool {
-        self.plots.iter().any(|p| p.name() == plot_name)
+    /// Returns whether the filter already contains a plot with the given name and association
+    pub fn contains(&self, plot_name: &str, associated_descriptive_name: &str) -> bool {
+        self.plots.iter().any(|p| {
+            p.name() == plot_name && p.associated_descriptive_name == associated_descriptive_name
+        })
     }
 
     /// Returns whether a plot with the given name should be highlighted (is hovered)
@@ -42,7 +54,10 @@ impl PlotNameFilter {
         plot_data.iter().filter(move |pv| {
             self.plots
                 .iter()
-                .find(|pf| pf.name() == pv.name())
+                .find(|pf| {
+                    pf.name() == pv.name()
+                        && pf.associated_descriptive_name == pv.associated_descriptive_name()
+                })
                 .is_some_and(|pf| pf.show() && fn_show_id(pv.log_id()))
         })
     }
@@ -57,6 +72,28 @@ impl PlotNameFilter {
         for p in &mut self.plots {
             p.set_show(false);
         }
+    }
+
+    /// Invalidate the cache when the structure of plots changes
+    fn invalidate_cache(&mut self) {
+        self.grouped_plots_cache.clear();
+        self.cache_valid = false;
+    }
+
+    /// Build (if necessary) and retrieve the cached grouped plots
+    fn get_grouped_plots(&mut self) -> &BTreeMap<String, Vec<usize>> {
+        if !self.cache_valid {
+            for (index, plot) in self.plots.iter().enumerate() {
+                self.grouped_plots_cache
+                    .entry(plot.associated_descriptive_name.clone())
+                    .or_default()
+                    .push(index);
+            }
+
+            self.cache_valid = true;
+        }
+
+        &self.grouped_plots_cache
     }
 
     /// Shows the window where users can toggle plot visibility based on plot labels
@@ -117,24 +154,37 @@ impl PlotNameFilter {
             count
         };
 
-        // Scrollable area for plot toggles
+        // Get the cached grouped plots
+        let grouped_plots = self.get_grouped_plots().clone();
+
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                for plot in &mut self.plots {
-                    let dataset_count = count_plot_occurrences(plot.name());
-                    let plot_name = plot.name().to_owned();
+                for (descriptive_name, plot_indices) in grouped_plots {
+                    // Create a CollapsingHeader for each group.
+                    let header_text = format!("{descriptive_name} ({})", plot_indices.len());
+                    egui::CollapsingHeader::new(RichText::new(header_text).strong())
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            // Render the toggle buttons for each plot within the group.
+                            for &plot_index in &plot_indices {
+                                let plot = &mut self.plots[plot_index];
+                                let dataset_count = count_plot_occurrences(plot.name());
+                                let plot_name = plot.name().to_owned();
 
-                    ui.horizontal(|ui| {
-                        plot.hovered = ui.toggle_value(&mut plot.show, plot_name).hovered();
-                        if dataset_count > 0 {
-                            ui.label(
-                                RichText::new(format!("({dataset_count})"))
-                                    .small()
-                                    .color(ui.visuals().weak_text_color()),
-                            );
-                        }
-                    });
+                                ui.horizontal(|ui| {
+                                    plot.hovered =
+                                        ui.toggle_value(&mut plot.show, plot_name).hovered();
+                                    if dataset_count > 0 {
+                                        ui.label(
+                                            RichText::new(format!("({dataset_count})"))
+                                                .small()
+                                                .color(ui.visuals().weak_text_color()),
+                                        );
+                                    }
+                                });
+                            }
+                        });
                 }
             });
     }
@@ -143,16 +193,19 @@ impl PlotNameFilter {
 #[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameShow {
     name: String,
+    // The descriptive name of the log it came from
+    associated_descriptive_name: String,
     show: bool,
     // On hover: Highlight the line plots that match the name
     hovered: bool,
 }
 
 impl PlotNameShow {
-    pub fn new(name: String, show: bool) -> Self {
+    pub fn new(name: String, show: bool, associated_descriptive_name: String) -> Self {
         Self {
             name,
             show,
+            associated_descriptive_name,
             hovered: false,
         }
     }

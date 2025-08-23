@@ -53,24 +53,27 @@ impl SkytemHdf5 for FrameAltimeters {
         };
 
         let mut height1_with_ts: Vec<[f64; 2]> = Vec::new();
+        let mut height1_invalid_values_count: u64 = 0;
+        let mut height1_invalid_values: Vec<[f64; 2]> = Vec::new();
         for (height, ts) in heights1.iter().zip(timestamps1) {
-            height1_with_ts.push([ts, *height as f64]);
+            if *height > Self::INVALID_VALUE_THRESHOLD {
+                height1_invalid_values_count += 1;
+                height1_invalid_values.push([ts, height1_invalid_values_count as f64]);
+            } else {
+                height1_with_ts.push([ts, *height as f64]);
+            }
         }
         let mut height2_with_ts: Vec<[f64; 2]> = Vec::new();
+        let mut height2_invalid_values_count: u64 = 0;
+        let mut height2_invalid_values: Vec<[f64; 2]> = Vec::new();
         for (height, ts) in heights2.iter().zip(timestamps2) {
-            height2_with_ts.push([ts, *height as f64]);
+            if *height > Self::INVALID_VALUE_THRESHOLD {
+                height2_invalid_values_count += 1;
+                height2_invalid_values.push([ts, height2_invalid_values_count as f64]);
+            } else {
+                height2_with_ts.push([ts, *height as f64]);
+            }
         }
-
-        let rawplot1 = RawPlot::new(
-            format!("Height-1 [{height1_unit}]"),
-            height1_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
-        let rawplot2 = RawPlot::new(
-            format!("Height-2 [{height2_unit}]"),
-            height2_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
 
         let metadata = Self::extract_metadata(
             &height1_dataset,
@@ -79,7 +82,28 @@ impl SkytemHdf5 for FrameAltimeters {
             &timestamp2_dataset,
         )?;
 
-        let mut raw_plots = vec![rawplot1, rawplot2];
+        let mut raw_plots = vec![
+            RawPlot::new(
+                format!("Height-1 [{height1_unit}]"),
+                height1_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Height-1 Invalid Count".to_owned(),
+                height1_invalid_values,
+                ExpectedPlotRange::Thousands,
+            ),
+            RawPlot::new(
+                format!("Height-2 [{height2_unit}]"),
+                height2_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                "Height-2 Invalid Count".to_owned(),
+                height2_invalid_values,
+                ExpectedPlotRange::Thousands,
+            ),
+        ];
 
         raw_plots.retain(|rp| rp.points().len() > 2);
 
@@ -123,6 +147,10 @@ pub struct FrameAltimeters {
 }
 
 impl FrameAltimeters {
+    // The actual invalid placeholder value for the ILM is the ASCII string "99999.99"
+    // we label any value above this value as invalid as the ILM cannot go above ~500m anyways
+    const INVALID_VALUE_THRESHOLD: f32 = 2000.;
+
     const HEIGHT1_DATASET: &str = "height-1";
     const HEIGHT2_DATASET: &str = "height-2";
     const TIMESTAMP1_DATASET: &str = "timestamp-1";

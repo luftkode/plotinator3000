@@ -146,6 +146,10 @@ impl LoadedLogSettings {
         self.marked_for_deletion
     }
 
+    pub fn mark_for_deletion(&mut self, mark: bool) {
+        self.marked_for_deletion = mark;
+    }
+
     pub fn marked_for_deletion_mut(&mut self) -> &mut bool {
         &mut self.marked_for_deletion
     }
