@@ -523,7 +523,7 @@ impl NavSysSpsKitchenSink {
         ];
         raw_plots.retain(|rp| {
             if rp.points().is_empty() {
-                log::warn!("{} has no data", rp.name());
+                log::debug!("{} has no data", rp.name());
                 false
             } else {
                 true

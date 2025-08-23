@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Support parsing HDF5 files from zip archives
+- Recursively parse zip archives up to a max depth of 3
+
 ## [1.24.0]
 
 - Filter invalid values from the `frame-altimeter` into a "invalid values" dataset, just like with `navsys`

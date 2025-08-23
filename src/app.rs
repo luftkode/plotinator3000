@@ -137,8 +137,7 @@ impl eframe::App for App {
             );
 
             if self.plot.plot_count() == 0 {
-                // Display the message when plots are shown
-                util::draw_empty_state(ui);
+                util::draw_empty_state(ui); // Display the message when no plots are shown
             }
 
             match handle_dropped_files(ctx, &mut self.loaded_files) {
