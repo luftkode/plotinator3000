@@ -197,3 +197,102 @@ fn is_zip_file(path: &Path) -> bool {
     path.extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"))
 }
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests {
+    use super::*;
+    use plotinator_log_if::plotable::Plotable as _;
+    use plotinator_test_util::test_file_defs::frame_altimeters::*;
+    use plotinator_test_util::test_file_defs::mbed_motor_control::*;
+    use std::io::Write as _;
+    use tempfile::TempDir;
+    use testresult::TestResult;
+    use zip::write::ExtendedFileOptions;
+    use zip::{ZipWriter, write::FileOptions};
+
+    #[test]
+    fn test_parse_zip_file_with_nested_directories() -> TestResult {
+        // Create a temporary zip file with nested structure
+        let temp_dir = TempDir::new()?;
+        let zip_path = temp_dir.path().join("test_archive.zip");
+        let zip_file = std::fs::File::create(&zip_path)?;
+        let mut zip_writer = ZipWriter::new(zip_file);
+
+        let options: FileOptions<'_, ExtendedFileOptions> =
+            FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+        // Level 1: Root files
+        zip_writer.start_file("root_file.pid", options.clone())?;
+        zip_writer.write_all(MBED_PID_V1_BYTES)?;
+
+        // Level 2: First subdirectory
+        zip_writer.start_file("level1/status_log.status", options.clone())?;
+        zip_writer.write_all(MBED_STATUS_V1_BYTES)?;
+
+        // Level 3: Second subdirectory with HDF5 file
+        zip_writer.start_file("level1/level2/altimeters.h5", options.clone())?;
+        zip_writer.write_all(FRAME_ALTIMETERS_BYTES)?;
+
+        // Level 4: Third subdirectory (should still be parsed, at max depth)
+        zip_writer.start_file("level1/level2/level3/another_pid.bin", options.clone())?;
+        zip_writer.write_all(MBED_PID_V1_BYTES)?;
+
+        // Level 5: Fourth subdirectory (should be ignored, beyond max depth)
+        zip_writer.start_file("level1/level2/level3/level4/ignored.pid", options.clone())?;
+        zip_writer.write_all(MBED_PID_V1_BYTES)?;
+
+        // Additional nested structure to test directory traversal
+        zip_writer.start_file("another_branch/data.status", options.clone())?;
+        zip_writer.write_all(MBED_STATUS_V1_BYTES)?;
+
+        zip_writer.start_file("another_branch/deep/nested/file.pid", options)?;
+        zip_writer.write_all(MBED_PID_V1_BYTES)?;
+
+        zip_writer.finish()?;
+
+        // Test parsing the zip file
+        let mut loaded_files = LoadedFiles::default();
+        loaded_files.parse_zip_file(&zip_path)?;
+
+        let loaded = loaded_files.loaded();
+
+        // Verify we got the expected number of files
+        // Should parse 6 files total:
+        // - root_file.pid (level 1)
+        // - level1/status_log.status (level 2)
+        // - level1/level2/altimeters.h5 (level 3)
+        // - level1/level2/level3/another_pid.pid (level 3)
+        // - another_branch/data.status (level 2)
+        // - another_branch/deep/nested/file.pid (level 3)
+        // Should NOT parse level4/ignored.pid (level 4, beyond max depth)
+        assert_eq!(
+            loaded.len(),
+            6,
+            "Expected 6 files to be parsed from zip archive, got: {loaded:?}"
+        );
+
+        // Verify we have different types of files
+        let mut pid_count = 0;
+        let mut status_count = 0;
+        let mut hdf5_count = 0;
+
+        for format in loaded {
+            let name = format.descriptive_name();
+            eprintln!("{name}");
+            match name {
+                "Mbed PID v1" => pid_count += 1,
+                "Mbed Status v1" => status_count += 1,
+                "Frame altimeters" => hdf5_count += 1,
+                _ => panic!("unexpected name: {name}"),
+            };
+        }
+
+        // Verify we parsed the expected file types
+        assert_eq!(pid_count, 3, "Expected 3 PID files");
+        assert_eq!(status_count, 2, "Expected 2 Status files");
+        assert_eq!(hdf5_count, 1, "Expected 1 HDF5 file");
+
+        Ok(())
+    }
+}
