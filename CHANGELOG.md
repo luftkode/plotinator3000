@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.25.0]
+
 - Support parsing HDF5 files from zip archives
 - Recursively parse zip archives up to a max depth of 3
 
