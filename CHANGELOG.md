@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.24.0]
 
+- Filter invalid values from the `frame-altimeter` into a "invalid values" dataset, just like with `navsys`
 - Group filter plot labels after log type
 - Group loaded logs after type
 - Sort loaded logs alphabetically and after start time
