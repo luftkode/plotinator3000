@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use egui::RichText;
 use plotinator_plot_util::PlotValues;
 use serde::{Deserialize, Serialize};
@@ -14,9 +16,11 @@ impl PlotNameFilter {
         self.plots.sort_unstable_by(|a, b| a.name().cmp(b.name()));
     }
 
-    /// Returns whether the filter already contains a plot with the given name
-    pub fn contains_name(&self, plot_name: &str) -> bool {
-        self.plots.iter().any(|p| p.name() == plot_name)
+    /// Returns whether the filter already contains a plot with the given name and association
+    pub fn contains(&self, plot_name: &str, associated_descriptive_name: &str) -> bool {
+        self.plots.iter().any(|p| {
+            p.name() == plot_name && p.associated_descriptive_name == associated_descriptive_name
+        })
     }
 
     /// Returns whether a plot with the given name should be highlighted (is hovered)
@@ -42,7 +46,10 @@ impl PlotNameFilter {
         plot_data.iter().filter(move |pv| {
             self.plots
                 .iter()
-                .find(|pf| pf.name() == pv.name())
+                .find(|pf| {
+                    pf.name() == pv.name()
+                        && pf.associated_descriptive_name == pv.associated_descriptive_name()
+                })
                 .is_some_and(|pf| pf.show() && fn_show_id(pv.log_id()))
         })
     }
@@ -117,24 +124,45 @@ impl PlotNameFilter {
             count
         };
 
-        // Scrollable area for plot toggles
+        // 1. Group plots by their associated descriptive name into a BTreeMap.
+        //    The BTreeMap will keep the groups sorted alphabetically by name.
+        let mut grouped_plots: BTreeMap<String, Vec<&mut PlotNameShow>> = BTreeMap::new();
+        for plot in &mut self.plots {
+            grouped_plots
+                .entry(plot.associated_descriptive_name.clone())
+                .or_default()
+                .push(plot);
+        }
+
+        // 2. Render the grouped plots within a scrollable area.
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                for plot in &mut self.plots {
-                    let dataset_count = count_plot_occurrences(plot.name());
-                    let plot_name = plot.name().to_owned();
+                // 3. Iterate over the sorted groups from the BTreeMap.
+                for (descriptive_name, plots_in_group) in grouped_plots {
+                    // 4. Create a CollapsingHeader for each group.
+                    let header_text = format!("{} ({})", descriptive_name, plots_in_group.len());
+                    egui::CollapsingHeader::new(RichText::new(header_text).strong())
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            // 5. Render the toggle buttons for each plot within the group.
+                            for plot in plots_in_group {
+                                let dataset_count = count_plot_occurrences(plot.name());
+                                let plot_name = plot.name().to_owned();
 
-                    ui.horizontal(|ui| {
-                        plot.hovered = ui.toggle_value(&mut plot.show, plot_name).hovered();
-                        if dataset_count > 0 {
-                            ui.label(
-                                RichText::new(format!("({dataset_count})"))
-                                    .small()
-                                    .color(ui.visuals().weak_text_color()),
-                            );
-                        }
-                    });
+                                ui.horizontal(|ui| {
+                                    plot.hovered =
+                                        ui.toggle_value(&mut plot.show, plot_name).hovered();
+                                    if dataset_count > 0 {
+                                        ui.label(
+                                            RichText::new(format!("({dataset_count})"))
+                                                .small()
+                                                .color(ui.visuals().weak_text_color()),
+                                        );
+                                    }
+                                });
+                            }
+                        });
                 }
             });
     }
@@ -143,16 +171,19 @@ impl PlotNameFilter {
 #[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameShow {
     name: String,
+    // The descriptive name of the log it came from
+    associated_descriptive_name: String,
     show: bool,
     // On hover: Highlight the line plots that match the name
     hovered: bool,
 }
 
 impl PlotNameShow {
-    pub fn new(name: String, show: bool) -> Self {
+    pub fn new(name: String, show: bool, associated_descriptive_name: String) -> Self {
         Self {
             name,
             show,
+            associated_descriptive_name,
             hovered: false,
         }
     }

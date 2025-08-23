@@ -114,28 +114,41 @@ impl PlotSettings {
         }
     }
 
-    fn ui_show_or_hide_all_buttons(ui: &mut egui::Ui, loaded_files: &mut [LoadedLogSettings]) {
+    fn ui_show_or_hide_all_buttons(ui: &mut egui::Ui, log_groups: &mut LogGroupUIState) {
         if ui
             .button(RichText::new("Hide all").strong())
             .on_hover_text("Hide all loaded logs")
             .clicked()
         {
-            for f in loaded_files.iter_mut() {
-                *f.show_log_mut() = false;
-            }
+            log_groups.hide_all();
         }
+        ui.label("/");
         if ui
             .button(RichText::new("Show all").strong())
             .on_hover_text("Show all loaded logs")
             .clicked()
         {
-            for f in loaded_files.iter_mut() {
-                *f.show_log_mut() = true;
-            }
+            log_groups.show_all();
+        }
+        ui.separator();
+        if ui
+            .button(RichText::new("Collapse all").strong())
+            .on_hover_text("Collapse all loaded logs")
+            .clicked()
+        {
+            log_groups.collapse_all();
+        }
+        ui.label("/");
+        if ui
+            .button(RichText::new("Expand all").strong())
+            .on_hover_text("Expand all loaded logs")
+            .clicked()
+        {
+            log_groups.expand_all();
         }
     }
 
-    /// Shows the loaded files UI, now with grouping, stateful icons, and visual framing.
+    /// Shows the loaded files window
     fn show_loaded_files(&mut self, ui: &mut egui::Ui) {
         let loaded_files_count = self.loaded_log_settings.len();
         let visibility_icon = if self.ps_ui.show_loaded_logs {
@@ -165,12 +178,9 @@ impl PlotSettings {
                     frame.show(ui, |ui| {
                         egui::ScrollArea::vertical().show(ui, |ui| {
                             ui.horizontal_wrapped(|ui| {
-                                Self::ui_show_or_hide_all_buttons(
-                                    ui,
-                                    &mut self.loaded_log_settings,
-                                );
+                                Self::ui_show_or_hide_all_buttons(ui, &mut self.log_group_ui_state);
                             });
-                            ui.add_space(5.0);
+                            ui.add_space(2.0);
                             egui::Grid::new("log_settings_grid").show(ui, |ui| {
                                 ui.label("");
                                 ui.label("");
@@ -267,10 +277,14 @@ impl PlotSettings {
     ///
     /// # Arguments
     /// - `plot_name` The name of the plot, i.e. the name that appears on the plot legend
-    pub fn add_plot_name_if_not_exists(&mut self, plot_name: &str) {
-        if !self.plot_name_filter.contains_name(plot_name) {
-            self.plot_name_filter
-                .add_plot(PlotNameShow::new(plot_name.to_owned(), true));
+    /// - `descriptive_name` the name of the logfile e.g. `Mbed Pid v6` or `frame-altimeter`
+    pub fn add_plot_name_if_not_exists(&mut self, plot_name: &str, descriptive_name: &str) {
+        if !self.plot_name_filter.contains(plot_name, descriptive_name) {
+            self.plot_name_filter.add_plot(PlotNameShow::new(
+                plot_name.to_owned(),
+                true,
+                descriptive_name.to_owned(),
+            ));
         }
     }
 

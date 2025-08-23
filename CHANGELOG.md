@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.24.0]
+
+- Group filter plot labels after log type
 - Group loaded logs after type
 - Sort loaded logs alphabetically and after start time
 - Show loaded logs start datetime as `YYYY-MM-DD HH:MM:SS`

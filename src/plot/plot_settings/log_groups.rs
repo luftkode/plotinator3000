@@ -1,19 +1,66 @@
 use super::{date_settings::LoadedLogSettings, loaded_logs};
 use egui::{Color32, RichText, Ui};
 use egui_phosphor::regular;
-use serde::{Deserialize, Serialize};
 
-#[derive(Default, PartialEq, Deserialize, Serialize)]
+// One shot flags for modifying all logs and/or log groups
+#[derive(PartialEq)]
+enum OneShotDoAll {
+    Collapse,
+    Expand,
+    Show,
+    Hide,
+}
+
+#[derive(Default, PartialEq)]
 pub struct LogGroupUIState {
+    flag: Option<OneShotDoAll>,
     collapsed_log_groups: Vec<String>,
 }
 
+impl LogGroupUIState {
+    pub(crate) fn expand_all(&mut self) {
+        self.flag = Some(OneShotDoAll::Expand);
+    }
+    pub(crate) fn collapse_all(&mut self) {
+        self.flag = Some(OneShotDoAll::Collapse);
+    }
+    pub(crate) fn show_all(&mut self) {
+        self.flag = Some(OneShotDoAll::Show);
+    }
+    pub(crate) fn hide_all(&mut self) {
+        self.flag = Some(OneShotDoAll::Hide);
+    }
+
+    fn handle_flags(&mut self, loaded_log_settings: &mut [LoadedLogSettings]) {
+        let Some(flag) = self.flag.take() else {
+            return;
+        };
+        match flag {
+            OneShotDoAll::Collapse => self.flag = Some(OneShotDoAll::Collapse),
+            OneShotDoAll::Expand => self.collapsed_log_groups.clear(),
+            OneShotDoAll::Show => Self::set_all_visibility(loaded_log_settings, true),
+            OneShotDoAll::Hide => Self::set_all_visibility(loaded_log_settings, false),
+        }
+    }
+
+    fn set_all_visibility(loaded_log_settings: &mut [LoadedLogSettings], show: bool) {
+        for f in loaded_log_settings.iter_mut() {
+            *f.show_log_mut() = show;
+        }
+    }
+
+    fn clear_flag(&mut self) {
+        self.flag = None;
+    }
+}
+
 /// Renders the UI for grouped log files.
-pub fn show_log_groups(
+pub(crate) fn show_log_groups(
     ui: &mut Ui,
     loaded_log_settings: &mut [LoadedLogSettings],
     state: &mut LogGroupUIState,
 ) {
+    state.handle_flags(loaded_log_settings);
     let mut i = 0;
     while i < loaded_log_settings.len() {
         let name = loaded_log_settings[i].descriptive_name().to_owned();
@@ -43,6 +90,8 @@ pub fn show_log_groups(
             ui.end_row();
         }
     }
+
+    state.clear_flag();
 }
 
 /// Renders the header for a log group, including collapse/expand and group actions.
@@ -52,10 +101,13 @@ fn show_group_header(
     name: &String,
     state: &mut LogGroupUIState,
 ) {
+    if state.flag == Some(OneShotDoAll::Collapse) {
+        state.collapsed_log_groups.push(name.to_owned());
+    }
     let is_collapsed = state.collapsed_log_groups.contains(name);
     let mut group_hovered = false;
 
-    // --- Column 1: Collapse/Expand Button ---
+    // Column 1: Collapse/Expand Button
     let icon = if is_collapsed {
         RichText::new(format!("{} {name}", regular::CARET_RIGHT))
     } else {
@@ -74,7 +126,7 @@ fn show_group_header(
         group_hovered = true;
     }
 
-    // --- Columns 2 & 3: Empty space for alignment ---
+    // Columns 2 & 3: Empty space for alignment
     if ui.label("").hovered() {
         group_hovered = true;
     }
@@ -82,7 +134,7 @@ fn show_group_header(
         group_hovered = true;
     }
 
-    // --- Column 4: Group action buttons (visibility and deletion) ---
+    // Column 4: Group action buttons (visibility and deletion)
     ui.horizontal(|ui| {
         if show_group_visibility_toggle(ui, group_settings).hovered() {
             group_hovered = true;

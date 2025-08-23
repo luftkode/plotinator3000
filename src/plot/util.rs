@@ -23,22 +23,28 @@ pub fn add_plot_data_to_plot_collections(
     for raw_plot in data.raw_plots() {
         match raw_plot.expected_range() {
             ExpectedPlotRange::Percentage => {
-                plots
-                    .percentage_mut()
-                    .add_plot_if_not_exists(raw_plot, data_id);
+                plots.percentage_mut().add_plot_if_not_exists(
+                    raw_plot,
+                    data_id,
+                    data.descriptive_name(),
+                );
             }
             ExpectedPlotRange::OneToOneHundred => {
-                plots
-                    .one_to_hundred_mut()
-                    .add_plot_if_not_exists(raw_plot, data_id);
+                plots.one_to_hundred_mut().add_plot_if_not_exists(
+                    raw_plot,
+                    data_id,
+                    data.descriptive_name(),
+                );
             }
             ExpectedPlotRange::Thousands => {
-                plots
-                    .thousands_mut()
-                    .add_plot_if_not_exists(raw_plot, data_id);
+                plots.thousands_mut().add_plot_if_not_exists(
+                    raw_plot,
+                    data_id,
+                    data.descriptive_name(),
+                );
             }
         }
-        plot_settings.add_plot_name_if_not_exists(raw_plot.name());
+        plot_settings.add_plot_name_if_not_exists(raw_plot.name(), data.descriptive_name());
     }
 
     if let Some(plot_labels) = data.labels() {
