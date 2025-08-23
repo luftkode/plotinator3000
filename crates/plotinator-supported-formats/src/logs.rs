@@ -21,6 +21,7 @@ macro_rules! define_supported_log_formats {
     ( $( $variant:ident => $ty:ty ),* $(,)? ) => {
         #[derive(Debug, Clone, Deserialize, Serialize)]
         pub enum SupportedLog {
+
             $( $variant($ty, ParseInfo), )*
         }
 

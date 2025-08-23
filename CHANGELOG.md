@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.25.0]
+
+- Support parsing HDF5 files from zip archives
+- Recursively parse zip archives up to a max depth of 3
+
+## [1.24.0]
+
+- Filter invalid values from the `frame-altimeter` into a "invalid values" dataset, just like with `navsys`
+- Group filter plot labels after log type
+- Group loaded logs after type
+- Sort loaded logs alphabetically and after start time
+- Show loaded logs start datetime as `YYYY-MM-DD HH:MM:SS`
+
+## [1.23.0]
+
+- Apply highlighting to polygons in scatter plots in the same way as it is applied in line plots
+- Improve filter window UI
+- Highlights plots that are effected by a filter label when hovering the given label
+
+## [1.22.1]
+
+- Update dependencies
+- Close download window on `Esc`
+
+## [1.22.0]
+
+### Added
+
+- **Experimental** download latest data files from TS
+
+### Fixed
+
+- `frame-inclinometer` would show `pitch (old)` to indicate the old incorrect calculation, but that actually implies to `roll` and not `pitch`
+- Sps kitchen sink did not recognize inclinometer calibration values as valid entries
+
 ## [1.21.1]
 
 ### Fixed

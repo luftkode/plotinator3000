@@ -89,7 +89,7 @@ impl LogPlotUi {
             link_group.replace(ui.id().with("linked_plots"));
         }
 
-        plot_ui::show_settings_grid(ui, axis_config, plot_settings);
+        plot_ui::show_settings_grid(ui, axis_config, plot_settings, plots);
 
         for log in loaded_files {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);

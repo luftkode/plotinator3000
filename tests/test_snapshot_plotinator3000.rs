@@ -1,3 +1,4 @@
+#![cfg(not(target_arch = "wasm32"))]
 mod util;
 use plotinator_test_util::{bifrost_current, mbed_pid_v6_regular, mbed_status_v6_regular};
 use util::*;
@@ -110,8 +111,9 @@ fn test_snapshot_open_loaded_files_open_log_window() {
 
     // Get the Mbed PID button from the loaded logs window and click it
     let loaded_files_window = harness.get_loaded_files_window();
-    let loaded_mbed_pid_button = loaded_files_window
-        .get_by(|n| n.role() == Role::Button && n.label().is_some_and(|l| l.contains("Mbed PID")));
+    let loaded_mbed_pid_button = loaded_files_window.get_by(|n| {
+        n.role() == Role::Button && n.label().is_some_and(|l| l.contains("Mbed PID v6 #"))
+    });
 
     assert!(loaded_mbed_pid_button.accesskit_node().is_clickable());
 

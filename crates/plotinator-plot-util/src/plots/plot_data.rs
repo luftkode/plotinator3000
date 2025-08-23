@@ -48,7 +48,12 @@ impl PlotData {
     }
 
     /// Adds a plot to the [`PlotData`] collection if another plot with the same label doesn't already exist
-    pub fn add_plot_if_not_exists(&mut self, raw_plot: &RawPlot, log_id: u16) {
+    pub fn add_plot_if_not_exists(
+        &mut self,
+        raw_plot: &RawPlot,
+        log_id: u16,
+        descriptive_name: &str,
+    ) {
         // Crash in development but just emit an error message in release mode
         debug_assert!(
             raw_plot.points().len() > 1,
@@ -70,6 +75,7 @@ impl PlotData {
                 raw_plot.points().to_vec(),
                 raw_plot.name().to_owned(),
                 log_id,
+                descriptive_name.to_owned(),
             )
             .color(self.auto_color());
             self.plots.push(new_plot);
@@ -117,6 +123,8 @@ pub struct PlotValues {
     log_id: u16,
     // Label = "<name> #<log_id>"
     label: String,
+    // The descriptive name of the log that this data set originated from
+    associated_descriptive_name: String,
     color: Color32,
     highlight: bool,
 }
@@ -127,7 +135,12 @@ impl PlotValues {
     // Don't mipmap/downsample to more than this amount of elements
     const MIPMAP_MIN_ELEMENTS: usize = 512;
 
-    pub fn new(raw_plot: Vec<[f64; 2]>, name: String, log_id: u16) -> Self {
+    pub fn new(
+        raw_plot: Vec<[f64; 2]>,
+        name: String,
+        log_id: u16,
+        associated_descriptive_name: String,
+    ) -> Self {
         let label = format!("{name} #{log_id}");
         let raw_plot_points = Some(raw_plot.iter().map(|p| (*p).into()).collect());
 
@@ -152,6 +165,7 @@ impl PlotValues {
             name,
             log_id,
             label,
+            associated_descriptive_name,
             // Color32::TRANSPARENT means we auto assign one
             color: Color32::TRANSPARENT,
             highlight: false,
@@ -299,6 +313,11 @@ impl PlotValues {
         self.raw_plot_points
             .as_deref()
             .expect("Attempted to retrieve raw plot points without first generating it")
+    }
+
+    /// The descriptive name of the log the plot values are associated with, e.g. `Navsys` or `frame-altimeter`
+    pub fn associated_descriptive_name(&self) -> &str {
+        &self.associated_descriptive_name
     }
 
     /// Name of Plot, e.g. `RPM` or `Pid err`

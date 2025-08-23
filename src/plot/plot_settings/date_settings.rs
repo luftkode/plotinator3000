@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Datelike as _, NaiveDateTime, Timelike as _, Utc};
 use egui::RichText;
 use plotinator_plot_util::{PlotData, Plots};
 use plotinator_supported_formats::ParseInfo;
@@ -90,8 +90,23 @@ impl LoadedLogSettings {
         }
     }
 
-    pub fn start_date(&self) -> DateTime<Utc> {
+    /// Name of the log such as `Navsys` or `frame-magnetometer`
+    pub(crate) fn descriptive_name(&self) -> &str {
+        &self.log_descriptive_name
+    }
+
+    pub(crate) fn start_date(&self) -> DateTime<Utc> {
         self.start_date
+    }
+
+    pub(crate) fn starte_date_formatted(&self) -> String {
+        let y = self.start_date.year();
+        let m = self.start_date.month();
+        let d = self.start_date.day();
+        let hh = self.start_date.hour();
+        let mm = self.start_date.minute();
+        let ss = self.start_date.second();
+        format!("{y}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}")
     }
 
     pub fn new_start_date(&mut self, new_start_date: DateTime<Utc>) {
@@ -100,10 +115,9 @@ impl LoadedLogSettings {
 
     pub fn log_label(&self) -> String {
         format!(
-            "#{log_id} {descriptive_name}",
+            "{descriptive_name} #{log_id}",
             log_id = self.log_id,
             descriptive_name = self.log_descriptive_name,
-            //start_date = self.start_date.naive_utc()
         )
     }
 
@@ -130,6 +144,10 @@ impl LoadedLogSettings {
 
     pub fn marked_for_deletion(&self) -> bool {
         self.marked_for_deletion
+    }
+
+    pub fn mark_for_deletion(&mut self, mark: bool) {
+        self.marked_for_deletion = mark;
     }
 
     pub fn marked_for_deletion_mut(&mut self) -> &mut bool {

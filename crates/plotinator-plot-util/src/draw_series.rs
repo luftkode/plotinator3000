@@ -40,6 +40,9 @@ impl SeriesDrawMode {
             let dx = self.rhombus_radius() * x_dvalue_dpos;
             let dy = self.rhombus_radius() * y_dvalue_dpos;
 
+            let (polygon_stroke_width, polygon_color) =
+                self.apply_pologygon_highlighting(highlight, color);
+
             for point in points_slice {
                 let top = [point.x, point.y + dy];
                 let right = [point.x + dx, point.y];
@@ -49,7 +52,7 @@ impl SeriesDrawMode {
 
                 let rhombus = Polygon::new(label, rhombus_vertices)
                     .allow_hover(false) // Make it non-interactive (otherwise cursor might snap to a polygon point, which misleads them to believe it's an actual data point)
-                    .stroke(egui::Stroke::new(self.polygon_stroke_width(), color));
+                    .stroke(egui::Stroke::new(polygon_stroke_width, polygon_color));
 
                 plot_ui.polygon(rhombus);
             }
@@ -74,6 +77,29 @@ impl SeriesDrawMode {
             Self::LineWithEmphasis { .. } | Self::Line { .. } => true,
             Self::Scatter { .. } => false,
         }
+    }
+
+    // Apply polygon highlighting to color and stroke width if applicable
+    fn apply_pologygon_highlighting(&self, highlight: bool, color: Color32) -> (f32, Color32) {
+        let polygon_stroke_width = if highlight {
+            self.polygon_stroke_width() * 1.5 // Make stroke thicker when highlighted
+        } else {
+            self.polygon_stroke_width()
+        };
+
+        let polygon_color = if highlight {
+            // Make color brighter/more saturated when highlighted
+            Color32::from_rgba_unmultiplied(
+                (color.r() as f32 * 1.2).min(255.0) as u8,
+                (color.g() as f32 * 1.2).min(255.0) as u8,
+                (color.b() as f32 * 1.2).min(255.0) as u8,
+                color.a(),
+            )
+        } else {
+            color
+        };
+
+        (polygon_stroke_width, polygon_color)
     }
 
     fn draw_rhombus(&self) -> bool {
