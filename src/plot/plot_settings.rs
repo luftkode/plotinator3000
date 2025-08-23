@@ -1,5 +1,12 @@
+use crate::plot::{
+    axis_config::{AxisConfig, show_axis_settings},
+    plot_settings::{
+        log_groups::{LogGroupUIState, show_log_groups},
+        series_plot_settings::SeriesPlotSettings,
+    },
+};
 use date_settings::LoadedLogSettings;
-use egui::{Color32, Key, Response, RichText};
+use egui::{Color32, Frame, Key, Response, RichText};
 use egui_phosphor::regular;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
@@ -7,14 +14,11 @@ use plot_visibility_config::PlotVisibilityConfig;
 use plotinator_plot_util::{MipMapConfiguration, PlotValues, Plots};
 use plotinator_ui_util::theme_color;
 use serde::{Deserialize, Serialize};
-
-use crate::plot::{
-    axis_config::{AxisConfig, show_axis_settings},
-    plot_settings::series_plot_settings::SeriesPlotSettings,
-};
+use smallvec::SmallVec;
 
 pub mod date_settings;
 mod loaded_logs;
+mod log_groups;
 pub mod mipmap_settings;
 mod plot_filter;
 mod plot_visibility_config;
@@ -65,7 +69,10 @@ pub struct PlotSettings {
     loaded_log_settings: Vec<LoadedLogSettings>,
     mipmap_settings: MipMapSettings,
     series_plot_settings: SeriesPlotSettings,
+    #[serde(skip)]
     apply_deletions: bool,
+    #[serde(skip)]
+    log_group_ui_state: LogGroupUIState,
 }
 
 impl PlotSettings {
@@ -108,32 +115,27 @@ impl PlotSettings {
     }
 
     fn ui_show_or_hide_all_buttons(ui: &mut egui::Ui, loaded_files: &mut [LoadedLogSettings]) {
-        let mut hide_all = false;
-        let mut show_all = false;
-
         if ui
-            .button(RichText::new("Hide all").strong().heading())
+            .button(RichText::new("Hide all").strong())
+            .on_hover_text("Hide all loaded logs")
             .clicked()
         {
-            hide_all = true;
-        }
-        if ui
-            .button(RichText::new("Show all").strong().heading())
-            .clicked()
-        {
-            show_all = true;
-        }
-        if hide_all {
             for f in loaded_files.iter_mut() {
                 *f.show_log_mut() = false;
             }
-        } else if show_all {
+        }
+        if ui
+            .button(RichText::new("Show all").strong())
+            .on_hover_text("Show all loaded logs")
+            .clicked()
+        {
             for f in loaded_files.iter_mut() {
                 *f.show_log_mut() = true;
             }
         }
     }
 
+    /// Shows the loaded files UI, now with grouping, stateful icons, and visual framing.
     fn show_loaded_files(&mut self, ui: &mut egui::Ui) {
         let loaded_files_count = self.loaded_log_settings.len();
         let visibility_icon = if self.ps_ui.show_loaded_logs {
@@ -149,44 +151,56 @@ impl PlotSettings {
             show_loaded_logs_text.text(),
         );
         if self.ps_ui.show_loaded_logs {
-            // Only react on Escape input if no settings are currently open
             if ui.ctx().input(|i| i.key_pressed(Key::Escape))
                 && !self.loaded_log_settings.iter().any(|s| s.clicked())
             {
                 self.ps_ui.show_loaded_logs = false;
             }
+
+            let frame = Frame::group(ui.style()).corner_radius(4.0);
+
             egui::Window::new(show_loaded_logs_text)
                 .open(&mut self.ps_ui.show_loaded_logs)
                 .show(ui.ctx(), |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        ui.horizontal_wrapped(|ui| {
-                            Self::ui_show_or_hide_all_buttons(ui, &mut self.loaded_log_settings);
-                        });
-                        egui::Grid::new("log_settings_grid").show(ui, |ui| {
-                            ui.label("");
-                            ui.label("");
-                            ui.label("");
-                            let any_marked_for_deletion = self
-                                .loaded_log_settings
-                                .iter()
-                                .any(|s| s.marked_for_deletion());
-                            let apply_text = if any_marked_for_deletion {
-                                RichText::new("Apply").strong()
-                            } else {
-                                RichText::new("Apply")
-                            };
-                            if ui
-                                .add_enabled(any_marked_for_deletion, egui::Button::new(apply_text))
-                                .clicked()
-                            {
-                                self.apply_deletions = true;
-                            }
-
-                            ui.end_row();
-                            for settings in &mut self.loaded_log_settings {
-                                loaded_logs::log_date_settings_ui(ui, settings);
+                    frame.show(ui, |ui| {
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                Self::ui_show_or_hide_all_buttons(
+                                    ui,
+                                    &mut self.loaded_log_settings,
+                                );
+                            });
+                            ui.add_space(5.0);
+                            egui::Grid::new("log_settings_grid").show(ui, |ui| {
+                                ui.label("");
+                                ui.label("");
+                                ui.label("");
+                                let any_marked_for_deletion = self
+                                    .loaded_log_settings
+                                    .iter()
+                                    .any(|s| s.marked_for_deletion());
+                                let apply_text = if any_marked_for_deletion {
+                                    RichText::new("Apply").strong()
+                                } else {
+                                    RichText::new("Apply")
+                                };
+                                if ui
+                                    .add_enabled(
+                                        any_marked_for_deletion,
+                                        egui::Button::new(apply_text),
+                                    )
+                                    .clicked()
+                                {
+                                    self.apply_deletions = true;
+                                }
                                 ui.end_row();
-                            }
+
+                                show_log_groups(
+                                    ui,
+                                    &mut self.loaded_log_settings,
+                                    &mut self.log_group_ui_state,
+                                );
+                            });
                         });
                     });
                 });
@@ -286,8 +300,11 @@ impl PlotSettings {
 
     pub fn add_log_setting(&mut self, log_settings: LoadedLogSettings) {
         self.loaded_log_settings.push(log_settings);
-        self.loaded_log_settings
-            .sort_by(|a, b| a.descriptive_name().cmp(b.descriptive_name()));
+        self.loaded_log_settings.sort_by(|a, b| {
+            a.descriptive_name()
+                .cmp(b.descriptive_name())
+                .then_with(|| a.start_date().cmp(&b.start_date()))
+        });
     }
 
     // The id filter specifies which plots belonging to which logs should not be painted on the plot ui.
@@ -308,20 +325,12 @@ impl PlotSettings {
     }
 
     fn set_highlighted(&self, plots: &mut Plots) {
-        // At most 2, since one can be open and another be hovered on but no more than that
-        // uses u16::MAX as a special value to signify `None` basically
-        let mut ids_to_highlight = [u16::MAX, u16::MAX];
+        // Use a SmallVec as commonly there will be 0-1 ids to highlight, but with log grouping
+        // there could potentially be many more
+        let mut ids_to_highlight: SmallVec<[u16; 32]> = SmallVec::new();
         for log_setting in &self.loaded_log_settings {
-            if ids_to_highlight[0] != u16::MAX && ids_to_highlight[1] != u16::MAX {
-                break;
-            }
             if log_setting.cursor_hovering_on() || log_setting.clicked() {
-                // Could actually be made branchless but might compromise readability too much
-                if ids_to_highlight[0] == u16::MAX {
-                    ids_to_highlight[0] = log_setting.log_id();
-                } else {
-                    ids_to_highlight[1] = log_setting.log_id();
-                }
+                ids_to_highlight.push(log_setting.log_id());
             }
         }
         let set_plot_highlight = |plot_data: &mut plotinator_plot_util::PlotData| {

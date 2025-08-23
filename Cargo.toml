@@ -41,7 +41,6 @@ plotinator-supported-formats.path = "crates/plotinator-supported-formats"
 plotinator-updater.path = "crates/plotinator-updater"
 plotinator-download.path = "crates/plotinator-download"
 plotinator-strfmt.path = "crates/plotinator-strfmt"
-
 egui = { version = "0.32", features = ["rayon", "callstack"] }
 eframe = { version = "0.32", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
@@ -74,6 +73,7 @@ memmap2 = "0.9.7"
 tokio = "1.47.1"
 reqwest = { version = "0.12.23", default-features = false }
 dirs = "6.0.0"
+smallvec = "1.15.1"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
@@ -114,6 +114,7 @@ tokio.workspace = true
 memmap2.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
+smallvec.workspace = true
 
 
 [dev-dependencies]
