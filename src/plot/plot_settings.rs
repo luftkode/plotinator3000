@@ -286,6 +286,8 @@ impl PlotSettings {
 
     pub fn add_log_setting(&mut self, log_settings: LoadedLogSettings) {
         self.loaded_log_settings.push(log_settings);
+        self.loaded_log_settings
+            .sort_by(|a, b| a.descriptive_name().cmp(b.descriptive_name()));
     }
 
     // The id filter specifies which plots belonging to which logs should not be painted on the plot ui.
