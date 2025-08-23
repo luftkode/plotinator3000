@@ -7,6 +7,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameFilter {
     plots: Vec<PlotNameShow>,
+    // Cache for grouped plots - not serialized since it's derived data
+    #[serde(skip)]
+    grouped_plots_cache: BTreeMap<String, Vec<usize>>,
+    // Track if plots have been modified to invalidate cache
+    #[serde(skip)]
+    cache_valid: bool,
 }
 
 impl PlotNameFilter {
@@ -14,6 +20,8 @@ impl PlotNameFilter {
         self.plots.push(plot_name_show);
         // sort in alphabetical order
         self.plots.sort_unstable_by(|a, b| a.name().cmp(b.name()));
+        // Invalidate cache since plots have changed
+        self.invalidate_cache();
     }
 
     /// Returns whether the filter already contains a plot with the given name and association
@@ -64,6 +72,28 @@ impl PlotNameFilter {
         for p in &mut self.plots {
             p.set_show(false);
         }
+    }
+
+    /// Invalidate the cache when the structure of plots changes
+    fn invalidate_cache(&mut self) {
+        self.grouped_plots_cache.clear();
+        self.cache_valid = false;
+    }
+
+    /// Build (if necessary) and retrieve the cached grouped plots
+    fn get_grouped_plots(&mut self) -> &BTreeMap<String, Vec<usize>> {
+        if !self.cache_valid {
+            for (index, plot) in self.plots.iter().enumerate() {
+                self.grouped_plots_cache
+                    .entry(plot.associated_descriptive_name.clone())
+                    .or_default()
+                    .push(index);
+            }
+
+            self.cache_valid = true;
+        }
+
+        &self.grouped_plots_cache
     }
 
     /// Shows the window where users can toggle plot visibility based on plot labels
@@ -124,29 +154,21 @@ impl PlotNameFilter {
             count
         };
 
-        // 1. Group plots by their associated descriptive name into a BTreeMap.
-        //    The BTreeMap will keep the groups sorted alphabetically by name.
-        let mut grouped_plots: BTreeMap<String, Vec<&mut PlotNameShow>> = BTreeMap::new();
-        for plot in &mut self.plots {
-            grouped_plots
-                .entry(plot.associated_descriptive_name.clone())
-                .or_default()
-                .push(plot);
-        }
+        // Get the cached grouped plots
+        let grouped_plots = self.get_grouped_plots().clone();
 
-        // 2. Render the grouped plots within a scrollable area.
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                // 3. Iterate over the sorted groups from the BTreeMap.
-                for (descriptive_name, plots_in_group) in grouped_plots {
-                    // 4. Create a CollapsingHeader for each group.
-                    let header_text = format!("{} ({})", descriptive_name, plots_in_group.len());
+                for (descriptive_name, plot_indices) in grouped_plots {
+                    // Create a CollapsingHeader for each group.
+                    let header_text = format!("{descriptive_name} ({})", plot_indices.len());
                     egui::CollapsingHeader::new(RichText::new(header_text).strong())
                         .default_open(true)
                         .show(ui, |ui| {
-                            // 5. Render the toggle buttons for each plot within the group.
-                            for plot in plots_in_group {
+                            // Render the toggle buttons for each plot within the group.
+                            for &plot_index in &plot_indices {
+                                let plot = &mut self.plots[plot_index];
                                 let dataset_count = count_plot_occurrences(plot.name());
                                 let plot_name = plot.name().to_owned();
 

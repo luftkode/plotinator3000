@@ -70,13 +70,18 @@ pub(crate) fn show_log_groups(
             .map_or(loaded_log_settings.len(), |pos| i + pos);
 
         let group_settings = &mut loaded_log_settings[i..group_end];
+        let group_size = group_settings.len();
 
-        show_group_header(ui, group_settings, &name, state);
+        if group_size == 1 {
+            show_single_log(ui, &mut group_settings[0]);
+        } else {
+            show_group_header(ui, group_settings, &name, state);
 
-        if !state.collapsed_log_groups.contains(&name) {
-            for setting in group_settings {
-                loaded_logs::show_log_date_settings_ui(ui, setting);
-                ui.end_row();
+            if !state.collapsed_log_groups.contains(&name) {
+                for setting in group_settings {
+                    loaded_logs::show_log_date_settings_ui(ui, setting);
+                    ui.end_row();
+                }
             }
         }
 
@@ -94,6 +99,12 @@ pub(crate) fn show_log_groups(
     state.clear_flag();
 }
 
+/// Renders a single log without grouping overhead - more concise display
+fn show_single_log(ui: &mut Ui, log_setting: &mut LoadedLogSettings) {
+    loaded_logs::show_log_date_settings_ui(ui, log_setting);
+    ui.end_row();
+}
+
 /// Renders the header for a log group, including collapse/expand and group actions.
 fn show_group_header(
     ui: &mut Ui,
@@ -107,11 +118,17 @@ fn show_group_header(
     let is_collapsed = state.collapsed_log_groups.contains(name);
     let mut group_hovered = false;
 
-    // Column 1: Collapse/Expand Button
-    let icon = if is_collapsed {
-        RichText::new(format!("{} {name}", regular::CARET_RIGHT))
+    // Column 1: Collapse/Expand Button with group count
+    let count_text = if group_settings.len() > 1 {
+        format!(" ({})", group_settings.len())
     } else {
-        RichText::new(format!("{} {name}", regular::CARET_DOWN)).strong()
+        String::new()
+    };
+
+    let icon = if is_collapsed {
+        RichText::new(format!("{} {name}{count_text}", regular::CARET_RIGHT))
+    } else {
+        RichText::new(format!("{} {name}{count_text}", regular::CARET_DOWN)).strong()
     };
 
     let button_collapse = ui.button(icon);
