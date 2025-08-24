@@ -109,12 +109,12 @@ impl GpsPvtRecords {
             RawPlot::new(
                 "Height [ellipsoid, m]".to_owned(),
                 height,
-                ExpectedPlotRange::Thousands,
+                ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
                 "Height [MSL, m]".to_owned(),
                 h_msl,
-                ExpectedPlotRange::Thousands,
+                ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
                 "Ground speed [m/s]".to_owned(),
@@ -129,12 +129,12 @@ impl GpsPvtRecords {
             RawPlot::new(
                 "Horizontal accuracy [m]".to_owned(),
                 hacc,
-                ExpectedPlotRange::Thousands,
+                ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
                 "Vertical accuracy [m]".to_owned(),
                 vacc,
-                ExpectedPlotRange::Thousands,
+                ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
                 "Speed accuracy [m/s]".to_owned(),
