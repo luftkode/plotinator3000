@@ -62,15 +62,17 @@ impl PlotNameFilter {
         })
     }
 
-    pub fn set_show_all(&mut self) {
+    pub fn all_set_show(&mut self, show: bool) {
         for p in &mut self.plots {
-            p.set_show(true);
+            p.set_show(show);
         }
     }
 
-    pub fn set_hide_all(&mut self) {
+    pub fn all_bools_set_show(&mut self, show: bool) {
         for p in &mut self.plots {
-            p.set_show(false);
+            if p.name().contains("[bool]") {
+                p.set_show(show);
+            }
         }
     }
 
@@ -100,6 +102,8 @@ impl PlotNameFilter {
     pub fn show(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
         let mut enable_all = false;
         let mut disable_all = false;
+        let mut enable_all_bools = false;
+        let mut disable_all_bools = false;
 
         // Header with global controls and stats
         ui.horizontal(|ui| {
@@ -110,6 +114,19 @@ impl PlotNameFilter {
                 disable_all = true;
             }
             ui.separator();
+            if ui
+                .button(RichText::new("Show all [bool]s").strong())
+                .clicked()
+            {
+                enable_all_bools = true;
+            }
+            if ui
+                .button(RichText::new("Hide all [bool]s").strong())
+                .clicked()
+            {
+                disable_all_bools = true;
+            }
+            ui.separator();
             let shown_count = self.plots.iter().filter(|p| p.show()).count();
             let total_count = self.plots.len();
             ui.label(format!("Shown: {shown_count}/{total_count} plot types"));
@@ -118,9 +135,13 @@ impl PlotNameFilter {
         ui.separator();
 
         if enable_all {
-            self.set_show_all();
+            self.all_set_show(true);
         } else if disable_all {
-            self.set_hide_all();
+            self.all_set_show(false);
+        } else if enable_all_bools {
+            self.all_bools_set_show(true);
+        } else if disable_all_bools {
+            self.all_bools_set_show(false);
         }
 
         // Helper function to count occurrences of a plot name across all datasets
