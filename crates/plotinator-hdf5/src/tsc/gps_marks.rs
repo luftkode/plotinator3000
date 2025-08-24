@@ -60,7 +60,7 @@ impl GpsMarkRecords {
 
         for (e, &t) in self.inner.iter().zip(&time) {
             step_counter.record_count(e.count, t);
-            delta_computer.record_timestamp(e.unix_timestamp_ns(), t);
+            delta_computer.record_timestamp(e.unix_timestamp_ns(), t, e.count);
 
             pulse_width.push([t, e.pulse_width_us()]);
             acc_est.push([t, e.acc_est as f64]);
@@ -81,11 +81,12 @@ impl GpsMarkRecords {
             "Count step differences".to_owned(),
             step_counter.to_metadata_string(),
         ));
+        let (all_stats, normal_stats) = delta_computer.to_metadata_string();
+        metadata.push(("Timestamp Δt stats [s]".to_owned(), all_stats));
         metadata.push((
-            "Timestamp Δt stats [s]".to_owned(),
-            delta_computer.to_metadata_string(),
+            "Timestamp Δt stats (without faults) [s]".to_owned(),
+            normal_stats,
         ));
-
         (
             vec![
                 RawPlot::new(
@@ -221,7 +222,9 @@ impl StepCounter {
 struct DeltaComputer {
     deltas: Vec<[f64; 2]>, // [timestamp, delta_s]
     prev_ns: Option<i64>,
-    stats: Vec<f64>, // store deltas separately for metadata
+    all_stats: Vec<f64>,     // all deltas
+    normal_stats: Vec<f64>,  // deltas without faults (Δcount = 1)
+    prev_count: Option<u16>, // to detect faults
 }
 
 impl DeltaComputer {
@@ -229,31 +232,50 @@ impl DeltaComputer {
         Self {
             deltas: Vec::new(),
             prev_ns: None,
-            stats: Vec::new(),
+            all_stats: Vec::new(),
+            normal_stats: Vec::new(),
+            prev_count: None,
         }
     }
 
-    fn record_timestamp(&mut self, curr_ns: i64, curr_time: f64) {
+    fn record_timestamp(&mut self, curr_ns: i64, curr_time: f64, curr_count: u16) {
         if let Some(prev) = self.prev_ns {
             let delta_s = (curr_ns - prev) as f64 / 1e9;
             self.deltas.push([curr_time, delta_s]);
-            self.stats.push(delta_s);
+            self.all_stats.push(delta_s);
+
+            // Add to normal_stats only if step increment is 1
+            if let Some(prev_count) = self.prev_count {
+                if curr_count.wrapping_sub(prev_count) == 1 {
+                    self.normal_stats.push(delta_s);
+                }
+            }
         }
+
         self.prev_ns = Some(curr_ns);
+        self.prev_count = Some(curr_count);
     }
 
     fn take_plot_points(self) -> Vec<[f64; 2]> {
         self.deltas
     }
 
-    fn to_metadata_string(&self) -> String {
-        if self.stats.is_empty() {
-            return "No deltas computed".to_owned();
+    fn stats_to_string(stats: &[f64]) -> String {
+        if stats.is_empty() {
+            return "No deltas".to_owned();
         }
-        let min = self.stats.iter().copied().fold(f64::INFINITY, f64::min);
-        let max = self.stats.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-        let avg = self.stats.iter().sum::<f64>() / self.stats.len() as f64;
-        format!("min={min:.6}, max={max:.6}, avg={avg:.6}")
+        let min = stats.iter().copied().fold(f64::INFINITY, f64::min);
+        let max = stats.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let avg = stats.iter().sum::<f64>() / stats.len() as f64;
+        let mean_diff_sq_sum: f64 = stats.iter().map(|x| (x - avg).powi(2)).sum();
+        let stddev = (mean_diff_sq_sum / stats.len() as f64).sqrt();
+        format!("min={min:.6}, max={max:.6}, avg={avg:.6}, σ={stddev:.6}")
+    }
+
+    fn to_metadata_string(&self) -> (String, String) {
+        let all = Self::stats_to_string(&self.all_stats);
+        let normal = Self::stats_to_string(&self.normal_stats);
+        (all, normal)
     }
 }
 

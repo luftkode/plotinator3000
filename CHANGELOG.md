@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.27.0]
 
 - Add plot for TSC timestamp delta
+- Add timestamp statistics to TSC metadata
 - Add show/hide all button for `[bool]` data series
 
 ## [1.26.0]
