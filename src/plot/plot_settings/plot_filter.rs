@@ -18,8 +18,13 @@ pub struct PlotNameFilter {
 impl PlotNameFilter {
     pub fn add_plot(&mut self, plot_name_show: PlotNameShow) {
         self.plots.push(plot_name_show);
-        // sort in alphabetical order
-        self.plots.sort_unstable_by(|a, b| a.name().cmp(b.name()));
+        // sort such that those with [bool] in their name is last, and then in alphabetical order
+        self.plots.sort_unstable_by(|a, b| {
+            a.name()
+                .contains("[bool]")
+                .cmp(&b.name().contains("[bool]"))
+                .then(a.name().cmp(b.name()))
+        });
         // Invalidate cache since plots have changed
         self.invalidate_cache();
     }
