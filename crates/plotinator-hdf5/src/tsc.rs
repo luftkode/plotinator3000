@@ -118,7 +118,8 @@ mod tests {
         let h5file = hdf5::File::open(tsc())?;
 
         let gps_marks = GpsMarkRecords::from_hdf5(&h5file)?;
-        let hm = HmData::from_hdf5(&h5file)?;
+        let mut hm = HmData::from_hdf5(&h5file)?;
+        hm.load_full()?;
 
         let gps_time = gps_marks.timestamps();
 

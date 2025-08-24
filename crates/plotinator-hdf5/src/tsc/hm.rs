@@ -175,7 +175,8 @@ mod tests {
     #[test]
     fn test_hm_data_dimensions() -> TestResult {
         let h5file = hdf5::File::open(tsc())?;
-        let hm_data = HmData::from_hdf5(&h5file)?;
+        let mut hm_data = HmData::from_hdf5(&h5file)?;
+        hm_data.load_full()?;
 
         let gps_timestamps = vec![0.0, 1.0, 2.0, 3.0];
 
