@@ -56,4 +56,5 @@ pub mod legacy_generator;
 pub mod mbed_motor_control;
 pub mod navsys_kitchen_sink;
 pub mod njord_ins;
+pub mod tsc;
 pub mod wasp200;

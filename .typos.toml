@@ -5,3 +5,5 @@
 [default.extend-words]
 egui = "egui"           # Example for how to ignore a false positive
 mosquitto = "mosquitto"
+NED = "NED"             # GPS related
+EXTINT = "EXTINT"       # GPS related

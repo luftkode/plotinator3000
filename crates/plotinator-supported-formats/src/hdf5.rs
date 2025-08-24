@@ -3,6 +3,7 @@ use plotinator_hdf5::frame_altimeters::FrameAltimeters;
 use plotinator_hdf5::frame_inclinometers::FrameInclinometers;
 use plotinator_hdf5::frame_magnetometer::FrameMagnetometer;
 use plotinator_hdf5::njord_ins::NjordIns;
+use plotinator_hdf5::tsc::Tsc;
 use plotinator_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -86,5 +87,6 @@ define_supported_hdf5_formats! {
     FrameAltimeters => FrameAltimeters,
     FrameInclinometers => FrameInclinometers,
     FrameMagnetometer => FrameMagnetometer,
-    NjordIns => NjordIns
+    NjordIns => NjordIns,
+    Tsc => Tsc,
 }
