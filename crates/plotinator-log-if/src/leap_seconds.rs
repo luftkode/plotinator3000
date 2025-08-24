@@ -1,4 +1,4 @@
-// LEAP_SECONDS: Newest → Oldest
+// LEAP_SECONDS: Newest -> Oldest
 //
 // If a new leap second is added, it needs to go in this list, otherwise new GPS/Unix timestamp conversions are erroneous
 //

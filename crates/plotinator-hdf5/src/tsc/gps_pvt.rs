@@ -47,22 +47,57 @@ impl GpsPvtRecords {
         let mut vel_d = Vec::with_capacity(time.len());
         let mut mag_dec = Vec::with_capacity(time.len());
 
+        // Valid flags
+        let mut valid_date = Vec::with_capacity(time.len());
+        let mut valid_time = Vec::with_capacity(time.len());
+        let mut valid_fully_resolved = Vec::with_capacity(time.len());
+        let mut valid_mag = Vec::with_capacity(time.len());
+
+        // Status flags
+        let mut gnss_fix_ok = Vec::with_capacity(time.len());
+        let mut diff_soln = Vec::with_capacity(time.len());
+        let mut head_veh_valid = Vec::with_capacity(time.len());
+
+        // Additional flags
+        let mut confirmed_avail = Vec::with_capacity(time.len());
+        let mut confirmed_date = Vec::with_capacity(time.len());
+        let mut confirmed_time = Vec::with_capacity(time.len());
+
         for (e, &t) in self.inner.iter().zip(&time) {
             numsv.push([t, e.num_sv as f64]);
             height.push([t, e.height_meters()]);
             h_msl.push([t, e.height_msl_meters()]);
             gspeed.push([t, e.ground_speed_ms()]);
             heading.push([t, e.head_mot as f64 * 1e-5]); // degrees
-            hacc.push([t, e.h_acc as f64 * 1e-3]); // mm → m
-            vacc.push([t, e.v_acc as f64 * 1e-3]); // mm → m
-            sacc.push([t, e.s_acc as f64 * 1e-3]); // mm/s → m/s
+            hacc.push([t, e.h_acc as f64 * 1e-3]); // mm -> m
+            vacc.push([t, e.v_acc as f64 * 1e-3]); // mm -> m
+            sacc.push([t, e.s_acc as f64 * 1e-3]); // mm/s -> m/s
             pdop.push([t, e.p_dop as f64 * 0.01]);
             lat_deg.push([t, e.latitude_degrees()]);
             lon_deg.push([t, e.longitude_degrees()]);
-            vel_n.push([t, e.vel_n as f64 * 1e-3]); // mm/s → m/s
-            vel_e.push([t, e.vel_e as f64 * 1e-3]); // mm/s → m/s
-            vel_d.push([t, e.vel_d as f64 * 1e-3]); // mm/s → m/s
-            mag_dec.push([t, e.mag_dec as f64 * 1e-2]); // degrees * 1e-2 → degrees
+            vel_n.push([t, e.vel_n as f64 * 1e-3]); // mm/s -> m/s
+            vel_e.push([t, e.vel_e as f64 * 1e-3]); // mm/s -> m/s
+            vel_d.push([t, e.vel_d as f64 * 1e-3]); // mm/s -> m/s
+            mag_dec.push([t, e.mag_dec as f64 * 1e-2]); // degrees * 1e-2 -> degrees
+
+            // Extract valid flags
+            valid_date.push([t, e.flag_valid(GpsPvtRecord::VALID_DATE)]);
+            valid_time.push([t, e.flag_valid(GpsPvtRecord::VALID_TIME)]);
+            valid_fully_resolved.push([t, e.flag_valid(GpsPvtRecord::VALID_FULLY_RESOLVED)]);
+            valid_mag.push([t, e.flag_valid(GpsPvtRecord::VALID_MAG)]);
+
+            // Extract status flags
+            gnss_fix_ok.push([t, e.flag_status(GpsPvtRecord::FLAGS_GNSS_FIX_OK)]);
+            diff_soln.push([t, e.flag_status(GpsPvtRecord::FLAGS_DIFF_SOLN)]);
+            head_veh_valid.push([t, e.flag_status(GpsPvtRecord::FLAGS_HEAD_VEH_VALID)]);
+
+            // Extract additional flags
+            confirmed_avail.push([
+                t,
+                e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_AVAILABLE),
+            ]);
+            confirmed_date.push([t, e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_DATE)]);
+            confirmed_time.push([t, e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_TIME)]);
         }
 
         vec![
@@ -111,7 +146,6 @@ impl GpsPvtRecords {
                 pdop,
                 ExpectedPlotRange::OneToOneHundred,
             ),
-            // New RawPlot instances
             RawPlot::new(
                 "Latitude [deg]".to_owned(),
                 lat_deg,
@@ -140,41 +174,128 @@ impl GpsPvtRecords {
             RawPlot::new(
                 "Magnetic Declination [deg]".to_owned(),
                 mag_dec,
-                ExpectedPlotRange::OneToOneHundred, // Typically within ±30 degrees
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            // Valid flags
+            RawPlot::new(
+                "Valid Date [bool]".to_owned(),
+                valid_date,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlot::new(
+                "Valid Time [bool]".to_owned(),
+                valid_time,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlot::new(
+                "Valid Fully Resolved [bool]".to_owned(),
+                valid_fully_resolved,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlot::new(
+                "Valid Magnetic Declination [bool]".to_owned(),
+                valid_mag,
+                ExpectedPlotRange::Percentage,
+            ),
+            // Status flags
+            RawPlot::new(
+                "GNSS Fix OK [bool]".to_owned(),
+                gnss_fix_ok,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlot::new(
+                "Differential Solution [bool]".to_owned(),
+                diff_soln,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlot::new(
+                "Head Vehicle Valid [bool]".to_owned(),
+                head_veh_valid,
+                ExpectedPlotRange::Percentage,
+            ),
+            // Additional flags
+            RawPlot::new(
+                "Confirmed Available [bool]".to_owned(),
+                confirmed_avail,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlot::new(
+                "Confirmed Date [bool]".to_owned(),
+                confirmed_date,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlot::new(
+                "Confirmed Time [bool]".to_owned(),
+                confirmed_time,
+                ExpectedPlotRange::Percentage,
             ),
         ]
     }
 }
-
+/// UBX-NAV-PVT message payload structure
 #[derive(H5Type, Debug)]
 #[repr(C)]
 struct GpsPvtRecord {
     /// GPS time of week of navigation epoch (milliseconds)
     #[hdf5(rename = "iTOW")]
     i_tow: u32,
+
+    /// Year (UTC)
     year: u16,
+    /// Month (UTC), range 1-12
     month: u8,
+    /// Day of month (UTC), range 1-31
     day: u8,
+    /// Hour of day (UTC), range 0-23
     hour: u8,
+    /// Minute of hour (UTC), range 0-59
     min: u8,
+    /// Seconds of minute (UTC), range 0-60 (60 for leap seconds)
     sec: u8,
+
+    /// Validity flags
+    /// Bit 0 (`VALID_DATE)`: valid UTC date
+    /// Bit 1 (`VALID_TIME)`: valid UTC time of day
+    /// Bit 2 (`VALID_FULLY_RESOLVED)`: UTC time fully resolved (no seconds uncertainty)
+    /// Bit 3 (`VALID_MAG)`: valid magnetic declination
     #[hdf5(rename = "validFlag")]
     valid_flag: u8,
+
     /// Time accuracy estimate (nanoseconds)
     #[hdf5(rename = "tAcc")]
     t_acc: u32,
+
     /// Fraction of second, range -1e9..1e9 (UTC) (nanoseconds)
     nano: i32,
-    /// GNSS fix Type
+
+    /// GNSS fix type, range 0-5
+    /// 0: No fix
+    /// 1: Dead reckoning only
+    /// 2: 2D-fix (signal from only 3 SVs, constant altitude assumed)
+    /// 3: 3D-fix
+    /// 4: GNSS + dead reckoning combined
+    /// 5: Time only fix (high precision devices)
     #[hdf5(rename = "fixType")]
     fix_type: u8,
+
     /// Fix status flags
+    /// Bit 0 (`FLAGS_GNSS_FIX_OK)`: valid fix (within DOP & accuracy masks)
+    /// Bit 1 (`FLAGS_DIFF_SOLN)`: DGPS used
+    /// Bits 2-4 (`FLAGS_PSM_MASK)`: Power save mode state
+    /// Bit 5 (`FLAGS_HEAD_VEH_VALID)`: heading of vehicle is valid
+    /// Bits 6-7 (`FLAGS_CARRIER_PHASE_MASK)`: Carrier phase solution status
     flags: u8,
+
     /// Additional flags
+    /// Bit 5 (`FLAGS2_CONFIRMED_AVAILABLE)`: UTC Date/Time validity confirmation available
+    /// Bit 6 (`FLAGS2_CONFIRMED_DATE)`: UTC Date validity confirmed
+    /// Bit 7 (`FLAGS2_CONFIRMED_TIME)`: UTC Time of Day validity confirmed
     flags2: u8,
+
     /// Number of satellites used in navigation solution
     #[hdf5(rename = "numSV")]
     num_sv: u8,
+
     /// Longitude (degrees * 1e-7)
     lon: i32,
     /// Latitude (degrees * 1e-7)
@@ -213,11 +334,12 @@ struct GpsPvtRecord {
     /// Speed accuracy estimate (millimeters/second)
     #[hdf5(rename = "sAcc")]
     s_acc: u32,
-    /// Heading accuracy estimate (degrees * 1e-5)
+
+    /// Heading accuracy estimate (both motion & vehicle) (degrees * 1e-5)
     #[hdf5(rename = "headAcc")]
     head_acc: u32,
 
-    /// Position DOP (dilution of precision) * 0.01
+    /// Position DOP (dilution of precision) (1 / 0.01)
     #[hdf5(rename = "pDOP")]
     p_dop: u16,
 
@@ -229,6 +351,7 @@ struct GpsPvtRecord {
     reserved06: u8,
 
     /// Heading of vehicle (2-D) (degrees * 1e-5)
+    /// Vehicle orientation, different from headMot (direction of motion)
     #[hdf5(rename = "headVeh")]
     head_veh: i32,
 
@@ -241,6 +364,22 @@ struct GpsPvtRecord {
 }
 
 impl GpsPvtRecord {
+    // Valid flag constants
+    const VALID_DATE: u8 = 1;
+    const VALID_TIME: u8 = 2;
+    const VALID_FULLY_RESOLVED: u8 = 4;
+    const VALID_MAG: u8 = 8;
+
+    // Status flag constants
+    const FLAGS_GNSS_FIX_OK: u8 = 1;
+    const FLAGS_DIFF_SOLN: u8 = 2;
+    const FLAGS_HEAD_VEH_VALID: u8 = 32;
+
+    // Additional flag constants
+    const FLAGS2_CONFIRMED_AVAILABLE: u8 = 32;
+    const FLAGS2_CONFIRMED_DATE: u8 = 64;
+    const FLAGS2_CONFIRMED_TIME: u8 = 128;
+
     fn unix_timestamp_utc(&self) -> DateTime<Utc> {
         // Build datetime from explicit UTC fields - this must succeed or crash
         let naive_date =
@@ -292,6 +431,25 @@ impl GpsPvtRecord {
     /// Get ground speed in m/s
     pub fn ground_speed_ms(&self) -> f64 {
         self.g_speed as f64 * 1e-3
+    }
+
+    /// Extract flag from `valid_flag` field as float (0.0 or 1.0)
+    fn flag_valid(&self, mask: u8) -> f64 {
+        if self.valid_flag & mask != 0 {
+            1.0
+        } else {
+            0.0
+        }
+    }
+
+    /// Extract flag from flags field as float (0.0 or 1.0)
+    fn flag_status(&self, mask: u8) -> f64 {
+        if self.flags & mask != 0 { 1.0 } else { 0.0 }
+    }
+
+    /// Extract flag from flags2 field as float (0.0 or 1.0)
+    fn flag_additional(&self, mask: u8) -> f64 {
+        if self.flags2 & mask != 0 { 1.0 } else { 0.0 }
     }
 }
 

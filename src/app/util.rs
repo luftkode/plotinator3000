@@ -147,8 +147,7 @@ pub fn draw_empty_state(ui: &mut egui::Ui) {
                 ScrollArea::vertical()
                     .max_height(available_height)
                     .show(ui, |ui| {
-                        // Section for Text-based formats
-                        ui.heading("Text-based Formats");
+                        ui.heading("Non-HDF5 Formats");
                         ui.add_space(6.0);
 
                         for format in LOG_FORMATS {
@@ -164,7 +163,7 @@ pub fn draw_empty_state(ui: &mut egui::Ui) {
                         #[cfg(target_arch = "wasm32")]
                         {
                             ui.label(
-                                RichText::new("⚠️ HDF5 is not supported on web builds.")
+                                RichText::new("⚠ HDF5 is not supported on web builds.")
                                     .color(egui::Color32::RED),
                             );
                         }

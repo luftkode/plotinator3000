@@ -196,7 +196,7 @@ impl StepCounter {
             let time_str = dt.format("%H:%M:%S%.3f").to_string();
 
             result.push_str(&format!(
-                "Step={} at {time_str} (time delta: {:.6}s, count: {} -> {})\n",
+                "Step={} at {time_str} [time delta: {:.6}s, count: {} -> {}]\n",
                 event.step_delta, event.time_delta_s, event.count_before, event.count_after
             ));
         }
@@ -305,8 +305,8 @@ impl GpsMarkRecord {
         let sub_ns_delta = self.tow_sub_ms_f as i64 - self.tow_sub_ms_r as i64; // nanoseconds
 
         // Combine everything into nanoseconds
-        let total_ns = week_delta * 1_000_000_000   // weeks → ns
-                    + ms_delta * MS_TO_NS // ms → ns
+        let total_ns = week_delta * 1_000_000_000   // weeks -> ns
+                    + ms_delta * MS_TO_NS // ms -> ns
                     + sub_ns_delta; // ns
 
         // Convert to microseconds
