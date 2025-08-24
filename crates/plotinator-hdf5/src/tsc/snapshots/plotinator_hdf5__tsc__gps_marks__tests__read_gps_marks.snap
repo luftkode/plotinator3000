@@ -1,0 +1,49 @@
+---
+source: crates/plotinator-hdf5/src/tsc/gps_marks.rs
+expression: gps_marks
+---
+[GpsMarkRecord {
+    ch: 0,
+    flags: 205,
+    count: 29747,
+    wn_r: 2380,
+    wn_f: 2380,
+    tow_ms_r: 220110452,
+    tow_sub_ms_r: 380049,
+    tow_ms_f: 220110453,
+    tow_sub_ms_f: 713383,
+    acc_est: 299,
+}, GpsMarkRecord {
+    ch: 0,
+    flags: 205,
+    count: 29748,
+    wn_r: 2380,
+    wn_f: 2380,
+    tow_ms_r: 220111553,
+    tow_sub_ms_r: 772737,
+    tow_ms_f: 220111555,
+    tow_sub_ms_f: 106091,
+    acc_est: 298,
+}, GpsMarkRecord {
+    ch: 0,
+    flags: 205,
+    count: 29749,
+    wn_r: 2380,
+    wn_f: 2380,
+    tow_ms_r: 220112655,
+    tow_sub_ms_r: 166128,
+    tow_ms_f: 220112656,
+    tow_sub_ms_f: 499483,
+    acc_est: 297,
+}, GpsMarkRecord {
+    ch: 0,
+    flags: 205,
+    count: 29750,
+    wn_r: 2380,
+    wn_f: 2380,
+    tow_ms_r: 220113756,
+    tow_sub_ms_r: 559377,
+    tow_ms_f: 220113757,
+    tow_sub_ms_f: 892731,
+    acc_est: 298,
+}], shape=[4], strides=[1], layout=CFcf (0xf), const ndim=1

@@ -1,4 +1,5 @@
 pub mod hdf5;
+pub mod leap_seconds;
 pub mod log;
 pub mod parseable;
 pub mod plotable;

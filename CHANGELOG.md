@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.26.0]
+
 - Always try to fetch WASM bundle, fallback to cached if fetch fails
+- Add support for `TSC.h5` GPS data
 
 ## [1.25.0]
 

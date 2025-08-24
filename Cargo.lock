@@ -954,6 +954,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "console"
+version = "0.15.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "054ccb5b10f9f2cbf51eb355ca1d05c2d279ce1804688d0db74b4733a5aeafd8"
+dependencies = [
+ "encode_unicode",
+ "libc",
+ "once_cell",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1463,6 +1475,12 @@ dependencies = [
  "bytemuck",
  "serde",
 ]
+
+[[package]]
+name = "encode_unicode"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
 name = "encoding_rs"
@@ -2423,6 +2441,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "879f10e63c20629ecabbb64a8010319738c66a5cd0c29b02d63d272b03751d01"
 dependencies = [
  "generic-array",
+]
+
+[[package]]
+name = "insta"
+version = "1.43.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "154934ea70c58054b556dd430b99a98c2a7ff5309ac9891597e339b5c28f4371"
+dependencies = [
+ "console",
+ "once_cell",
+ "similar",
 ]
 
 [[package]]
@@ -3432,7 +3461,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plotinator-download"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3447,14 +3476,16 @@ dependencies = [
 
 [[package]]
 name = "plotinator-hdf5"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
+ "anyhow",
  "byteorder",
  "chrono",
  "derive_more",
  "egui_plot",
  "getset",
  "hdf5-metno",
+ "insta",
  "log",
  "ndarray",
  "num-traits",
@@ -3472,7 +3503,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-log-if"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "chrono",
  "log",
@@ -3481,7 +3512,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-logs"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "byteorder",
  "chrono",
@@ -3502,11 +3533,11 @@ dependencies = [
 
 [[package]]
 name = "plotinator-macros"
-version = "1.25.0"
+version = "1.26.0"
 
 [[package]]
 name = "plotinator-mqtt"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3528,7 +3559,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-plot-util"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "chrono",
  "egui",
@@ -3549,7 +3580,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-strfmt"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "chrono",
  "egui_plot",
@@ -3558,7 +3589,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-supported-formats"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "chrono",
  "log",
@@ -3573,7 +3604,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-test-util"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "paste",
  "testresult",
@@ -3581,7 +3612,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-ui-util"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "egui",
  "egui_plot",
@@ -3589,7 +3620,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-updater"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "axoupdater",
  "eframe",
@@ -3605,7 +3636,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4513,6 +4544,12 @@ name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
+
+[[package]]
+name = "similar"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "slab"
