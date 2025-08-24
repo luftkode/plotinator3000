@@ -1,4 +1,4 @@
-use std::{io, path::Path};
+use std::{io, path::Path, time::Instant};
 
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{
@@ -26,11 +26,24 @@ impl Tsc {
 
 impl SkytemHdf5 for Tsc {
     fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+        let total_start = Instant::now();
+        let start_reading = Instant::now();
         let h5 = hdf5::File::open(path)?;
-        log::info!("Reading TSC datasets");
+        log::info!("== Reading TSC datasets");
+        let start = Instant::now();
         let hm = HmData::from_hdf5(&h5)?;
+        log::info!("Read HmData in {:.1?}", start.elapsed());
+
+        let start = Instant::now();
         let gps_marks = GpsMarkRecords::from_hdf5(&h5)?;
+        log::info!("Read GpsMarks in {:.1?}", start.elapsed());
+        let start = Instant::now();
         let gps_pvts = GpsPvtRecords::from_hdf5(&h5)?;
+        log::info!("Read GpsPvt in {:.1?}", start.elapsed());
+        log::info!(
+            "== Finished reading datasets in {:.1?}",
+            start_reading.elapsed()
+        );
 
         let Some(first_timestamp) = gps_marks.first_timestamp() else {
             return Err(io::Error::new(
@@ -39,16 +52,31 @@ impl SkytemHdf5 for Tsc {
             ));
         };
 
+        let start_building_plots = Instant::now();
+        log::info!("== Building plots");
+        let start = Instant::now();
         log::info!("Creating GPS marks plots");
         let (mut plots, mut metadata) = gps_marks.build_plots_and_metadata();
+        log::info!("Created GPS marks plots in {:.1?}", start.elapsed());
         log::info!("Creating GPS PVT plots");
+        let start = Instant::now();
         plots.extend(gps_pvts.build_plots());
+        log::info!("Created GPS PVT plots in {:.1?}", start.elapsed());
         log::info!("Creating HM plots");
+        let start = Instant::now();
         let gps_time = gps_marks.timestamps();
         let (hm_plots, hm_metadata) = hm.build_plots_and_metadata(&gps_time);
         plots.extend(hm_plots);
         metadata.extend(hm_metadata);
-
+        log::info!("Created HM plots in {:.1?}", start.elapsed());
+        log::info!(
+            "== Finishing build plots in {:.1?}",
+            start_building_plots.elapsed()
+        );
+        log::info!(
+            "== == Total TSC::from_path duration: {:.1?} == ==",
+            total_start.elapsed()
+        );
         Ok(Self {
             first_timestamp,
             raw_plots: plots,
