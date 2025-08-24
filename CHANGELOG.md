@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.27.1]
+
+- Avoid loading the whole HM dataset of `TSC.h5` when only the shape is used
+
 ## [1.27.0]
 
 - Add plot for TSC timestamp delta
