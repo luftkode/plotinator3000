@@ -35,6 +35,7 @@ impl GpsMarkRecords {
         self.inner.first().map(|e| e.unix_timestamp_utc())
     }
 
+    #[allow(clippy::too_many_lines, reason = "Long but simple")]
     pub fn build_plots_and_metadata(&self) -> (Vec<RawPlot>, Vec<(String, String)>) {
         let time = self.timestamps();
 
@@ -55,9 +56,11 @@ impl GpsMarkRecords {
         let mut new_rising_edge = Vec::with_capacity(time.len());
 
         let mut step_counter = StepCounter::new();
+        let mut delta_computer = DeltaComputer::new();
 
         for (e, &t) in self.inner.iter().zip(&time) {
             step_counter.record_count(e.count, t);
+            delta_computer.record_timestamp(e.unix_timestamp_ns(), t);
 
             pulse_width.push([t, e.pulse_width_us()]);
             acc_est.push([t, e.acc_est as f64]);
@@ -77,6 +80,10 @@ impl GpsMarkRecords {
         metadata.push((
             "Count step differences".to_owned(),
             step_counter.to_metadata_string(),
+        ));
+        metadata.push((
+            "Timestamp Δt stats [s]".to_owned(),
+            delta_computer.to_metadata_string(),
         ));
 
         (
@@ -127,6 +134,11 @@ impl GpsMarkRecords {
                     "New rising edge [bool]".to_owned(),
                     new_rising_edge,
                     ExpectedPlotRange::Percentage,
+                ),
+                RawPlot::new(
+                    "Timestamp Δt [s]".to_owned(),
+                    delta_computer.take_plot_points(),
+                    ExpectedPlotRange::OneToOneHundred,
                 ),
             ],
             metadata,
@@ -202,6 +214,46 @@ impl StepCounter {
         }
 
         result
+    }
+}
+
+/// Computes deltas between consecutive GPS marks
+struct DeltaComputer {
+    deltas: Vec<[f64; 2]>, // [timestamp, delta_s]
+    prev_ns: Option<i64>,
+    stats: Vec<f64>, // store deltas separately for metadata
+}
+
+impl DeltaComputer {
+    fn new() -> Self {
+        Self {
+            deltas: Vec::new(),
+            prev_ns: None,
+            stats: Vec::new(),
+        }
+    }
+
+    fn record_timestamp(&mut self, curr_ns: i64, curr_time: f64) {
+        if let Some(prev) = self.prev_ns {
+            let delta_s = (curr_ns - prev) as f64 / 1e9;
+            self.deltas.push([curr_time, delta_s]);
+            self.stats.push(delta_s);
+        }
+        self.prev_ns = Some(curr_ns);
+    }
+
+    fn take_plot_points(self) -> Vec<[f64; 2]> {
+        self.deltas
+    }
+
+    fn to_metadata_string(&self) -> String {
+        if self.stats.is_empty() {
+            return "No deltas computed".to_owned();
+        }
+        let min = self.stats.iter().copied().fold(f64::INFINITY, f64::min);
+        let max = self.stats.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let avg = self.stats.iter().sum::<f64>() / self.stats.len() as f64;
+        format!("min={min:.6}, max={max:.6}, avg={avg:.6}")
     }
 }
 
