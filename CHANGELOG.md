@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.27.2]
+
+- Fix crash when parsing date from malformed `TSC.h5` GPS data (where all date data is 0)
+
 ## [1.27.1]
 
 - Avoid loading the whole HM dataset of `TSC.h5` when only the shape is used

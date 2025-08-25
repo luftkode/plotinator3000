@@ -77,6 +77,16 @@ impl SkytemHdf5 for Tsc {
             "== == Total TSC::from_path duration: {:.1?} == ==",
             total_start.elapsed()
         );
+
+        plots.retain(|p| {
+            if p.points().len() < 2 {
+                log::warn!("Discarding plot with less than 2 points: {}", p.name());
+                false
+            } else {
+                true
+            }
+        });
+
         Ok(Self {
             first_timestamp,
             raw_plots: plots,
