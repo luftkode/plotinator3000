@@ -20,10 +20,11 @@ impl GpsPvtRecords {
     }
 
     // Return a vector of timestamps (unix UTC nanoseconds)
-    pub fn timestamps(&self) -> Vec<f64> {
+    //
+    pub fn timestamps(&self) -> Vec<Option<f64>> {
         self.inner
             .iter()
-            .map(|g| g.unix_timestamp_ns() as f64)
+            .map(|g| g.unix_timestamp_ns().map(|ts| ts as f64))
             .collect()
     }
 
@@ -63,7 +64,11 @@ impl GpsPvtRecords {
         let mut confirmed_date = Vec::with_capacity(time.len());
         let mut confirmed_time = Vec::with_capacity(time.len());
 
-        for (e, &t) in self.inner.iter().zip(&time) {
+        for (e, &timestamp_opt) in self.inner.iter().zip(&time) {
+            let Some(t) = timestamp_opt else {
+                log::warn!("Ignoring NAV-PVT data from invalid timestamp");
+                continue;
+            };
             numsv.push([t, e.num_sv as f64]);
             height.push([t, e.height_meters()]);
             h_msl.push([t, e.height_msl_meters()]);
@@ -380,15 +385,20 @@ impl GpsPvtRecord {
     const FLAGS2_CONFIRMED_DATE: u8 = 64;
     const FLAGS2_CONFIRMED_TIME: u8 = 128;
 
-    fn unix_timestamp_utc(&self) -> DateTime<Utc> {
-        // Build datetime from explicit UTC fields - this must succeed or crash
-        let naive_date =
+    fn unix_timestamp_utc(&self) -> Option<DateTime<Utc>> {
+        let Some(naive_date) =
             chrono::NaiveDate::from_ymd_opt(self.year as i32, self.month as u32, self.day as u32)
-                .expect("Invalid date in GPS PVT record");
+        else {
+            log::error!("Invalid date: {self:?}");
+            return None;
+        };
 
-        let naive_datetime = naive_date
-            .and_hms_opt(self.hour as u32, self.min as u32, self.sec as u32)
-            .expect("Invalid time in GPS PVT record");
+        let Some(naive_datetime) =
+            naive_date.and_hms_opt(self.hour as u32, self.min as u32, self.sec as u32)
+        else {
+            log::error!("Invalid time: {self:?}");
+            return None;
+        };
 
         let mut utc_datetime = naive_datetime.and_utc();
 
@@ -397,15 +407,13 @@ impl GpsPvtRecord {
             utc_datetime += chrono::Duration::nanoseconds(self.nano as i64);
         }
 
-        utc_datetime
+        Some(utc_datetime)
     }
 
     /// Convert PVT record to precise Unix timestamp in nanoseconds since Unix epoch
-    /// Uses only the explicit UTC date/time fields - no fallbacks, crashes on invalid data
-    fn unix_timestamp_ns(&self) -> i64 {
+    fn unix_timestamp_ns(&self) -> Option<i64> {
         self.unix_timestamp_utc()
-            .timestamp_nanos_opt()
-            .expect("invalid time")
+            .and_then(|ts| ts.timestamp_nanos_opt())
     }
 
     /// Get latitude in degrees
@@ -467,7 +475,31 @@ mod tests {
         let gps_pvt = gps_pvt.inner;
         for g in &gps_pvt {
             eprintln!("g: {g:?}");
-            eprintln!("{}", g.unix_timestamp_utc());
+            eprintln!("{:?}", g.unix_timestamp_utc());
+            eprintln!(
+                "Lat: {:.7}°, Lon: {:.7}°",
+                g.latitude_degrees(),
+                g.longitude_degrees()
+            );
+            eprintln!(
+                "Height: {:.3}m, Speed: {:.3}m/s",
+                g.height_meters(),
+                g.ground_speed_ms()
+            );
+        }
+
+        insta::assert_debug_snapshot!(gps_pvt);
+        Ok(())
+    }
+
+    #[test]
+    fn read_gps_pvt_from_stub() -> TestResult {
+        let h5file = hdf5::File::open(tsc_stub())?;
+        let gps_pvt = GpsPvtRecords::from_hdf5(&h5file)?;
+        let gps_pvt = gps_pvt.inner;
+        for g in &gps_pvt {
+            eprintln!("g: {g:?}");
+            eprintln!("{:?}", g.unix_timestamp_utc());
             eprintln!(
                 "Lat: {:.7}°, Lon: {:.7}°",
                 g.latitude_degrees(),
@@ -528,7 +560,7 @@ mod tests {
 
         // Verify the expected datetime
         assert_eq!(
-            record.unix_timestamp_utc(),
+            record.unix_timestamp_utc().unwrap(),
             NaiveDate::from_ymd_opt(2022, 3, 10)
                 .unwrap()
                 .and_hms_nano_opt(15, 30, 45, 123456789)
