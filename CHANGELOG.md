@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `zip`: 4.4.0 → 4.5.0 ([#323](https://github.com/luftkode/plotinator3000/pull/323))
+- `memmap2`: 0.9.7 → 0.9.8 ([#323](https://github.com/luftkode/plotinator3000/pull/323))
+
 ## [1.27.2]
 
 - Fix crash when parsing date from malformed `TSC.h5` GPS data (where all date data is 0)
