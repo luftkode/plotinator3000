@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.72.3]
+
+### Changed
+
+- Disable periodically saving app state if large datasets are loaded to prevent periodic lag spikes
+- Format very large numbers in a more human readable way
+
 ### Dependencies
 
 - `zip`: 4.4.0 → 4.5.0 ([#323](https://github.com/luftkode/plotinator3000/pull/323))

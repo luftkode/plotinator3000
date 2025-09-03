@@ -7,6 +7,7 @@ use egui_notify::Toasts;
 use plot_settings::PlotSettings;
 use plotinator_plot_util::{Plots, plots::MaxPlotBounds};
 use plotinator_supported_formats::SupportedFormat;
+use plotinator_ui_util::format_large_number;
 use serde::{Deserialize, Serialize};
 
 use axis_config::AxisConfig;
@@ -50,6 +51,8 @@ pub struct LogPlotUi {
     max_bounds: MaxPlotBounds, // The maximum bounds for the plot, used for resetting zoom
     link_group: Option<Id>,
     click_delta: ClickDelta,
+    #[serde(skip)]
+    total_data_points: u32,
 }
 
 impl LogPlotUi {
@@ -61,6 +64,10 @@ impl LogPlotUi {
         self.plots.percentage().plots().len()
             + self.plots.one_to_hundred().plots().len()
             + self.plots.thousands().plots().len()
+    }
+
+    pub(crate) fn total_data_points(&self) -> u32 {
+        self.total_data_points
     }
 
     pub fn ui(
@@ -83,6 +90,7 @@ impl LogPlotUi {
             link_group,
             click_delta,
             stored_plot_files,
+            total_data_points,
         } = self;
 
         if link_group.is_none() {
@@ -97,11 +105,15 @@ impl LogPlotUi {
         }
 
         if !loaded_files.is_empty() {
-            log::info!("Total data points: {}", plots.total_data_points());
+            *total_data_points = plots.total_data_points() as u32;
+            log::info!(
+                "Total data points: {}",
+                format_large_number(*total_data_points)
+            );
             toasts
                 .info(format!(
                     "Total data points in loaded files: {}",
-                    plots.total_data_points(),
+                    format_large_number(*total_data_points),
                 ))
                 .duration(Some(Duration::from_secs(20)));
         }

@@ -52,6 +52,12 @@ pub struct App {
     #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     download_ui: DownloadUi,
+
+    // Disable saving app state if we have over 100k loaded data points
+    // the lag gets noticeable depending on the performance of the device, but if we disable it already at 100k we
+    // will definitely not notice it, even on low performing devices.
+    #[serde(skip)]
+    disable_app_state_storage: bool,
 }
 
 impl Default for App {
@@ -79,12 +85,15 @@ impl Default for App {
 
             #[cfg(not(target_arch = "wasm32"))]
             download_ui: DownloadUi::default(),
+
+            disable_app_state_storage: false,
         }
     }
 }
 
 impl App {
     const DEFAULT_FONT_SIZE: f32 = 16.0;
+    const DISABLE_STORAGE_THRESHOLD: u32 = 100_000; // Disable saving app state if we have over 100k loaded data points
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -107,8 +116,16 @@ impl App {
 impl eframe::App for App {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        self.font_size_init = false;
-        eframe::set_value(storage, eframe::APP_KEY, self);
+        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        puffin::profile_function!();
+        self.disable_app_state_storage =
+            self.plot.total_data_points() > Self::DISABLE_STORAGE_THRESHOLD;
+
+        if self.disable_app_state_storage {
+            log::debug!("Saving app state is disabled - skipping");
+        } else {
+            eframe::set_value(storage, eframe::APP_KEY, self);
+        }
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.

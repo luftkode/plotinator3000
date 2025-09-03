@@ -47,3 +47,35 @@ pub fn auto_color(auto_color_idx: &mut usize) -> Color32 {
     let h = i as f32 * golden_ratio;
     egui::epaint::Hsva::new(h, 0.85, 0.5, 1.0).into() // TODO(emilk): OkLab or some other perspective color space
 }
+
+/// Formats a large number into a more human-readable string.
+/// - Numbers under 1 million will be formatted with comma separators (e.g., 950,123).
+/// - Numbers 1 million and over will be formatted with two decimal places (e.g., 1.21 M).
+///
+/// # Arguments
+///
+/// * `num` - The number to format.
+///
+/// # Returns
+///
+/// A formatted `String`.
+pub fn format_large_number(num: u32) -> String {
+    if num < 1_000_000 {
+        // Format with comma separators for thousands
+        let s = num.to_string();
+        let mut result = String::with_capacity(s.len() + (s.len() - 1) / 3);
+        let mut count = 0;
+        // Iterate in reverse to place commas every three digits
+        for c in s.chars().rev() {
+            if count > 0 && count % 3 == 0 {
+                result.push(',');
+            }
+            result.push(c);
+            count += 1;
+        }
+        result.chars().rev().collect()
+    } else {
+        let millions = num as f64 / 1_000_000.0;
+        format!("{millions:.2} M")
+    }
+}
