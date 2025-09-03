@@ -64,14 +64,12 @@ pub fn format_large_number(num: u32) -> String {
         // Format with comma separators for thousands
         let s = num.to_string();
         let mut result = String::with_capacity(s.len() + (s.len() - 1) / 3);
-        let mut count = 0;
         // Iterate in reverse to place commas every three digits
-        for c in s.chars().rev() {
+        for (count, ch) in s.chars().rev().enumerate() {
             if count > 0 && count % 3 == 0 {
                 result.push(',');
             }
-            result.push(c);
-            count += 1;
+            result.push(ch);
         }
         result.chars().rev().collect()
     } else {
