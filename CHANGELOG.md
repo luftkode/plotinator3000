@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-## [1.72.3]
+## [1.28.0]
+
+- Add support for `frame-gps` HDF5 files
+
+## [1.27.3]
 
 ### Changed
 
