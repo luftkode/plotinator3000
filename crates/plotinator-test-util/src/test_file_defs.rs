@@ -6,7 +6,7 @@ macro_rules! test_file {
 
 macro_rules! define_binary_test_file {
     ($name:ident, $path:expr) => {
-        paste! {
+        paste::paste! {
             pub const [<$name:upper _PATH>]: &str = concat!(
                 test_file!($path),
             );
@@ -15,8 +15,8 @@ macro_rules! define_binary_test_file {
                 test_file!($path),
             ));
 
-            pub fn [<$name>]() -> PathBuf {
-                PathBuf::from([<$name:upper _PATH>])
+            pub fn [<$name>]() -> std::path::PathBuf {
+                std::path::PathBuf::from([<$name:upper _PATH>])
                     .canonicalize()
                     .expect("Failed to canonicalize path: {[<$name:upper _PATH>]}")
             }
@@ -26,7 +26,7 @@ macro_rules! define_binary_test_file {
 
 macro_rules! define_utf8_test_file {
     ($name:ident, $path:expr) => {
-        paste! {
+        paste::paste! {
             pub const [<$name:upper _PATH>]: &str = concat!(
                 test_file!($path),
             );
@@ -39,8 +39,8 @@ macro_rules! define_utf8_test_file {
                 test_file!($path),
             ));
 
-            pub fn [<$name>]() -> PathBuf {
-                PathBuf::from([<$name:upper _PATH>])
+            pub fn [<$name>]() -> std::path::PathBuf {
+                std::path::PathBuf::from([<$name:upper _PATH>])
                     .canonicalize()
                     .expect("Failed to canonicalize path: {[<$name:upper _PATH>]}")
             }
@@ -50,6 +50,7 @@ macro_rules! define_utf8_test_file {
 
 pub mod bifrost_current;
 pub mod frame_altimeters;
+pub mod frame_gps;
 pub mod frame_inclinometers;
 pub mod frame_magnetometer;
 pub mod legacy_generator;

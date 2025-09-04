@@ -1,5 +1,3 @@
-use paste::paste;
-use std::path::PathBuf;
 macro_rules! define_wasp200_sps {
     ($name:ident, $path:expr) => {
         define_utf8_test_file!($name, concat!("wasp200/", $path));

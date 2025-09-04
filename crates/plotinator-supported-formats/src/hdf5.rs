@@ -1,10 +1,4 @@
 use chrono::{DateTime, Utc};
-use plotinator_hdf5::frame_altimeters::FrameAltimeters;
-use plotinator_hdf5::frame_inclinometers::FrameInclinometers;
-use plotinator_hdf5::frame_magnetometer::FrameMagnetometer;
-use plotinator_hdf5::njord_ins::NjordIns;
-use plotinator_hdf5::tsc::Tsc;
-use plotinator_hdf5::{bifrost::BifrostLoopCurrent, wasp200::Wasp200};
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -82,11 +76,12 @@ macro_rules! define_supported_hdf5_formats {
 }
 
 define_supported_hdf5_formats! {
-    BifrostLoopCurrent => BifrostLoopCurrent,
-    Wasp200Height => Wasp200,
-    FrameAltimeters => FrameAltimeters,
-    FrameInclinometers => FrameInclinometers,
-    FrameMagnetometer => FrameMagnetometer,
-    NjordIns => NjordIns,
-    Tsc => Tsc,
+    BifrostLoopCurrent => plotinator_hdf5::bifrost::BifrostLoopCurrent,
+    Wasp200Height => plotinator_hdf5::wasp200::Wasp200,
+    FrameAltimeters => plotinator_hdf5::frame_altimeters::FrameAltimeters,
+    FrameInclinometers => plotinator_hdf5::frame_inclinometers::FrameInclinometers,
+    FrameMagnetometer => plotinator_hdf5::frame_magnetometer::FrameMagnetometer,
+    FrameGps => plotinator_hdf5::frame_gps::FrameGps,
+    NjordIns => plotinator_hdf5::njord_ins::NjordIns,
+    Tsc => plotinator_hdf5::tsc::Tsc,
 }

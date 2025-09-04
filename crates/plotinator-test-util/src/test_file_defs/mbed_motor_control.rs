@@ -1,6 +1,3 @@
-use paste::paste;
-use std::path::PathBuf;
-
 macro_rules! define_mbed_log {
     ($name:ident, $path:expr) => {
         define_binary_test_file!($name, concat!("mbed_motor_control/", $path));

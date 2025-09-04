@@ -6,6 +6,7 @@ plotinator_macros::non_wasm_modules!(
     pub mod frame_altimeters;
     pub mod frame_inclinometers;
     pub mod frame_magnetometer;
+    pub mod frame_gps;
     pub mod njord_ins;
     pub mod tsc;
 );
