@@ -40,81 +40,103 @@ impl SkytemHdf5 for FrameInclinometers {
         let attitudes2: ndarray::Array2<f32> = attitude2_dataset.read()?;
         let timestamps2: ndarray::Array2<i64> = timestamp2_dataset.read_2d()?;
 
-        let (timestamps1, first_timestamp1) = Self::process_timestamps(&timestamps1);
-        let (timestamps2, first_timestamp2) = Self::process_timestamps(&timestamps2);
-        let total_starting_timestamp = std::cmp::min(first_timestamp1, first_timestamp2);
+        let mut raw_plots = vec![];
 
-        let data_len = angles1.nrows();
+        let mut total_starting_timestamp = None;
+        if let Some((timestamps1, first_timestamp1)) = Self::process_timestamps(&timestamps1) {
+            total_starting_timestamp = Some(first_timestamp1);
 
-        let mut pitch1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-        let mut pitch2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-        let mut old_roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-        let mut old_roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-        let mut roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-        let mut roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+            let data_len = angles1.nrows();
 
-        for ((angles_row, attitudes_row), timestamp) in angles1
-            .outer_iter()
-            .zip(attitudes1.outer_iter())
-            .zip(timestamps1.iter())
-        {
-            let pitch = attitudes_row[0];
-            let roll = attitudes_row[1];
+            let mut pitch1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+            let mut old_roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+            let mut roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
 
-            // The old roll that is incorrectly calculated
-            let old_roll = angles_row[1];
+            for ((angles_row, attitudes_row), timestamp) in angles1
+                .outer_iter()
+                .zip(attitudes1.outer_iter())
+                .zip(timestamps1.iter())
+            {
+                let pitch = attitudes_row[0];
+                let roll = attitudes_row[1];
 
-            pitch1_with_ts.push([*timestamp, pitch as f64]);
-            roll1_with_ts.push([*timestamp, roll as f64]);
-            old_roll1_with_ts.push([*timestamp, old_roll as f64]);
+                // The old roll that is incorrectly calculated
+                let old_roll = angles_row[1];
+
+                pitch1_with_ts.push([*timestamp, pitch as f64]);
+                roll1_with_ts.push([*timestamp, roll as f64]);
+                old_roll1_with_ts.push([*timestamp, old_roll as f64]);
+            }
+
+            let pitch1_rawplot = RawPlot::new(
+                "Pitch-TL1 °".to_owned(),
+                pitch1_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            );
+            let roll1_rawplot = RawPlot::new(
+                "Roll-TL1 °".to_owned(),
+                roll1_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            );
+            let old_roll1_rawplot = RawPlot::new(
+                "Roll-TL1 (Old) °".to_owned(),
+                old_roll1_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            );
+            raw_plots.push(pitch1_rawplot);
+            raw_plots.push(roll1_rawplot);
+            raw_plots.push(old_roll1_rawplot);
         }
 
-        for ((angles_row, attitudes_row), timestamp) in angles2
-            .outer_iter()
-            .zip(attitudes2.outer_iter())
-            .zip(timestamps2.iter())
-        {
-            let pitch = attitudes_row[0];
-            let roll = attitudes_row[1];
+        if let Some((timestamps2, first_timestamp2)) = Self::process_timestamps(&timestamps2) {
+            if let Some(total_starting_ts) = total_starting_timestamp {
+                total_starting_timestamp = Some(first_timestamp2.min(total_starting_ts));
+            } else {
+                total_starting_timestamp = Some(first_timestamp2);
+            }
 
-            // The old roll that is incorrectly calculated
-            let old_roll = angles_row[1];
+            let data_len = angles2.nrows();
+            let mut pitch2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+            let mut old_roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+            let mut roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
 
-            pitch2_with_ts.push([*timestamp, pitch as f64]);
-            roll2_with_ts.push([*timestamp, roll as f64]);
-            old_roll2_with_ts.push([*timestamp, old_roll as f64]);
+            for ((angles_row, attitudes_row), timestamp) in angles2
+                .outer_iter()
+                .zip(attitudes2.outer_iter())
+                .zip(timestamps2.iter())
+            {
+                let pitch = attitudes_row[0];
+                let roll = attitudes_row[1];
+
+                // The old roll that is incorrectly calculated
+                let old_roll = angles_row[1];
+
+                pitch2_with_ts.push([*timestamp, pitch as f64]);
+                roll2_with_ts.push([*timestamp, roll as f64]);
+                old_roll2_with_ts.push([*timestamp, old_roll as f64]);
+            }
+
+            let pitch2_rawplot = RawPlot::new(
+                "Pitch-TL2 °".to_owned(),
+                pitch2_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            );
+
+            let roll2_rawplot = RawPlot::new(
+                "Roll-TL2 °".to_owned(),
+                roll2_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            );
+            let old_roll2_rawplot = RawPlot::new(
+                "Roll-TL2 (Old) °".to_owned(),
+                old_roll2_with_ts,
+                ExpectedPlotRange::OneToOneHundred,
+            );
+
+            raw_plots.push(pitch2_rawplot);
+            raw_plots.push(roll2_rawplot);
+            raw_plots.push(old_roll2_rawplot);
         }
-
-        let pitch1_rawplot = RawPlot::new(
-            "Pitch-1 °".to_owned(),
-            pitch1_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
-        let pitch2_rawplot = RawPlot::new(
-            "Pitch-2 °".to_owned(),
-            pitch2_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
-        let roll1_rawplot = RawPlot::new(
-            "Roll-1 °".to_owned(),
-            roll1_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
-        let roll2_rawplot = RawPlot::new(
-            "Roll-2 °".to_owned(),
-            roll2_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
-        let old_roll1_rawplot = RawPlot::new(
-            "Roll-1 (Old) °".to_owned(),
-            old_roll1_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
-        let old_roll2_rawplot = RawPlot::new(
-            "Roll-2 (Old) °".to_owned(),
-            old_roll2_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        );
 
         let metadata = Self::extract_metadata(
             &angle1_dataset,
@@ -126,16 +148,9 @@ impl SkytemHdf5 for FrameInclinometers {
         )?;
 
         Ok(Self {
-            starting_timestamp_utc: total_starting_timestamp,
+            starting_timestamp_utc: total_starting_timestamp.unwrap_or_default(),
             dataset_description: "Frame inclinometers".to_owned(),
-            raw_plots: vec![
-                pitch1_rawplot,
-                pitch2_rawplot,
-                roll1_rawplot,
-                roll2_rawplot,
-                old_roll1_rawplot,
-                old_roll2_rawplot,
-            ],
+            raw_plots,
             metadata,
         })
     }
@@ -205,8 +220,10 @@ impl FrameInclinometers {
         ))
     }
 
-    fn process_timestamps(timestamp_data: &ndarray::Array2<i64>) -> (Vec<f64>, DateTime<Utc>) {
-        let first = timestamp_data.first().expect("Empty timestamps");
+    fn process_timestamps(
+        timestamp_data: &ndarray::Array2<i64>,
+    ) -> Option<(Vec<f64>, DateTime<Utc>)> {
+        let first = timestamp_data.first()?;
         let first_timestamp: DateTime<Utc> = chrono::Utc.timestamp_nanos(*first).to_utc();
 
         let mut timestamps = vec![];
@@ -214,7 +231,7 @@ impl FrameInclinometers {
             timestamps.push(*t as f64);
         }
 
-        (timestamps, first_timestamp)
+        Some((timestamps, first_timestamp))
     }
 
     fn extract_metadata(
