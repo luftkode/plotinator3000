@@ -85,6 +85,12 @@ const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
         subitems: None,
     },
     LogFormat {
+        title: "Frame GPS",
+        description: "Novatel GPS data",
+        link: "https://github.com/luftkode/frame-gps",
+        subitems: None,
+    },
+    LogFormat {
         title: "TSC",
         description: "GPS data from the TS (TEM data is not supported)",
         link: "https://github.com/luftkode/tib3d-script",
