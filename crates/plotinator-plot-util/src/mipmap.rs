@@ -1,7 +1,6 @@
-use std::{cell::Cell, ops::RangeInclusive};
-
 use egui_plot::PlotPoint;
 use serde::{Deserialize, Serialize};
+use std::{cell::Cell, ops::RangeInclusive};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MipMapStrategy {
@@ -91,28 +90,36 @@ impl MipMap2DPlotPoints {
         }
     }
 
-    /// Downsamples a vector to `ceil(len / 2)` elements with the chosen [`MipMapStrategy`]
+    /// Downsample a vector to `ceil(len / 2)` elements with the chosen [`MipMapStrategy`]
     fn downsample(source: &[PlotPoint], strategy: MipMapStrategy) -> Vec<PlotPoint> {
-        let strategy = match strategy {
-            MipMapStrategy::Min => |pairs: &[PlotPoint]| {
-                // Branchless way of selecting the point with the smallest X-value
-                let index_bool: usize = (pairs[0].y > pairs[1].y) as usize;
-                pairs[index_bool]
-            },
-            MipMapStrategy::Max => |pairs: &[PlotPoint]| {
-                // Branchless way of selecting the point with the greatest X-value
-                let index_bool: usize = (pairs[0].y < pairs[1].y) as usize;
-                pairs[index_bool]
-            },
-        };
-        source
-            .chunks(2)
-            .map(|pairs| match pairs.len() {
-                1 => pairs[0],
-                2 => strategy(pairs),
-                _ => unreachable!("Unsound condition"),
-            })
-            .collect()
+        let pairs = source.len() / 2;
+        let rem = source.len() % 2;
+
+        let mut out = Vec::with_capacity(pairs + rem);
+        for pair in source.chunks_exact(2) {
+            out.push(Self::pick(pair[0], pair[1], strategy));
+        }
+        if rem == 1 {
+            out.push(*source.last().unwrap());
+        }
+        out
+    }
+
+    #[inline(always)]
+    fn pick(p0: PlotPoint, p1: PlotPoint, strategy: MipMapStrategy) -> PlotPoint {
+        // branchless, don't touch unless you understand it
+        match strategy {
+            MipMapStrategy::Min => {
+                // choose lower y
+                let idx: usize = (p0.y > p1.y) as usize;
+                [p0, p1][idx]
+            }
+            MipMapStrategy::Max => {
+                // choose higher y
+                let idx: usize = (p0.y < p1.y) as usize;
+                [p0, p1][idx]
+            }
+        }
     }
 
     /// Returns the total number of downsampled levels.
@@ -205,10 +212,16 @@ impl MipMap2DPlotPoints {
                     result_span: Some((start_idx, end_idx)),
                     result_idx: lvl_idx,
                 };
-                self.most_recent_lookup.replace(new_cached);
+                self.most_recent_lookup.set(new_cached);
                 return (lvl_idx, Some((start_idx, end_idx)));
             }
         }
+        self.most_recent_lookup.set(LevelLookupCached {
+            pixel_width,
+            x_bounds: (x_min, x_max),
+            result_span: None,
+            result_idx: 0,
+        });
         (0, None)
     }
 

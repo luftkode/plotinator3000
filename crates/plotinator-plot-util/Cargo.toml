@@ -25,6 +25,7 @@ puffin_http = { workspace = true, optional = true }
 log.workspace = true
 strum_macros.workspace = true
 strum.workspace = true
+rayon.workspace = true
 
 [dev-dependencies]
 testresult.workspace = true
