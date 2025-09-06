@@ -1,14 +1,13 @@
+use plotinator_plot_ui::LogPlotUi;
+
 use crate::{
-    app::{
-        custom_files::{CustomFileContent, try_parse_custom_file, try_parse_custom_file_from_buf},
-        loaded_files::LoadedFiles,
-    },
-    plot::LogPlotUi,
+    custom_files::{CustomFileContent, try_parse_custom_file, try_parse_custom_file_from_buf},
+    loaded_files::LoadedFiles,
 };
 
 pub mod preview_dropped;
 
-pub(crate) fn handle_dropped_files(
+pub fn handle_dropped_files(
     ctx: &egui::Context,
     loaded_files: &mut LoadedFiles,
 ) -> anyhow::Result<Option<Box<LogPlotUi>>> {

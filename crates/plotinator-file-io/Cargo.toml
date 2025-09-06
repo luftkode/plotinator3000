@@ -1,0 +1,37 @@
+[package]
+name = "plotinator-file-io"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+plotinator-supported-formats = { workspace = true }
+plotinator-plot-ui = { workspace = true }
+plotinator-mqtt = { workspace = true, optional = true }
+plotinator-hdf5 = { workspace = true }
+egui = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+rfd = { workspace = true }
+log = { workspace = true }
+zip = { workspace = true }
+tempfile = { workspace = true }
+
+[dev-dependencies]
+plotinator-log-if.workspace = true
+plotinator-test-util.workspace = true
+testresult.workspace = true
+
+[lints]
+workspace = true
+
+
+[features]
+default = ["mqtt", "hdf5"]
+hdf5 = ["plotinator-supported-formats/hdf5"]
+mqtt = ["plotinator-mqtt"]

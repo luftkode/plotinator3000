@@ -34,15 +34,19 @@ plotinator-ui-util.path = "crates/plotinator-ui-util"
 plotinator-logs.path = "crates/plotinator-logs"
 plotinator-log-if.path = "crates/plotinator-log-if"
 plotinator-plot-util.path = "crates/plotinator-plot-util"
+plotinator-plot-ui.path = "crates/plotinator-plot-ui"
 plotinator-hdf5.path = "crates/plotinator-hdf5"
 plotinator-mqtt.path = "crates/plotinator-mqtt"
+plotinator-mqtt-ui.path = "crates/plotinator-mqtt-ui"
 plotinator-macros.path = "crates/plotinator-macros"
 plotinator-proc-macros.path = "crates/plotinator-proc-macros"
 plotinator-supported-formats.path = "crates/plotinator-supported-formats"
 plotinator-updater.path = "crates/plotinator-updater"
 plotinator-download.path = "crates/plotinator-download"
 plotinator-strfmt.path = "crates/plotinator-strfmt"
+plotinator-file-io.path = "crates/plotinator-file-io"
 egui = { version = "0.32", features = ["rayon", "callstack"] }
+egui-notify = "0.20.0"
 eframe = { version = "0.32", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
@@ -68,7 +72,7 @@ toml = "0.9.5"
 thiserror = "2.0"
 semver = "1.0.26"
 elevated-command = "1.1"
-paste = "1.0.15"
+paste = { package = "pastey", version = "*" }
 anyhow = "1.0.99"
 rumqttc = "0.24.0"
 memmap2 = "0.9.8"
@@ -77,6 +81,8 @@ reqwest = { version = "0.12.23", default-features = false }
 dirs = "6.0.0"
 smallvec = "1.15.1"
 tempfile = "3.19.1"
+rfd = "0.15"
+zip = "5.0.0"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
@@ -94,6 +100,7 @@ insta = "1.43.1"
 plotinator-logs.workspace = true
 plotinator-log-if.workspace = true
 plotinator-plot-util.workspace = true
+plotinator-plot-ui.workspace = true
 plotinator-hdf5.workspace = true
 plotinator-test-util.workspace = true
 plotinator-ui-util.workspace = true
@@ -101,7 +108,12 @@ plotinator-macros.workspace = true
 plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
+plotinator-file-io.workspace = true
+egui.workspace = true
+eframe.workspace = true
 egui_plot.workspace = true
+egui-phosphor.workspace = true
+egui-notify.workspace = true
 log.workspace = true
 serde.workspace = true
 strum.workspace = true
@@ -109,11 +121,7 @@ strum_macros.workspace = true
 chrono.workspace = true
 getset.workspace = true
 semver.workspace = true
-egui.workspace = true
-eframe.workspace = true
-rfd = "0.15"
-egui-phosphor.workspace = true
-egui-notify = "0.20.0"
+rfd.workspace = true
 tokio.workspace = true
 memmap2.workspace = true
 serde_json.workspace = true
@@ -121,7 +129,6 @@ anyhow.workspace = true
 smallvec.workspace = true
 tempfile.workspace = true
 rayon.workspace = true
-
 
 
 [dev-dependencies]
@@ -142,9 +149,9 @@ egui_kittest = { version = "0.32.1", features = [
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 plotinator-updater = { workspace = true, optional = true }
 plotinator-mqtt = { workspace = true, optional = true }
+plotinator-mqtt-ui = { workspace = true, optional = true }
 plotinator-download.workspace = true
 env_logger = "0.11"
-zip = "5.0.0"
 profiling = { workspace = true, optional = true }
 puffin = { workspace = true, optional = true }
 puffin_http = { workspace = true, optional = true }
@@ -162,7 +169,7 @@ web-sys = "0.3.70"
 default = ["selfupdater", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5"]
 selfupdater = ["dep:plotinator-updater"]
-mqtt = ["dep:plotinator-mqtt"]
+mqtt = ["dep:plotinator-mqtt", "dep:plotinator-mqtt-ui"]
 log_time = ["plotinator-proc-macros/log_time"]
 profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http", "plotinator-proc-macros/profiling"]
 
@@ -260,7 +267,7 @@ manual_string_new = "warn"
 map_err_ignore = "warn"
 map_flatten = "warn"
 map_unwrap_or = "warn"
-match_on_vec_items = "warn"
+indexing_slicing = "allow" # TODO: Fix?
 match_same_arms = "warn"
 match_wild_err_arm = "warn"
 match_wildcard_for_single_variants = "warn"

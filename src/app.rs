@@ -1,17 +1,11 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::app::download::DownloadUi;
-use crate::plot::LogPlotUi;
-use dropped_files::handle_dropped_files;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
+use plotinator_plot_ui::LogPlotUi;
 
-use file_dialog as fd;
-use loaded_files::LoadedFiles;
+use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
 
-pub(crate) mod custom_files;
-mod dropped_files;
-mod file_dialog;
-pub mod loaded_files;
 mod misc;
 mod util;
 
@@ -36,7 +30,7 @@ pub struct App {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     #[serde(skip)]
-    pub(crate) mqtt: crate::mqtt::Mqtt,
+    pub(crate) mqtt: plotinator_mqtt_ui::Mqtt,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -72,7 +66,7 @@ impl Default for App {
             error_message: None,
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            mqtt: crate::mqtt::Mqtt::default(),
+            mqtt: plotinator_mqtt_ui::Mqtt::default(),
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),
@@ -156,7 +150,10 @@ impl eframe::App for App {
                 util::draw_empty_state(ui); // Display the message when no plots are shown
             }
 
-            match handle_dropped_files(ctx, &mut self.loaded_files) {
+            match plotinator_file_io::dropped_files::handle_dropped_files(
+                ctx,
+                &mut self.loaded_files,
+            ) {
                 Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
                 Err(e) => self.error_message = Some(e.to_string()),
                 Ok(None) => (),
@@ -231,9 +228,9 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                     // Option to export the entire UI state for later restoration
                     if ui.button("Plot UI State").clicked() {
                         #[cfg(not(target_arch = "wasm32"))]
-                        file_dialog::native::NativeFileDialog::save_plot_ui(&app.plot);
+                        fd::native::NativeFileDialog::save_plot_ui(&app.plot);
                         #[cfg(target_arch = "wasm32")]
-                        file_dialog::web::WebFileDialog::save_plot_ui(&app.plot);
+                        fd::web::WebFileDialog::save_plot_ui(&app.plot);
 
                         ui.close_kind(UiKind::Menu);
                     }
@@ -241,15 +238,13 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                     // Option to export just the raw plot data
                     if ui.button("Plot Data").clicked() {
                         #[cfg(not(target_arch = "wasm32"))]
-                        file_dialog::native::NativeFileDialog::save_plot_data(
+                        fd::native::NativeFileDialog::save_plot_data(
                             app.plot.stored_plot_files(),
                             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                             app.mqtt.mqtt_plot_data.as_ref(),
                         );
                         #[cfg(target_arch = "wasm32")]
-                        file_dialog::web::WebFileDialog::save_plot_data(
-                            app.plot.stored_plot_files(),
-                        );
+                        fd::web::WebFileDialog::save_plot_data(app.plot.stored_plot_files());
                         ui.close_kind(UiKind::Menu);
                     }
                 },

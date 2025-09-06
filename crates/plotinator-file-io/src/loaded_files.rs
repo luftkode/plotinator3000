@@ -14,16 +14,16 @@ pub struct LoadedFiles {
 
 impl LoadedFiles {
     /// Return a vector of immutable references to all logs
-    pub(crate) fn loaded(&self) -> &[SupportedFormat] {
+    pub fn loaded(&self) -> &[SupportedFormat] {
         &self.loaded
     }
 
     /// Take all the `loaded_files` currently stored and return them as a list
-    pub(crate) fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
+    pub fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
         self.loaded.drain(..).collect()
     }
 
-    pub(crate) fn parse_path(&mut self, path: &Path) -> anyhow::Result<()> {
+    pub fn parse_path(&mut self, path: &Path) -> anyhow::Result<()> {
         if path.is_dir() {
             self.parse_directory(path)?;
         } else if is_zip_file(path) {
@@ -35,7 +35,7 @@ impl LoadedFiles {
         Ok(())
     }
 
-    pub(crate) fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
+    pub fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
         self.loaded.push(SupportedFormat::parse_from_buf(buf)?);
         Ok(())
     }

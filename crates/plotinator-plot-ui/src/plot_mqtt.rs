@@ -2,7 +2,7 @@ use egui::{Color32, Vec2};
 use egui_plot::{Plot, PlotBounds};
 use plotinator_plot_util::draw_series::SeriesDrawMode;
 
-use crate::plot::{PlotType, util};
+use crate::{PlotType, util};
 
 use super::click_delta::ClickDelta;
 

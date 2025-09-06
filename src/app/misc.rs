@@ -1,5 +1,7 @@
 use egui_phosphor::regular;
+use plotinator_file_io::loaded_files::LoadedFiles;
 use plotinator_log_if::prelude::Plotable as _;
+use plotinator_plot_ui::WARN_ON_UNPARSED_BYTES_THRESHOLD;
 use std::time::Duration;
 
 use egui::{Color32, RichText, TextStyle, ThemePreference};
@@ -7,9 +9,7 @@ use egui_notify::Toasts;
 use plotinator_strfmt::format_data_size;
 use plotinator_supported_formats::SupportedFormat;
 
-use crate::{
-    App, WARN_ON_UNPARSED_BYTES_THRESHOLD, app::loaded_files::LoadedFiles, plot::LogPlotUi,
-};
+use crate::App;
 
 pub(super) fn show_theme_toggle_buttons(ui: &mut egui::Ui) {
     let mut theme_preference = ui.ctx().options(|opt| opt.theme_preference);
@@ -138,7 +138,7 @@ pub(super) fn show_app_reset_button(ui: &mut egui::Ui, app: &mut App) {
                 .duration(Some(std::time::Duration::from_secs(3)));
         }
         app.loaded_files = LoadedFiles::default();
-        app.plot = LogPlotUi::default();
+        app.plot = plotinator_plot_ui::LogPlotUi::default();
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         app.mqtt.reset();

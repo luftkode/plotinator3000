@@ -6,18 +6,6 @@ use std::{
 use plotinator_supported_formats::SupportedFormat;
 use serde::Serialize;
 
-use crate::{
-    app::{
-        LoadedFiles,
-        custom_files::{
-            CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
-            try_parse_custom_file_from_buf,
-        },
-        file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
-    },
-    plot::LogPlotUi,
-};
-
 fn execute<F: std::future::Future<Output = ()> + 'static>(f: F) {
     wasm_bindgen_futures::spawn_local(f);
 }

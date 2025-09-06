@@ -3432,6 +3432,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
+name = "pastey"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35fb2e5f958ec131621fdd531e9fc186ed768cbe395337403ae56c17a74c68ec"
+
+[[package]]
 name = "pbkdf2"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3509,6 +3515,27 @@ dependencies = [
  "reqwest",
  "strum 0.27.2",
  "strum_macros 0.27.2",
+]
+
+[[package]]
+name = "plotinator-file-io"
+version = "1.29.1"
+dependencies = [
+ "anyhow",
+ "egui",
+ "log",
+ "plotinator-hdf5",
+ "plotinator-log-if",
+ "plotinator-mqtt",
+ "plotinator-plot-ui",
+ "plotinator-supported-formats",
+ "plotinator-test-util",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "testresult",
+ "zip",
 ]
 
 [[package]]
@@ -3602,6 +3629,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "plotinator-mqtt-ui"
+version = "1.29.1"
+dependencies = [
+ "egui",
+ "plotinator-mqtt",
+]
+
+[[package]]
+name = "plotinator-plot-ui"
+version = "1.29.1"
+dependencies = [
+ "chrono",
+ "egui",
+ "egui-notify",
+ "egui-phosphor",
+ "egui_plot",
+ "log",
+ "plotinator-log-if",
+ "plotinator-macros",
+ "plotinator-mqtt",
+ "plotinator-mqtt-ui",
+ "plotinator-plot-util",
+ "plotinator-proc-macros",
+ "plotinator-strfmt",
+ "plotinator-supported-formats",
+ "plotinator-ui-util",
+ "profiling",
+ "puffin",
+ "puffin_http",
+ "rayon",
+ "serde",
+ "smallvec",
+ "strum 0.27.2",
+ "strum_macros 0.27.2",
+]
+
+[[package]]
 name = "plotinator-plot-util"
 version = "1.29.1"
 dependencies = [
@@ -3667,7 +3731,7 @@ dependencies = [
 name = "plotinator-test-util"
 version = "1.29.1"
 dependencies = [
- "paste",
+ "pastey",
  "testresult",
 ]
 
@@ -3713,11 +3777,14 @@ dependencies = [
  "memmap2",
  "mimalloc",
  "plotinator-download",
+ "plotinator-file-io",
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-logs",
  "plotinator-macros",
  "plotinator-mqtt",
+ "plotinator-mqtt-ui",
+ "plotinator-plot-ui",
  "plotinator-plot-util",
  "plotinator-proc-macros",
  "plotinator-strfmt",
@@ -3741,7 +3808,6 @@ dependencies = [
  "tokio",
  "wasm-bindgen-futures",
  "web-sys",
- "zip",
 ]
 
 [[package]]
