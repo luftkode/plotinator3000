@@ -6,24 +6,29 @@ use egui_plot::{PlotBounds, PlotPoint};
 use plotinator_log_if::prelude::RawPlot;
 use serde::{Deserialize, Serialize};
 
-use crate::mipmap::{MipMap2DPlotPoints, MipMapStrategy};
+use crate::{
+    mipmap::{MipMap2DPlotPoints, MipMapStrategy},
+    plots::plot_data::plot_labels::StoredPlotLabels,
+};
 
 use super::util;
+
+pub mod plot_labels;
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct PlotData {
     max_bounds: Option<PlotBounds>,
-    plots: Vec<PlotValues>,
+    plots: Vec<CookedPlot>,
     plot_labels: Vec<StoredPlotLabels>,
     next_auto_color_idx: usize,
 }
 
 impl PlotData {
-    pub fn plots(&self) -> &[PlotValues] {
+    pub fn plots(&self) -> &[CookedPlot] {
         &self.plots
     }
 
-    pub fn plots_as_mut(&mut self) -> &mut Vec<PlotValues> {
+    pub fn plots_as_mut(&mut self) -> &mut Vec<CookedPlot> {
         &mut self.plots
     }
 
@@ -39,11 +44,20 @@ impl PlotData {
         self.plot_labels.push(plot_labels);
     }
 
+    /// Returns a borrowed iterator over the labels of all plots.
+    ///
+    /// The label is on the form `"<name> #<log_id>"`.
+    pub fn plot_labels_iter(&self) -> impl Iterator<Item = &str> {
+        self.plots.iter().map(|p| p.label())
+    }
+
     /// Returns whether [`PlotData`] contains a plot with the label `plot_label`.
     ///
     /// The label is on the form `"<name> #<log_id>"`
     pub fn contains_plot(&self, plot_label: &str) -> bool {
-        self.plots.iter().any(|p| p.label() == plot_label)
+        self.plots
+            .iter()
+            .any(|p: &CookedPlot| p.label() == plot_label)
     }
 
     /// Adds a plot to the [`PlotData`] collection if another plot with the same label doesn't already exist
@@ -65,25 +79,20 @@ impl PlotData {
             );
             return;
         }
-        let mut plot_label = String::with_capacity(30); // Approx. enough to not reallocate
-        plot_label.push('#');
-        plot_label.push_str(&log_id.to_string());
-        plot_label.push(' ');
-        plot_label.push_str(raw_plot.name());
-        if !self.contains_plot(&plot_label) {
-            let new_plot = PlotValues::new(
-                raw_plot.points().to_vec(),
-                raw_plot.name().to_owned(),
-                log_id,
-                descriptive_name.to_owned(),
-            )
-            .color(self.auto_color());
-            self.plots.push(new_plot);
-            self.calc_max_bounds();
+
+        if !self.contains_plot(&raw_plot.label_from_id(log_id)) {
+            self.add_plot(raw_plot, log_id, descriptive_name);
         }
     }
 
-    fn auto_color(&mut self) -> Color32 {
+    pub fn add_plot(&mut self, raw_plot: &RawPlot, log_id: u16, descriptive_name: &str) {
+        let new_plot =
+            CookedPlot::new(raw_plot, log_id, descriptive_name.to_owned()).color(self.auto_color());
+        self.plots.push(new_plot);
+        self.calc_max_bounds();
+    }
+
+    pub fn auto_color(&mut self) -> Color32 {
         plotinator_ui_util::auto_color(&mut self.next_auto_color_idx)
     }
 
@@ -111,8 +120,8 @@ impl PlotData {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct PlotValues {
-    raw_plot: Vec<[f64; 2]>,
+pub struct CookedPlot {
+    raw_points: Vec<[f64; 2]>,
     #[serde(skip)]
     raw_plot_points: Option<Vec<PlotPoint>>,
     #[serde(skip)]
@@ -131,40 +140,37 @@ pub struct PlotValues {
 
 type PointList<'pl> = &'pl [[f64; 2]];
 
-impl PlotValues {
+impl CookedPlot {
     // Don't mipmap/downsample to more than this amount of elements
     const MIPMAP_MIN_ELEMENTS: usize = 512;
 
     #[plotinator_proc_macros::log_time]
-    pub fn new(
-        raw_plot: Vec<[f64; 2]>,
-        name: String,
-        log_id: u16,
-        associated_descriptive_name: String,
-    ) -> Self {
+    pub fn new(raw_plot: &RawPlot, log_id: u16, associated_descriptive_name: String) -> Self {
         plotinator_macros::profile_function!();
-        let label = format!("{name} #{log_id}");
-        let raw_plot_points = Some(raw_plot.iter().map(|p| (*p).into()).collect());
+        let label = raw_plot.label_from_id(log_id);
+        let raw_plot_points = Some(raw_plot.points().iter().map(|p| (*p).into()).collect());
+
+        let raw_points = raw_plot.points().to_owned();
 
         let mipmap_max_pp = MipMap2DPlotPoints::without_base(
-            &raw_plot,
+            &raw_points,
             MipMapStrategy::Max,
             Self::MIPMAP_MIN_ELEMENTS,
         );
         let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
-            &raw_plot,
+            &raw_points,
             MipMapStrategy::Min,
             Self::MIPMAP_MIN_ELEMENTS,
         );
         mipmap_min_pp.join(&mipmap_max_pp);
-        let max_bounds = Self::calc_max_bounds(&raw_plot, mipmap_min_pp.get_max_level());
+        let max_bounds = Self::calc_max_bounds(&raw_points, mipmap_min_pp.get_max_level());
 
         Self {
-            raw_plot,
+            raw_points,
             raw_plot_points,
             mipmap_minmax_plot_points: Some(mipmap_min_pp),
             max_bounds: Some(max_bounds),
-            name,
+            name: raw_plot.name().to_owned(),
             log_id,
             label,
             associated_descriptive_name,
@@ -188,7 +194,7 @@ impl PlotValues {
     }
 
     pub fn get_raw(&self) -> PointList {
-        &self.raw_plot
+        &self.raw_points
     }
 
     pub fn get_level(&self, level: usize) -> Option<&[PlotPoint]> {
@@ -232,25 +238,25 @@ impl PlotValues {
 
     /// Apply an offset to the plot based on the difference to the supplied [`DateTime<Utc>`]
     pub fn offset_plot(&mut self, new_start_date: DateTime<Utc>) {
-        util::offset_data_iter(self.raw_plot.iter_mut(), new_start_date);
-        self.raw_plot_points = Some(self.raw_plot.iter().map(|p| (*p).into()).collect());
+        util::offset_data_iter(self.raw_points.iter_mut(), new_start_date);
+        self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
         self.recalc_mipmaps_plot_points();
     }
 
     fn recalc_mipmaps_plot_points(&mut self) {
         let mipmap_max_pp = MipMap2DPlotPoints::without_base(
-            &self.raw_plot,
+            &self.raw_points,
             MipMapStrategy::Max,
             Self::MIPMAP_MIN_ELEMENTS,
         );
         let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
-            &self.raw_plot,
+            &self.raw_points,
             MipMapStrategy::Min,
             Self::MIPMAP_MIN_ELEMENTS,
         );
         mipmap_min_pp.join(&mipmap_max_pp);
         self.max_bounds = Some(Self::calc_max_bounds(
-            &self.raw_plot,
+            &self.raw_points,
             mipmap_min_pp.get_max_level(),
         ));
         self.mipmap_minmax_plot_points = Some(mipmap_min_pp);
@@ -281,12 +287,12 @@ impl PlotValues {
     }
 
     pub fn total_data_points(&self) -> usize {
-        self.raw_plot.len()
+        self.raw_points.len()
     }
 
     pub fn first_timestamp(&self) -> f64 {
         *self
-            .raw_plot
+            .raw_points
             .first()
             .and_then(|f| f.first())
             .expect("Empty dataset")
@@ -294,7 +300,7 @@ impl PlotValues {
 
     pub fn last_timestamp(&self) -> f64 {
         *self
-            .raw_plot
+            .raw_points
             .last()
             .and_then(|f| f.first())
             .expect("Empty dataset")
@@ -306,7 +312,7 @@ impl PlotValues {
     /// so they are skipped and initialized as None at start up.
     pub fn build_raw_plot_points(&mut self) {
         if self.raw_plot_points.is_none() {
-            self.raw_plot_points = Some(self.raw_plot.iter().map(|p| (*p).into()).collect());
+            self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
             self.recalc_mipmaps_plot_points();
         }
     }
@@ -349,80 +355,5 @@ impl PlotValues {
 
     pub fn get_max_bounds(&self) -> PlotBounds {
         self.max_bounds.expect("Accessed max_bounds before it was populated (missing call to 'build_raw_plot_points'?)")
-    }
-}
-
-/// Represents all the plotlabels from a given log
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct StoredPlotLabels {
-    pub log_id: u16,
-    pub label_points: Vec<PlotLabel>,
-    pub highlight: bool,
-}
-
-impl StoredPlotLabels {
-    pub fn new(label_points: Vec<([f64; 2], String)>, log_id: u16) -> Self {
-        Self {
-            label_points: label_points.into_iter().map(PlotLabel::from).collect(),
-            log_id,
-            highlight: false,
-        }
-    }
-
-    pub fn labels(&self) -> &[PlotLabel] {
-        &self.label_points
-    }
-
-    /// Apply an offset to the plot labels based on the difference to the supplied [`DateTime<Utc>`]
-    pub fn offset_labels(&mut self, new_start_date: DateTime<Utc>) {
-        util::offset_data_iter(self.label_points_mut(), new_start_date);
-    }
-
-    // Returns mutable references to the points directly
-    fn label_points_mut(&mut self) -> impl Iterator<Item = &mut [f64; 2]> {
-        self.label_points.iter_mut().map(|label| &mut label.point)
-    }
-
-    pub fn log_id(&self) -> u16 {
-        self.log_id
-    }
-
-    /// Whether or not the labels should be highlighted
-    pub fn get_highlight(&self) -> bool {
-        self.highlight
-    }
-
-    /// Mutable reference to whether or not the labels should be highlighted
-    pub fn get_highlight_mut(&mut self) -> &mut bool {
-        &mut self.highlight
-    }
-}
-
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct PlotLabel {
-    pub point: [f64; 2],
-    pub text: String,
-}
-
-impl PlotLabel {
-    pub fn new(point: [f64; 2], text: String) -> Self {
-        Self { point, text }
-    }
-
-    pub fn point(&self) -> [f64; 2] {
-        self.point
-    }
-
-    pub fn text(&self) -> &str {
-        &self.text
-    }
-}
-
-impl From<([f64; 2], String)> for PlotLabel {
-    fn from(value: ([f64; 2], String)) -> Self {
-        Self {
-            point: value.0,
-            text: value.1,
-        }
     }
 }

@@ -11,7 +11,7 @@ pub mod plots;
 
 pub use plots::{
     Plots,
-    plot_data::{PlotData, PlotValues, StoredPlotLabels},
+    plot_data::{CookedPlot, PlotData, plot_labels::StoredPlotLabels},
 };
 
 use crate::draw_series::SeriesDrawMode;
@@ -26,7 +26,7 @@ pub enum MipMapConfiguration {
 
 pub fn plot_lines<'pv>(
     plot_ui: &mut egui_plot::PlotUi<'pv>,
-    plots: impl Iterator<Item = &'pv PlotValues>,
+    plots: impl Iterator<Item = &'pv CookedPlot>,
     mipmap_cfg: MipMapConfiguration,
     series_draw_mode: SeriesDrawMode,
     plots_width_pixels: usize,
@@ -67,7 +67,7 @@ pub fn plot_lines<'pv>(
 
 fn plot_with_mipmapping<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot_vals: &'p PlotValues,
+    plot_vals: &'p CookedPlot,
 
     series_draw_mode: SeriesDrawMode,
     mipmap_lvl: usize,
@@ -99,7 +99,7 @@ fn plot_with_mipmapping<'p>(
 
 fn plot_raw<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot_vals: &'p PlotValues,
+    plot_vals: &'p CookedPlot,
 
     series_draw_mode: SeriesDrawMode,
     x_bounds: RangeInclusive<f64>,

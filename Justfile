@@ -102,6 +102,10 @@ run-profiling *ARGS:
     cargo install puffin_viewer --locked
     cargo {{run}} --features profiling {{ARGS}}
 
+[group("Profiling")]
+run-log-time *ARGS:
+    cargo {{run}} --features log_time {{ARGS}}
+
 # Requires firebase CLI and access to MKI firebase account
 [group("Web")]
 firebase-deploy:

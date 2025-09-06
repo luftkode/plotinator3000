@@ -12,7 +12,13 @@ homepage.workspace = true
 [features]
 default = ["hdf5"]
 hdf5 = []
-profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
+log_time = ["plotinator-proc-macros/log_time"]
+profiling = [
+    "dep:profiling",
+    "dep:puffin",
+    "dep:puffin_http",
+    "plotinator-proc-macros/profiling",
+]
 
 
 [dependencies]

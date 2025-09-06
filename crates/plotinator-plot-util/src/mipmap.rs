@@ -1,8 +1,6 @@
-use std::{cell::RefCell, ops::RangeInclusive};
-
 use egui_plot::PlotPoint;
-use num_traits::{FromPrimitive, Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
+use std::{cell::Cell, ops::RangeInclusive};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MipMapStrategy {
@@ -10,16 +8,30 @@ pub enum MipMapStrategy {
     Max,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
-struct LevelLookupCached<T: Num + ToPrimitive + FromPrimitive + PartialOrd> {
+#[inline]
+fn estimate_levels(mut len: usize, min_elements: usize) -> usize {
+    if len == 0 {
+        return 1;
+    }
+    let mut levels = 1; // include base
+    while len > min_elements {
+        len = len.div_ceil(2);
+        levels += 1;
+    }
+    levels
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+struct LevelLookupCached {
     pixel_width: usize,
-    x_bounds: (T, T),
-    result_span: (usize, usize),
+    x_bounds: (f64, f64),
+    result_span: Option<(usize, usize)>,
     result_idx: usize,
 }
 
-impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> LevelLookupCached<T> {
-    pub fn is_equal(&self, pixel_width: usize, x_bounds: (T, T)) -> bool {
+impl LevelLookupCached {
+    #[inline]
+    pub fn is_equal(&self, pixel_width: usize, x_bounds: (f64, f64)) -> bool {
         // Compare bounds first because pixel_width is much more stable
         self.x_bounds == x_bounds && self.pixel_width == pixel_width
     }
@@ -27,48 +39,25 @@ impl<T: Num + ToPrimitive + FromPrimitive + Copy + PartialOrd> LevelLookupCached
 
 pub struct MipMap2DPlotPoints {
     data: Vec<Vec<PlotPoint>>,
-    most_recent_lookup: RefCell<LevelLookupCached<f64>>,
+    most_recent_lookup: Cell<LevelLookupCached>,
 }
 
 impl MipMap2DPlotPoints {
     pub fn new(source: &[[f64; 2]], strategy: MipMapStrategy, min_elements: usize) -> Self {
-        let mut current: Vec<PlotPoint> = source.iter().map(|p| PlotPoint::from(*p)).collect();
-        let mut data: Vec<Vec<PlotPoint>> = vec![current.clone()];
+        let base: Vec<PlotPoint> = source.iter().map(|&p| PlotPoint::from(p)).collect();
+        let mut data: Vec<Vec<PlotPoint>> =
+            Vec::with_capacity(estimate_levels(base.len(), min_elements));
+        data.push(base);
 
-        while current.len() > min_elements {
-            let mipmap: Vec<PlotPoint> = Self::downsample(&current, strategy);
-            current = mipmap.clone();
-            data.push(mipmap);
+        while data.last().expect("unsound condition").len() > min_elements {
+            let next = Self::downsample(data.last().expect("unsound condition"), strategy);
+            data.push(next);
         }
 
         Self {
             data,
-            most_recent_lookup: RefCell::new(LevelLookupCached::default()),
+            most_recent_lookup: Cell::new(LevelLookupCached::default()),
         }
-    }
-
-    /// Downsamples a vector to `ceil(len / 2)` elements with the chosen [`MipMapStrategy`]
-    fn downsample(source: &[PlotPoint], strategy: MipMapStrategy) -> Vec<PlotPoint> {
-        let strategy = match strategy {
-            MipMapStrategy::Min => |pairs: &[PlotPoint]| {
-                // Branchless way of selecting the point with the smallest X-value
-                let index_bool: usize = (pairs[0].y > pairs[1].y) as usize;
-                pairs[index_bool]
-            },
-            MipMapStrategy::Max => |pairs: &[PlotPoint]| {
-                // Branchless way of selecting the point with the greatest X-value
-                let index_bool: usize = (pairs[0].y < pairs[1].y) as usize;
-                pairs[index_bool]
-            },
-        };
-        source
-            .chunks(2)
-            .map(|pairs| match pairs.len() {
-                1 => pairs[0],
-                2 => strategy(pairs),
-                _ => unreachable!("Unsound condition"),
-            })
-            .collect()
     }
 
     /// Create a [`MipMap2DPlotPoints`] but don't include the base level. Retrieving level 0 will then return an empty vec.
@@ -79,20 +68,56 @@ impl MipMap2DPlotPoints {
         strategy: MipMapStrategy,
         min_elements: usize,
     ) -> Self {
-        let mut data: Vec<Vec<PlotPoint>> = vec![Vec::<PlotPoint>::default()];
+        // Reserve +1 for the empty base placeholder
+        let mut data: Vec<Vec<PlotPoint>> =
+            Vec::with_capacity(estimate_levels(source.len(), min_elements) + 1);
+        data.push(Vec::new()); // level 0 is empty by design
 
-        let mut current: Vec<PlotPoint> = source.iter().map(|p| PlotPoint::from(*p)).collect();
-        current = Self::downsample(&current, strategy);
-        data.push(current.clone());
-        while current.len() > min_elements {
-            let mipmap: Vec<PlotPoint> = Self::downsample(&current, strategy);
-            current = mipmap.clone();
-            data.push(mipmap);
+        // First real level
+        let first: Vec<PlotPoint> = source.iter().map(|&p| PlotPoint::from(p)).collect();
+        let mut lvl = Self::downsample(&first, strategy);
+        data.push(lvl);
+
+        while data.last().expect("unsound condition").len() > min_elements {
+            lvl = Self::downsample(data.last().expect("unsound condition"), strategy);
+            data.push(lvl);
         }
 
         Self {
             data,
-            most_recent_lookup: RefCell::new(LevelLookupCached::default()),
+            most_recent_lookup: Cell::new(LevelLookupCached::default()),
+        }
+    }
+
+    /// Downsample a vector to `ceil(len / 2)` elements with the chosen [`MipMapStrategy`]
+    fn downsample(source: &[PlotPoint], strategy: MipMapStrategy) -> Vec<PlotPoint> {
+        let pairs = source.len() / 2;
+        let rem = source.len() % 2;
+
+        let mut out = Vec::with_capacity(pairs + rem);
+        for pair in source.chunks_exact(2) {
+            out.push(Self::pick(pair[0], pair[1], strategy));
+        }
+        if rem == 1 {
+            out.push(*source.last().expect("unsound condition"));
+        }
+        out
+    }
+
+    #[inline(always)]
+    fn pick(p0: PlotPoint, p1: PlotPoint, strategy: MipMapStrategy) -> PlotPoint {
+        // branchless, don't touch unless you understand it
+        match strategy {
+            MipMapStrategy::Min => {
+                // choose lower y
+                let idx: usize = (p0.y > p1.y) as usize;
+                [p0, p1][idx]
+            }
+            MipMapStrategy::Max => {
+                // choose higher y
+                let idx: usize = (p0.y < p1.y) as usize;
+                [p0, p1][idx]
+            }
         }
     }
 
@@ -155,15 +180,9 @@ impl MipMap2DPlotPoints {
         x_bounds: RangeInclusive<f64>,
     ) -> (usize, Option<(usize, usize)>) {
         let (x_min, x_max) = (*x_bounds.start(), *x_bounds.end());
-        if self
-            .most_recent_lookup
-            .borrow()
-            .is_equal(pixel_width, (x_min, x_max))
-        {
-            return (
-                self.most_recent_lookup.borrow().result_idx,
-                Some(self.most_recent_lookup.borrow().result_span),
-            );
+        let cached = self.most_recent_lookup.get();
+        if cached.is_equal(pixel_width, (x_min, x_max)) {
+            return (cached.result_idx, cached.result_span);
         }
         let target_point_count = pixel_width;
 
@@ -189,13 +208,19 @@ impl MipMap2DPlotPoints {
                 let new_cached = LevelLookupCached {
                     pixel_width,
                     x_bounds: (x_min, x_max),
-                    result_span: (start_idx, end_idx),
+                    result_span: Some((start_idx, end_idx)),
                     result_idx: lvl_idx,
                 };
-                self.most_recent_lookup.replace(new_cached);
+                self.most_recent_lookup.set(new_cached);
                 return (lvl_idx, Some((start_idx, end_idx)));
             }
         }
+        self.most_recent_lookup.set(LevelLookupCached {
+            pixel_width,
+            x_bounds: (x_min, x_max),
+            result_span: None,
+            result_idx: 0,
+        });
         (0, None)
     }
 

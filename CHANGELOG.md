@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Optimize loading Njord-Ins datasets by parallelizing the HDF5 reading and preprocessing
+- Paralellize downsampling (mipmap generation) if the loaded dataset is very large
+- Various other minor optimizations
+
 ## [1.28.0]
 
 - Add support for `frame-gps` HDF5 files

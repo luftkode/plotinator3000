@@ -11,7 +11,7 @@ use egui_phosphor::regular;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
-use plotinator_plot_util::{MipMapConfiguration, PlotValues, Plots};
+use plotinator_plot_util::{CookedPlot, MipMapConfiguration, Plots};
 use plotinator_ui_util::theme_color;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
@@ -290,8 +290,8 @@ impl PlotSettings {
 
     pub fn apply_filters<'pv>(
         &'pv self,
-        plot_vals: &'pv [PlotValues],
-    ) -> impl Iterator<Item = &'pv PlotValues> {
+        plot_vals: &'pv [CookedPlot],
+    ) -> impl Iterator<Item = &'pv CookedPlot> {
         plotinator_macros::profile_function!();
         let id_filter = self.log_id_filter();
         self.plot_name_filter

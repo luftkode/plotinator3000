@@ -63,6 +63,10 @@ impl RawPlot {
     pub fn expected_range(&self) -> ExpectedPlotRange {
         self.expected_range
     }
+    /// Get the label of the plot from the given `id` ie. `"<name> #<id>"`
+    pub fn label_from_id(&self, id: u16) -> String {
+        format!("{} #{id}", self.name())
+    }
 }
 
 /// [`PlotLabels`] represents some text label that should be displayed in the plot

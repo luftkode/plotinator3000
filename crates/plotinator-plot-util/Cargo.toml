@@ -27,6 +27,7 @@ puffin_http = { workspace = true, optional = true }
 log.workspace = true
 strum_macros.workspace = true
 strum.workspace = true
+rayon.workspace = true
 
 [dev-dependencies]
 testresult.workspace = true
@@ -34,4 +35,10 @@ pretty_assertions.workspace = true
 
 [features]
 default = []
-profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
+log_time = ["plotinator-proc-macros/log_time"]
+profiling = [
+    "dep:profiling",
+    "dep:puffin",
+    "dep:puffin_http",
+    "plotinator-proc-macros/profiling",
+]
