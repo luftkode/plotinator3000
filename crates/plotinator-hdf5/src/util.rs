@@ -37,7 +37,7 @@ pub(crate) fn log_all_attributes(ds: &hdf5::Dataset) {
             log::error!("Failed reading attribute '{attr:?}' value as string");
             continue;
         };
-        log::info!("Attr: {attr_val_as_str}");
+        log::debug!("Attr: {attr_val_as_str}");
     }
 }
 
