@@ -248,18 +248,20 @@ impl FrameGpsDatasets {
                 lon.push([ts, entry.position[1]]);
                 alt.push([ts, entry.position[2]]);
             } else {
-                lat.push([ts, 1337.0]);
-                lon.push([ts, 1337.0]);
-                alt.push([ts, 1337.0]);
+                log::error!(
+                    "Expected entry position of length 3 or greater, got: {}",
+                    entry.position
+                );
             }
 
-            let offset = if let Ok(gps_dt) = DateTime::parse_from_rfc3339(entry.gps_time.as_str()) {
+            let gps_time = entry.gps_time.as_str();
+            if let Ok(gps_dt) = DateTime::parse_from_rfc3339(gps_time) {
                 let sys_dt = Utc.timestamp_nanos(*entry.timestamp);
-                sys_dt.signed_duration_since(gps_dt).num_milliseconds() as f64
+                let offset = sys_dt.signed_duration_since(gps_dt).num_milliseconds() as f64;
+                gps_time_offset.push([ts, offset]);
             } else {
-                1337.0
+                log::warn!("Invalid GPS time offset: {gps_time}");
             };
-            gps_time_offset.push([ts, offset]);
         }
         Ok(vec![
             RawPlot::new(
