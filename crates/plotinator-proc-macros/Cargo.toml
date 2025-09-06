@@ -14,10 +14,12 @@ proc-macro = true
 [dependencies]
 quote = "1.0.40"
 syn = { version = "2.0.106", features = ["full"] }
+puffin = { workspace = true, optional = true }
+profiling = { workspace = true, optional = true }
 
 [features]
 default = []
-profiling = []
+profiling = ["dep:profiling", "dep:puffin"]
 log_time = []
 
 

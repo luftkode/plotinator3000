@@ -61,8 +61,8 @@ log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.142"
 serde-big-array = "0.5.1"
-strum = "0.27.1"
-strum_macros = "0.27.1"
+strum = "0.27.2"
+strum_macros = "0.27.2"
 byteorder = "1.5.0"
 chrono = { version = "0.4.40", features = ["serde"] }
 getset = "0.1.6"
@@ -72,7 +72,7 @@ toml = "0.9.5"
 thiserror = "2.0"
 semver = "1.0.26"
 elevated-command = "1.1"
-paste = { package = "pastey", version = "*" }
+paste = "1.0.15"
 anyhow = "1.0.99"
 rumqttc = "0.24.0"
 memmap2 = "0.9.8"
@@ -116,19 +116,12 @@ egui-phosphor.workspace = true
 egui-notify.workspace = true
 log.workspace = true
 serde.workspace = true
-strum.workspace = true
-strum_macros.workspace = true
 chrono.workspace = true
-getset.workspace = true
 semver.workspace = true
-rfd.workspace = true
-tokio.workspace = true
-memmap2.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
-smallvec.workspace = true
-tempfile.workspace = true
 rayon.workspace = true
+
 
 
 [dev-dependencies]
@@ -152,7 +145,6 @@ plotinator-mqtt = { workspace = true, optional = true }
 plotinator-mqtt-ui = { workspace = true, optional = true }
 plotinator-download.workspace = true
 env_logger = "0.11"
-profiling = { workspace = true, optional = true }
 puffin = { workspace = true, optional = true }
 puffin_http = { workspace = true, optional = true }
 
@@ -167,11 +159,11 @@ web-sys = "0.3.70"
 
 [features]
 default = ["selfupdater", "mqtt", "hdf5"]
-hdf5 = ["plotinator-supported-formats/hdf5"]
+hdf5 = ["plotinator-supported-formats/hdf5", "plotinator-file-io/hdf5"]
 selfupdater = ["dep:plotinator-updater"]
-mqtt = ["dep:plotinator-mqtt", "dep:plotinator-mqtt-ui"]
+mqtt = ["dep:plotinator-mqtt", "dep:plotinator-mqtt-ui", "plotinator-plot-ui/mqtt", "plotinator-file-io/mqtt"]
 log_time = ["plotinator-proc-macros/log_time"]
-profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http", "plotinator-proc-macros/profiling"]
+profiling = ["dep:puffin", "dep:puffin_http", "plotinator-proc-macros/profiling"]
 
 [profile.release]
 opt-level = 3

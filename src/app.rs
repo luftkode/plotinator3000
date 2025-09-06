@@ -30,7 +30,7 @@ pub struct App {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     #[serde(skip)]
-    pub(crate) mqtt: plotinator_mqtt_ui::Mqtt,
+    pub(crate) mqtt: plotinator_mqtt_ui::connection::MqttConnection,
 
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
@@ -66,7 +66,7 @@ impl Default for App {
             error_message: None,
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-            mqtt: plotinator_mqtt_ui::Mqtt::default(),
+            mqtt: plotinator_mqtt_ui::connection::MqttConnection::default(),
 
             #[cfg(target_arch = "wasm32")]
             web_file_dialog: fd::web::WebFileDialog::default(),

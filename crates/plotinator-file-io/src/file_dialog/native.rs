@@ -43,7 +43,7 @@ impl NativeFileDialog {
     pub fn save_plot_data(
         plot_files: &[SupportedFormat],
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt_plots: Option<
-            &plotinator_mqtt::MqttPlotData,
+            &plotinator_mqtt_ui::plot::MqttPlotData,
         >,
     ) {
         let title = "Save Plot Data";

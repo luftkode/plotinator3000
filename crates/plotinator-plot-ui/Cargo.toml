@@ -16,8 +16,7 @@ plotinator-plot-util.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-log-if.workspace = true
-plotinator-mqtt = { workspace = true, optional = true }
-plotinator-mqtt-ui = { workspace = true, optional = true }
+puffin = { workspace = true, optional = true }
 egui.workspace = true
 egui_plot.workspace = true
 egui-phosphor.workspace = true
@@ -30,15 +29,16 @@ strum_macros.workspace = true
 smallvec.workspace = true
 rayon.workspace = true
 
-profiling = { workspace = true, optional = true }
-puffin = { workspace = true, optional = true }
-puffin_http = { workspace = true, optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+plotinator-mqtt = { workspace = true, optional = true }
+plotinator-mqtt-ui = { workspace = true, optional = true }
 
 [features]
-default = ["mqtt"]
+default = []
 mqtt = ["dep:plotinator-mqtt", "dep:plotinator-mqtt-ui"]
 log_time = ["plotinator-proc-macros/log_time"]
-profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http", "plotinator-proc-macros/profiling"]
+profiling = ["plotinator-proc-macros/profiling", "dep:puffin"]
 
 
 [lints]

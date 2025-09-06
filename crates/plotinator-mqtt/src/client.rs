@@ -32,7 +32,7 @@ fn subscribe(client: &Client, topics: &[String]) {
 
 /// Wraps the MQTT Event loop and adds functionality to check the connection status
 /// to coordinate with the client to allow for flushing all packets before disconnecting
-pub(crate) struct MqttClient {
+pub struct MqttClient {
     client: Client,
     stop_flag: Arc<AtomicBool>,
     state: ConnectionState,
@@ -43,7 +43,7 @@ pub(crate) struct MqttClient {
 
 impl MqttClient {
     /// Create a new MQTT Event Loop
-    pub(crate) fn new(
+    pub fn new(
         stop_flag: Arc<AtomicBool>,
         broker_host: String,
         broker_port: u16,
@@ -73,7 +73,7 @@ impl MqttClient {
     }
 
     /// Spawn a thread for the event loop to run in, returning the thread handle
-    pub(crate) fn spawn(self) -> thread::JoinHandle<anyhow::Result<()>> {
+    pub fn spawn(self) -> thread::JoinHandle<anyhow::Result<()>> {
         thread::Builder::new()
             .name("MQTT Event loop".to_owned())
             .spawn(move || {

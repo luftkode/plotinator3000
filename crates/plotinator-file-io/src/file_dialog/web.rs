@@ -1,10 +1,18 @@
+use crate::{
+    custom_files::{
+        CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
+        try_parse_custom_file_from_buf,
+    },
+    file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
+    loaded_files::LoadedFiles,
+};
+use plotinator_plot_ui::LogPlotUi;
+use plotinator_supported_formats::SupportedFormat;
+use serde::Serialize;
 use std::{
     io,
     sync::mpsc::{Receiver, Sender, channel},
 };
-
-use plotinator_supported_formats::SupportedFormat;
-use serde::Serialize;
 
 fn execute<F: std::future::Future<Output = ()> + 'static>(f: F) {
     wasm_bindgen_futures::spawn_local(f);
@@ -32,12 +40,12 @@ impl Default for WebFileDialog {
 }
 
 impl WebFileDialog {
-    pub(crate) fn open(&self, ctx: egui::Context) {
+    pub fn open(&self, ctx: egui::Context) {
         Self::open_dialog(ctx, self.file_sender.clone());
     }
 
     /// Saves the plot UI state to a file.
-    pub(crate) fn save_plot_ui(plot_ui: &LogPlotUi) {
+    pub fn save_plot_ui(plot_ui: &LogPlotUi) {
         Self::save_data_to_file(
             plot_ui,
             "Save Plot UI State",
@@ -47,7 +55,7 @@ impl WebFileDialog {
     }
 
     /// Saves the plot data to a file.
-    pub(crate) fn save_plot_data(plot_files: &[SupportedFormat]) {
+    pub fn save_plot_data(plot_files: &[SupportedFormat]) {
         if !plot_files.is_empty() {
             Self::save_data_to_file(
                 plot_files,
@@ -92,7 +100,7 @@ impl WebFileDialog {
         });
     }
 
-    pub(crate) fn poll_received_files(
+    pub fn poll_received_files(
         &self,
         loaded_files: &mut LoadedFiles,
     ) -> io::Result<Option<Box<LogPlotUi>>> {

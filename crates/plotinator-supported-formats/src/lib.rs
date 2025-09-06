@@ -1,6 +1,6 @@
 use logs::SupportedLog;
 use plotinator_log_if::prelude::*;
-use plotinator_mqtt::SerializableMqttPlotData;
+use plotinator_mqtt_ui::serializable::SerializableMqttPlotData;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,

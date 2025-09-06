@@ -33,7 +33,7 @@ pub enum PlotMode<'a> {
     Logs(&'a mut Plots),
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     MQTT(
-        &'a [(plotinator_mqtt::MqttPlotPoints, Color32)],
+        &'a [(plotinator_mqtt_ui::plot::MqttPlotPoints, Color32)],
         &'a mut bool,
     ),
 }
@@ -82,7 +82,7 @@ impl LogPlotUi {
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        mqtt: &mut plotinator_mqtt_ui::Mqtt,
+        mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -144,7 +144,8 @@ impl LogPlotUi {
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         let mode = {
             mqtt.show_waiting_for_initial_data(ui);
-            let mqtt_plots = plotinator_mqtt_ui::Mqtt::plots(mqtt.mqtt_plot_data.as_ref());
+            let mqtt_plots =
+                plotinator_mqtt_ui::connection::MqttConnection::plots(mqtt.mqtt_plot_data.as_ref());
             if mqtt_plots.is_empty() {
                 PlotMode::Logs(plots)
             } else {

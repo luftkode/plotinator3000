@@ -2,10 +2,11 @@ use chrono::DateTime;
 use egui::Color32;
 use egui_plot::PlotPoint;
 use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use plotinator_mqtt::data::listener::{
+    MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
+};
 
-use crate::{SerializableMqttPlotData, SerializableMqttPlotPoints};
-
-use super::listener::{MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayload};
+use crate::serializable::{SerializableMqttPlotData, SerializableMqttPlotPoints};
 
 /// A collection of accumulated plot points from various MQTT topics
 ///
@@ -60,55 +61,13 @@ pub struct MqttPlotPoints {
 }
 
 impl From<MqttTopicData> for MqttPlotPoints {
-    fn from(value: MqttTopicData) -> Self {
-        let data = match value.payload {
+    fn from(mqtt_topic_data: MqttTopicData) -> Self {
+        let MqttTopicData { topic, payload } = mqtt_topic_data;
+        let data = match payload {
             TopicPayload::Point(plot_point) => vec![plot_point],
             TopicPayload::Points(plot_points) => plot_points,
         };
-        Self {
-            topic: value.topic,
-            data,
-        }
-    }
-}
-
-impl From<MqttPlotData> for SerializableMqttPlotData {
-    fn from(original: MqttPlotData) -> Self {
-        let mut first_timestamp = None;
-        for (p, _) in &original.mqtt_plot_data {
-            if p.data.len() < 2 {
-                continue; // we can't plot data with less than two points
-            }
-            let tmp_first_ts = p.data[0].x;
-            if let Some(first_ts) = first_timestamp {
-                if tmp_first_ts < first_ts {
-                    first_timestamp = Some(tmp_first_ts);
-                }
-            } else {
-                first_timestamp = Some(tmp_first_ts);
-            }
-        }
-        let first_timestamp = first_timestamp.expect("unsound condition, no timestamps");
-        let first_timestamp = DateTime::from_timestamp_nanos(first_timestamp as i64);
-
-        let ts = first_timestamp.format("%d/%m/%Y %H:%M");
-        let descriptive_name = format!("MQTT {ts}");
-
-        let raw_plots: Vec<RawPlot> = original
-            .mqtt_plot_data
-            .into_iter()
-            .filter_map(|(m, _)| m.try_into().ok())
-            .collect();
-
-        for rp in &raw_plots {
-            debug_assert!(rp.points().len() > 1);
-        }
-
-        Self {
-            descriptive_name,
-            first_timestamp,
-            mqtt_plot_data: raw_plots,
-        }
+        Self { topic, data }
     }
 }
 
@@ -142,6 +101,49 @@ impl TryFrom<MqttPlotPoints> for RawPlot {
     }
 }
 
+impl From<MqttPlotData> for SerializableMqttPlotData {
+    fn from(original: MqttPlotData) -> Self {
+        let MqttPlotData {
+            mqtt_plot_data,
+            next_auto_color_idx: _,
+        } = original;
+        let mut first_timestamp = None;
+        for (p, _) in &mqtt_plot_data {
+            if p.data.len() < 2 {
+                continue; // we can't plot data with less than two points
+            }
+            let tmp_first_ts = p.data[0].x;
+            if let Some(first_ts) = first_timestamp {
+                if tmp_first_ts < first_ts {
+                    first_timestamp = Some(tmp_first_ts);
+                }
+            } else {
+                first_timestamp = Some(tmp_first_ts);
+            }
+        }
+        let first_timestamp = first_timestamp.expect("unsound condition, no timestamps");
+        let first_timestamp = DateTime::from_timestamp_nanos(first_timestamp as i64);
+
+        let ts = first_timestamp.format("%d/%m/%Y %H:%M");
+        let descriptive_name = format!("MQTT {ts}");
+
+        let raw_plots: Vec<RawPlot> = mqtt_plot_data
+            .into_iter()
+            .filter_map(|(m, _)| m.try_into().ok())
+            .collect();
+
+        for rp in &raw_plots {
+            debug_assert!(rp.points().len() > 1);
+        }
+
+        Self {
+            descriptive_name,
+            first_timestamp,
+            mqtt_plot_data: raw_plots,
+        }
+    }
+}
+
 impl From<MqttPlotPoints> for SerializableMqttPlotPoints {
     fn from(original: MqttPlotPoints) -> Self {
         let serializable_data = original.data.into_iter().map(|p| [p.x, p.y]).collect();
@@ -153,15 +155,9 @@ impl From<MqttPlotPoints> for SerializableMqttPlotPoints {
 }
 impl From<SerializableMqttPlotPoints> for MqttPlotPoints {
     fn from(serializable: SerializableMqttPlotPoints) -> Self {
-        let original_data = serializable
-            .data
-            .into_iter()
-            .map(|[x, y]| PlotPoint { x, y })
-            .collect();
-        Self {
-            topic: serializable.topic,
-            data: original_data,
-        }
+        let SerializableMqttPlotPoints { topic, data } = serializable;
+        let data = data.into_iter().map(|[x, y]| PlotPoint { x, y }).collect();
+        Self { topic, data }
     }
 }
 

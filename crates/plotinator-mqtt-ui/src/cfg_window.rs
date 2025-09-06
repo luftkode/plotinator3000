@@ -6,11 +6,14 @@ use std::{
     },
 };
 
-use crate::{
+use plotinator_mqtt::{
     broker_validator::{BrokerStatus, BrokerValidator, ValidatorStatus},
-    data_receiver::MqttDataReceiver,
     topic_discoverer::TopicDiscoverer,
-    ui::{show_broker_config_column, show_subscribed_topics_column},
+};
+
+use crate::{
+    data_receiver::MqttDataReceiver,
+    misc::{show_broker_config_column, show_subscribed_topics_column},
 };
 
 pub struct MqttConfigWindow {

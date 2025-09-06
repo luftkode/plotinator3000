@@ -9,8 +9,18 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-egui.workspace = true
+plotinator-macros.workspace = true
 plotinator-mqtt.workspace = true
+plotinator-log-if.workspace = true
+plotinator-ui-util.workspace = true
+egui.workspace = true
+egui_plot.workspace = true
+egui-phosphor.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+anyhow.workspace = true
 
 [lints]
 workspace = true

@@ -10,7 +10,7 @@ use egui_plot::PlotPoint;
 ///
 /// Buffered data may also be published to a topic which means it contains multiple data points per message
 #[derive(Debug)]
-pub(crate) struct MqttData {
+pub struct MqttData {
     pub inner: MqttTopicDataWrapper,
 }
 
@@ -29,7 +29,7 @@ impl MqttData {
 }
 
 #[derive(Debug)]
-pub(crate) enum MqttTopicDataWrapper {
+pub enum MqttTopicDataWrapper {
     Topic(MqttTopicData),
     Topics(Vec<MqttTopicData>),
 }
@@ -47,9 +47,9 @@ impl From<Vec<MqttTopicData>> for MqttTopicDataWrapper {
 }
 
 #[derive(Debug)]
-pub(crate) struct MqttTopicData {
-    pub(crate) topic: String,
-    pub(crate) payload: TopicPayload,
+pub struct MqttTopicData {
+    pub topic: String,
+    pub payload: TopicPayload,
 }
 
 impl MqttTopicData {

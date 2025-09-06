@@ -11,16 +11,24 @@ homepage.workspace = true
 [dependencies]
 plotinator-supported-formats = { workspace = true }
 plotinator-plot-ui = { workspace = true }
-plotinator-mqtt = { workspace = true, optional = true }
-plotinator-hdf5 = { workspace = true }
 egui = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 rfd = { workspace = true }
 log = { workspace = true }
-zip = { workspace = true }
+
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+plotinator-mqtt = { workspace = true, optional = true }
+plotinator-mqtt-ui = { workspace = true, optional = true }
+plotinator-hdf5 = { workspace = true }
 tempfile = { workspace = true }
+zip = { workspace = true }
+
+# web:
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
 
 [dev-dependencies]
 plotinator-log-if.workspace = true
@@ -32,6 +40,6 @@ workspace = true
 
 
 [features]
-default = ["mqtt", "hdf5"]
+default = []
 hdf5 = ["plotinator-supported-formats/hdf5"]
-mqtt = ["plotinator-mqtt"]
+mqtt = ["plotinator-mqtt","plotinator-mqtt-ui"]
