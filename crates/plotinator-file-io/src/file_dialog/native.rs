@@ -1,18 +1,17 @@
-use std::{fs, io, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use crate::{
-    app::{
-        custom_files::{
-            CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
-            try_parse_custom_file,
-        },
-        file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
-        loaded_files::LoadedFiles,
-    },
-    plot::LogPlotUi,
-};
+use plotinator_plot_ui::LogPlotUi;
 use plotinator_supported_formats::SupportedFormat;
 use serde::Serialize;
+
+use crate::{
+    custom_files::{
+        CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
+        try_parse_custom_file,
+    },
+    file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
+    loaded_files::LoadedFiles,
+};
 
 #[derive(Debug, Default)]
 pub struct NativeFileDialog {
@@ -21,7 +20,7 @@ pub struct NativeFileDialog {
 
 impl NativeFileDialog {
     /// Opens a native file dialog to pick multiple files.
-    pub(crate) fn open(&mut self) {
+    pub fn open(&mut self) {
         if let Some(paths) = rfd::FileDialog::new()
             .add_filter(FILE_FILTER_NAME, FILE_FILTER_EXTENSIONS)
             .pick_files()
@@ -31,7 +30,7 @@ impl NativeFileDialog {
     }
 
     /// Saves the plot UI state to a file.
-    pub(crate) fn save_plot_ui(plot_ui: &LogPlotUi) {
+    pub fn save_plot_ui(plot_ui: &LogPlotUi) {
         Self::save_data_to_file(
             plot_ui,
             "Save Plot UI State",
@@ -41,10 +40,10 @@ impl NativeFileDialog {
     }
 
     /// Saves the plot data to a file.
-    pub(crate) fn save_plot_data(
+    pub fn save_plot_data(
         plot_files: &[SupportedFormat],
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt_plots: Option<
-            &plotinator_mqtt::MqttPlotData,
+            &plotinator_mqtt_ui::plot::MqttPlotData,
         >,
     ) {
         let title = "Save Plot Data";
@@ -106,10 +105,10 @@ impl NativeFileDialog {
 
     /// Parses all picked files and loads them into the application.
     /// Returns an `Option<LogPlotUi>` if a plot UI state file was loaded.
-    pub(crate) fn parse_picked_files(
+    pub fn parse_picked_files(
         &mut self,
         loaded_files: &mut LoadedFiles,
-    ) -> io::Result<Option<Box<LogPlotUi>>> {
+    ) -> anyhow::Result<Option<Box<LogPlotUi>>> {
         for pf in self.picked_files.drain(..) {
             match try_parse_custom_file(&pf)? {
                 Some(CustomFileContent::PlotData(plot_data)) => {

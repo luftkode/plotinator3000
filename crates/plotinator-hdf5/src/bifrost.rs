@@ -1,4 +1,5 @@
 use super::stream_descriptor::StreamDescriptor;
+use anyhow::bail;
 use chrono::Datelike as _;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use hdf5::Dataset;
@@ -12,7 +13,7 @@ use crate::util::{
 };
 
 impl SkytemHdf5 for BifrostLoopCurrent {
-    fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let current_dataset = Self::open_bifrost_current_dataset(path)?;
 
         let dataset_description = read_string_attribute(&current_dataset.attr("description")?)?;
@@ -21,12 +22,9 @@ impl SkytemHdf5 for BifrostLoopCurrent {
         let Ok(stream_descriptor): Result<StreamDescriptor, toml::de::Error> =
             toml::from_str(&stream_descriptor_toml_str)
         else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "Failed decoding 'stream_descriptor' string as TOML from stream_descriptor: {stream_descriptor_toml_str}"
-                ),
-            ));
+            bail!(
+                "Failed decoding 'stream_descriptor' string as TOML from stream_descriptor: {stream_descriptor_toml_str}"
+            )
         };
 
         let data_3: ndarray::Array3<f32> = current_dataset.read()?;

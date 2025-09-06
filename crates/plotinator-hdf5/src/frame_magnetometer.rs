@@ -42,7 +42,7 @@ impl SkytemHdf5 for FrameMagnetometer {
         clippy::too_many_lines,
         reason = "It's simple code that goes through all the datasets"
     )]
-    fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let h5file = hdf5::File::open(path)?;
         let magdata_ds: Dataset = util::open_dataset(&h5file, MAGDATA_DATASET, EXPECT_DIMENSIONS)?;
         let gps_timestamps_ds: Dataset =

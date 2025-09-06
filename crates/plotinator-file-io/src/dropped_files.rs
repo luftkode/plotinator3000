@@ -1,19 +1,16 @@
-use std::io;
+use plotinator_plot_ui::LogPlotUi;
 
 use crate::{
-    app::{
-        custom_files::{CustomFileContent, try_parse_custom_file, try_parse_custom_file_from_buf},
-        loaded_files::LoadedFiles,
-    },
-    plot::LogPlotUi,
+    custom_files::{CustomFileContent, try_parse_custom_file, try_parse_custom_file_from_buf},
+    loaded_files::LoadedFiles,
 };
 
 pub mod preview_dropped;
 
-pub(crate) fn handle_dropped_files(
+pub fn handle_dropped_files(
     ctx: &egui::Context,
     loaded_files: &mut LoadedFiles,
-) -> io::Result<Option<Box<LogPlotUi>>> {
+) -> anyhow::Result<Option<Box<LogPlotUi>>> {
     preview_dropped::preview_files(ctx);
     if let Some(dropped_files) = ctx.input(|in_state| {
         if in_state.raw.dropped_files.is_empty() {

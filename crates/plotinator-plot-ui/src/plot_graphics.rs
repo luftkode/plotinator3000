@@ -2,7 +2,7 @@ use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plotinator_plot_util::{PlotData, Plots};
 
-use crate::plot::{PlotMode, util};
+use crate::{PlotMode, util};
 
 use super::{
     ClickDelta, PlotType, axis_config::AxisConfig, plot_settings::PlotSettings, x_axis_formatter,
@@ -108,7 +108,7 @@ pub fn paint_plots(
                 x_axes,
                 link_group,
             );
-            crate::plot::plot_mqtt::fill_mqtt_plots(
+            crate::plot_mqtt::fill_mqtt_plots(
                 ui,
                 reset_plot_bounds,
                 plot_settings.line_plot_settings().draw_mode(),
@@ -128,7 +128,6 @@ pub fn paint_plots(
 /// * `gui` - The egui UI to paint on.
 /// * `reset_plot_bounds` - whether plot bounds should be reset.
 /// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`PlotType`].
-/// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
 /// * `click_delta` - State relating to pointer clicks on plots
 fn fill_log_plots(

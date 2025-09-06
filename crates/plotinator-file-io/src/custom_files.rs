@@ -4,9 +4,8 @@ use std::{
     path::Path,
 };
 
+use plotinator_plot_ui::LogPlotUi;
 use plotinator_supported_formats::SupportedFormat;
-
-use crate::plot::LogPlotUi;
 
 pub const CUSTOM_HEADER_PLOT_DATA: &str = "DONT TOUCH: PLOTINATOR3000 PLOT DATA FILE";
 pub const CUSTOM_HEADER_PLOT_UI_STATE: &str = "DONT TOUCH: PLOTINATOR3000 PLOT UI STATE FILE";

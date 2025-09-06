@@ -1,13 +1,14 @@
 use std::sync::{Arc, atomic::AtomicBool};
 
-use crate::{
-    BrokerStatus, MqttDataReceiver,
+use egui::{Color32, RichText, ScrollArea, Ui};
+use plotinator_mqtt::{
+    BrokerStatus,
     broker_validator::{BrokerValidator, ValidatorStatus},
-    data_receiver::spawn_mqtt_listener,
     topic_discoverer::TopicDiscoverer,
 };
-use egui::{Color32, RichText, ScrollArea, Ui};
 use plotinator_ui_util::theme_color;
+
+use crate::data_receiver::{MqttDataReceiver, spawn_mqtt_listener};
 
 pub(crate) fn show_broker_config_column(
     ui: &mut Ui,
@@ -78,7 +79,7 @@ pub(crate) fn show_subscribed_topics_column(
     broker_reachable_and_some_selected_topics: bool,
     connect_clicked: &mut bool,
     data_receiver: &mut Option<MqttDataReceiver>,
-    stop_flag: &mut Arc<AtomicBool>,
+    stop_flag: &Arc<AtomicBool>,
     selected_topics: &mut Vec<String>,
     broker_host: &str,
     broker_port: &str,

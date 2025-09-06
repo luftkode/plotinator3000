@@ -13,12 +13,7 @@ homepage.workspace = true
 default = ["hdf5"]
 hdf5 = []
 log_time = ["plotinator-proc-macros/log_time"]
-profiling = [
-    "dep:profiling",
-    "dep:puffin",
-    "dep:puffin_http",
-    "plotinator-proc-macros/profiling",
-]
+profiling = ["plotinator-proc-macros/profiling", "dep:puffin"]
 
 
 [dependencies]
@@ -26,18 +21,15 @@ plotinator-log-if = { workspace = true }
 plotinator-logs = { workspace = true }
 plotinator-hdf5 = { workspace = true }
 plotinator-mqtt = { workspace = true }
+plotinator-mqtt-ui = { workspace = true }
 plotinator-macros = { workspace = true }
 plotinator-proc-macros = { workspace = true }
+puffin = { workspace = true, optional = true }
+anyhow = { workspace =  true }
 serde = { workspace = true }
 memmap2 = { workspace = true }
 log = { workspace = true }
 chrono = { workspace = true }
-
-# -- Profiling dependencies
-profiling = { workspace = true, optional = true }
-puffin = { workspace = true, optional = true }
-puffin_http = { workspace = true, optional = true }
-# Profiling dependencies --
 
 [dev-dependencies]
 plotinator-test-util = { workspace = true }

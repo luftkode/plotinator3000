@@ -24,11 +24,16 @@ mod plot_ui;
 mod util;
 mod x_axis_formatter;
 
+/// if a log is loaded from content that exceeds this many unparsed bytes:
+/// - Show a toasts warning notification
+/// - Show warnings in the UI when viewing parse info for the loaded log
+pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
+
 pub enum PlotMode<'a> {
     Logs(&'a mut Plots),
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     MQTT(
-        &'a [(plotinator_mqtt::MqttPlotPoints, Color32)],
+        &'a [(plotinator_mqtt_ui::plot::MqttPlotPoints, Color32)],
         &'a mut bool,
     ),
 }
@@ -66,7 +71,7 @@ impl LogPlotUi {
             + self.plots.thousands().plots().len()
     }
 
-    pub(crate) fn total_data_points(&self) -> u32 {
+    pub fn total_data_points(&self) -> u32 {
         self.total_data_points
     }
 
@@ -76,7 +81,8 @@ impl LogPlotUi {
         first_frame: &mut bool,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt: &mut crate::mqtt::Mqtt,
+        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+        mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
@@ -138,7 +144,8 @@ impl LogPlotUi {
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         let mode = {
             mqtt.show_waiting_for_initial_data(ui);
-            let mqtt_plots = crate::mqtt::Mqtt::plots(mqtt.mqtt_plot_data.as_ref());
+            let mqtt_plots =
+                plotinator_mqtt_ui::connection::MqttConnection::plots(mqtt.mqtt_plot_data.as_ref());
             if mqtt_plots.is_empty() {
                 PlotMode::Logs(plots)
             } else {

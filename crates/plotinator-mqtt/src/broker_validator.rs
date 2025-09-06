@@ -33,7 +33,7 @@ pub enum ValidatorStatus {
 }
 
 #[derive(Default)]
-pub(crate) struct BrokerValidator {
+pub struct BrokerValidator {
     status: ValidatorStatus,
     previous_broker_input: String,
     broker_status: BrokerStatus,
@@ -50,7 +50,7 @@ impl BrokerValidator {
         self.status
     }
 
-    pub(crate) fn poll_broker_status(&mut self, ip: &str, port: &str) {
+    pub fn poll_broker_status(&mut self, ip: &str, port: &str) {
         let current_broker_input = format!("{ip}{port}");
 
         // Detect input changes

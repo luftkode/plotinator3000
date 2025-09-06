@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::io;
 use std::path::Path;
 
 /// Represents a supported HDF5 format, which can be any of the supported HDF5 format types.
@@ -23,7 +22,7 @@ macro_rules! define_supported_hdf5_formats {
         )*
 
         impl SkytemHdf5 for SupportedHdf5Format {
-            fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+            fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
                 let path = path.as_ref();
 
                 // Try each supported format in order
@@ -34,10 +33,7 @@ macro_rules! define_supported_hdf5_formats {
                 )*
 
                 // If none of the formats worked, return an error
-                Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Unrecognized HDF5 file format",
-                ))
+                anyhow::bail!("Unrecognized HDF5 file format");
             }
         }
 

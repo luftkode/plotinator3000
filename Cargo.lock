@@ -3512,6 +3512,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "plotinator-file-io"
+version = "1.29.1"
+dependencies = [
+ "anyhow",
+ "egui",
+ "log",
+ "plotinator-hdf5",
+ "plotinator-log-if",
+ "plotinator-mqtt",
+ "plotinator-mqtt-ui",
+ "plotinator-plot-ui",
+ "plotinator-supported-formats",
+ "plotinator-test-util",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "testresult",
+ "wasm-bindgen-futures",
+ "zip",
+]
+
+[[package]]
 name = "plotinator-hdf5"
 version = "1.29.1"
 dependencies = [
@@ -3543,6 +3566,7 @@ dependencies = [
 name = "plotinator-log-if"
 version = "1.29.1"
 dependencies = [
+ "anyhow",
  "chrono",
  "log",
  "serde",
@@ -3575,7 +3599,6 @@ version = "1.29.1"
 dependencies = [
  "profiling",
  "puffin",
- "puffin_http",
 ]
 
 [[package]]
@@ -3584,8 +3607,6 @@ version = "1.29.1"
 dependencies = [
  "anyhow",
  "chrono",
- "egui",
- "egui-phosphor",
  "egui_plot",
  "log",
  "plotinator-log-if",
@@ -3598,6 +3619,51 @@ dependencies = [
  "strum 0.27.2",
  "strum_macros 0.27.2",
  "testresult",
+]
+
+[[package]]
+name = "plotinator-mqtt-ui"
+version = "1.29.1"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "egui",
+ "egui-phosphor",
+ "egui_plot",
+ "log",
+ "plotinator-log-if",
+ "plotinator-macros",
+ "plotinator-mqtt",
+ "plotinator-ui-util",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "plotinator-plot-ui"
+version = "1.29.1"
+dependencies = [
+ "chrono",
+ "egui",
+ "egui-notify",
+ "egui-phosphor",
+ "egui_plot",
+ "log",
+ "plotinator-log-if",
+ "plotinator-macros",
+ "plotinator-mqtt",
+ "plotinator-mqtt-ui",
+ "plotinator-plot-util",
+ "plotinator-proc-macros",
+ "plotinator-strfmt",
+ "plotinator-supported-formats",
+ "plotinator-ui-util",
+ "puffin",
+ "rayon",
+ "serde",
+ "smallvec",
+ "strum 0.27.2",
+ "strum_macros 0.27.2",
 ]
 
 [[package]]
@@ -3614,9 +3680,7 @@ dependencies = [
  "plotinator-proc-macros",
  "plotinator-ui-util",
  "pretty_assertions",
- "profiling",
  "puffin",
- "puffin_http",
  "rayon",
  "serde",
  "strum 0.27.2",
@@ -3628,6 +3692,8 @@ dependencies = [
 name = "plotinator-proc-macros"
 version = "1.29.1"
 dependencies = [
+ "profiling",
+ "puffin",
  "quote",
  "syn",
 ]
@@ -3645,6 +3711,7 @@ dependencies = [
 name = "plotinator-supported-formats"
 version = "1.29.1"
 dependencies = [
+ "anyhow",
  "chrono",
  "log",
  "memmap2",
@@ -3653,11 +3720,10 @@ dependencies = [
  "plotinator-logs",
  "plotinator-macros",
  "plotinator-mqtt",
+ "plotinator-mqtt-ui",
  "plotinator-proc-macros",
  "plotinator-test-util",
- "profiling",
  "puffin",
- "puffin_http",
  "serde",
 ]
 
@@ -3706,16 +3772,17 @@ dependencies = [
  "egui_kittest",
  "egui_plot",
  "env_logger",
- "getset",
  "log",
- "memmap2",
  "mimalloc",
  "plotinator-download",
+ "plotinator-file-io",
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-logs",
  "plotinator-macros",
  "plotinator-mqtt",
+ "plotinator-mqtt-ui",
+ "plotinator-plot-ui",
  "plotinator-plot-util",
  "plotinator-proc-macros",
  "plotinator-strfmt",
@@ -3723,23 +3790,16 @@ dependencies = [
  "plotinator-test-util",
  "plotinator-ui-util",
  "plotinator-updater",
- "profiling",
  "puffin",
  "puffin_http",
  "rayon",
- "rfd",
  "semver",
  "serde",
  "serde_json",
- "smallvec",
- "strum 0.27.2",
- "strum_macros 0.27.2",
  "tempfile",
  "testresult",
- "tokio",
  "wasm-bindgen-futures",
  "web-sys",
- "zip",
 ]
 
 [[package]]

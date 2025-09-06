@@ -27,7 +27,7 @@ pub struct FrameGps {
 }
 
 impl SkytemHdf5 for FrameGps {
-    fn from_path(path: impl AsRef<Path>) -> std::io::Result<Self> {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let datasets = FrameGpsDatasets::open(path)?;
 
         let starting_timestamp_utc = datasets.first_timestamp();

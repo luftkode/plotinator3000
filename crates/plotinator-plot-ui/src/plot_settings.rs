@@ -1,4 +1,4 @@
-use crate::plot::{
+use crate::{
     axis_config::{AxisConfig, show_axis_settings},
     plot_settings::{
         log_groups::{LogGroupUIState, show_log_groups},

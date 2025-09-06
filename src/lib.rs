@@ -6,11 +6,6 @@ pub use app::App;
 use semver::Version;
 mod app;
 
-/// if a log is loaded from content that exceeds this many unparsed bytes:
-/// - Show a toasts warning notification
-/// - Show warnings in the UI when viewing parse info for the loaded log
-pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
-
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 pub const APP_OWNER: &str = "luftkode";
 
@@ -34,6 +29,5 @@ pub fn get_app_version() -> &'static Version {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
 pub mod mqtt;
-pub mod plot;
 #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
 pub mod profiling;

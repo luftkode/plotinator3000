@@ -1,8 +1,9 @@
 use egui::{Color32, Vec2};
 use egui_plot::{Plot, PlotBounds};
+use plotinator_mqtt_ui::plot::MqttPlotPoints;
 use plotinator_plot_util::draw_series::SeriesDrawMode;
 
-use crate::plot::{PlotType, util};
+use crate::{PlotType, util};
 
 use super::click_delta::ClickDelta;
 
@@ -14,7 +15,7 @@ pub fn fill_mqtt_plots(
     series_draw_mode: SeriesDrawMode,
     click_delta: &mut ClickDelta,
     mqtt_plot_area: Plot<'_>,
-    mqtt_plots: &[(plotinator_mqtt::MqttPlotPoints, Color32)],
+    mqtt_plots: &[(MqttPlotPoints, Color32)],
     set_auto_bounds: &mut bool,
 ) {
     plotinator_macros::profile_function!();
@@ -70,7 +71,7 @@ pub fn fill_mqtt_plots(
 }
 
 pub fn get_mqtt_auto_scaled_plot_bounds(
-    mqtt_plots: &[(plotinator_mqtt::MqttPlotPoints, Color32)],
+    mqtt_plots: &[(MqttPlotPoints, Color32)],
 ) -> Option<PlotBounds> {
     let mut max_bounds: Option<PlotBounds> = None;
     for (mp, _) in mqtt_plots {

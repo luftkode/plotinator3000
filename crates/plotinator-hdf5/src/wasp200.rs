@@ -1,3 +1,4 @@
+use anyhow::bail;
 use chrono::TimeZone as _;
 use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
@@ -12,7 +13,7 @@ use crate::util::{
 };
 
 impl SkytemHdf5 for Wasp200 {
-    fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let (height_dataset, timestamp_dataset) = Self::open_wasp200_datasets(path)?;
         log_all_attributes(&height_dataset);
         log_all_attributes(&timestamp_dataset);
@@ -23,10 +24,7 @@ impl SkytemHdf5 for Wasp200 {
 
         let timestamp_data: ndarray::Array2<Timestamp> = timestamp_dataset.read_2d()?;
         if timestamp_data.is_empty() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "No timestamps in wasp200 dataset",
-            ));
+            bail!("No timestamps in wasp200 dataset");
         }
         let (timestamps, first_timestamp) = Self::extract_timestamps(&timestamp_data);
 

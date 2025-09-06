@@ -2,8 +2,9 @@ use rumqttc::{Client, Event, MqttOptions, Packet};
 use std::{
     collections::HashSet,
     sync::{
+        Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc, Arc,
+        mpsc,
     },
     time::Duration,
 };
@@ -11,7 +12,7 @@ use std::{
 use crate::util::timestamped_client_id;
 
 #[derive(Default)]
-pub(crate) struct TopicDiscoverer {
+pub struct TopicDiscoverer {
     active: bool,
     discovered_topics: HashSet<String>,
     discovered_sys_topics: HashSet<String>,
@@ -164,5 +165,3 @@ pub(crate) fn start_discovery(
         })
         .expect("Failed to start MQTT topic discoverer thread")
 }
-
-
