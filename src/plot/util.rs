@@ -5,6 +5,7 @@ use plotinator_supported_formats::SupportedFormat;
 
 use super::plot_settings::{PlotSettings, date_settings::LoadedLogSettings};
 
+#[plotinator_proc_macros::log_time]
 pub fn add_plot_data_to_plot_collections(
     plots: &mut Plots,
     data: &SupportedFormat,
