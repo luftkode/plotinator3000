@@ -4,8 +4,7 @@ use egui_plot::{PlotPoint, PlotPoints};
 
 /// Filter plot points based on the x plot bounds.
 pub fn filter_plot_points(points: &[PlotPoint], x_bounds: RangeInclusive<f64>) -> PlotPoints<'_> {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
 
     // Don't bother filtering if there's less than 1024 points
     if points.len() < 1024 {
