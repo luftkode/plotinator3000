@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use egui::RichText;
-use plotinator_plot_util::PlotValues;
+use plotinator_plot_util::CookedPlot;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -50,9 +50,9 @@ impl PlotNameFilter {
     /// The id filter `fn_show_id` should return true if the given log should be shown according to the ID filter
     pub fn filter_plot_values<'pv, IF>(
         &'pv self,
-        plot_data: &'pv [PlotValues],
+        plot_data: &'pv [CookedPlot],
         fn_show_id: IF,
-    ) -> impl Iterator<Item = &'pv PlotValues>
+    ) -> impl Iterator<Item = &'pv CookedPlot>
     where
         IF: Fn(u16) -> bool,
     {

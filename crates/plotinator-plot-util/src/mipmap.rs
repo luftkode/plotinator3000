@@ -9,14 +9,13 @@ pub enum MipMapStrategy {
 }
 
 #[inline]
-fn estimate_levels(len: usize, min_elements: usize) -> usize {
+fn estimate_levels(mut len: usize, min_elements: usize) -> usize {
     if len == 0 {
         return 1;
     }
     let mut levels = 1; // include base
-    let mut len = len;
     while len > min_elements {
-        len = (len + 1) / 2;
+        len = len.div_ceil(2);
         levels += 1;
     }
     levels
@@ -50,8 +49,8 @@ impl MipMap2DPlotPoints {
             Vec::with_capacity(estimate_levels(base.len(), min_elements));
         data.push(base);
 
-        while data.last().unwrap().len() > min_elements {
-            let next = Self::downsample(data.last().unwrap(), strategy);
+        while data.last().expect("unsound condition").len() > min_elements {
+            let next = Self::downsample(data.last().expect("unsound condition"), strategy);
             data.push(next);
         }
 
@@ -79,8 +78,8 @@ impl MipMap2DPlotPoints {
         let mut lvl = Self::downsample(&first, strategy);
         data.push(lvl);
 
-        while data.last().unwrap().len() > min_elements {
-            lvl = Self::downsample(data.last().unwrap(), strategy);
+        while data.last().expect("unsound condition").len() > min_elements {
+            lvl = Self::downsample(data.last().expect("unsound condition"), strategy);
             data.push(lvl);
         }
 
@@ -100,7 +99,7 @@ impl MipMap2DPlotPoints {
             out.push(Self::pick(pair[0], pair[1], strategy));
         }
         if rem == 1 {
-            out.push(*source.last().unwrap());
+            out.push(*source.last().expect("unsound condition"));
         }
         out
     }

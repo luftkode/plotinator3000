@@ -153,6 +153,7 @@ impl SkytemHdf5 for NjordIns {
     }
 }
 
+#[allow(clippy::too_many_lines, reason = "Long but simple")]
 fn process_system_status(
     system_status: &ndarray::Array2<f32>,
     timestamps: &[f64],

@@ -162,7 +162,8 @@ default = ["selfupdater", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5"]
 selfupdater = ["dep:plotinator-updater"]
 mqtt = ["dep:plotinator-mqtt"]
-profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http"]
+log_time = ["plotinator-proc-macros/log_time"]
+profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http", "plotinator-proc-macros/profiling"]
 
 [profile.release]
 opt-level = 3
