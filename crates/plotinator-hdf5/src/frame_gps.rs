@@ -219,6 +219,7 @@ impl FrameGpsDatasets {
         Ok(metadata)
     }
 
+    #[allow(clippy::too_many_lines, reason = "long but simple")]
     fn gps_data_to_rawplots(&self, id: u8) -> io::Result<Vec<RawPlot>> {
         let gps_data = self.gps_data(id)?;
         let data_len = self.len(id)?;

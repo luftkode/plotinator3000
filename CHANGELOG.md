@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.29.1]
+
+- log warning instead of adding invalid gp time offset when `frame-gps`'s `gps_time` doesn't have a valid timestamp
+
 ## [1.29.0]
 
 - Update dependencies
