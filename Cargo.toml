@@ -37,6 +37,7 @@ plotinator-plot-util.path = "crates/plotinator-plot-util"
 plotinator-hdf5.path = "crates/plotinator-hdf5"
 plotinator-mqtt.path = "crates/plotinator-mqtt"
 plotinator-macros.path = "crates/plotinator-macros"
+plotinator-proc-macros.path = "crates/plotinator-proc-macros"
 plotinator-supported-formats.path = "crates/plotinator-supported-formats"
 plotinator-updater.path = "crates/plotinator-updater"
 plotinator-download.path = "crates/plotinator-download"
@@ -97,6 +98,7 @@ plotinator-hdf5.workspace = true
 plotinator-test-util.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-macros.workspace = true
+plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
 egui_plot.workspace = true
@@ -119,6 +121,7 @@ anyhow.workspace = true
 smallvec.workspace = true
 tempfile.workspace = true
 rayon.workspace = true
+
 
 [dev-dependencies]
 testresult.workspace = true

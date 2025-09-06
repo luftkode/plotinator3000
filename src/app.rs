@@ -116,8 +116,7 @@ impl App {
 impl eframe::App for App {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-        puffin::profile_function!();
+        plotinator_macros::profile_function!();
         self.disable_app_state_storage =
             self.plot.total_data_points() > Self::DISABLE_STORAGE_THRESHOLD;
 

@@ -3535,6 +3535,11 @@ dependencies = [
 [[package]]
 name = "plotinator-macros"
 version = "1.28.0"
+dependencies = [
+ "profiling",
+ "puffin",
+ "puffin_http",
+]
 
 [[package]]
 name = "plotinator-mqtt"
@@ -3568,6 +3573,8 @@ dependencies = [
  "log",
  "num-traits",
  "plotinator-log-if",
+ "plotinator-macros",
+ "plotinator-proc-macros",
  "plotinator-ui-util",
  "pretty_assertions",
  "profiling",
@@ -3578,6 +3585,14 @@ dependencies = [
  "strum 0.27.2",
  "strum_macros 0.27.2",
  "testresult",
+]
+
+[[package]]
+name = "plotinator-proc-macros"
+version = "1.28.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -3599,8 +3614,13 @@ dependencies = [
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-logs",
+ "plotinator-macros",
  "plotinator-mqtt",
+ "plotinator-proc-macros",
  "plotinator-test-util",
+ "profiling",
+ "puffin",
+ "puffin_http",
  "serde",
 ]
 
@@ -3660,6 +3680,7 @@ dependencies = [
  "plotinator-macros",
  "plotinator-mqtt",
  "plotinator-plot-util",
+ "plotinator-proc-macros",
  "plotinator-strfmt",
  "plotinator-supported-formats",
  "plotinator-test-util",

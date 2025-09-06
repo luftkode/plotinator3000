@@ -31,8 +31,7 @@ pub fn plot_lines<'pv>(
     series_draw_mode: SeriesDrawMode,
     plots_width_pixels: usize,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
     let x_plot_bounds = plot_ui.plot_bounds().range_x();
     for plot_vals in plots {
         match mipmap_cfg {
@@ -76,8 +75,7 @@ fn plot_with_mipmapping<'p>(
     // if the range is already known then we can skip filtering
     known_idx_range: Option<(usize, usize)>,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
 
     let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
     if plot_points_minmax.is_empty() {
@@ -106,8 +104,7 @@ fn plot_raw<'p>(
     series_draw_mode: SeriesDrawMode,
     x_bounds: RangeInclusive<f64>,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
     let plot_points = plot_vals.raw_plot_points();
     let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
     series_draw_mode.draw_series(
@@ -127,16 +124,14 @@ pub fn plot_raw_mqtt_line<'p>(
     series_draw_mode: SeriesDrawMode,
     x_bounds: RangeInclusive<f64>,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
 
     let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
     series_draw_mode.draw_series(plot_ui, filtered_points, label, color, false);
 }
 
 pub fn plot_labels(plot_ui: &mut egui_plot::PlotUi, plot_data: &PlotData, id_filter: &[u16]) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
     for plot_labels in plot_data
         .plot_labels()
         .iter()

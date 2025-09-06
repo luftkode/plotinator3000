@@ -45,6 +45,7 @@ impl SupportedFormat {
     ///
     /// This is how it is made available on native.
     pub fn parse_from_path(path: &Path) -> io::Result<Self> {
+        plotinator_macros::profile_function!();
         let file = fs::File::open(path)?;
 
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
@@ -64,6 +65,7 @@ impl SupportedFormat {
 
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
+    #[plotinator_proc_macros::log_time]
     fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
         let h5file = hdf5::SupportedHdf5Format::from_path(path)?;
         Ok(Self::HDF5(h5file))
