@@ -53,3 +53,12 @@ macro_rules! non_wasm_modules {
         )+
     };
 }
+
+/// Add puffin profiling to the function if the profiling feature is enabled and the target is not wasm32
+#[macro_export]
+macro_rules! profile_function {
+    () => {
+        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        puffin::profile_function!();
+    };
+}

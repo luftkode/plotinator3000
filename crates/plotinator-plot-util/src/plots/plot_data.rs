@@ -1,4 +1,3 @@
-// plots/plot_data.rs
 use std::ops::RangeInclusive;
 
 use chrono::{DateTime, Utc};
@@ -48,6 +47,7 @@ impl PlotData {
     }
 
     /// Adds a plot to the [`PlotData`] collection if another plot with the same label doesn't already exist
+    #[plotinator_proc_macros::log_time]
     pub fn add_plot_if_not_exists(
         &mut self,
         raw_plot: &RawPlot,
@@ -135,12 +135,14 @@ impl PlotValues {
     // Don't mipmap/downsample to more than this amount of elements
     const MIPMAP_MIN_ELEMENTS: usize = 512;
 
+    #[plotinator_proc_macros::log_time]
     pub fn new(
         raw_plot: Vec<[f64; 2]>,
         name: String,
         log_id: u16,
         associated_descriptive_name: String,
     ) -> Self {
+        plotinator_macros::profile_function!();
         let label = format!("{name} #{log_id}");
         let raw_plot_points = Some(raw_plot.iter().map(|p| (*p).into()).collect());
 

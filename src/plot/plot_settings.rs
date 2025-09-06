@@ -292,8 +292,7 @@ impl PlotSettings {
         &'pv self,
         plot_vals: &'pv [PlotValues],
     ) -> impl Iterator<Item = &'pv PlotValues> {
-        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-        puffin::profile_function!();
+        plotinator_macros::profile_function!();
         let id_filter = self.log_id_filter();
         self.plot_name_filter
             .filter_plot_values(plot_vals, move |id| {

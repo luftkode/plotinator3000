@@ -17,8 +17,7 @@ pub fn fill_mqtt_plots(
     mqtt_plots: &[(plotinator_mqtt::MqttPlotPoints, Color32)],
     set_auto_bounds: &mut bool,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
 
     let (scroll, modifiers) = util::get_cursor_scroll_input(gui);
     let final_zoom_factor: Option<Vec2> = scroll.and_then(|s| util::set_zoom_factor(s, modifiers));

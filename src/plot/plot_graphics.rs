@@ -35,8 +35,7 @@ pub fn paint_plots(
     click_delta: &mut ClickDelta,
     mode: PlotMode<'_>,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
 
     let x_axes = vec![AxisHints::new_x().formatter(x_axis_formatter::format_time)];
 
@@ -139,8 +138,7 @@ fn fill_log_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
 
     let (scroll, modifiers) = util::get_cursor_scroll_input(gui);
     let final_zoom_factor: Option<Vec2> = scroll.and_then(|s| util::set_zoom_factor(s, modifiers));
@@ -203,8 +201,7 @@ fn fill_plot<'p>(
     plot_data: &'p PlotData,
     plot_settings: &'p PlotSettings,
 ) {
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
-    puffin::profile_function!();
+    plotinator_macros::profile_function!();
 
     let line_plot_settings = plot_settings.line_plot_settings();
 
