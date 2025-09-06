@@ -11,7 +11,7 @@ pub mod plots;
 
 pub use plots::{
     Plots,
-    plot_data::{PlotData, PlotValues, StoredPlotLabels},
+    plot_data::{PlotData, PlotValues, plot_labels::StoredPlotLabels},
 };
 
 use crate::draw_series::SeriesDrawMode;
