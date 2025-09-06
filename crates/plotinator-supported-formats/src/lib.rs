@@ -44,7 +44,7 @@ impl SupportedFormat {
     /// Attempts to parse a log from a file path.
     ///
     /// This is how it is made available on native.
-    pub fn parse_from_path(path: &Path) -> io::Result<Self> {
+    pub fn parse_from_path(path: &Path) -> anyhow::Result<Self> {
         plotinator_macros::profile_function!();
         let file = fs::File::open(path)?;
 
@@ -66,7 +66,7 @@ impl SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     #[plotinator_proc_macros::log_time]
-    fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
+    fn parse_hdf5_from_path(path: &Path) -> anyhow::Result<Self> {
         let h5file = hdf5::SupportedHdf5Format::from_path(path)?;
         Ok(Self::HDF5(h5file))
     }

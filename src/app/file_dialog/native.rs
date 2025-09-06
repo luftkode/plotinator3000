@@ -1,4 +1,4 @@
-use std::{fs, io, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use crate::{
     app::{
@@ -109,7 +109,7 @@ impl NativeFileDialog {
     pub(crate) fn parse_picked_files(
         &mut self,
         loaded_files: &mut LoadedFiles,
-    ) -> io::Result<Option<Box<LogPlotUi>>> {
+    ) -> anyhow::Result<Option<Box<LogPlotUi>>> {
         for pf in self.picked_files.drain(..) {
             match try_parse_custom_file(&pf)? {
                 Some(CustomFileContent::PlotData(plot_data)) => {

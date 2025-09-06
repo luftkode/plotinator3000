@@ -158,17 +158,14 @@ fn is_admin_run_elevated() -> io::Result<bool> {
             Ok(false)
         } else {
             log::error!("Update failed!");
-            Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!(
-                    "Elevating permission failed with: {err_msg}",
-                    err_msg = if exit_code == 5 {
-                        "Permission not allowed".to_owned()
-                    } else {
-                        exit_code.to_string()
-                    }
-                ),
-            ))
+            Err(io::Error::other(format!(
+                "Elevating permission failed with: {err_msg}",
+                err_msg = if exit_code == 5 {
+                    "Permission not allowed".to_owned()
+                } else {
+                    exit_code.to_string()
+                }
+            )))
         }
     }
 }

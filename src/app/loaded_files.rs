@@ -23,7 +23,7 @@ impl LoadedFiles {
         self.loaded.drain(..).collect()
     }
 
-    pub(crate) fn parse_path(&mut self, path: &Path) -> io::Result<()> {
+    pub(crate) fn parse_path(&mut self, path: &Path) -> anyhow::Result<()> {
         if path.is_dir() {
             self.parse_directory(path)?;
         } else if is_zip_file(path) {

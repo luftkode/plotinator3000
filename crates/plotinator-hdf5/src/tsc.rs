@@ -1,5 +1,6 @@
-use std::{io, path::Path, time::Instant};
+use std::{path::Path, time::Instant};
 
+use anyhow::bail;
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{
     hdf5::SkytemHdf5,
@@ -25,7 +26,7 @@ impl Tsc {
 }
 
 impl SkytemHdf5 for Tsc {
-    fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let total_start = Instant::now();
         let start_reading = Instant::now();
         let h5 = hdf5::File::open(path)?;
@@ -46,10 +47,7 @@ impl SkytemHdf5 for Tsc {
         );
 
         let Some(first_timestamp) = gps_marks.first_timestamp() else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "gps marks dataset is empty",
-            ));
+            bail!("gps marks dataset is empty");
         };
 
         let start_building_plots = Instant::now();

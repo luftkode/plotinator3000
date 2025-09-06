@@ -28,6 +28,7 @@ plotinator-hdf5 = { workspace = true }
 plotinator-mqtt = { workspace = true }
 plotinator-macros = { workspace = true }
 plotinator-proc-macros = { workspace = true }
+anyhow = { workspace =  true }
 serde = { workspace = true }
 memmap2 = { workspace = true }
 log = { workspace = true }

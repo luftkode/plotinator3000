@@ -1,5 +1,6 @@
 use std::{io, path::Path};
 
+use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
@@ -14,7 +15,7 @@ use crate::{
 };
 
 impl SkytemHdf5 for FrameAltimeters {
-    fn from_path(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+    fn from_path(path: impl AsRef<std::path::Path>) -> anyhow::Result<Self> {
         let (height1_dataset, timestamp1_dataset, height2_dataset, timestamp2_dataset) =
             Self::open_datasets(path)?;
         log_all_attributes(&height1_dataset);
@@ -42,12 +43,7 @@ impl SkytemHdf5 for FrameAltimeters {
         let (timestamps2, first_timestamp2_opt) = Self::process_timestamps(&timestamp2_data);
 
         let total_starting_timestamp = match (first_timestamp1_opt, first_timestamp2_opt) {
-            (None, None) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "Both timestamp datasets are empty",
-                ));
-            }
+            (None, None) => bail!("Both timestamp datasets are empty"),
             (Some(ts), None) | (None, Some(ts)) => ts,
             (Some(ts1), Some(ts2)) => ts1.min(ts2),
         };

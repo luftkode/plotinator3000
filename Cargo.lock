@@ -3543,6 +3543,7 @@ dependencies = [
 name = "plotinator-log-if"
 version = "1.29.1"
 dependencies = [
+ "anyhow",
  "chrono",
  "log",
  "serde",
@@ -3645,6 +3646,7 @@ dependencies = [
 name = "plotinator-supported-formats"
 version = "1.29.1"
 dependencies = [
+ "anyhow",
  "chrono",
  "log",
  "memmap2",

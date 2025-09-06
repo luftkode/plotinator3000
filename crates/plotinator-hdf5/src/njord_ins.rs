@@ -18,7 +18,7 @@ impl SkytemHdf5 for NjordIns {
         clippy::too_many_lines,
         reason = "Just adding quick Njord INS support... This needs a refactor, when the dataformat is more stable for example"
     )]
-    fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let hdf5_file = hdf5::File::open(&path)?;
 
         let system_status_dataset = open_dataset(
