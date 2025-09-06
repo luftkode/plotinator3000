@@ -212,6 +212,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
       - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
 
   tag-release:
