@@ -3601,6 +3601,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "egui_plot",
+ "insta",
  "log",
  "plotinator-log-if",
  "plotinator-macros",

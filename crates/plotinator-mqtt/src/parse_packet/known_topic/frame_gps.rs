@@ -40,11 +40,12 @@ mod tests {
     #[test]
     fn test_parse_packet() -> TestResult {
         let payload = r#"{"gps_nr":2,"timestamp":1757321363140914802,"mode":3,"gps_status":{"hdop":0.8,"vdop":1.5,"pdop":1.7,"satellites":10},"gps_time":"2025-09-08T08:49:23.000Z","position":{"lat":56.217778333,"lon":10.147778333,"alt":66.62},"speed":0.052}"#;
-        let decoded: FrameGpsPacket = serde_json::from_str(payload)?;
-        dbg!(decoded);
+        let decoded_json: FrameGpsPacket = serde_json::from_str(payload)?;
         let known_topic = KnownTopic::from_str(&KnownTopic::FrameGps.to_string())?;
-        let mqtt_data = known_topic.parse_packet(payload)?;
-        dbg!(mqtt_data);
+        let mqtt_data = known_topic.parse_packet(payload)?.unwrap();
+
+        insta::assert_debug_snapshot!(decoded_json);
+        insta::assert_debug_snapshot!(mqtt_data);
         Ok(())
     }
 }
