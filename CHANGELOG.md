@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Avoid adding `NaN` values from `frame-gps` to datasets as they cause problems for the plotter
+- Detect `NaN` strings in navsys kitchen sink and ignore them when building datasets
 
 ### Dependencies
 

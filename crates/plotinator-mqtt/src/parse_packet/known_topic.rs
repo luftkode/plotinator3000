@@ -66,6 +66,10 @@ pub(crate) struct DebugSensorsGps {
 }
 
 impl KnownTopic {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "This kind of match statement will just be long when each topic needs a branch"
+    )]
     pub(crate) fn parse_packet(self, p: &str) -> anyhow::Result<Option<MqttData>> {
         match self {
             Self::FrameGps => {
