@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.30.0]
+
+### Added
+
+- Parse `frame-gps` MQTT packets
+
+### Fixed
+
+- Avoid adding `NaN` values from `frame-gps` to datasets as they cause problems for the plotter
+
 ## [1.29.1]
 
 - log warning instead of adding invalid gp time offset when `frame-gps`'s `gps_time` doesn't have a valid timestamp

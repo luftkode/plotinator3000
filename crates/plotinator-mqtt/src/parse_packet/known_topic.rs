@@ -1,3 +1,5 @@
+use anyhow::bail;
+use chrono::{TimeZone as _, Utc};
 use egui_plot::PlotPoint;
 use pilot_display::{PilotDisplayCoordinates, PilotDisplayRemainingDistance};
 use serde::Deserialize;
@@ -5,15 +7,20 @@ use strum_macros::{Display, EnumString};
 
 use crate::{
     data::listener::{MqttData, MqttTopicData},
+    parse_packet::known_topic::frame_gps::FrameGpsPacket,
     util,
 };
 
+pub(crate) mod frame_gps;
 pub(crate) mod pilot_display;
 
 /// Known topics can have custom payloads that have an associated known packet structure
 /// which allows recognizing and parsing them appropriately
 #[derive(EnumString, Display)]
 pub(crate) enum KnownTopic {
+    /// Timestamped packets from `frame-gps`
+    #[strum(serialize = "dt/tc/frame-gps/x/gps")]
+    FrameGps,
     #[strum(serialize = "dt/blackbird/sky-ubx/x/coordinates")]
     PilotDisplayCoordinates,
     #[strum(serialize = "dt/blackbird/pd-backend/remaining-distance")]
@@ -61,6 +68,93 @@ pub(crate) struct DebugSensorsGps {
 impl KnownTopic {
     pub(crate) fn parse_packet(self, p: &str) -> anyhow::Result<Option<MqttData>> {
         match self {
+            Self::FrameGps => {
+                let p: FrameGpsPacket = match serde_json::from_str(p) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        bail!("Failed deserialising frame-gps packet: {e} - Packet: {p}");
+                    }
+                };
+                let timestamp = p.timestamp as f64;
+
+                let system_time = Utc.timestamp_nanos(p.timestamp as i64);
+                let offset = system_time
+                    .signed_duration_since(p.gps_time)
+                    .num_milliseconds() as f64;
+
+                let id = p.gps_nr;
+
+                let mut topic_data = Vec::with_capacity(10);
+
+                if let Some(lat) = p.position.lat {
+                    topic_data.push(MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id} lat")),
+                        lat.into(),
+                        timestamp,
+                    ));
+                }
+                if let Some(lon) = p.position.lon {
+                    topic_data.push(MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id} lon")),
+                        lon.into(),
+                        timestamp,
+                    ));
+                }
+                if let Some(alt) = p.position.alt {
+                    topic_data.push(MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id} alt")),
+                        alt.into(),
+                        timestamp,
+                    ));
+                };
+
+                topic_data.push(MqttTopicData::single_with_ts(
+                    self.subtopic_str(&format!("GP{id} mode")),
+                    p.mode as f64,
+                    timestamp,
+                ));
+
+                if let Some(hdop) = p.gps_status.hdop {
+                    topic_data.push(MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id} hdop")),
+                        hdop.into(),
+                        timestamp,
+                    ));
+                }
+                if let Some(vdop) = p.gps_status.vdop {
+                    topic_data.push(MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id} vdop")),
+                        vdop.into(),
+                        timestamp,
+                    ));
+                }
+                if let Some(pdop) = p.gps_status.pdop {
+                    topic_data.push(MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id} pdop")),
+                        pdop.into(),
+                        timestamp,
+                    ));
+                }
+                topic_data.push(MqttTopicData::single_with_ts(
+                    self.subtopic_str(&format!("GP{id} satellites")),
+                    p.gps_status.satellites.into(),
+                    timestamp,
+                ));
+
+                if let Some(speed) = p.speed {
+                    topic_data.push(MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id} speed")),
+                        speed.into(),
+                        timestamp,
+                    ));
+                }
+                topic_data.push(MqttTopicData::single_with_ts(
+                    self.subtopic_str(&format!("GP{id} offset ms")),
+                    offset,
+                    timestamp,
+                ));
+                Ok(Some(MqttData::multiple(topic_data)))
+            }
             Self::PilotDisplayCoordinates => {
                 let p: PilotDisplayCoordinates = serde_json::from_str(p)?;
                 let lat = MqttTopicData::single(self.subtopic_str("lat"), p.lat());
