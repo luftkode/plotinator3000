@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#334](https://github.com/luftkode/plotinator3000/pull/334))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.4 ([#334](https://github.com/luftkode/plotinator3000/pull/334))
+- `actions/download-artifact`: 4 → 5 ([#334](https://github.com/luftkode/plotinator3000/pull/334))
+
 ## [1.29.1]
 
 - log warning instead of adding invalid gp time offset when `frame-gps`'s `gps_time` doesn't have a valid timestamp
