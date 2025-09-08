@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Avoid adding `NaN` values from `frame-gps` to datasets as they cause problems for the plotter
 
+### Dependencies
+
+- `chrono`: 0.4.41 → 0.4.42 ([#335](https://github.com/luftkode/plotinator3000/pull/335))
+
 ## [1.29.1]
 
 - log warning instead of adding invalid gp time offset when `frame-gps`'s `gps_time` doesn't have a valid timestamp
