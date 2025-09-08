@@ -18,6 +18,7 @@ alias fmt := format
 alias f := format
 alias d := doc
 alias r := run
+alias b := build
 alias start := run
 alias s := run
 alias c := check

@@ -1,0 +1,100 @@
+---
+source: crates/plotinator-mqtt/src/parse_packet/known_topic/frame_gps.rs
+expression: mqtt_data
+---
+MqttData {
+    inner: Topics(
+        [
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 lat]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 56.217777252197266,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 lon]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 10.147778511047363,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 alt]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 66.62000274658203,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 mode]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 3.0,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 hdop]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 0.800000011920929,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 vdop]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 1.5,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 pdop]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 1.7000000476837158,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 satellites]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 10.0,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 speed]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 0.052000001072883606,
+                    },
+                ),
+            },
+            MqttTopicData {
+                topic: "dt/tc/frame-gps/x/gps[GP2 offset ms]",
+                payload: Point(
+                    PlotPoint {
+                        x: 1.7573213631409147e18,
+                        y: 140.0,
+                    },
+                ),
+            },
+        ],
+    ),
+}

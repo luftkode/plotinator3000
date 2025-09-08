@@ -237,17 +237,38 @@ impl FrameGpsDatasets {
         for entry in gps_data.iter() {
             let ts = *entry.timestamp as f64;
 
-            hdop.push([ts, *entry.hdop]);
-            pdop.push([ts, *entry.pdop]);
-            vdop.push([ts, *entry.vdop]);
+            let hdop_sample = *entry.hdop;
+            if !hdop_sample.is_nan() {
+                hdop.push([ts, *entry.hdop]);
+            }
+            let pdop_sample = *entry.pdop;
+            if !pdop_sample.is_nan() {
+                pdop.push([ts, *entry.pdop]);
+            }
+            let vdop_sample = *entry.vdop;
+            if !vdop_sample.is_nan() {
+                vdop.push([ts, *entry.vdop]);
+            }
             mode.push([ts, *entry.mode as f64]);
-            speed.push([ts, (*entry.speed).into()]);
+            let speed_sample = *entry.speed;
+            if !speed_sample.is_nan() {
+                speed.push([ts, (*entry.speed).into()]);
+            }
             sats.push([ts, *entry.satellites as f64]);
 
             if entry.position.len() >= 3 {
-                lat.push([ts, entry.position[0]]);
-                lon.push([ts, entry.position[1]]);
-                alt.push([ts, entry.position[2]]);
+                let lat_sample = entry.position[0];
+                let lon_sample = entry.position[1];
+                let alt_sample = entry.position[2];
+                if !lat_sample.is_nan() {
+                    lat.push([ts, lat_sample]);
+                }
+                if !lon_sample.is_nan() {
+                    lon.push([ts, lon_sample]);
+                }
+                if !alt_sample.is_nan() {
+                    alt.push([ts, alt_sample]);
+                }
             } else {
                 log::error!(
                     "Expected entry position of length 3 or greater, got: {}",

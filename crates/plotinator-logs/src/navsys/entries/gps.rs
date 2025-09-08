@@ -140,6 +140,7 @@ pub enum GpsError {
 impl FromStr for Gps {
     type Err = GpsError;
 
+    #[allow(clippy::too_many_lines, reason = "Long but simple")]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split_whitespace().collect();
         if parts.len() != 18 {
@@ -161,12 +162,22 @@ impl FromStr for Gps {
             NaiveDateTime::parse_from_str(&timestamp_str, "%Y %m %d %H %M %S %3f")?.and_utc();
 
         // Parse latitude and longitude
-        let latitude = parts[8]
-            .parse()
-            .map_err(|e: ParseFloatError| GpsError::Latitude(e.to_string()))?;
-        let longitude = parts[9]
-            .parse()
-            .map_err(|e: ParseFloatError| GpsError::Longitude(e.to_string()))?;
+        let lat_str = parts[8];
+        let latitude = if lat_str == "NaN" {
+            f64::NAN
+        } else {
+            lat_str
+                .parse()
+                .map_err(|e: ParseFloatError| GpsError::Latitude(e.to_string()))?
+        };
+        let lon_str = parts[9];
+        let longitude = if lon_str == "NaN" {
+            f64::NAN
+        } else {
+            lon_str
+                .parse()
+                .map_err(|e: ParseFloatError| GpsError::Longitude(e.to_string()))?
+        };
 
         // Parse GPS time
         let gp_time = parts[10].to_owned();
@@ -185,21 +196,46 @@ impl FromStr for Gps {
         }
 
         // Parse DOP values and other metrics
-        let speed = parts[13]
-            .parse()
-            .map_err(|e: ParseFloatError| GpsError::Speed(e.to_string()))?;
-        let hdop = parts[14]
-            .parse()
-            .map_err(|e: ParseFloatError| GpsError::Hdop(e.to_string()))?;
-        let vdop = parts[15]
-            .parse()
-            .map_err(|e: ParseFloatError| GpsError::Vdop(e.to_string()))?;
-        let pdop = parts[16]
-            .parse()
-            .map_err(|e: ParseFloatError| GpsError::Pdop(e.to_string()))?;
-        let altitude = parts[17]
-            .parse()
-            .map_err(|e: ParseFloatError| GpsError::Altitude(e.to_string()))?;
+        let speed_str = parts[13];
+        let speed = if speed_str == "NaN" {
+            f32::NAN
+        } else {
+            speed_str
+                .parse()
+                .map_err(|e: ParseFloatError| GpsError::Speed(e.to_string()))?
+        };
+        let hdop_str = parts[14];
+        let hdop = if hdop_str == "NaN" {
+            f32::NAN
+        } else {
+            hdop_str
+                .parse()
+                .map_err(|e: ParseFloatError| GpsError::Hdop(e.to_string()))?
+        };
+        let vdop_str = parts[15];
+        let vdop = if vdop_str == "NaN" {
+            f32::NAN
+        } else {
+            vdop_str
+                .parse()
+                .map_err(|e: ParseFloatError| GpsError::Vdop(e.to_string()))?
+        };
+        let pdop_str = parts[16];
+        let pdop = if pdop_str == "NaN" {
+            f32::NAN
+        } else {
+            pdop_str
+                .parse()
+                .map_err(|e: ParseFloatError| GpsError::Pdop(e.to_string()))?
+        };
+        let altitude_str = parts[17];
+        let altitude = if altitude_str == "NaN" {
+            f32::NAN
+        } else {
+            altitude_str
+                .parse()
+                .map_err(|e: ParseFloatError| GpsError::Altitude(e.to_string()))?
+        };
 
         Ok(Self::new(
             id,

@@ -53,10 +53,20 @@ pub struct MqttTopicData {
 }
 
 impl MqttTopicData {
+    /// Single point timestamped with the current system time
     pub fn single(topic: String, value: f64) -> Self {
+        Self::single_with_ts(topic, value, util::now_timestamp())
+    }
+
+    /// Single point with supplied timestamp
+    pub fn single_with_ts(topic: String, value: f64, timestamp: f64) -> Self {
         Self {
             topic,
-            payload: util::point_now(value).into(),
+            payload: PlotPoint {
+                x: timestamp,
+                y: value,
+            }
+            .into(),
         }
     }
 

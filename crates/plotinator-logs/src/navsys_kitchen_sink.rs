@@ -186,8 +186,12 @@ impl NavSysSpsKitchenSink {
                 }
                 NavSysSpsEntry::GP1(e) => {
                     let ts = e.timestamp_ns();
-                    raw_gp1_points_latitude.push([ts, e.latitude()]);
-                    raw_gp1_points_longitude.push([ts, e.longitude()]);
+                    if !e.latitude().is_nan() {
+                        raw_gp1_points_latitude.push([ts, e.latitude()]);
+                    }
+                    if !e.longitude().is_nan() {
+                        raw_gp1_points_longitude.push([ts, e.longitude()]);
+                    }
                     raw_gp1_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
                     raw_gp1_points_num_satellites.push([ts, e.num_satellites().into()]);
                     raw_gp1_points_speed_kmh.push([ts, e.speed_kmh().into()]);
@@ -198,39 +202,81 @@ impl NavSysSpsKitchenSink {
                 }
                 NavSysSpsEntry::GP2(e) => {
                     let ts = e.timestamp_ns();
-                    raw_gp2_points_latitude.push([ts, e.latitude()]);
-                    raw_gp2_points_longitude.push([ts, e.longitude()]);
+                    if !e.latitude().is_nan() {
+                        raw_gp2_points_latitude.push([ts, e.latitude()]);
+                    }
+                    if !e.longitude().is_nan() {
+                        raw_gp2_points_longitude.push([ts, e.longitude()]);
+                    }
                     raw_gp2_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
                     raw_gp2_points_num_satellites.push([ts, e.num_satellites().into()]);
-                    raw_gp2_points_speed_kmh.push([ts, e.speed_kmh().into()]);
-                    raw_gp2_points_hdop.push([ts, e.hdop().into()]);
-                    raw_gp2_points_vdop.push([ts, e.vdop().into()]);
-                    raw_gp2_points_pdop.push([ts, e.pdop().into()]);
-                    raw_gp2_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    if !e.speed_kmh().is_nan() {
+                        raw_gp2_points_speed_kmh.push([ts, e.speed_kmh().into()]);
+                    }
+                    if !e.hdop().is_nan() {
+                        raw_gp2_points_hdop.push([ts, e.hdop().into()]);
+                    }
+                    if !e.vdop().is_nan() {
+                        raw_gp2_points_vdop.push([ts, e.vdop().into()]);
+                    }
+                    if !e.pdop().is_nan() {
+                        raw_gp2_points_pdop.push([ts, e.pdop().into()]);
+                    }
+                    if !e.altitude_above_mean_sea().is_nan() {
+                        raw_gp2_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    }
                 }
                 NavSysSpsEntry::GP3(e) => {
                     let ts = e.timestamp_ns();
-                    raw_gp3_points_latitude.push([ts, e.latitude()]);
-                    raw_gp3_points_longitude.push([ts, e.longitude()]);
+                    if !e.latitude().is_nan() {
+                        raw_gp3_points_latitude.push([ts, e.latitude()]);
+                    }
+                    if !e.longitude().is_nan() {
+                        raw_gp3_points_longitude.push([ts, e.longitude()]);
+                    }
                     raw_gp3_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
                     raw_gp3_points_num_satellites.push([ts, e.num_satellites().into()]);
-                    raw_gp3_points_speed_kmh.push([ts, e.speed_kmh().into()]);
-                    raw_gp3_points_hdop.push([ts, e.hdop().into()]);
-                    raw_gp3_points_vdop.push([ts, e.vdop().into()]);
-                    raw_gp3_points_pdop.push([ts, e.pdop().into()]);
-                    raw_gp3_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    if !e.speed_kmh().is_nan() {
+                        raw_gp3_points_speed_kmh.push([ts, e.speed_kmh().into()]);
+                    }
+                    if !e.hdop().is_nan() {
+                        raw_gp3_points_hdop.push([ts, e.hdop().into()]);
+                    }
+                    if !e.vdop().is_nan() {
+                        raw_gp3_points_vdop.push([ts, e.vdop().into()]);
+                    }
+                    if !e.pdop().is_nan() {
+                        raw_gp3_points_pdop.push([ts, e.pdop().into()]);
+                    }
+                    if !e.altitude_above_mean_sea().is_nan() {
+                        raw_gp3_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    }
                 }
                 NavSysSpsEntry::GPx(e) => {
                     let ts = e.timestamp_ns();
-                    raw_gpx_points_latitude.push([ts, e.latitude()]);
-                    raw_gpx_points_longitude.push([ts, e.longitude()]);
+                    if !e.latitude().is_nan() {
+                        raw_gpx_points_latitude.push([ts, e.latitude()]);
+                    }
+                    if !e.longitude().is_nan() {
+                        raw_gpx_points_longitude.push([ts, e.longitude()]);
+                    }
                     raw_gpx_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
                     raw_gpx_points_num_satellites.push([ts, e.num_satellites().into()]);
-                    raw_gpx_points_speed_kmh.push([ts, e.speed_kmh().into()]);
-                    raw_gpx_points_hdop.push([ts, e.hdop().into()]);
-                    raw_gpx_points_vdop.push([ts, e.vdop().into()]);
-                    raw_gpx_points_pdop.push([ts, e.pdop().into()]);
-                    raw_gpx_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    if !e.speed_kmh().is_nan() {
+                        raw_gpx_points_speed_kmh.push([ts, e.speed_kmh().into()]);
+                    }
+                    if !e.hdop().is_nan() {
+                        raw_gpx_points_hdop.push([ts, e.hdop().into()]);
+                    }
+                    if !e.vdop().is_nan() {
+                        raw_gpx_points_vdop.push([ts, e.vdop().into()]);
+                    }
+                    if !e.pdop().is_nan() {
+                        raw_gpx_points_pdop.push([ts, e.pdop().into()]);
+                    }
+                    if !e.altitude_above_mean_sea().is_nan() {
+                        raw_gpx_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    }
                 }
                 NavSysSpsEntry::MA1(e) => {
                     raw_mag1_points.push([e.timestamp_ns(), e.field_nanotesla()]);

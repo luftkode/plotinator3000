@@ -1,0 +1,36 @@
+---
+source: crates/plotinator-mqtt/src/parse_packet/known_topic/frame_gps.rs
+expression: decoded_json
+---
+FrameGpsPacket {
+    gps_nr: 2,
+    timestamp: 1757321363140914802,
+    mode: 3,
+    gps_status: FrameGpsStatus {
+        hdop: Some(
+            0.8,
+        ),
+        pdop: Some(
+            1.7,
+        ),
+        vdop: Some(
+            1.5,
+        ),
+        satellites: 10,
+    },
+    position: FrameGpsPosition {
+        lat: Some(
+            56.217777,
+        ),
+        lon: Some(
+            10.1477785,
+        ),
+        alt: Some(
+            66.62,
+        ),
+    },
+    speed: Some(
+        0.052,
+    ),
+    gps_time: 2025-09-08T08:49:23Z,
+}

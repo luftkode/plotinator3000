@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.30.0]
+
+### Added
+
+- Parse `frame-gps` MQTT packets
+
+### Fixed
+
+- Avoid adding `NaN` values from `frame-gps` to datasets as they cause problems for the plotter
+- Detect `NaN` strings in navsys kitchen sink and ignore them when building datasets
+
 ### Dependencies
 
 - `chrono`: 0.4.41 → 0.4.42 ([#335](https://github.com/luftkode/plotinator3000/pull/335))
