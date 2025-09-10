@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.30.1]
+
+- Fix `NaN` values were added for navsys sps kitchen sink GP1
+
 ## [1.30.0]
 
 ### Added

@@ -194,11 +194,21 @@ impl NavSysSpsKitchenSink {
                     }
                     raw_gp1_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
                     raw_gp1_points_num_satellites.push([ts, e.num_satellites().into()]);
-                    raw_gp1_points_speed_kmh.push([ts, e.speed_kmh().into()]);
-                    raw_gp1_points_hdop.push([ts, e.hdop().into()]);
-                    raw_gp1_points_vdop.push([ts, e.vdop().into()]);
-                    raw_gp1_points_pdop.push([ts, e.pdop().into()]);
-                    raw_gp1_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    if !e.speed_kmh().is_nan() {
+                        raw_gp1_points_speed_kmh.push([ts, e.speed_kmh().into()]);
+                    }
+                    if !e.hdop().is_nan() {
+                        raw_gp1_points_hdop.push([ts, e.hdop().into()]);
+                    }
+                    if !e.vdop().is_nan() {
+                        raw_gp1_points_vdop.push([ts, e.vdop().into()]);
+                    }
+                    if !e.pdop().is_nan() {
+                        raw_gp1_points_pdop.push([ts, e.pdop().into()]);
+                    }
+                    if !e.altitude_above_mean_sea().is_nan() {
+                        raw_gp1_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    }
                 }
                 NavSysSpsEntry::GP2(e) => {
                     let ts = e.timestamp_ns();

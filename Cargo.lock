@@ -3491,7 +3491,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plotinator-download"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3506,7 +3506,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-file-io"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "egui",
@@ -3529,7 +3529,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-hdf5"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -3557,7 +3557,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-log-if"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3567,7 +3567,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-logs"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "byteorder",
  "chrono",
@@ -3588,7 +3588,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-macros"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "profiling",
  "puffin",
@@ -3596,7 +3596,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-mqtt"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3617,7 +3617,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-mqtt-ui"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3635,7 +3635,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-plot-ui"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "chrono",
  "egui",
@@ -3662,7 +3662,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-plot-util"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "chrono",
  "egui",
@@ -3684,7 +3684,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-proc-macros"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "profiling",
  "puffin",
@@ -3694,7 +3694,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-strfmt"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "chrono",
  "egui_plot",
@@ -3703,7 +3703,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-supported-formats"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3723,7 +3723,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-test-util"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "paste",
  "testresult",
@@ -3731,7 +3731,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-ui-util"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "egui",
  "egui_plot",
@@ -3739,7 +3739,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-updater"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "axoupdater",
  "eframe",
@@ -3755,7 +3755,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "1.30.0"
+version = "1.30.1"
 dependencies = [
  "anyhow",
  "chrono",
