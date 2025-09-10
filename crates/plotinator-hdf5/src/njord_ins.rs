@@ -28,15 +28,6 @@ impl SkytemHdf5 for NjordIns {
         )?;
         assert_description_in_attrs(&system_status_dataset)?;
 
-        let raw_byte_stream_dataset = open_dataset(
-            &hdf5_file,
-            Self::RAW_BYTE_STREAM_DATASET,
-            Self::EXPECT_DIMENSION,
-        )?;
-
-        let unix_time_dataset =
-            open_dataset(&hdf5_file, Self::UNIX_TIME_DATASET, Self::EXPECT_DIMENSION)?;
-
         let position_dataset =
             open_dataset(&hdf5_file, Self::POSITION_DATASET, Self::EXPECT_DIMENSION)?;
 
@@ -51,26 +42,14 @@ impl SkytemHdf5 for NjordIns {
             Self::FILTER_STATUS_DATASET,
             Self::EXPECT_DIMENSION,
         )?;
-        let microseconds_dataset = open_dataset(
-            &hdf5_file,
-            Self::MICROSECONDS_DATASET,
-            Self::EXPECT_DIMENSION,
-        )?;
 
         log_all_attributes(&system_status_dataset);
-        log_all_attributes(&raw_byte_stream_dataset);
-        log_all_attributes(&unix_time_dataset);
         log_all_attributes(&position_dataset);
         log_all_attributes(&orientation_dataset);
         log_all_attributes(&filter_status_dataset);
-        log_all_attributes(&microseconds_dataset);
 
-        let unix_time: ndarray::Array2<i64> = unix_time_dataset.read()?;
-        let microseconds: ndarray::Array2<i64> = microseconds_dataset.read()?;
-        let timestamps = combine_timestamps(&unix_time, &microseconds);
-        let first_timestamp = *timestamps.first().expect("No timestamps in dataset");
-        // convert to f64 once and for all
-        let timestamps: Vec<f64> = timestamps.into_iter().map(|ts| ts as f64).collect();
+        let (first_timestamp, timestamps, rawplot_offset_opt) =
+            Self::read_dataset_time(&hdf5_file)?;
 
         let _system_status_unit =
             read_any_attribute_to_string(&system_status_dataset.attr("unit")?)?;
@@ -130,7 +109,10 @@ impl SkytemHdf5 for NjordIns {
             &orientation_dataset,
         )?;
 
-        let mut raw_plots = Vec::with_capacity(33);
+        let mut raw_plots = Vec::with_capacity(33 + rawplot_offset_opt.is_some() as usize);
+        if let Some(offset_plot) = rawplot_offset_opt {
+            raw_plots.push(offset_plot);
+        }
         if let Some(plots) = position_plots {
             raw_plots.extend(plots);
         }
@@ -540,14 +522,84 @@ pub struct NjordIns {
 }
 
 impl NjordIns {
-    const SYSTEM_STATUS_DATASET: &str = "system_status";
-    const RAW_BYTE_STREAM_DATASET: &str = "raw_byte_stream";
+    // Before we logged system time
     const UNIX_TIME_DATASET: &str = "unix_time";
     const MICROSECONDS_DATASET: &str = "microseconds";
+    // After we started logging system time
+    const GPS_UNIX_TIME_DATASET: &str = "gps_unix_time";
+    const SYSTEM_TIMESTAMP: &str = "timestamp";
+
+    const SYSTEM_STATUS_DATASET: &str = "system_status";
     const FILTER_STATUS_DATASET: &str = "filter_status";
     const POSITION_DATASET: &str = "position";
     const ORIENTATION_DATASET: &str = "orientation";
     const EXPECT_DIMENSION: usize = 2;
+
+    fn poc_read_dataset_time(hdf5_file: &hdf5::File) -> anyhow::Result<(i64, Vec<f64>)> {
+        let unix_time_dataset =
+            open_dataset(hdf5_file, Self::UNIX_TIME_DATASET, Self::EXPECT_DIMENSION)?;
+        let microseconds_dataset = open_dataset(
+            hdf5_file,
+            Self::MICROSECONDS_DATASET,
+            Self::EXPECT_DIMENSION,
+        )?;
+
+        let unix_time: ndarray::Array2<i64> = unix_time_dataset.read()?;
+        let microseconds: ndarray::Array2<i64> = microseconds_dataset.read()?;
+        let timestamps: Vec<i64> = combine_timestamps(&unix_time, &microseconds);
+        let first_timestamp = *timestamps.first().expect("No timestamps in dataset");
+        // convert to f64 once and for all
+        let timestamps: Vec<f64> = timestamps.into_iter().map(|ts| ts as f64).collect();
+        Ok((first_timestamp, timestamps))
+    }
+
+    fn with_sys_time_read_dataset_time(
+        hdf5_file: &hdf5::File,
+    ) -> anyhow::Result<(i64, Vec<f64>, RawPlot)> {
+        let sys_time = open_dataset(hdf5_file, Self::SYSTEM_TIMESTAMP, Self::EXPECT_DIMENSION)?;
+        let sys_time: Vec<i64> = sys_time.read_raw()?;
+        let first_timestamp = *sys_time.first().expect("No timestamps in dataset");
+        let plot_timestamps: Vec<f64> = sys_time.iter().map(|ts| *ts as f64).collect();
+        let gps_unix_time = open_dataset(
+            hdf5_file,
+            Self::GPS_UNIX_TIME_DATASET,
+            Self::EXPECT_DIMENSION,
+        )?;
+
+        let gps_unix_time: ndarray::Array2<i64> = gps_unix_time.read()?;
+
+        let mut time_offset = Vec::with_capacity(sys_time.len());
+
+        for ((gps_ts, sys_ts), plot_ts) in gps_unix_time.iter().zip(sys_time).zip(&plot_timestamps)
+        {
+            let delta_ns = (sys_ts - *gps_ts) as f64;
+            let delta_ms = delta_ns / 1e6;
+            time_offset.push([*plot_ts, delta_ms]);
+        }
+
+        Ok((
+            first_timestamp,
+            plot_timestamps,
+            RawPlot::new(
+                "Time Offset [ms]".to_owned(),
+                time_offset,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+        ))
+    }
+
+    // Returns the time that the dataset should be aligned with
+    fn read_dataset_time(
+        hdf5_file: &hdf5::File,
+    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>)> {
+        if let Ok((first_timestamp, plot_timestamps)) = Self::poc_read_dataset_time(hdf5_file) {
+            Ok((first_timestamp, plot_timestamps, None))
+        } else {
+            let (first_ts, plot_ts, rawplot_offset) =
+                Self::with_sys_time_read_dataset_time(hdf5_file)?;
+            Ok((first_ts, plot_ts, Some(rawplot_offset)))
+        }
+    }
 
     fn extract_metadata(
         system_status_dataset: &Dataset,
