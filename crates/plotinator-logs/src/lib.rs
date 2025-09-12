@@ -1,4 +1,4 @@
-use std::io;
+use std::{fmt, io};
 
 use plotinator_log_if::prelude::*;
 
@@ -54,7 +54,7 @@ pub fn parse_unique_description(raw_uniq_desc: &[u8]) -> String {
 ///     Ok(())
 /// }
 /// ```
-pub fn parse_and_display_log_entries<T: LogEntry>(
+pub fn parse_and_display_log_entries<T: LogEntry + fmt::Display>(
     reader: &mut impl io::BufRead,
     limit: Option<usize>,
 ) {

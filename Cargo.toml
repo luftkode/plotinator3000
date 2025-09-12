@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.31.0"
+version = "1.32.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -45,6 +45,7 @@ plotinator-updater.path = "crates/plotinator-updater"
 plotinator-download.path = "crates/plotinator-download"
 plotinator-strfmt.path = "crates/plotinator-strfmt"
 plotinator-file-io.path = "crates/plotinator-file-io"
+plotinator-csv.path = "crates/plotinator-csv"
 egui = { version = "0.32", features = ["rayon", "callstack"] }
 egui-notify = "0.20.0"
 eframe = { version = "0.32", default-features = false, features = [

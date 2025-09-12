@@ -1,15 +1,12 @@
-use std::{fmt::Display, io};
+use std::io;
 
 use crate::{parseable::Parseable, plotable::Plotable};
 
 /// A given log should implement this trait
-pub trait SkytemLog:
-    Plotable + Parseable + GitMetadata + Clone + Display + Send + Sync + Sized
-{
-}
+pub trait SkytemLog: Plotable + Parseable + GitMetadata + Clone + Send + Sync + Sized {}
 
 /// A given log entry should implement this trait
-pub trait LogEntry: Sized + Display + Send + Sync {
+pub trait LogEntry: Sized + Send + Sync {
     /// Create a [`LogEntry`] instance from a reader
     ///
     /// Returns a tuple containing:

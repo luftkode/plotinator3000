@@ -1,29 +1,21 @@
-use std::io;
-
 use crate::parse_info::{ParseInfo, ParsedBytes, TotalBytes};
 use chrono::{DateTime, Utc};
 use plotinator_log_if::prelude::*;
-use plotinator_logs::{
-    generator::GeneratorLog,
-    inclinometer_sps::InclinometerSps,
-    mbed_motor_control::{pid::pidlog::PidLog, status::statuslog::StatusLog},
-    navsys::NavSysSps,
-    navsys_kitchen_sink::NavSysSpsKitchenSink,
-};
 use serde::{Deserialize, Serialize};
+use std::io;
 
-/// Represents a supported log format, which can be any of the supported log format types.
+/// Represents a supported csv format.
 ///
-/// This simply serves to encapsulate all the supported log formats in a single type
-macro_rules! define_supported_log_formats {
+/// This simply serves to encapsulate all the supported csv formats in a single type
+macro_rules! define_supported_csv_formats {
     ( $( $variant:ident => $ty:ty ),* $(,)? ) => {
         #[derive(Debug, Clone, Deserialize, Serialize)]
-        pub enum SupportedLog {
+        pub enum SupportedCsv {
 
             $( $variant($ty, ParseInfo), )*
         }
 
-        impl SupportedLog {
+        impl SupportedCsv {
             pub(crate) fn parse_info(&self) -> ParseInfo {
                 match self {
                     $( Self::$variant(_, parse_info) => *parse_info, )*
@@ -44,9 +36,9 @@ macro_rules! define_supported_log_formats {
                                 ParsedBytes(read_bytes),
                                 TotalBytes(total_bytes)
                             );
-                            let log = Self::$variant(log_data, parse_info);
-                            log::debug!("Got: {}", log.descriptive_name());
-                            return Ok(log);
+                            let csv = Self::$variant(log_data, parse_info);
+                            log::debug!("Got: {}", csv.descriptive_name());
+                            return Ok(csv);
                         }
                         Err(e) => {
                             log::debug!("Failed to parse as {}: {e}", stringify!($ty));
@@ -62,14 +54,14 @@ macro_rules! define_supported_log_formats {
         }
 
         $(
-            impl From<($ty, ParseInfo)> for SupportedLog {
+            impl From<($ty, ParseInfo)> for SupportedCsv {
                 fn from(value: ($ty, ParseInfo)) -> Self {
                     Self::$variant(value.0, value.1)
                 }
             }
         )*
 
-        impl Plotable for SupportedLog {
+        impl Plotable for SupportedCsv {
             fn raw_plots(&self) -> &[RawPlot] {
                 match self {
                     $( Self::$variant(l, _) => l.raw_plots(), )*
@@ -103,11 +95,6 @@ macro_rules! define_supported_log_formats {
     };
 }
 
-define_supported_log_formats! {
-    MbedPid => PidLog,
-    MbedStatus => StatusLog,
-    Generator => GeneratorLog,
-    NavSysSps => NavSysSps,
-    NavSysSpsKitchenSink => NavSysSpsKitchenSink,
-    InclinometerSps => InclinometerSps,
+define_supported_csv_formats! {
+    NjordInsPPP => plotinator_csv::njord_ins::NjordInsPPP,
 }

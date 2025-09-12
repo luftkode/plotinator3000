@@ -8,12 +8,15 @@ use std::{
     path::Path,
 };
 
+pub(crate) mod csv;
 #[cfg(feature = "hdf5")]
 #[cfg(not(target_arch = "wasm32"))]
 mod hdf5;
 pub(crate) mod logs;
+pub(crate) mod parse_info;
+pub use parse_info::ParseInfo;
 
-pub use logs::parse_info::ParseInfo;
+use crate::csv::SupportedCsv;
 
 /// Represents a supported format, which can be any of the supported format types.
 ///
@@ -25,6 +28,7 @@ pub use logs::parse_info::ParseInfo;
 )]
 pub enum SupportedFormat {
     Log(SupportedLog),
+    Csv(SupportedCsv),
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF5")]
@@ -34,11 +38,17 @@ pub enum SupportedFormat {
 
 impl SupportedFormat {
     /// Attempts to parse a log from raw content.
-    ///
-    /// This is how content is made available in a browser.
     pub fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
         let log = SupportedLog::parse_from_buf(content)?;
         Ok(Self::Log(log))
+    }
+
+    /// Parse a buffer of file contents known to be a csv file.
+    ///
+    /// Callers must check that it's a .csv file first
+    pub fn parse_csv_from_buf(content: &[u8]) -> io::Result<Self> {
+        let log = SupportedCsv::parse_from_buf(content)?;
+        Ok(Self::Csv(log))
     }
 
     /// Attempts to parse a log from a file path.
@@ -50,6 +60,14 @@ impl SupportedFormat {
 
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
             Self::parse_hdf5_from_path(path)?
+        } else if path.extension().is_some_and(|ext| ext == "csv") {
+            #[allow(
+                unsafe_code,
+                reason = "If the user manages to drop a file and then delete that file before we are done parsing it then they deserve it"
+            )]
+            // SAFETY: It's safe as long as the underlying file is not modified before this function returns
+            let mmap: memmap2::Mmap = unsafe { memmap2::Mmap::map(&file)? };
+            Self::parse_csv_from_buf(&mmap[..])?
         } else {
             #[allow(
                 unsafe_code,
@@ -102,6 +120,7 @@ impl SupportedFormat {
     pub fn parse_info(&self) -> Option<ParseInfo> {
         match self {
             Self::Log(l) => Some(l.parse_info()),
+            Self::Csv(c) => Some(c.parse_info()),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(_) => None,
@@ -114,6 +133,7 @@ impl Plotable for SupportedFormat {
     fn raw_plots(&self) -> &[RawPlot] {
         match self {
             Self::Log(l) => l.raw_plots(),
+            Self::Csv(c) => c.raw_plots(),
 
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
@@ -125,6 +145,7 @@ impl Plotable for SupportedFormat {
     fn first_timestamp(&self) -> chrono::DateTime<chrono::Utc> {
         match self {
             Self::Log(l) => l.first_timestamp(),
+            Self::Csv(c) => c.first_timestamp(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.first_timestamp(),
@@ -135,6 +156,7 @@ impl Plotable for SupportedFormat {
     fn descriptive_name(&self) -> &str {
         match self {
             Self::Log(l) => l.descriptive_name(),
+            Self::Csv(c) => c.descriptive_name(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.descriptive_name(),
@@ -145,6 +167,7 @@ impl Plotable for SupportedFormat {
     fn labels(&self) -> Option<&[PlotLabels]> {
         match self {
             Self::Log(l) => l.labels(),
+            Self::Csv(c) => c.labels(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.labels(),
@@ -155,6 +178,7 @@ impl Plotable for SupportedFormat {
     fn metadata(&self) -> Option<Vec<(String, String)>> {
         match self {
             Self::Log(l) => l.metadata(),
+            Self::Csv(c) => c.metadata(),
             #[cfg(feature = "hdf5")]
             #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.metadata(),

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.32.0]
+
+- Add boilerplate for supporting CSV file formats
+- Add support for CSV file with Njord INS PPP correction data
+
 ## [1.31.0]
 
 - Support new Njord INS format with consolidated GPS timestamps and system time datasets
