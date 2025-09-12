@@ -16,5 +16,5 @@ install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = false
 # Which actions to run on pull requests
-pr-run-mode = "upload"
+pr-run-mode = "plan"
 github-build-setup = "../custom_build_setup/build-setup.yml"
