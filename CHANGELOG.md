@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add boilerplate for supporting CSV file formats
 - Add support for CSV file with Njord INS PPP correction data
+- Add support for GrafNav PPP file (csv-like)
 
 ## [1.31.0]
 

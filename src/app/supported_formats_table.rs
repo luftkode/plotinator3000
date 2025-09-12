@@ -46,12 +46,20 @@ const LOG_FORMATS: &[LogFormat<'_>] = &[
     },
 ];
 
-const CSV_FORMATS: &[LogFormat<'_>] = &[LogFormat {
-    title: "Njord INS PPP",
-    description: "CSV with PPP corrected Njord INS (Certus Mini-d) data",
-    link: "https://github.com/luftkode/njord-ins",
-    subitems: None,
-}];
+const CSV_FORMATS: &[LogFormat<'_>] = &[
+    LogFormat {
+        title: "Njord INS PPP",
+        description: "CSV with PPP corrected Njord INS (Certus Mini-d) data",
+        link: "https://github.com/luftkode/njord-ins",
+        subitems: None,
+    },
+    LogFormat {
+        title: "GrafNav PPP",
+        description: "CSV-like with GrafNav PPP corrected GPS data (for novatel GPS)",
+        link: "",
+        subitems: None,
+    },
+];
 
 #[cfg(not(target_arch = "wasm32"))]
 const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[

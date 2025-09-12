@@ -150,6 +150,7 @@ fn parse_metadata_line(line: &str) -> Option<(String, String)> {
 impl Parseable for GrafNavPPP {
     const DESCRIPTIVE_NAME: &str = "GrafNav PPP";
 
+    #[allow(clippy::too_many_lines, reason = "Long but simple")]
     fn from_reader(reader: &mut impl std::io::BufRead) -> std::io::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
         let mut metadata = Vec::new();
@@ -201,7 +202,6 @@ impl Parseable for GrafNavPPP {
             io::Error::new(io::ErrorKind::InvalidData, "No data rows found in log")
         })?;
 
-        // Add dataset length to metadata
         metadata.push(("Dataset length".into(), row_len.to_string()));
 
         let raw_plots = vec![
