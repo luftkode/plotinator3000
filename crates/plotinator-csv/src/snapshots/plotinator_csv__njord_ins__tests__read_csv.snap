@@ -2,7 +2,7 @@
 source: crates/plotinator-csv/src/njord_ins.rs
 expression: njord_ins
 ---
-NjordInsOld {
+NjordInsPPP {
     raw_plots: [
         RawPlot {
             name: "Pitch °",
