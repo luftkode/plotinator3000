@@ -1,0 +1,5 @@
+---
+source: crates/plotinator-csv/src/grafnav.rs
+expression: grafnavppp.raw_plots.len()
+---
+16

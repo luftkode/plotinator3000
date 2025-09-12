@@ -1,0 +1,24 @@
+[package]
+name = "plotinator-csv"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+plotinator-test-util.workspace = true
+plotinator-plot-util.workspace = true
+plotinator-log-if.workspace = true
+log.workspace = true
+serde.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+
+[lints]
+workspace = true

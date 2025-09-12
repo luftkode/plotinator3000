@@ -1,0 +1,359 @@
+---
+source: crates/plotinator-csv/src/grafnav.rs
+expression: grafnavppp
+---
+GrafNavPPP {
+    raw_plots: [
+        RawPlot {
+            name: "Latitude °",
+            points: [
+                [
+                    1.757435842e18,
+                    56.160949863,
+                ],
+                [
+                    1.757435843e18,
+                    56.16094988,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Longitude °",
+            points: [
+                [
+                    1.757435842e18,
+                    10.0376824505,
+                ],
+                [
+                    1.757435843e18,
+                    10.037682512,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Height MSL [m]",
+            points: [
+                [
+                    1.757435842e18,
+                    34.2,
+                ],
+                [
+                    1.757435843e18,
+                    34.193,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Height Ellipsoid [m]",
+            points: [
+                [
+                    1.757435842e18,
+                    73.394,
+                ],
+                [
+                    1.757435843e18,
+                    73.388,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Northing [m]",
+            points: [
+                [
+                    1.757435842e18,
+                    6224477.873,
+                ],
+                [
+                    1.757435843e18,
+                    6224477.875,
+                ],
+            ],
+            expected_range: Thousands,
+        },
+        RawPlot {
+            name: "Easting [m]",
+            points: [
+                [
+                    1.757435842e18,
+                    564447.43,
+                ],
+                [
+                    1.757435843e18,
+                    564447.434,
+                ],
+            ],
+            expected_range: Thousands,
+        },
+        RawPlot {
+            name: "Velocity East [km/h]",
+            points: [
+                [
+                    1.757435842e18,
+                    -0.065,
+                ],
+                [
+                    1.757435843e18,
+                    0.073,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Velocity North [km/h]",
+            points: [
+                [
+                    1.757435842e18,
+                    0.084,
+                ],
+                [
+                    1.757435843e18,
+                    0.008,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Velocity Up [km/h]",
+            points: [
+                [
+                    1.757435842e18,
+                    0.024,
+                ],
+                [
+                    1.757435843e18,
+                    -0.114,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Horizontal Speed [km/h]",
+            points: [
+                [
+                    1.757435842e18,
+                    0.106,
+                ],
+                [
+                    1.757435843e18,
+                    0.074,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Quality Factor",
+            points: [
+                [
+                    1.757435842e18,
+                    3.0,
+                ],
+                [
+                    1.757435843e18,
+                    3.0,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "PDOP",
+            points: [
+                [
+                    1.757435842e18,
+                    1.43,
+                ],
+                [
+                    1.757435843e18,
+                    1.43,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Number of Satellites",
+            points: [
+                [
+                    1.757435842e18,
+                    15.0,
+                ],
+                [
+                    1.757435843e18,
+                    15.0,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Course Over Ground [°]",
+            points: [
+                [
+                    1.757435842e18,
+                    0.0,
+                ],
+                [
+                    1.757435843e18,
+                    0.0,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Undulation [m]",
+            points: [
+                [
+                    1.757435842e18,
+                    39.195,
+                ],
+                [
+                    1.757435843e18,
+                    39.195,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+        RawPlot {
+            name: "Sequence Number",
+            points: [
+                [
+                    1.757435842e18,
+                    1.0,
+                ],
+                [
+                    1.757435843e18,
+                    2.0,
+                ],
+            ],
+            expected_range: OneToOneHundred,
+        },
+    ],
+    first_timestamp: 2025-09-09T16:37:22Z,
+    metadata: [
+        (
+            "Project",
+            "20250909_05_GP1_PPP",
+        ),
+        (
+            "Program",
+            "GrafNav Version 9.00.2207",
+        ),
+        (
+            "Profile",
+            "20120305_Skytem",
+        ),
+        (
+            "Source",
+            "GNSS Epochs(PPP Combined)",
+        ),
+        (
+            "ProcessInfo",
+            "20250909_05_GP1_PPP by Unknown on 9/12/2025 at 10:12:48",
+        ),
+        (
+            "Datum",
+            "WGS84 (2025.690)",
+        ),
+        (
+            "Remote",
+            "Antenna height 0.000 m, to L1PC [Generic(NONE)]",
+        ),
+        (
+            "UTC Offset",
+            "18 s",
+        ),
+        (
+            "Geoid",
+            "EGM96-World.wpg [] (Absolute correction)",
+        ),
+        (
+            "Map projection Info",
+            "",
+        ),
+        (
+            "UTM Zone",
+            "32",
+        ),
+        (
+            "Column/Variable Contents, Units and Description",
+            "",
+        ),
+        (
+            "01",
+            "SeqNum                                      Sequence number that increments by user defined value. Jumps of more than one indicate missing epochs",
+        ),
+        (
+            "02",
+            "UTCDate      Year/Month/Day                 Date of epoch or feature (UTC time)",
+        ),
+        (
+            "03",
+            "UTCTime      HH:MM:SS.SS                    Time of epoch or feature - Receiver time frame (UTC)",
+        ),
+        (
+            "04",
+            "Latitude     Decimal Degrees (signed)       North/South Geographic coordinate",
+        ),
+        (
+            "05",
+            "Longitude    Decimal Degrees (signed)       East/West Geographic coordinate",
+        ),
+        (
+            "06",
+            "H-MSL        Metres                         Height above the geoid",
+        ),
+        (
+            "07",
+            "Northing     Metres                         North (y) coordinate in Universal Transverse Mercator grid",
+        ),
+        (
+            "08",
+            "Easting      Metres                         East (x) coordinate in Universal Transverse Mercator grid",
+        ),
+        (
+            "09",
+            "Q                                           Quality factor where 1 is best and 6 is worst",
+        ),
+        (
+            "10",
+            "Undulation   Metres                         Height of the ellipsoid above the geoid",
+        ),
+        (
+            "11",
+            "PDOP                                        Position Dilution of Precision, which is a measure of X, Y, Z position geometry",
+        ),
+        (
+            "12",
+            "H-Ell        Metres                         Height above the current ellipsoid",
+        ),
+        (
+            "13",
+            "NS                                          Number of total satellites (GPS+GLONASS+BeiDou+Galileo+QZSS) used in solution",
+        ),
+        (
+            "14",
+            "COG          Decimal Degrees (signed)       Direction that antenna is travelling",
+        ),
+        (
+            "15",
+            "VEast        Kilometers per Hour            East local level velocity",
+        ),
+        (
+            "16",
+            "VNorth       Kilometers per Hour            North local level velocity",
+        ),
+        (
+            "17",
+            "VUp          Kilometers per Hour            Up local level velocity",
+        ),
+        (
+            "18",
+            "HzSpeed      Kilometers per Hour            Combined effect of local level north and east speed",
+        ),
+        (
+            "Dataset length",
+            "2",
+        ),
+    ],
+}

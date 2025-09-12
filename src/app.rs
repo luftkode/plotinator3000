@@ -7,7 +7,7 @@ use plotinator_plot_ui::LogPlotUi;
 use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
 
 mod misc;
-mod util;
+mod supported_formats_table;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod download;
@@ -147,7 +147,7 @@ impl eframe::App for App {
             );
 
             if self.plot.plot_count() == 0 {
-                util::draw_empty_state(ui); // Display the message when no plots are shown
+                supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown
             }
 
             match plotinator_file_io::dropped_files::handle_dropped_files(

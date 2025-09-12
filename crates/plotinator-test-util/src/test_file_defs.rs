@@ -49,6 +49,7 @@ macro_rules! define_utf8_test_file {
 }
 
 pub mod bifrost_current;
+pub mod csv;
 pub mod frame_altimeters;
 pub mod frame_gps;
 pub mod frame_inclinometers;

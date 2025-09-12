@@ -1,0 +1,5 @@
+---
+source: crates/plotinator-csv/src/njord_ins.rs
+expression: read_bytes
+---
+8157
