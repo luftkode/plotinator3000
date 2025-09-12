@@ -404,6 +404,9 @@ Tue Sep 09 18:37:32 CEST 2025,1757435852,80242,0,56.16089115927095,10.0377703794
         let mut reader = BufReader::new(NJORD_INS_PPP_CSV_BYTES);
         let (njord_ins, read_bytes) = NjordInsPPP::from_reader(&mut reader).unwrap();
         insta::assert_debug_snapshot!(njord_ins.raw_plots.len());
-        insta::assert_debug_snapshot!(read_bytes);
+        // windows line endings...
+        if !cfg!(target_os = "windows") {
+            insta::assert_debug_snapshot!(read_bytes);
+        }
     }
 }
