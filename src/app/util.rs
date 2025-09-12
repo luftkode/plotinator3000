@@ -46,6 +46,13 @@ const LOG_FORMATS: &[LogFormat<'_>] = &[
     },
 ];
 
+const CSV_FORMATS: &[LogFormat<'_>] = &[LogFormat {
+    title: "Njord INS PPP",
+    description: "CSV with PPP corrected Njord INS (Certus Mini-d) data",
+    link: "https://github.com/luftkode/njord-ins",
+    subitems: None,
+}];
+
 #[cfg(not(target_arch = "wasm32"))]
 const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
     LogFormat {
@@ -153,15 +160,6 @@ pub fn draw_empty_state(ui: &mut egui::Ui) {
                 ScrollArea::vertical()
                     .max_height(available_height)
                     .show(ui, |ui| {
-                        ui.heading("Non-HDF5 Formats");
-                        ui.add_space(6.0);
-
-                        for format in LOG_FORMATS {
-                            draw_log_format_entry(ui, format);
-                            ui.separator();
-                            ui.add_space(6.0);
-                        }
-
                         // Section for HDF5 formats
                         ui.heading("HDF5 Formats");
                         ui.add_space(6.0);
@@ -181,6 +179,24 @@ pub fn draw_empty_state(ui: &mut egui::Ui) {
                                 ui.separator();
                                 ui.add_space(6.0);
                             }
+                        }
+
+                        ui.heading("Custom Formats");
+                        ui.add_space(6.0);
+
+                        for format in LOG_FORMATS {
+                            draw_log_format_entry(ui, format);
+                            ui.separator();
+                            ui.add_space(6.0);
+                        }
+
+                        ui.heading("CSV Formats");
+                        ui.add_space(6.0);
+
+                        for format in CSV_FORMATS {
+                            draw_log_format_entry(ui, format);
+                            ui.separator();
+                            ui.add_space(6.0);
                         }
                     });
             });
