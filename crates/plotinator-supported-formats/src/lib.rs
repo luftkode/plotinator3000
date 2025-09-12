@@ -60,7 +60,13 @@ impl SupportedFormat {
 
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
             Self::parse_hdf5_from_path(path)?
-        } else if path.extension().is_some_and(|ext| ext == "csv") {
+        } else if let Some(ext) = path.extension()
+            && (ext == "csv"
+                || (ext == "txt"
+                    && path
+                        .file_name()
+                        .is_some_and(|name| name.to_string_lossy().contains("PPP"))))
+        {
             #[allow(
                 unsafe_code,
                 reason = "If the user manages to drop a file and then delete that file before we are done parsing it then they deserve it"

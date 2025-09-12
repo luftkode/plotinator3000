@@ -1,0 +1,45 @@
+
+Project:     20250909_05_GP1_PPP
+Program:     GrafNav Version 9.00.2207
+Profile:     20120305_Skytem
+Source:      GNSS Epochs(PPP Combined)
+ProcessInfo: 20250909_05_GP1_PPP by Unknown on 9/12/2025 at 10:12:48
+
+Datum:       WGS84 (2025.690)
+Remote:      Antenna height 0.000 m, to L1PC [Generic(NONE)]
+UTC Offset:  18 s
+Geoid:       EGM96-World.wpg [] (Absolute correction)
+
+Map projection Info:
+  UTM Zone:    32
+
+Column/Variable Contents, Units and Description:
+  01: SeqNum                                      Sequence number that increments by user defined value. Jumps of more than one indicate missing epochs
+  02: UTCDate      Year/Month/Day                 Date of epoch or feature (UTC time)
+  03: UTCTime      HH:MM:SS.SS                    Time of epoch or feature - Receiver time frame (UTC)
+  04: Latitude     Decimal Degrees (signed)       North/South Geographic coordinate
+  05: Longitude    Decimal Degrees (signed)       East/West Geographic coordinate
+  06: H-MSL        Metres                         Height above the geoid
+  07: Northing     Metres                         North (y) coordinate in Universal Transverse Mercator grid
+  08: Easting      Metres                         East (x) coordinate in Universal Transverse Mercator grid
+  09: Q                                           Quality factor where 1 is best and 6 is worst
+  10: Undulation   Metres                         Height of the ellipsoid above the geoid
+  11: PDOP                                        Position Dilution of Precision, which is a measure of X, Y, Z position geometry
+  12: H-Ell        Metres                         Height above the current ellipsoid
+  13: NS                                          Number of total satellites (GPS+GLONASS+BeiDou+Galileo+QZSS) used in solution
+  14: COG          Decimal Degrees (signed)       Direction that antenna is travelling
+  15: VEast        Kilometers per Hour            East local level velocity
+  16: VNorth       Kilometers per Hour            North local level velocity
+  17: VUp          Kilometers per Hour            Up local level velocity
+  18: HzSpeed      Kilometers per Hour            Combined effect of local level north and east speed
+
+SeqNum    UTCDate     UTCTime       Latitude      Longitude        H-MSL     Northing      Easting Q   Undulation   PDOP        H-Ell NS            COG     VEast    VNorth       VUp HzSpeed
+            (YMD)       (HMS)          (deg)          (deg)          (m)          (m)          (m)            (m)  (dop)          (m)             (deg)    (km/h)    (km/h)    (km/h) (km/h)
+1      2025/09/09 16:37:22.00  56.1609498630  10.0376824505       34.200  6224477.873   564447.430 3       39.195   1.43       73.394 15   0.0000000000    -0.065     0.084     0.024 0.106
+2      2025/09/09 16:37:23.00  56.1609498800  10.0376825120       34.193  6224477.875   564447.434 3       39.195   1.43       73.388 15   0.0000000000     0.073     0.008    -0.114 0.074
+3      2025/09/09 16:37:24.00  56.1609498983  10.0376824724       34.198  6224477.877   564447.432 3       39.195   1.43       73.392 15   0.0000000000    -0.019    -0.066    -0.055 0.069
+4      2025/09/09 16:37:25.00  56.1609498917  10.0376824902       34.194  6224477.876   564447.433 3       39.195   1.43       73.388 15   0.0000000000     0.034    -0.012     0.085 0.036
+5      2025/09/09 16:37:26.00  56.1609498891  10.0376824863       34.194  6224477.876   564447.432 3       39.195   1.43       73.389 15   0.0000000000    -0.027    -0.055     0.095 0.061
+6      2025/09/09 16:37:27.00  56.1609499249  10.0376824896       34.195  6224477.879   564447.433 3       39.195   1.43       73.390 15   0.0000000000     0.050     0.102     0.030 0.113
+7      2025/09/09 16:37:28.00  56.1609499134  10.0376824810       34.194  6224477.878   564447.432 3       39.195   1.43       73.389 15   0.0000000000    -0.029     0.017     0.068 0.034
+8      2025/09/09 16:37:29.00  56.1609498852  10.0376824736       34.196  6224477.875   564447.432 3       39.195   1.43       73.390 15

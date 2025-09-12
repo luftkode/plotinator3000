@@ -97,4 +97,5 @@ macro_rules! define_supported_csv_formats {
 
 define_supported_csv_formats! {
     NjordInsPPP => plotinator_csv::njord_ins::NjordInsPPP,
+    GrafNavPPP => plotinator_csv::grafnav::GrafNavPPP,
 }

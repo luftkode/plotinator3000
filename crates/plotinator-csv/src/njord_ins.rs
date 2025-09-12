@@ -382,6 +382,8 @@ impl Plotable for NjordInsPPP {
 mod tests {
     use std::io::BufReader;
 
+    use plotinator_test_util::test_file_defs::csv::NJORD_INS_PPP_CSV_BYTES;
+
     use super::*;
 
     const TEST_2_ROWS: &str = r#"Human Timestamp,Unix Time,Microseconds,Fix Type,Latitude,Longitude,Height,Latitude SD,Longitude SD,Height SD,Velocity North,Velocity East,Velocity Down,Velocity North SD,Velocity East SD,Velocity Down SD,Roll,Pitch,Heading,Roll SD,Pitch SD,Heading SD,Accelerometer Bias X,Accelerometer Bias Y,Accelerometer Bias Z,Accelerometer Bias X SD,Accelerometer Bias Y SD,Accelerometer Bias Z SD,Gyroscope Bias X,Gyroscope Bias Y,Gyroscope Bias Z,Gyroscope Bias X SD,Gyroscope Bias Y SD,Gyroscope Bias Z SD,GPS Satellites,GLONASS Satellites,BeiDou Satellites,Galileo Satellites,Differential GPS Satellites,Differential Glonass Satellites,Differential BeiDou Satellites,Differential Galileo Satellites,Dual Antenna Fix,Horizontal Separation,Vertical Separation,SBAS Satellites,Differential SBAS Satellites,Zero Velocity Update,Base to Rover North,Base to Rover East,Base to Rover Down,Base to Rover North SD,Base to Rover East SD,Base to Rover Down SD,Moving Base Fix Type,Event 1 Flag,Event 2 Flag
@@ -394,6 +396,14 @@ Tue Sep 09 18:37:32 CEST 2025,1757435852,80242,0,56.16089115927095,10.0377703794
         let (njord_ins, read_bytes) = NjordInsPPP::from_reader(&mut reader).unwrap();
 
         insta::assert_debug_snapshot!(njord_ins);
+        insta::assert_debug_snapshot!(read_bytes);
+    }
+
+    #[test]
+    fn test_read_csv_test_data() {
+        let mut reader = BufReader::new(NJORD_INS_PPP_CSV_BYTES);
+        let (njord_ins, read_bytes) = NjordInsPPP::from_reader(&mut reader).unwrap();
+        insta::assert_debug_snapshot!(njord_ins.raw_plots.len());
         insta::assert_debug_snapshot!(read_bytes);
     }
 }
