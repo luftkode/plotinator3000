@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `egui_kittest`: 0.32.2 → 0.32.3 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+- `egui`: 0.32.2 → 0.32.3 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+- `eframe`: 0.32.2 → 0.32.3 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+- `serde`: 1.0.219 → 1.0.223 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+- `serde_json`: 1.0.143 → 1.0.145 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+- `semver`: 1.0.26 → 1.0.27 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+- `tempfile`: 3.21.0 → 3.22.0 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+- `zip`: 5.0.0 → 5.1.1 ([#341](https://github.com/luftkode/plotinator3000/pull/341))
+
 ## [1.32.0]
 
 - Add boilerplate for supporting CSV file formats
