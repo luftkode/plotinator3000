@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#340](https://github.com/luftkode/plotinator3000/pull/340))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.5 ([#340](https://github.com/luftkode/plotinator3000/pull/340))
+- `actions/download-artifact`: 4 → 5 ([#340](https://github.com/luftkode/plotinator3000/pull/340))
+
 ## [1.32.0]
 
 - Add boilerplate for supporting CSV file formats
