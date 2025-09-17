@@ -233,6 +233,9 @@ impl FrameGpsDatasets {
         let mut alt = Vec::with_capacity(data_len);
         let mut speed = Vec::with_capacity(data_len);
         let mut sats = Vec::with_capacity(data_len);
+        let mut alt_nan_count = Vec::with_capacity(data_len);
+        let mut alt_nan_bool = Vec::with_capacity(data_len);
+        let mut alt_nan_cnt: u64 = 0;
 
         for entry in gps_data.iter() {
             let ts = *entry.timestamp as f64;
@@ -266,9 +269,14 @@ impl FrameGpsDatasets {
                 if !lon_sample.is_nan() {
                     lon.push([ts, lon_sample]);
                 }
-                if !alt_sample.is_nan() {
+                if alt_sample.is_nan() {
+                    alt_nan_cnt += 1;
+                    alt_nan_bool.push([ts, 1.0]);
+                } else {
+                    alt_nan_bool.push([ts, 0.0]);
                     alt.push([ts, alt_sample]);
                 }
+                alt_nan_count.push([ts, alt_nan_cnt as f64]);
             } else {
                 log::error!(
                     "Expected entry position of length 3 or greater, got: {}",
@@ -325,6 +333,16 @@ impl FrameGpsDatasets {
                 format!("Altitude-GP{id}"),
                 alt,
                 ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                format!("Altitude-NaN-cnt-GP{id}"),
+                alt_nan_count,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlot::new(
+                format!("Altitude-NaN-GP{id}"),
+                alt_nan_bool,
+                ExpectedPlotRange::Percentage,
             ),
             RawPlot::new(
                 format!("Speed-GP{id}"),
