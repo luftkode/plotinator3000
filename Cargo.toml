@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.32.0"
+version = "1.32.1"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -124,7 +124,6 @@ anyhow.workspace = true
 rayon.workspace = true
 
 
-
 [dev-dependencies]
 testresult.workspace = true
 tempfile.workspace = true
@@ -162,9 +161,18 @@ web-sys = "0.3.70"
 default = ["selfupdater", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5", "plotinator-file-io/hdf5"]
 selfupdater = ["dep:plotinator-updater"]
-mqtt = ["dep:plotinator-mqtt", "dep:plotinator-mqtt-ui", "plotinator-plot-ui/mqtt", "plotinator-file-io/mqtt"]
+mqtt = [
+    "dep:plotinator-mqtt",
+    "dep:plotinator-mqtt-ui",
+    "plotinator-plot-ui/mqtt",
+    "plotinator-file-io/mqtt",
+]
 log_time = ["plotinator-proc-macros/log_time"]
-profiling = ["dep:puffin", "dep:puffin_http", "plotinator-proc-macros/profiling"]
+profiling = [
+    "dep:puffin",
+    "dep:puffin_http",
+    "plotinator-proc-macros/profiling",
+]
 
 [profile.release]
 opt-level = 3
@@ -260,7 +268,7 @@ manual_string_new = "warn"
 map_err_ignore = "warn"
 map_flatten = "warn"
 map_unwrap_or = "warn"
-indexing_slicing = "allow" # TODO: Fix?
+indexing_slicing = "allow"                   # TODO: Fix?
 match_same_arms = "warn"
 match_wild_err_arm = "warn"
 match_wildcard_for_single_variants = "warn"

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.32.1]
+
+- Add count of frame-gps altimeter NaN values to plots
+- Run `cargo update`
+
 ## [1.32.0]
 
 - Add boilerplate for supporting CSV file formats
@@ -376,7 +381,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `reqwest`: 0.12.14 → 0.12.15 ([#218](https://github.com/luftkode/plotinator3000/pull/218))
 - `cargo-bins/cargo-binstall`: 1.12.1 → 1.12.2 ([#217](https://github.com/luftkode/plotinator3000/pull/217))
 - `crambl/dependabot-changelog-writer`: 1.0.2 → 1.0.3 ([#219](https://github.com/luftkode/plotinator3000/pull/219))
-- `openssl ` 0.10.70 -> 0.10.72
+- `openssl` 0.10.70 -> 0.10.72
 - `openssl-sys` 0.9.105 -> 0.9.107
 - `tokio`: 1.44.1 → 1.44.2 ([#221](https://github.com/luftkode/plotinator3000/pull/221))
 - `env_logger`: 0.11.7 → 0.11.8 ([#221](https://github.com/luftkode/plotinator3000/pull/221))
@@ -610,7 +615,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Only set font styles when it changes instead of at every frame (leftover tech-debt from starting to learn egui)
-- Make the loaded files window scrollable - resolves https://github.com/luftkode/plotinator3000/issues/118
+- Make the loaded files window scrollable - resolves <https://github.com/luftkode/plotinator3000/issues/118>
 
 ## [1.3.3]
 
@@ -757,7 +762,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial support for `HDF` files, starting with bifrost (TX) loop current. The feature is currently guarded behind a feature flag, enabling it is tracked at: https://github.com/luftkode/plotinator3000/issues/84.
+- Initial support for `HDF` files, starting with bifrost (TX) loop current. The feature is currently guarded behind a feature flag, enabling it is tracked at: <https://github.com/luftkode/plotinator3000/issues/84>.
 
 ### Changed
 
