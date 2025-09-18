@@ -30,9 +30,7 @@ fn main() -> eframe::Result {
             }
         }
         Err(e) => {
-            return Err(eframe::Error::AppCreation(
-                format!("Error in updater: {e}").into(),
-            ));
+            log::error!("Error in updater: {e}");
         }
     }
 
