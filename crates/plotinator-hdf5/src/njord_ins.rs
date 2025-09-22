@@ -13,6 +13,8 @@ use crate::{
     },
 };
 
+const RAW_PLOT_NAME_SUFFIX: &str = "(Njord-INS)";
+
 impl SkytemHdf5 for NjordIns {
     #[allow(
         clippy::too_many_lines,
@@ -50,6 +52,28 @@ impl SkytemHdf5 for NjordIns {
 
         let (first_timestamp, timestamps, rawplot_offset_opt) =
             Self::read_dataset_time(&hdf5_file)?;
+
+        let time_between_samples_plot_opt = {
+            if timestamps.len() > 2 {
+                let points = timestamps
+                    .windows(2)
+                    .map(|window| {
+                        let t1 = window[0];
+                        let t2 = window[1];
+                        // Timestamps are f64 nanoseconds. Convert the difference to milliseconds.
+                        let delta_ms = (t2 - t1) / 1_000_000.0;
+                        [t2, delta_ms] // Plot the delta against the second timestamp
+                    })
+                    .collect();
+                Some(RawPlot::new(
+                    format!("Δt sample [ms] {RAW_PLOT_NAME_SUFFIX}"),
+                    points,
+                    ExpectedPlotRange::OneToOneHundred,
+                ))
+            } else {
+                None // No time differences to plot if there's less than 3 samples
+            }
+        };
 
         let _system_status_unit =
             read_any_attribute_to_string(&system_status_dataset.attr("unit")?)?;
@@ -109,7 +133,14 @@ impl SkytemHdf5 for NjordIns {
             &orientation_dataset,
         )?;
 
-        let mut raw_plots = Vec::with_capacity(33 + rawplot_offset_opt.is_some() as usize);
+        let mut raw_plots = Vec::with_capacity(
+            33 + rawplot_offset_opt.is_some() as usize
+                + time_between_samples_plot_opt.is_some() as usize,
+        );
+
+        if let Some(tbs_plot) = time_between_samples_plot_opt {
+            raw_plots.push(tbs_plot);
+        }
         if let Some(offset_plot) = rawplot_offset_opt {
             raw_plots.push(offset_plot);
         }
@@ -428,14 +459,18 @@ fn process_orientation(
     }
 
     vec![
-        RawPlot::new("Roll".to_owned(), rolls, ExpectedPlotRange::OneToOneHundred),
         RawPlot::new(
-            "Pitch".to_owned(),
+            format!("Roll {RAW_PLOT_NAME_SUFFIX}"),
+            rolls,
+            ExpectedPlotRange::OneToOneHundred,
+        ),
+        RawPlot::new(
+            format!("Pitch {RAW_PLOT_NAME_SUFFIX}"),
             pitches,
             ExpectedPlotRange::OneToOneHundred,
         ),
         RawPlot::new(
-            "Heading".to_owned(),
+            format!("Heading {RAW_PLOT_NAME_SUFFIX}"),
             headings,
             ExpectedPlotRange::OneToOneHundred,
         ),
@@ -463,17 +498,17 @@ fn process_position(
 
     vec![
         RawPlot::new(
-            "Latitude".to_owned(),
+            format!("Latitude {RAW_PLOT_NAME_SUFFIX}"),
             latitudes,
             ExpectedPlotRange::OneToOneHundred,
         ),
         RawPlot::new(
-            "Longitude".to_owned(),
+            format!("Longitude {RAW_PLOT_NAME_SUFFIX}"),
             longitudes,
             ExpectedPlotRange::OneToOneHundred,
         ),
         RawPlot::new(
-            "Height [m]".to_owned(),
+            format!("Height [m] {RAW_PLOT_NAME_SUFFIX}"),
             heights,
             ExpectedPlotRange::OneToOneHundred,
         ),
@@ -581,7 +616,7 @@ impl NjordIns {
             first_timestamp,
             plot_timestamps,
             RawPlot::new(
-                "Time Offset [ms]".to_owned(),
+                format!("Δt GPS/System [ms] {RAW_PLOT_NAME_SUFFIX}"),
                 time_offset,
                 ExpectedPlotRange::OneToOneHundred,
             ),
@@ -637,8 +672,8 @@ mod tests {
     fn test_read_njord_ins() -> TestResult {
         let njord_ins = NjordIns::from_path(njord_ins())?;
         assert_eq!(njord_ins.metadata.len(), 44);
-        assert_eq!(njord_ins.raw_plots.len(), 33);
-        assert_eq!(njord_ins.raw_plots[0].points().len(), 4840);
+        assert_eq!(njord_ins.raw_plots.len(), 34);
+        assert_eq!(njord_ins.raw_plots[1].points().len(), 4840);
 
         Ok(())
     }
