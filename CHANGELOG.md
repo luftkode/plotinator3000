@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `wasm-bindgen-futures`: 0.4.52 → 0.4.53 ([#346](https://github.com/luftkode/plotinator3000/pull/346))
+- `web-sys`: 0.3.79 → 0.3.80 ([#346](https://github.com/luftkode/plotinator3000/pull/346))
+- `anyhow`: 1.0.99 → 1.0.100 ([#346](https://github.com/luftkode/plotinator3000/pull/346))
+
 ## [1.32.2]
 
 - Continue on error in updater
