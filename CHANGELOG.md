@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#345](https://github.com/luftkode/plotinator3000/pull/345))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.5 ([#345](https://github.com/luftkode/plotinator3000/pull/345))
+- `crambl/dependabot-changelog-writer`: 1.3.0 → 1.3.1 ([#345](https://github.com/luftkode/plotinator3000/pull/345))
+- `actions/download-artifact`: 4 → 5 ([#345](https://github.com/luftkode/plotinator3000/pull/345))
+
 ## [1.32.2]
 
 - Continue on error in updater
