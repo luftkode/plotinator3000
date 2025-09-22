@@ -25,7 +25,7 @@ alias c := check
 alias ca := check-all
 
 # Achieve higher verbosity in run command e.g. by running "RUST_LOG=plotinator3000=debug just run --release"
-export RUST_LOG := env_var_or_default("RUST_LOG", "RUST_LOG=plotinator3000=trace")
+export RUST_LOG := env_var_or_default("RUST_LOG", "plotinator3000=trace")
 # Ensure it doesn't run the updating process during development
 export PLOTINATOR_BYPASS_UPDATES := env_var_or_default("PLOTINATOR_BYPASS_UPDATES", "true")
 

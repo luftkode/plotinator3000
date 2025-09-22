@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.33.0]
+
+- Plot time between samples for Njord INS
+- Add `(Njord-INS)` suffix to raw plots for Njord INS where the values are quite generic, such as height and position.
+
 ## [1.32.2]
 
 - Continue on error in updater
