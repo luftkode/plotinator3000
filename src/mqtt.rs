@@ -12,11 +12,11 @@ pub(crate) fn show_mqtt_connect_button(
     for mode in app.mqtt.connection_modes() {
         let label_txt = match mode {
             MqttConnectionMode::ActiveAndConnected { broker_host } => {
-                RichText::new(format!("{WIFI_HIGH} {broker_host}",)).color(Color32::GREEN)
+                RichText::new(format!("{WIFI_HIGH} {broker_host}")).color(Color32::GREEN)
             }
             MqttConnectionMode::ActiveButDisconnected { broker_host } => {
                 ui.spinner();
-                RichText::new(format!("{WIFI_SLASH} {broker_host}",)).color(Color32::RED)
+                RichText::new(format!("{WIFI_SLASH} {broker_host}")).color(Color32::RED)
             }
             MqttConnectionMode::Inactive => continue,
         };
