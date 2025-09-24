@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Allow listening to more MQTT brokers at a time
 
+### Dependencies
+
+- `wasm-bindgen-futures`: 0.4.52 → 0.4.53 ([#348](https://github.com/luftkode/plotinator3000/pull/348))
+- `web-sys`: 0.3.79 → 0.3.80 ([#348](https://github.com/luftkode/plotinator3000/pull/348))
+- `anyhow`: 1.0.99 → 1.0.100 ([#348](https://github.com/luftkode/plotinator3000/pull/348))
+- `tempfile`: 3.22.0 → 3.23.0 ([#348](https://github.com/luftkode/plotinator3000/pull/348))
+
 ## [1.33.0]
 
 - Plot time between samples for Njord INS
