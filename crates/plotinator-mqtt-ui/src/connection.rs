@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Default)]
 pub struct MqttConnection {
-    pub mqtt_data_receiver: Option<MqttDataReceiver>,
+    pub mqtt_data_receiver: Vec<MqttDataReceiver>,
     mqtt_config_window: Option<MqttConfigWindow>,
     pub mqtt_plot_data: Option<MqttPlotData>,
     // auto scale plot bounds (MQTT only)
@@ -17,7 +17,7 @@ pub struct MqttConnection {
 
 impl MqttConnection {
     pub fn reset(&mut self) {
-        self.mqtt_data_receiver = None;
+        self.mqtt_data_receiver.clear();
         self.mqtt_config_window = None;
         self.mqtt_plot_data = None;
     }
@@ -34,10 +34,9 @@ impl MqttConnection {
         if self.mqtt_plot_data.is_none() {
             self.mqtt_plot_data = Some(MqttPlotData::default());
         }
-        self.mqtt_data_receiver
-            .as_mut()
-            .expect("Attempted to poll when no listener is active")
-            .poll(self.mqtt_plot_data.as_mut().expect("unsound condition"));
+        for receiver in &mut self.mqtt_data_receiver {
+            receiver.poll(self.mqtt_plot_data.as_mut().expect("unsound condition"));
+        }
     }
 
     pub fn window_open(&self) -> bool {
@@ -54,14 +53,14 @@ impl MqttConnection {
     }
 
     pub fn listener_active(&self) -> bool {
-        self.mqtt_data_receiver.is_some()
+        !self.mqtt_data_receiver.is_empty()
     }
 
     /// Returns true if we're listening for MQTT data but have yet to receive enough to display a plot
     ///
     /// One topic needs at least 2 points for us to have anything to plot
     fn waiting_for_initial_data(&self) -> bool {
-        if self.mqtt_data_receiver.is_some() {
+        if !self.mqtt_data_receiver.is_empty() {
             if let Some(mqtt_plot_data) = &self.mqtt_plot_data {
                 for (p, _) in mqtt_plot_data.plots() {
                     if p.data.len() > 1 {
@@ -82,10 +81,13 @@ impl MqttConnection {
             ui.add_space(20.);
             ui.vertical_centered_justified(|ui| {
                 ui.heading("Waiting for 2 data points on any of the following topics:");
-                debug_assert!(self.mqtt_data_receiver.is_some(), "Expected an active MQTT data receiver when painting 'waiting for initial data' elements");
-                for topic in self.mqtt_data_receiver.as_ref().expect("Unsound condition").subscribed_topics() {
-                    ui.label(topic);
+                debug_assert!(!self.mqtt_data_receiver.is_empty(), "Expected an active MQTT data receiver when painting 'waiting for initial data' elements");
+                for receiver in &self.mqtt_data_receiver {
+                    for topic in receiver.subscribed_topics() {
+                        ui.label(topic);
+                    }
                 }
+
                 ui.spinner();
             });
         }
@@ -93,24 +95,35 @@ impl MqttConnection {
 
     pub fn show_connect_window(&mut self, ui: &mut egui::Ui) {
         if let Some(mqtt_config_window) = &mut self.mqtt_config_window {
-            if mqtt_config_window.is_open || self.mqtt_data_receiver.is_none() {
+            if mqtt_config_window.is_open || self.mqtt_data_receiver.is_empty() {
                 if let Some(data_receiver) = mqtt_config_window.ui(ui) {
-                    self.mqtt_data_receiver = Some(data_receiver);
+                    self.mqtt_data_receiver.push(data_receiver);
                     self.set_auto_bounds = true;
                 }
             }
         }
     }
 
-    pub fn active_and_connected(&self) -> bool {
-        self.mqtt_data_receiver
-            .as_ref()
-            .is_some_and(|receiver| receiver.connected())
+    pub fn connection_modes(&self) -> Vec<MqttConnectionMode> {
+        let mut modes = vec![];
+        for receiver in &self.mqtt_data_receiver {
+            let broker_host = receiver.broker_host().to_owned();
+            if receiver.connected() {
+                modes.push(MqttConnectionMode::ActiveAndConnected { broker_host });
+            } else {
+                modes.push(MqttConnectionMode::ActiveButDisconnected { broker_host });
+            }
+        }
+        if modes.is_empty() {
+            modes.push(MqttConnectionMode::Inactive);
+        }
+        modes
     }
+}
 
-    pub fn active_but_disconnected(&self) -> bool {
-        self.mqtt_data_receiver
-            .as_ref()
-            .is_some_and(|receiver| !receiver.connected())
-    }
+#[derive(Debug, Clone)]
+pub enum MqttConnectionMode {
+    ActiveAndConnected { broker_host: String },
+    ActiveButDisconnected { broker_host: String },
+    Inactive,
 }

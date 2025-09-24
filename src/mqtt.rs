@@ -1,31 +1,29 @@
 use std::time::Duration;
 
 use egui::{Color32, RichText};
+use egui_phosphor::regular::{WIFI_HIGH, WIFI_SLASH};
+use plotinator_mqtt_ui::connection::MqttConnectionMode;
 
 pub(crate) fn show_mqtt_connect_button(
     app: &mut crate::App,
     ctx: &egui::Context,
     ui: &mut egui::Ui,
 ) {
-    let mqtt_connect_button_txt = if app.mqtt.active_and_connected() {
-        RichText::new(format!(
-            "{} MQTT connect",
-            egui_phosphor::regular::WIFI_HIGH
-        ))
-        .color(Color32::GREEN)
-    } else if app.mqtt.active_but_disconnected() {
-        RichText::new(format!(
-            "{} MQTT connect",
-            egui_phosphor::regular::WIFI_SLASH
-        ))
-        .color(Color32::RED)
-    } else {
-        RichText::new("MQTT connect".to_owned())
-    };
-    if app.mqtt.active_but_disconnected() {
-        ui.spinner();
+    for mode in app.mqtt.connection_modes() {
+        let label_txt = match mode {
+            MqttConnectionMode::ActiveAndConnected { broker_host } => {
+                RichText::new(format!("{WIFI_HIGH} {broker_host}")).color(Color32::GREEN)
+            }
+            MqttConnectionMode::ActiveButDisconnected { broker_host } => {
+                ui.spinner();
+                RichText::new(format!("{WIFI_SLASH} {broker_host}")).color(Color32::RED)
+            }
+            MqttConnectionMode::Inactive => continue,
+        };
+        ui.label(label_txt);
     }
-    if ui.button(mqtt_connect_button_txt).clicked() {
+
+    if ui.button("MQTT connect").clicked() {
         app.mqtt.connect();
     }
 

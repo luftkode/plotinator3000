@@ -16,28 +16,38 @@ pub fn spawn_mqtt_listener(
     let (tx, rx) = std::sync::mpsc::channel();
     let client = MqttClient::new(
         Arc::clone(stop_flag),
-        broker_host,
+        broker_host.clone(),
         broker_port,
         topics.to_owned(),
         tx.clone(),
     );
     client.spawn();
-    MqttDataReceiver::new(rx, topics.to_owned())
+    MqttDataReceiver::new(broker_host, rx, topics.to_owned())
 }
 
 pub struct MqttDataReceiver {
     subscribed_topics: Vec<String>,
     recv: Receiver<MqttMessage>,
     state: ConnectionState,
+    broker_host: String,
 }
 
 impl MqttDataReceiver {
-    pub(crate) fn new(recv: Receiver<MqttMessage>, subscribed_topics: Vec<String>) -> Self {
+    pub(crate) fn new(
+        broker_host: String,
+        recv: Receiver<MqttMessage>,
+        subscribed_topics: Vec<String>,
+    ) -> Self {
         Self {
             subscribed_topics,
             recv,
             state: ConnectionState::Disconnected,
+            broker_host,
         }
+    }
+
+    pub fn broker_host(&self) -> &str {
+        &self.broker_host
     }
 
     /// Returns true if the listener is connected to the MQTT broker

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.34.0]
+
+- Allow listening to more MQTT brokers at a time
+
 ### Dependencies
 
 - `wasm-bindgen-futures`: 0.4.52 → 0.4.53 ([#348](https://github.com/luftkode/plotinator3000/pull/348))
