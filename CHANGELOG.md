@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.34.0]
+
+- Allow listening to more MQTT brokers at a time
+
 ## [1.33.0]
 
 - Plot time between samples for Njord INS
