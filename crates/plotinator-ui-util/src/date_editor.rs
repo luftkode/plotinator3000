@@ -46,6 +46,11 @@ impl DateEditor {
         resp
     }
 
+    pub fn set(&mut self, date: DateTime<Utc>) {
+        self.tmp_date = date.format("%Y-%m-%d %H:%M:%S%.f").to_string();
+        self.current_date = Some(date);
+    }
+
     pub fn current(&self) -> Option<DateTime<Utc>> {
         self.current_date
     }

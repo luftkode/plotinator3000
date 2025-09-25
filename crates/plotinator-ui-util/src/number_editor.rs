@@ -38,6 +38,11 @@ impl NumberEditor {
         }
     }
 
+    pub fn set(&mut self, val: f64) {
+        self.tmp_value = val.to_string();
+        self.value = Some(val);
+    }
+
     pub fn current(&self) -> Option<f64> {
         self.value
     }

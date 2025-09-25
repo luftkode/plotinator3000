@@ -1,5 +1,6 @@
 use egui::{Color32, Key, RichText};
 use egui_phosphor::regular;
+use egui_plot::PlotBounds;
 use plotinator_strfmt::format_data_size;
 
 use crate::WARN_ON_UNPARSED_BYTES_THRESHOLD;
@@ -60,7 +61,11 @@ fn ui_button_open_log(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSettings) {
     }
 }
 
-pub fn show_log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSettings) {
+pub fn show_log_settings_ui(
+    ui: &mut egui::Ui,
+    loaded_log: &mut LoadedLogSettings,
+    selected_box: Option<PlotBounds>,
+) {
     ui_button_open_log(ui, loaded_log);
     ui.label("");
     ui.horizontal(|ui| {
@@ -68,11 +73,16 @@ pub fn show_log_date_settings_ui(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSe
         ui_button_remove_toggle(ui, loaded_log);
     });
     if loaded_log.clicked() {
-        log_settings_window(ui, loaded_log, &loaded_log.log_label());
+        log_settings_window(ui, loaded_log, &loaded_log.log_label(), selected_box);
     }
 }
 
-fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name_date: &str) {
+fn log_settings_window(
+    ui: &egui::Ui,
+    settings: &mut LoadedLogSettings,
+    log_name_date: &str,
+    selected_box: Option<PlotBounds>,
+) {
     // State of window bound to the 'X'-button that closes the window
     let mut open = true;
     egui::Window::new(RichText::new(log_name_date).size(20.0).strong())
@@ -135,7 +145,9 @@ fn log_settings_window(ui: &egui::Ui, settings: &mut LoadedLogSettings, log_name
         });
 
     if settings.log_points_cutter.clicked {
-        settings.log_points_cutter.show(ui, log_name_date);
+        settings
+            .log_points_cutter
+            .show(ui, log_name_date, selected_box);
     }
 
     if !open || ui.ctx().input(|i| i.key_pressed(Key::Escape)) {

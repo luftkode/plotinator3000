@@ -1,5 +1,6 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone as _, Utc};
 use egui::{Order, RichText};
+use egui_plot::PlotBounds;
 use plotinator_ui_util::{date_editor::DateEditor, number_editor::NumberEditor};
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +25,7 @@ impl CutOutsideMinMaxRange {
 #[derive(PartialEq, Default, Deserialize, Serialize)]
 pub(crate) struct LogPointsCutter {
     pub(crate) clicked: bool,
+    pub(crate) selected_box: Option<PlotBounds>,
     pub(crate) start_date: DateEditor,
     pub(crate) end_date: DateEditor,
     pub(crate) min_val: NumberEditor,
@@ -39,10 +41,34 @@ impl LogPointsCutter {
             end.timestamp_nanos_opt().expect("invalid time") as f64,
         ));
     }
+
+    pub fn set_select_box(&mut self, selected_box: PlotBounds) {
+        self.selected_box = Some(selected_box);
+        self.min_val.set(selected_box.min()[1]);
+        self.max_val.set(selected_box.max()[1]);
+        self.start_date
+            .set(Utc.timestamp_nanos(selected_box.min()[0] as i64));
+        self.end_date
+            .set(Utc.timestamp_nanos(selected_box.max()[0] as i64));
+    }
+
+    pub fn handle_selected_box(&mut self, selected_box: Option<PlotBounds>) {
+        if let Some(selected_box) = selected_box {
+            if let Some(current_selected_box) = self.selected_box.as_mut() {
+                if selected_box != *current_selected_box {
+                    self.set_select_box(selected_box);
+                }
+            } else {
+                self.set_select_box(selected_box);
+            }
+        }
+    }
 }
 
 impl LogPointsCutter {
-    pub fn show(&mut self, ui: &egui::Ui, log_name_date: &str) {
+    pub fn show(&mut self, ui: &egui::Ui, log_name_date: &str, selected_box: Option<PlotBounds>) {
+        self.handle_selected_box(selected_box);
+
         let mut open = true;
         egui::Window::new(
             RichText::new(format!("Cutting {log_name_date}"))
@@ -57,7 +83,8 @@ impl LogPointsCutter {
         .anchor(egui::Align2::LEFT_TOP, egui::Vec2::ZERO)
         .show(ui.ctx(), |ui| {
             ui.vertical_centered_justified(|ui| {
-                ui.label("Remove range");
+                ui.label("Remove range").highlight();
+                ui.label("Hint: Hold X and drag to mark the bounds for cutting");
                 self.start_date.show(ui);
                 self.end_date.show(ui);
 
@@ -66,7 +93,7 @@ impl LogPointsCutter {
                     self.max_val.show(ui);
                 });
 
-                if ui.button("Remove points in range").clicked() {
+                if ui.button("Remove points in time range").clicked() {
                     if let (Some(start), Some(end)) =
                         (self.start_date.current(), self.end_date.current())
                     {
@@ -80,7 +107,7 @@ impl LogPointsCutter {
                     }
                 }
                 if ui
-                    .button("Remove points in range but outside min/max")
+                    .button("Remove points outside min/max in the time range")
                     .clicked()
                 {
                     if let (Some(min), Some(max)) = (self.min_val.current(), self.max_val.current())
