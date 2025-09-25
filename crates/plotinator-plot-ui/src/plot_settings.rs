@@ -6,13 +6,14 @@ use crate::{
     },
 };
 use date_settings::LoadedLogSettings;
-use egui::{Color32, Frame, Key, Response, RichText};
-use egui_phosphor::regular;
+use egui::{Button, Color32, Frame, Grid, Key, Response, RichText, ScrollArea, Window};
+use egui_phosphor::regular::{self, EYE, EYE_SLASH};
+use egui_plot::PlotBounds;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
 use plotinator_plot_util::{CookedPlot, MipMapConfiguration, Plots};
-use plotinator_ui_util::theme_color;
+use plotinator_ui_util::{PlotType, theme_color};
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
@@ -81,6 +82,7 @@ impl PlotSettings {
         ui: &mut egui::Ui,
         axis_cfg: &mut AxisConfig,
         plots: &plotinator_plot_util::Plots,
+        selected_box: Option<PlotBounds>,
     ) {
         if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(theme_color(
@@ -91,7 +93,7 @@ impl PlotSettings {
             show_axis_settings(ui, axis_cfg);
             self.series_plot_settings.show(ui);
         } else {
-            self.show_loaded_files(ui);
+            self.show_loaded_files(ui, selected_box);
             self.ui_plot_filter_settings(ui, plots);
             self.mipmap_settings.show(ui);
             show_axis_settings(ui, axis_cfg);
@@ -149,12 +151,12 @@ impl PlotSettings {
     }
 
     /// Shows the loaded files window
-    fn show_loaded_files(&mut self, ui: &mut egui::Ui) {
+    fn show_loaded_files(&mut self, ui: &mut egui::Ui, selected_box: Option<PlotBounds>) {
         let loaded_files_count = self.loaded_log_settings.len();
         let visibility_icon = if self.ps_ui.show_loaded_logs {
-            regular::EYE
+            EYE
         } else {
-            regular::EYE_SLASH
+            EYE_SLASH
         };
         let show_loaded_logs_text = RichText::new(format!(
             "{visibility_icon} Loaded files ({loaded_files_count})",
@@ -172,16 +174,16 @@ impl PlotSettings {
 
             let frame = Frame::group(ui.style()).corner_radius(4.0);
 
-            egui::Window::new(show_loaded_logs_text)
+            Window::new(show_loaded_logs_text)
                 .open(&mut self.ps_ui.show_loaded_logs)
                 .show(ui.ctx(), |ui| {
                     frame.show(ui, |ui| {
-                        egui::ScrollArea::vertical().show(ui, |ui| {
+                        ScrollArea::vertical().show(ui, |ui| {
                             ui.horizontal_wrapped(|ui| {
                                 Self::ui_show_or_hide_all_buttons(ui, &mut self.log_group_ui_state);
                             });
                             ui.add_space(2.0);
-                            egui::Grid::new("log_settings_grid").show(ui, |ui| {
+                            Grid::new("log_settings_grid").show(ui, |ui| {
                                 ui.label("");
                                 ui.label("");
                                 ui.label("");
@@ -195,10 +197,7 @@ impl PlotSettings {
                                     RichText::new("Apply")
                                 };
                                 if ui
-                                    .add_enabled(
-                                        any_marked_for_deletion,
-                                        egui::Button::new(apply_text),
-                                    )
+                                    .add_enabled(any_marked_for_deletion, Button::new(apply_text))
                                     .clicked()
                                 {
                                     self.apply_deletions = true;
@@ -209,6 +208,7 @@ impl PlotSettings {
                                     ui,
                                     &mut self.loaded_log_settings,
                                     &mut self.log_group_ui_state,
+                                    selected_box,
                                 );
                             });
                         });
@@ -436,11 +436,11 @@ impl PlotSettings {
         self.series_plot_settings
     }
 
-    pub(crate) fn highlight(&self, ptype: super::PlotType) -> bool {
+    pub(crate) fn highlight(&self, ptype: PlotType) -> bool {
         match ptype {
-            super::PlotType::Percentage => self.visibility.hovered_display_percentage(),
-            super::PlotType::Hundreds => self.visibility.hovered_display_to_hundreds(),
-            super::PlotType::Thousands => self.visibility.hovered_display_thousands(),
+            PlotType::Percentage => self.visibility.hovered_display_percentage(),
+            PlotType::Hundreds => self.visibility.hovered_display_to_hundreds(),
+            PlotType::Thousands => self.visibility.hovered_display_thousands(),
         }
     }
 }

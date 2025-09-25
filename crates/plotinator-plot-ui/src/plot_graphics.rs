@@ -1,12 +1,11 @@
 use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plotinator_plot_util::{PlotData, Plots};
+use plotinator_ui_util::{PlotType, box_selection::BoxSelection};
 
 use crate::{PlotMode, util};
 
-use super::{
-    ClickDelta, PlotType, axis_config::AxisConfig, plot_settings::PlotSettings, x_axis_formatter,
-};
+use super::{ClickDelta, axis_config::AxisConfig, plot_settings::PlotSettings, x_axis_formatter};
 
 /// Paints multiple plots based on the provided settings and configurations.
 ///
@@ -33,6 +32,7 @@ pub fn paint_plots(
     axis_cfg: &AxisConfig,
     link_group: egui::Id,
     click_delta: &mut ClickDelta,
+    box_selection: &mut BoxSelection,
     mode: PlotMode<'_>,
 ) {
     plotinator_macros::profile_function!();
@@ -96,6 +96,7 @@ pub fn paint_plots(
                 plot_components_list,
                 plot_settings,
                 click_delta,
+                box_selection,
             );
         }
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
@@ -136,6 +137,7 @@ fn fill_log_plots(
     plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
+    box_selection: &mut BoxSelection,
 ) {
     plotinator_macros::profile_function!();
 
@@ -144,10 +146,15 @@ fn fill_log_plots(
 
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
+            let area_hovered = plot_ui.response().hovered();
+            if area_hovered {
+                box_selection.record_key_and_pointer_events(plot_ui, ptype);
+            }
+
             if plot_settings.highlight(ptype) {
                 plotinator_ui_util::highlight_plot_rect(plot_ui);
             }
-            if plot_ui.response().hovered() {
+            if area_hovered {
                 if let Some(final_zoom_factor) = final_zoom_factor {
                     plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
                 }

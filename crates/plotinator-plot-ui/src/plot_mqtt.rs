@@ -2,8 +2,9 @@ use egui::{Color32, Vec2};
 use egui_plot::{Plot, PlotBounds};
 use plotinator_mqtt_ui::plot::MqttPlotPoints;
 use plotinator_plot_util::draw_series::SeriesDrawMode;
+use plotinator_ui_util::PlotType;
 
-use crate::{PlotType, util};
+use crate::util;
 
 use super::click_delta::ClickDelta;
 

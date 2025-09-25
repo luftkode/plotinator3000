@@ -1,62 +1,31 @@
-use chrono::{DateTime, Datelike as _, NaiveDateTime, Timelike as _, Utc};
-use egui::RichText;
+use chrono::{DateTime, Datelike as _, Timelike as _, Utc};
 use plotinator_plot_util::{PlotData, Plots};
 use plotinator_supported_formats::ParseInfo;
+use plotinator_ui_util::date_editor::DateEditor;
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Deserialize, Serialize)]
-pub struct LoadedLogMetadata {
-    description: String,
-    value: String,
-    selected: bool,
-}
-impl LoadedLogMetadata {
-    pub fn new(description: String, value: String) -> Self {
-        Self {
-            description,
-            value,
-            selected: false,
-        }
-    }
+use crate::plot_settings::date_settings::{
+    loaded_log_metadata::LoadedLogMetadata, log_points_cutter::LogPointsCutter,
+};
 
-    pub fn show(&mut self, ui: &mut egui::Ui) {
-        ui.label(RichText::new(&self.description).strong());
-        if self.value.len() > 100 {
-            let shortened_preview_value = format!("{} ...", &self.value[..40]);
-            if ui.button(&shortened_preview_value).clicked() {
-                self.selected = !self.selected;
-            };
-            if self.selected {
-                egui::Window::new(shortened_preview_value)
-                    .open(&mut self.selected)
-                    .show(ui.ctx(), |ui| {
-                        ui.horizontal_wrapped(|ui| ui.label(&self.value));
-                    });
-            }
-        } else {
-            ui.label(&self.value);
-        }
+pub mod loaded_log_metadata;
+pub mod log_points_cutter;
 
-        ui.end_row();
-    }
-}
-
-#[derive(PartialEq, Eq, Deserialize, Serialize)]
+#[derive(PartialEq, Deserialize, Serialize)]
 pub struct LoadedLogSettings {
     log_id: u16,
     log_descriptive_name: String,
     pub original_start_date: DateTime<Utc>,
     start_date: DateTime<Utc>,
     clicked: bool,
-    pub tmp_date_buf: String,
-    pub err_msg: String,
-    pub new_date_candidate: Option<NaiveDateTime>,
-    pub date_changed: bool,
+    pub start_date_editor: DateEditor,
     show: bool,
     log_metadata: Option<Vec<LoadedLogMetadata>>,
     parse_info: Option<ParseInfo>,
     marked_for_deletion: bool,
     is_hovered: bool,
+    pub(crate) log_points_cutter: LogPointsCutter,
+    start_date_changed: bool,
 }
 
 impl LoadedLogSettings {
@@ -78,10 +47,9 @@ impl LoadedLogSettings {
             original_start_date: start_date,
             start_date,
             clicked: false,
-            tmp_date_buf: String::new(),
-            err_msg: String::new(),
-            new_date_candidate: None,
-            date_changed: false,
+            log_points_cutter: LogPointsCutter::default(),
+            start_date_editor: DateEditor::new(start_date),
+            start_date_changed: false,
             show: true,
             log_metadata,
             parse_info,
@@ -111,6 +79,7 @@ impl LoadedLogSettings {
 
     pub fn new_start_date(&mut self, new_start_date: DateTime<Utc>) {
         self.start_date = new_start_date;
+        self.start_date_changed = true;
     }
 
     pub fn log_label(&self) -> String {
@@ -180,7 +149,40 @@ pub fn update_plot_dates(
     plots: &mut Plots,
     settings: &mut LoadedLogSettings,
 ) {
-    if settings.date_changed {
+    if let Some((start, end)) = settings.log_points_cutter.cut_points_x_range.take() {
+        log::info!("Applying cut date range cut");
+        let apply_cut_x_range = |plot_data: &mut PlotData| {
+            for pd in plot_data.plots_as_mut() {
+                if settings.log_id == pd.log_id() {
+                    pd.cut_plot_within_x_range(start, end);
+                }
+            }
+        };
+
+        apply_cut_x_range(plots.percentage_mut());
+        apply_cut_x_range(plots.one_to_hundred_mut());
+        apply_cut_x_range(plots.thousands_mut());
+        *invalidate_plot = true;
+    }
+    if let Some(cut) = settings.log_points_cutter.cut_points_outside_minmax.take() {
+        log::info!("Applying cut outside min max range");
+        let apply_cut_x_range = |plot_data: &mut PlotData| {
+            for pd in plot_data.plots_as_mut() {
+                if settings.log_id == pd.log_id() {
+                    let (start, end) = cut.x_range;
+                    let (min, max) = cut.y_min_max;
+                    pd.cut_plot_outside_minmax(start, end, min, max);
+                }
+            }
+        };
+
+        apply_cut_x_range(plots.percentage_mut());
+        apply_cut_x_range(plots.one_to_hundred_mut());
+        apply_cut_x_range(plots.thousands_mut());
+        *invalidate_plot = true;
+    }
+
+    if settings.start_date_changed {
         let apply_offsets = |plot_data: &mut PlotData| {
             for pd in plot_data.plots_as_mut() {
                 if settings.log_id == pd.log_id() {
@@ -199,7 +201,7 @@ pub fn update_plot_dates(
         apply_offsets(plots.one_to_hundred_mut());
         apply_offsets(plots.thousands_mut());
 
-        settings.date_changed = false;
+        settings.start_date_changed = false;
         *invalidate_plot = true;
     }
 }

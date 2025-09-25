@@ -1,6 +1,7 @@
 use super::{date_settings::LoadedLogSettings, loaded_logs};
 use egui::{Color32, RichText, Ui};
 use egui_phosphor::regular;
+use egui_plot::PlotBounds;
 
 // One shot flags for modifying all logs and/or log groups
 #[derive(PartialEq)]
@@ -59,6 +60,7 @@ pub(crate) fn show_log_groups(
     ui: &mut Ui,
     loaded_log_settings: &mut [LoadedLogSettings],
     state: &mut LogGroupUIState,
+    selected_box: Option<PlotBounds>,
 ) {
     state.handle_flags(loaded_log_settings);
     let mut i = 0;
@@ -73,13 +75,13 @@ pub(crate) fn show_log_groups(
         let group_size = group_settings.len();
 
         if group_size == 1 {
-            show_single_log(ui, &mut group_settings[0]);
+            show_single_log(ui, &mut group_settings[0], selected_box);
         } else {
             show_group_header(ui, group_settings, &name, state);
 
             if !state.collapsed_log_groups.contains(&name) {
                 for setting in group_settings {
-                    loaded_logs::show_log_date_settings_ui(ui, setting);
+                    loaded_logs::show_log_settings_ui(ui, setting, selected_box);
                     ui.end_row();
                 }
             }
@@ -100,9 +102,13 @@ pub(crate) fn show_log_groups(
 }
 
 /// Renders a single log without grouping overhead - more concise display
-fn show_single_log(ui: &mut Ui, log_setting: &mut LoadedLogSettings) {
+fn show_single_log(
+    ui: &mut Ui,
+    log_setting: &mut LoadedLogSettings,
+    selected_box: Option<PlotBounds>,
+) {
     *log_setting.cursor_hovering_on_mut() = false;
-    loaded_logs::show_log_date_settings_ui(ui, log_setting);
+    loaded_logs::show_log_settings_ui(ui, log_setting, selected_box);
     ui.end_row();
 }
 

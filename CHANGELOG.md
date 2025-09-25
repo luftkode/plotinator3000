@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.35.0]
 
 - Plot time between samples for Njord INS, Njord WASP, and Frame altimeter.
+- Add log cutting tool to allow cutting/trimming datasets
 
 ## [1.34.0]
 

@@ -1,4 +1,16 @@
 use egui::Color32;
+use serde::{Deserialize, Serialize};
+
+pub mod box_selection;
+pub mod date_editor;
+pub mod number_editor;
+
+#[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub enum PlotType {
+    Percentage,
+    Hundreds,
+    Thousands,
+}
 
 /// Selects between the colors based on the current UI theme
 #[must_use]

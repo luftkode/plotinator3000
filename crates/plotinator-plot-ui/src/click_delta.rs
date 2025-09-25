@@ -2,10 +2,8 @@ use std::ops::RangeInclusive;
 
 use egui::{Color32, RichText};
 use egui_plot::{Line, MarkerShape, PlotBounds, PlotPoint, PlotPoints, PlotUi, Points};
-use plotinator_ui_util::plot_theme_color;
+use plotinator_ui_util::{PlotType, plot_theme_color};
 use serde::{Deserialize, Serialize};
-
-use super::PlotType;
 
 /// Keeps track of clicks in plot areas to show the delta (x and y) of two different clicks.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Deserialize, Serialize)]

@@ -7,7 +7,7 @@ use egui_notify::Toasts;
 use plot_settings::PlotSettings;
 use plotinator_plot_util::{Plots, plots::MaxPlotBounds};
 use plotinator_supported_formats::SupportedFormat;
-use plotinator_ui_util::format_large_number;
+use plotinator_ui_util::{box_selection::BoxSelection, format_large_number};
 use serde::{Deserialize, Serialize};
 
 use axis_config::AxisConfig;
@@ -38,13 +38,6 @@ pub enum PlotMode<'a> {
     ),
 }
 
-#[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub enum PlotType {
-    Percentage,
-    Hundreds,
-    Thousands,
-}
-
 #[derive(Default, Deserialize, Serialize)]
 pub struct LogPlotUi {
     // We also store the raw files so they are easy to export
@@ -58,6 +51,8 @@ pub struct LogPlotUi {
     click_delta: ClickDelta,
     #[serde(skip)]
     total_data_points: u32,
+    #[serde(skip)]
+    box_selection: BoxSelection,
 }
 
 impl LogPlotUi {
@@ -95,6 +90,7 @@ impl LogPlotUi {
             max_bounds,
             link_group,
             click_delta,
+            box_selection,
             stored_plot_files,
             total_data_points,
         } = self;
@@ -103,7 +99,13 @@ impl LogPlotUi {
             link_group.replace(ui.id().with("linked_plots"));
         }
 
-        plot_ui::show_settings_grid(ui, axis_config, plot_settings, plots);
+        plot_ui::show_settings_grid(
+            ui,
+            axis_config,
+            plot_settings,
+            plots,
+            box_selection.selected(),
+        );
 
         for log in loaded_files {
             util::add_plot_data_to_plot_collections(plots, log, plot_settings);
@@ -164,6 +166,7 @@ impl LogPlotUi {
                 axis_config,
                 link_group.expect("uninitialized link group id"),
                 click_delta,
+                box_selection,
                 mode,
             );
         })
