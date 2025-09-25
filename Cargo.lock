@@ -3748,8 +3748,10 @@ dependencies = [
 name = "plotinator-ui-util"
 version = "1.34.0"
 dependencies = [
+ "chrono",
  "egui",
  "egui_plot",
+ "serde",
 ]
 
 [[package]]

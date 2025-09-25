@@ -1,5 +1,8 @@
 use egui::Color32;
 
+pub mod date_editor;
+pub mod number_editor;
+
 /// Selects between the colors based on the current UI theme
 #[must_use]
 pub fn theme_color(ui: &egui::Ui, dark: Color32, light: Color32) -> Color32 {

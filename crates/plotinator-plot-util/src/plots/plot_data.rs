@@ -243,6 +243,41 @@ impl CookedPlot {
         self.recalc_mipmaps_plot_points();
     }
 
+    /// Remove all points between `start` and `end`
+    pub fn cut_plot_within_x_range(&mut self, start: f64, end: f64) {
+        log::info!("Removing points within range: {start} - {end}");
+        let begin_count = self.raw_points.len();
+
+        self.raw_points.retain(|p| p[0] < start || p[0] > end);
+
+        let end_count = self.raw_points.len();
+        let removed_count = begin_count - end_count;
+        log::info!("Removed {removed_count} points");
+        self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
+        self.recalc_mipmaps_plot_points();
+    }
+
+    /// Remove points with x ∈ [start, end] but y ∉ [min, max]
+    pub fn cut_plot_outside_minmax(&mut self, start: f64, end: f64, min: f64, max: f64) {
+        log::info!("Removing points outside min-max: {min:.2} - {max:.2}");
+        let begin_count = self.raw_points.len();
+
+        self.raw_points.retain(|p|
+            // outside the x-range: always keep
+        if p[0] < start || p[0] > end {
+            true
+        } else {
+            // inside x-range: keep only if y is within [min, max]
+            p[1] >= min && p[1] <= max
+        });
+
+        let end_count = self.raw_points.len();
+        let removed_count = begin_count - end_count;
+        log::info!("Removed {removed_count} points");
+        self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
+        self.recalc_mipmaps_plot_points();
+    }
+
     fn recalc_mipmaps_plot_points(&mut self) {
         let mipmap_max_pp = MipMap2DPlotPoints::without_base(
             &self.raw_points,
