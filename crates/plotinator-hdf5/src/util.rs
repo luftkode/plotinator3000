@@ -4,6 +4,7 @@ use hdf5::{
     Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
+use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
 
 /// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
@@ -174,4 +175,57 @@ pub(crate) fn open_dataset(
         ));
     }
     Ok(dataset)
+}
+
+pub(crate) fn gen_time_between_samples_rawplot(
+    timestamps: &[i64],
+    rawplot_name_suffix: &str,
+) -> Option<RawPlot> {
+    calc_time_between_samples(timestamps)
+        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
+}
+
+pub(crate) fn gen_time_between_samples_rawplot_2d(
+    timestamps: &ndarray::Array2<i64>,
+    rawplot_name_suffix: &str,
+) -> Option<RawPlot> {
+    calc_time_between_samples_2d(timestamps)
+        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
+}
+
+fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, rawplot_name_suffix: &str) -> RawPlot {
+    RawPlot::new(
+        format!("Δt sample [ms] {rawplot_name_suffix}"),
+        points,
+        ExpectedPlotRange::OneToOneHundred,
+    )
+}
+
+/// Calculate the time difference between points in a slice of unix nanosecond timestamps
+pub(crate) fn calc_time_between_samples(timestamps: &[i64]) -> Option<Vec<[f64; 2]>> {
+    if timestamps.len() < 3 {
+        return None; // No time differences to plot if there's less than 3 samples
+    }
+
+    let points = timestamps
+        .windows(2)
+        .map(|window| {
+            let t1 = window[0];
+            let t2 = window[1];
+            // Timestamps are nanoseconds. Convert the difference to milliseconds.
+            let delta_ms = (t2 - t1) / 1_000_000;
+            [t2 as f64, delta_ms as f64] // Plot the delta against the second timestamp
+        })
+        .collect();
+    Some(points)
+}
+
+/// Calculate the time difference between points in a 2D array of unix nanosecond timestamps
+/// Flattens the array and calls the existing `calc_time_between_samples` function
+pub(crate) fn calc_time_between_samples_2d(
+    timestamps: &ndarray::Array2<i64>,
+) -> Option<Vec<[f64; 2]>> {
+    let flat_timestamps: Vec<i64> = timestamps.iter().copied().collect();
+
+    calc_time_between_samples(&flat_timestamps)
 }
