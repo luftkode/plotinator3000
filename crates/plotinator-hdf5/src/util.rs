@@ -221,11 +221,11 @@ pub(crate) fn calc_time_between_samples(timestamps: &[i64]) -> Option<Vec<[f64; 
 }
 
 /// Calculate the time difference between points in a 2D array of unix nanosecond timestamps
-/// Flattens the array and calls the existing calc_time_between_samples function
+/// Flattens the array and calls the existing `calc_time_between_samples` function
 pub(crate) fn calc_time_between_samples_2d(
     timestamps: &ndarray::Array2<i64>,
 ) -> Option<Vec<[f64; 2]>> {
-    let flat_timestamps: Vec<i64> = timestamps.iter().cloned().collect();
+    let flat_timestamps: Vec<i64> = timestamps.iter().copied().collect();
 
     calc_time_between_samples(&flat_timestamps)
 }

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     stream_descriptor::StreamDescriptor,
     util::{
-        assert_description_in_attrs, log_all_attributes, open_dataset,
+        self, assert_description_in_attrs, log_all_attributes, open_dataset,
         read_any_attribute_to_string, read_string_attribute,
     },
 };
@@ -50,30 +50,8 @@ impl SkytemHdf5 for NjordIns {
         log_all_attributes(&orientation_dataset);
         log_all_attributes(&filter_status_dataset);
 
-        let (first_timestamp, timestamps, rawplot_offset_opt) =
+        let (first_timestamp, timestamps, delta_t_samples_opt, rawplot_offset_opt) =
             Self::read_dataset_time(&hdf5_file)?;
-
-        let time_between_samples_plot_opt = {
-            if timestamps.len() > 2 {
-                let points = timestamps
-                    .windows(2)
-                    .map(|window| {
-                        let t1 = window[0];
-                        let t2 = window[1];
-                        // Timestamps are f64 nanoseconds. Convert the difference to milliseconds.
-                        let delta_ms = (t2 - t1) / 1_000_000.0;
-                        [t2, delta_ms] // Plot the delta against the second timestamp
-                    })
-                    .collect();
-                Some(RawPlot::new(
-                    format!("Δt sample [ms] {RAW_PLOT_NAME_SUFFIX}"),
-                    points,
-                    ExpectedPlotRange::OneToOneHundred,
-                ))
-            } else {
-                None // No time differences to plot if there's less than 3 samples
-            }
-        };
 
         let _system_status_unit =
             read_any_attribute_to_string(&system_status_dataset.attr("unit")?)?;
@@ -134,13 +112,13 @@ impl SkytemHdf5 for NjordIns {
         )?;
 
         let mut raw_plots = Vec::with_capacity(
-            33 + rawplot_offset_opt.is_some() as usize
-                + time_between_samples_plot_opt.is_some() as usize,
+            33 + rawplot_offset_opt.is_some() as usize + delta_t_samples_opt.is_some() as usize,
         );
 
-        if let Some(tbs_plot) = time_between_samples_plot_opt {
-            raw_plots.push(tbs_plot);
+        if let Some(delta_t_samples) = delta_t_samples_opt {
+            raw_plots.push(delta_t_samples);
         }
+
         if let Some(offset_plot) = rawplot_offset_opt {
             raw_plots.push(offset_plot);
         }
@@ -570,7 +548,9 @@ impl NjordIns {
     const ORIENTATION_DATASET: &str = "orientation";
     const EXPECT_DIMENSION: usize = 2;
 
-    fn poc_read_dataset_time(hdf5_file: &hdf5::File) -> anyhow::Result<(i64, Vec<f64>)> {
+    fn poc_read_dataset_time(
+        hdf5_file: &hdf5::File,
+    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>)> {
         let unix_time_dataset =
             open_dataset(hdf5_file, Self::UNIX_TIME_DATASET, Self::EXPECT_DIMENSION)?;
         let microseconds_dataset = open_dataset(
@@ -583,17 +563,21 @@ impl NjordIns {
         let microseconds: ndarray::Array2<i64> = microseconds_dataset.read()?;
         let timestamps: Vec<i64> = combine_timestamps(&unix_time, &microseconds);
         let first_timestamp = *timestamps.first().expect("No timestamps in dataset");
+        let time_between_samples =
+            util::gen_time_between_samples_rawplot(&timestamps, RAW_PLOT_NAME_SUFFIX);
         // convert to f64 once and for all
         let timestamps: Vec<f64> = timestamps.into_iter().map(|ts| ts as f64).collect();
-        Ok((first_timestamp, timestamps))
+        Ok((first_timestamp, timestamps, time_between_samples))
     }
 
     fn with_sys_time_read_dataset_time(
         hdf5_file: &hdf5::File,
-    ) -> anyhow::Result<(i64, Vec<f64>, RawPlot)> {
+    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>, RawPlot)> {
         let sys_time = open_dataset(hdf5_file, Self::SYSTEM_TIMESTAMP, Self::EXPECT_DIMENSION)?;
         let sys_time: Vec<i64> = sys_time.read_raw()?;
         let first_timestamp = *sys_time.first().expect("No timestamps in dataset");
+        let time_between_samples =
+            util::gen_time_between_samples_rawplot(&sys_time, RAW_PLOT_NAME_SUFFIX);
         let plot_timestamps: Vec<f64> = sys_time.iter().map(|ts| *ts as f64).collect();
         let gps_unix_time = open_dataset(
             hdf5_file,
@@ -615,6 +599,7 @@ impl NjordIns {
         Ok((
             first_timestamp,
             plot_timestamps,
+            time_between_samples,
             RawPlot::new(
                 format!("Δt GPS/System [ms] {RAW_PLOT_NAME_SUFFIX}"),
                 time_offset,
@@ -624,15 +609,21 @@ impl NjordIns {
     }
 
     // Returns the time that the dataset should be aligned with
+    #[allow(
+        clippy::type_complexity,
+        reason = "we'll stop supporting this sensor soon enough"
+    )]
     fn read_dataset_time(
         hdf5_file: &hdf5::File,
-    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>)> {
-        if let Ok((first_timestamp, plot_timestamps)) = Self::poc_read_dataset_time(hdf5_file) {
-            Ok((first_timestamp, plot_timestamps, None))
+    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>, Option<RawPlot>)> {
+        if let Ok((first_timestamp, plot_timestamps, delta_t_samples)) =
+            Self::poc_read_dataset_time(hdf5_file)
+        {
+            Ok((first_timestamp, plot_timestamps, delta_t_samples, None))
         } else {
-            let (first_ts, plot_ts, rawplot_offset) =
+            let (first_ts, plot_ts, delta_t_samples, rawplot_offset) =
                 Self::with_sys_time_read_dataset_time(hdf5_file)?;
-            Ok((first_ts, plot_ts, Some(rawplot_offset)))
+            Ok((first_ts, plot_ts, delta_t_samples, Some(rawplot_offset)))
         }
     }
 

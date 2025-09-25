@@ -8,9 +8,11 @@ use std::{io, path::Path};
 
 use crate::stream_descriptor::StreamDescriptor;
 use crate::util::{
-    assert_description_in_attrs, log_all_attributes, open_dataset, read_any_attribute_to_string,
-    read_string_attribute,
+    self, assert_description_in_attrs, log_all_attributes, open_dataset,
+    read_any_attribute_to_string, read_string_attribute,
 };
+
+const RAW_PLOT_NAME_SUFFIX: &str = "(Njord-WASP)";
 
 impl SkytemHdf5 for Wasp200 {
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
@@ -26,7 +28,8 @@ impl SkytemHdf5 for Wasp200 {
         if timestamp_data.is_empty() {
             bail!("No timestamps in wasp200 dataset");
         }
-        let (timestamps, first_timestamp) = Self::extract_timestamps(&timestamp_data);
+        let (timestamps, first_timestamp, delta_t_samples_opt) =
+            Self::extract_timestamps(&timestamp_data);
 
         let mut height_with_ts: Vec<[f64; 2]> = Vec::new();
 
@@ -34,18 +37,22 @@ impl SkytemHdf5 for Wasp200 {
             height_with_ts.push([ts, *height as f64]);
         }
 
-        let rawplot = RawPlot::new(
-            format!("Height [{height_unit}]"),
+        let mut raw_plots = vec![RawPlot::new(
+            format!("Height [{height_unit}] {RAW_PLOT_NAME_SUFFIX}"),
             height_with_ts,
             ExpectedPlotRange::OneToOneHundred,
-        );
+        )];
+
+        if let Some(delta_t_samples) = delta_t_samples_opt {
+            raw_plots.push(delta_t_samples);
+        }
 
         let metadata = Self::extract_metadata(&height_dataset, &timestamp_dataset)?;
 
         Ok(Self {
             starting_timestamp_utc: first_timestamp,
-            dataset_description: "Wasp200 Height".to_owned(),
-            raw_plots: vec![rawplot],
+            dataset_description: "Njord Wasp200 Height".to_owned(),
+            raw_plots,
             metadata,
         })
     }
@@ -133,22 +140,21 @@ impl Wasp200 {
 
     fn extract_timestamps(
         timestamp_data: &ndarray::Array2<Timestamp>,
-    ) -> (Vec<f64>, DateTime<Utc>) {
+    ) -> (Vec<f64>, DateTime<Utc>, Option<RawPlot>) {
         let timestamps_raw: Vec<i64> = timestamp_data.iter().map(|t| t.time).collect();
         let first_timestamp: DateTime<Utc> = chrono::Utc
             .timestamp_nanos(*timestamps_raw.first().expect("Empty timestamps"))
             .to_utc();
 
+        let delta_t_samples =
+            util::gen_time_between_samples_rawplot(&timestamps_raw, RAW_PLOT_NAME_SUFFIX);
+
         let mut timestamps = vec![];
         for t in timestamps_raw {
-            let ts = chrono::Utc.timestamp_nanos(t).to_utc();
-            timestamps.push(
-                ts.timestamp_nanos_opt()
-                    .expect("timestamp as nanoseconds out of range") as f64,
-            );
+            timestamps.push(t as f64);
         }
 
-        (timestamps, first_timestamp)
+        (timestamps, first_timestamp, delta_t_samples)
     }
 }
 

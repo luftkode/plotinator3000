@@ -9,12 +9,16 @@ use serde::{Deserialize, Serialize};
 use crate::{
     stream_descriptor::StreamDescriptor,
     util::{
-        assert_description_in_attrs, log_all_attributes, open_dataset,
+        self, assert_description_in_attrs, log_all_attributes, open_dataset,
         read_any_attribute_to_string, read_string_attribute,
     },
 };
 
+const RAW_PLOT_NAME_SUFFIX_1: &str = "(HE1)";
+const RAW_PLOT_NAME_SUFFIX_2: &str = "(HE2)";
+
 impl SkytemHdf5 for FrameAltimeters {
+    #[allow(clippy::too_many_lines, reason = "long but simple")]
     fn from_path(path: impl AsRef<std::path::Path>) -> anyhow::Result<Self> {
         let (height1_dataset, timestamp1_dataset, height2_dataset, timestamp2_dataset) =
             Self::open_datasets(path)?;
@@ -39,8 +43,10 @@ impl SkytemHdf5 for FrameAltimeters {
         let timestamp1_data: ndarray::Array2<i64> = timestamp1_dataset.read_2d()?;
         let timestamp2_data: ndarray::Array2<i64> = timestamp2_dataset.read_2d()?;
 
-        let (timestamps1, first_timestamp1_opt) = Self::process_timestamps(&timestamp1_data);
-        let (timestamps2, first_timestamp2_opt) = Self::process_timestamps(&timestamp2_data);
+        let (timestamps1, first_timestamp1_opt, delta_t_sample_opt1) =
+            Self::process_timestamps(&timestamp1_data, RAW_PLOT_NAME_SUFFIX_1);
+        let (timestamps2, first_timestamp2_opt, delta_t_sample_opt2) =
+            Self::process_timestamps(&timestamp2_data, RAW_PLOT_NAME_SUFFIX_2);
 
         let total_starting_timestamp = match (first_timestamp1_opt, first_timestamp2_opt) {
             (None, None) => bail!("Both timestamp datasets are empty"),
@@ -80,26 +86,33 @@ impl SkytemHdf5 for FrameAltimeters {
 
         let mut raw_plots = vec![
             RawPlot::new(
-                format!("Height-1 [{height1_unit}]"),
+                format!("Height [{height1_unit}] {RAW_PLOT_NAME_SUFFIX_1}"),
                 height1_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
-                "Height-1 Invalid Count".to_owned(),
+                format!("Height Invalid Count {RAW_PLOT_NAME_SUFFIX_1}"),
                 height1_invalid_values,
                 ExpectedPlotRange::Thousands,
             ),
             RawPlot::new(
-                format!("Height-2 [{height2_unit}]"),
+                format!("Height [{height2_unit}] {RAW_PLOT_NAME_SUFFIX_2}"),
                 height2_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
-                "Height-2 Invalid Count".to_owned(),
+                format!("Height Invalid Count {RAW_PLOT_NAME_SUFFIX_2}"),
                 height2_invalid_values,
                 ExpectedPlotRange::Thousands,
             ),
         ];
+
+        if let Some(delta_t_sample1) = delta_t_sample_opt1 {
+            raw_plots.push(delta_t_sample1);
+        }
+        if let Some(delta_t_sample2) = delta_t_sample_opt2 {
+            raw_plots.push(delta_t_sample2);
+        }
 
         raw_plots.retain(|rp| rp.points().len() > 2);
 
@@ -179,17 +192,21 @@ impl FrameAltimeters {
 
     fn process_timestamps(
         timestamp_data: &ndarray::Array2<i64>,
-    ) -> (Vec<f64>, Option<DateTime<Utc>>) {
+        plot_name_suffix: &str,
+    ) -> (Vec<f64>, Option<DateTime<Utc>>, Option<RawPlot>) {
         let first_timestamp = timestamp_data
             .first()
             .map(|ts| chrono::Utc.timestamp_nanos(*ts).to_utc());
+
+        let delta_t_samples =
+            util::gen_time_between_samples_rawplot_2d(timestamp_data, plot_name_suffix);
 
         let mut timestamps = vec![];
         for t in timestamp_data {
             timestamps.push(*t as f64);
         }
 
-        (timestamps, first_timestamp)
+        (timestamps, first_timestamp, delta_t_samples)
     }
 
     fn extract_metadata(
@@ -248,7 +265,7 @@ mod tests {
     fn test_read_frame_altimeters() -> TestResult {
         let frame_altimeters = FrameAltimeters::from_path(frame_altimeters())?;
         assert_eq!(frame_altimeters.metadata.len(), 48);
-        assert_eq!(frame_altimeters.raw_plots.len(), 2);
+        assert_eq!(frame_altimeters.raw_plots.len(), 4);
         assert_eq!(frame_altimeters.raw_plots[0].points().len(), 1091);
 
         Ok(())
