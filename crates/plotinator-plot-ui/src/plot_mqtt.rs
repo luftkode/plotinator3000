@@ -2,7 +2,7 @@ use egui::{Color32, Vec2};
 use egui_plot::{Plot, PlotBounds};
 use plotinator_mqtt_ui::plot::MqttPlotPoints;
 use plotinator_plot_util::draw_series::SeriesDrawMode;
-use plotinator_ui_util::PlotType;
+use plotinator_ui_util::{PlotType, box_selection::BoxSelection};
 
 use crate::util;
 
@@ -18,6 +18,7 @@ pub fn fill_mqtt_plots(
     mqtt_plot_area: Plot<'_>,
     mqtt_plots: &[(MqttPlotPoints, Color32)],
     set_auto_bounds: &mut bool,
+    box_selection: &mut BoxSelection,
 ) {
     plotinator_macros::profile_function!();
 
@@ -25,7 +26,11 @@ pub fn fill_mqtt_plots(
     let final_zoom_factor: Option<Vec2> = scroll.and_then(|s| util::set_zoom_factor(s, modifiers));
 
     mqtt_plot_area.show(gui, |plot_ui| {
-        if plot_ui.response().hovered() {
+        let area_hovered = plot_ui.response().hovered();
+        if area_hovered {
+            box_selection.record_key_and_pointer_events(plot_ui, PlotType::Hundreds);
+        }
+        if area_hovered {
             if let Some(final_zoom_factor) = final_zoom_factor {
                 plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
             }
