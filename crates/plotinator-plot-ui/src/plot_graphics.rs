@@ -117,6 +117,7 @@ pub fn paint_plots(
                 mqtt_plot,
                 mqtt_plots,
                 set_auto_bounds,
+                box_selection,
             );
         }
     }

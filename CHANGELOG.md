@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.35.1]
+
+- Also allow plot cutting for MQTT plots
+
 ## [1.35.0]
 
 - Plot time between samples for Njord INS, Njord WASP, and Frame altimeter.
