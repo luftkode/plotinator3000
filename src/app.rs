@@ -2,6 +2,7 @@
 use crate::app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
+use egui_phosphor::regular::FLOPPY_DISK;
 use plotinator_plot_ui::LogPlotUi;
 
 use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
@@ -219,36 +220,41 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
                 app.native_file_dialog.open();
             }
 
-            ui.menu_button(
-                RichText::new(format!(
-                    "{icon} Save",
-                    icon = egui_phosphor::regular::FLOPPY_DISK
-                )),
-                |ui| {
-                    // Option to export the entire UI state for later restoration
-                    if ui.button("Plot UI State").clicked() {
-                        #[cfg(not(target_arch = "wasm32"))]
-                        fd::native::NativeFileDialog::save_plot_ui(&app.plot);
-                        #[cfg(target_arch = "wasm32")]
-                        fd::web::WebFileDialog::save_plot_ui(&app.plot);
+            ui.menu_button(RichText::new(format!("{FLOPPY_DISK} Save")), |ui| {
+                // Option to export the entire UI state for later restoration
+                if ui.button("Plot UI State").clicked() {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    fd::native::NativeFileDialog::save_plot_ui(&app.plot);
+                    #[cfg(target_arch = "wasm32")]
+                    fd::web::WebFileDialog::save_plot_ui(&app.plot);
 
-                        ui.close_kind(UiKind::Menu);
-                    }
+                    ui.close_kind(UiKind::Menu);
+                }
 
-                    // Option to export just the raw plot data
-                    if ui.button("Plot Data").clicked() {
-                        #[cfg(not(target_arch = "wasm32"))]
-                        fd::native::NativeFileDialog::save_plot_data(
-                            app.plot.stored_plot_files(),
-                            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-                            app.mqtt.mqtt_plot_data.as_ref(),
-                        );
-                        #[cfg(target_arch = "wasm32")]
-                        fd::web::WebFileDialog::save_plot_data(app.plot.stored_plot_files());
-                        ui.close_kind(UiKind::Menu);
-                    }
-                },
-            );
+                // Option to export just the raw plot data
+                if ui.button("Plot Data").clicked() {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    fd::native::NativeFileDialog::save_plot_data(
+                        app.plot.stored_plot_files(),
+                        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+                        app.mqtt.mqtt_plot_data.as_ref(),
+                    );
+                    #[cfg(target_arch = "wasm32")]
+                    fd::web::WebFileDialog::save_plot_data(app.plot.stored_plot_files());
+                    ui.close_kind(UiKind::Menu);
+                }
+
+                // Option to export individual plot data
+                if ui.button("Individual Plot data").clicked() {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    fd::native::NativeFileDialog::save_individual_plots(
+                        app.plot.individual_plots(),
+                    );
+                    #[cfg(target_arch = "wasm32")]
+                    fd::web::WebFileDialog::save_individual_plots(app.plot.individual_plots());
+                    ui.close_kind(UiKind::Menu);
+                }
+            });
 
             #[cfg(not(target_arch = "wasm32"))]
             misc::not_wasm_show_download_button(ui, app);

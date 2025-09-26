@@ -7,6 +7,7 @@ use crate::{
     loaded_files::LoadedFiles,
 };
 use plotinator_plot_ui::LogPlotUi;
+use plotinator_plot_util::CookedPlot;
 use plotinator_supported_formats::SupportedFormat;
 use serde::Serialize;
 use std::{
@@ -61,6 +62,21 @@ impl WebFileDialog {
                 plot_files,
                 "Save Plot Data",
                 "plotinator3k.p3k",
+                CUSTOM_HEADER_PLOT_DATA,
+            );
+        }
+    }
+
+    pub fn save_individual_plots<'a>(plots: impl Iterator<Item = &'a CookedPlot>) {
+        let title = "Save Individual Plots";
+
+        let plots: Vec<&CookedPlot> = plots.collect();
+
+        if !plots.is_empty() {
+            Self::save_data_to_file(
+                &plots,
+                title,
+                "individual_plots.p3k",
                 CUSTOM_HEADER_PLOT_DATA,
             );
         }

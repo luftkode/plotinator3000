@@ -11,6 +11,7 @@ homepage.workspace = true
 [dependencies]
 plotinator-supported-formats = { workspace = true }
 plotinator-plot-ui = { workspace = true }
+plotinator-plot-util = { workspace = true }
 egui = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -42,4 +43,4 @@ workspace = true
 [features]
 default = []
 hdf5 = ["plotinator-supported-formats/hdf5"]
-mqtt = ["plotinator-mqtt","plotinator-mqtt-ui"]
+mqtt = ["plotinator-mqtt", "plotinator-mqtt-ui"]

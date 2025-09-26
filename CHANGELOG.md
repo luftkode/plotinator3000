@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.35.2]
+
+- Add button for saving individual plot data, to allow exporting cut datasets
+
 ## [1.35.1]
 
 - Also allow plot cutting for MQTT plots

@@ -6,6 +6,8 @@ mod util;
 
 use plot_data::PlotData;
 
+use crate::CookedPlot;
+
 #[derive(Default, Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
 pub struct MaxPlotBounds {
     pub percentage: Option<PlotBounds>,
@@ -52,6 +54,16 @@ impl Plots {
         }
 
         total_points
+    }
+
+    /// Return an iterator over all cooked plots across `percentage`,
+    /// `one_to_hundred`, and `thousands`.
+    pub fn individual_plots(&self) -> impl Iterator<Item = &CookedPlot> {
+        self.percentage
+            .plots()
+            .iter()
+            .chain(self.one_to_hundred.plots().iter())
+            .chain(self.thousands.plots().iter())
     }
 
     pub fn percentage(&self) -> &PlotData {
