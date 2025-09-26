@@ -5,7 +5,7 @@ use click_delta::ClickDelta;
 use egui::Color32;
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
-use plotinator_plot_util::{Plots, plots::MaxPlotBounds};
+use plotinator_plot_util::{CookedPlot, Plots, plots::MaxPlotBounds};
 use plotinator_supported_formats::SupportedFormat;
 use plotinator_ui_util::{box_selection::BoxSelection, format_large_number};
 use serde::{Deserialize, Serialize};
@@ -58,6 +58,10 @@ pub struct LogPlotUi {
 impl LogPlotUi {
     pub fn stored_plot_files(&self) -> &[SupportedFormat] {
         &self.stored_plot_files
+    }
+
+    pub fn individual_plots(&self) -> impl Iterator<Item = &CookedPlot> {
+        self.plots.individual_plots()
     }
 
     pub fn plot_count(&self) -> usize {
