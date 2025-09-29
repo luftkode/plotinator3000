@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#355](https://github.com/luftkode/plotinator3000/pull/355))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.6 ([#355](https://github.com/luftkode/plotinator3000/pull/355))
+- `crambl/dependabot-changelog-writer`: 1.3.0 → 1.3.1 ([#355](https://github.com/luftkode/plotinator3000/pull/355))
+- `actions/download-artifact`: 4 → 5 ([#355](https://github.com/luftkode/plotinator3000/pull/355))
+
 ## [1.35.2]
 
 - Add button for saving individual plot data, to allow exporting cut datasets
