@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `wasm-bindgen-futures`: 0.4.53 → 0.4.54 ([#356](https://github.com/luftkode/plotinator3000/pull/356))
+- `web-sys`: 0.3.80 → 0.3.81 ([#356](https://github.com/luftkode/plotinator3000/pull/356))
+- `thiserror`: 2.0.16 → 2.0.17 ([#356](https://github.com/luftkode/plotinator3000/pull/356))
+- `quote`: 1.0.40 → 1.0.41 ([#356](https://github.com/luftkode/plotinator3000/pull/356))
+
 ## [1.35.2]
 
 - Add button for saving individual plot data, to allow exporting cut datasets
