@@ -74,6 +74,39 @@ impl Gps {
         (system_ms - gps_ms) as f64
     }
 
+    /// Convert NMEA-style coordinate (ddmm.mmmm or dddmm.mmmm) into decimal degrees
+    fn nmea_to_decimal(coord: f64) -> f64 {
+        if coord.is_nan() {
+            return f64::NAN;
+        }
+
+        // Extract degrees/minutes depending on number of digits before the decimal
+        let coord_str = format!("{coord:.8}");
+        let split_at = if coord_str.contains('.') {
+            coord_str.find('.').unwrap()
+        } else {
+            coord_str.len()
+        };
+
+        // Latitude usually has 4 digits before '.', longitude 5 — we can derive
+        // degrees = everything except the last two before decimal
+        let deg_digits = split_at - 2;
+        let degrees: f64 = coord_str[..deg_digits].parse().unwrap_or(0.0);
+        let minutes: f64 = coord_str[deg_digits..].parse().unwrap_or(0.0);
+
+        degrees + (minutes / 60.0)
+    }
+
+    /// Returns latitude in decimal degrees
+    pub(crate) fn latitude_deg(&self) -> f64 {
+        Self::nmea_to_decimal(self.latitude)
+    }
+
+    /// Returns longitude in decimal degrees
+    pub(crate) fn longitude_deg(&self) -> f64 {
+        Self::nmea_to_decimal(self.longitude)
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "It's a constructor with a lot of data that doesn't benefit from being grouped/wrapped into a struct"

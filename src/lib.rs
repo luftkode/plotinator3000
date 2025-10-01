@@ -31,3 +31,5 @@ pub fn get_app_version() -> &'static Version {
 pub mod mqtt;
 #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
 pub mod profiling;
+
+pub mod map_view;

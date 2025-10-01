@@ -56,7 +56,9 @@ eframe = { version = "0.32", default-features = false, features = [
     "x11",
 ] }
 egui_plot = { version = "0.33", features = ["serde"] }
+egui_extras = "0.32.3"
 egui-phosphor = "0.10.0"
+walkers = "0.45.0"
 rayon = "1.11.0"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
@@ -110,11 +112,13 @@ plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-file-io.workspace = true
+walkers.workspace = true
 egui.workspace = true
 eframe.workspace = true
 egui_plot.workspace = true
 egui-phosphor.workspace = true
 egui-notify.workspace = true
+egui_extras.workspace = true
 log.workspace = true
 serde.workspace = true
 chrono.workspace = true

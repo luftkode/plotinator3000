@@ -24,6 +24,7 @@ pub struct FrameGps {
     dataset_description: String,
     raw_plots: Vec<RawPlot>,
     metadata: Vec<(String, String)>,
+    coordinates: Vec<Vec<(f64, f64)>>,
 }
 
 impl SkytemHdf5 for FrameGps {
@@ -31,8 +32,10 @@ impl SkytemHdf5 for FrameGps {
         let datasets = FrameGpsDatasets::open(path)?;
 
         let starting_timestamp_utc = datasets.first_timestamp();
-        let mut raw_plots = datasets.gps_data_to_rawplots(1)?;
-        raw_plots.extend(datasets.gps_data_to_rawplots(2)?);
+        let (coordinates1, mut raw_plots) = datasets.gps_data_to_rawplots(1)?;
+        let (coordinates2, raw_plots2) = datasets.gps_data_to_rawplots(2)?;
+
+        raw_plots.extend(raw_plots2);
 
         raw_plots.retain(|rp| {
             if rp.points().is_empty() {
@@ -50,6 +53,7 @@ impl SkytemHdf5 for FrameGps {
             dataset_description: "Frame GPS".to_owned(),
             raw_plots,
             metadata,
+            coordinates: vec![coordinates1, coordinates2],
         })
     }
 }
@@ -73,6 +77,10 @@ impl Plotable for FrameGps {
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
         Some(self.metadata.clone())
+    }
+
+    fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
+        Some(self.coordinates.clone())
     }
 }
 
@@ -220,9 +228,10 @@ impl FrameGpsDatasets {
     }
 
     #[allow(clippy::too_many_lines, reason = "long but simple")]
-    fn gps_data_to_rawplots(&self, id: u8) -> io::Result<Vec<RawPlot>> {
+    fn gps_data_to_rawplots(&self, id: u8) -> io::Result<(Vec<(f64, f64)>, Vec<RawPlot>)> {
         let gps_data = self.gps_data(id)?;
         let data_len = self.len(id)?;
+        let mut coordinates = Vec::with_capacity(data_len);
         let mut hdop = Vec::with_capacity(data_len);
         let mut pdop = Vec::with_capacity(data_len);
         let mut vdop = Vec::with_capacity(data_len);
@@ -269,6 +278,9 @@ impl FrameGpsDatasets {
                 if !lon_sample.is_nan() {
                     lon.push([ts, lon_sample]);
                 }
+                if !lat_sample.is_nan() && !lon_sample.is_nan() {
+                    coordinates.push((lon_sample, lat_sample));
+                }
                 if alt_sample.is_nan() {
                     alt_nan_cnt += 1;
                     alt_nan_bool.push([ts, 1.0]);
@@ -293,68 +305,71 @@ impl FrameGpsDatasets {
                 log::warn!("Invalid GPS time offset: {gps_time}");
             };
         }
-        Ok(vec![
-            RawPlot::new(
-                format!("HDOP-GP{id}"),
-                hdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("PDOP-GP{id}"),
-                pdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("VDOP-GP{id}"),
-                vdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Time Offset (ms)-GP{id}"),
-                gps_time_offset,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Mode-GP{id}"),
-                mode,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Latitude-GP{id}"),
-                lat,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Longitude-GP{id}"),
-                lon,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Altitude-GP{id}"),
-                alt,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Altitude-NaN-cnt-GP{id}"),
-                alt_nan_count,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Altitude-NaN-GP{id}"),
-                alt_nan_bool,
-                ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
-                format!("Speed-GP{id}"),
-                speed,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                format!("Satellites-GP{id}"),
-                sats,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-        ])
+        Ok((
+            coordinates,
+            vec![
+                RawPlot::new(
+                    format!("HDOP-GP{id}"),
+                    hdop,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("PDOP-GP{id}"),
+                    pdop,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("VDOP-GP{id}"),
+                    vdop,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Time Offset (ms)-GP{id}"),
+                    gps_time_offset,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Mode-GP{id}"),
+                    mode,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Latitude-GP{id}"),
+                    lat,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Longitude-GP{id}"),
+                    lon,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Altitude-GP{id}"),
+                    alt,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Altitude-NaN-cnt-GP{id}"),
+                    alt_nan_count,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Altitude-NaN-GP{id}"),
+                    alt_nan_bool,
+                    ExpectedPlotRange::Percentage,
+                ),
+                RawPlot::new(
+                    format!("Speed-GP{id}"),
+                    speed,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+                RawPlot::new(
+                    format!("Satellites-GP{id}"),
+                    sats,
+                    ExpectedPlotRange::OneToOneHundred,
+                ),
+            ],
+        ))
     }
 
     fn timestamp_dataset(&self, id: u8) -> io::Result<Array2<i64>> {
