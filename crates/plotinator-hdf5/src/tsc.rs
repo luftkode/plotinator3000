@@ -72,6 +72,7 @@ impl SkytemHdf5 for Tsc {
         log::info!("Creating HM plots");
         let start = Instant::now();
         let gps_time = gps_marks.timestamps();
+        hm.load_full()?;
         let (hm_plots, mut hm_metadata) = hm.build_plots_and_metadata(&gps_time, &root_metadata)?;
         plots.extend(hm_plots);
         metadata.append(&mut hm_metadata);

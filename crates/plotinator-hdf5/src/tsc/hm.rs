@@ -4,7 +4,7 @@ use ndarray::{
     OwnedRepr, s,
 };
 use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
-use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
+use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
 
 use crate::tsc::metadata::RootMetadata;
 
@@ -34,6 +34,7 @@ fn cumulative_sum_f64(array: &ArrayView1<f64>) -> Array1<f64> {
         .collect()
 }
 
+// NOTE: Don't bother optimizing this, never takes more than 1-4ms and typically takes around 500us
 fn calc_subdivided_bfields(
     timevals: &Array1<u32>,
     signed_data_slice: &Array3<f64>,
@@ -54,7 +55,7 @@ fn calc_subdivided_bfields(
     );
     ensure!(
         avg_per_subdiv.shape()[1] == gate_cnt,
-        "Shape mismatch: avg_per_subdiv width dim ({}) != widths length ({gate_cnt})",
+        "Shape mismatch: avg_per_subdiv width dim ({}) != gate count ({gate_cnt})",
         avg_per_subdiv.shape()[1]
     );
 
@@ -64,7 +65,6 @@ fn calc_subdivided_bfields(
 
     for (i, subdiv_row) in avg_per_subdiv.outer_iter().enumerate() {
         let timeoffset: f64 = subdiv_stride_ns * i as f64;
-        // subdiv_row is length widths_len
         let cumsum_avgdat = cumulative_sum_f64(&subdiv_row.view());
         let plotdata = cumsum_avgdat.mapv(|v| v * cnt_tesla_val);
 
@@ -224,10 +224,7 @@ impl<'h5> HmData<'h5> {
     }
 
     /// Load full data only if needed
-    #[allow(
-        dead_code,
-        reason = "We will need this later, and want to test that the functionality doesn't break"
-    )]
+    #[plotinator_proc_macros::log_time]
     pub fn load_full(&mut self) -> hdf5::Result<()> {
         if self.inner.is_none() {
             let dataset = self.h5file.dataset(&self.dataset_name)?;
@@ -276,30 +273,38 @@ impl<'h5> HmData<'h5> {
         let timevals: ndarray::Array1<u32> = gate_samples.gate_sample_cumulative_time_sum();
         let gate_count = gate_samples.gate_count();
 
+        log::debug!(
+            "Processing {n_time} periods of 1.1s HM data ({:.0}s)",
+            n_time as f64 * 1.1
+        );
+        // Use chunked parallelism: process multiple iterations per thread
+        // Each chunk should take a few milliseconds to amortize thread overhead
+        const CHUNK_SIZE: usize = 32;
+
         let results: Vec<_> = (0..n_time)
-            .into_par_iter()
-            .map(|t_idx| {
-                // data slice shape: [n_subdivisions, 2, widths_len]  (e.g. [413,2,76])
-                let data_slice_3d = hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
+            .collect::<Vec<_>>()
+            .par_chunks(CHUNK_SIZE)
+            .flat_map(|chunk| {
+                chunk
+                    .iter()
+                    .map(|&t_idx| {
+                        // data slice shape: [n_subdivisions, 2, widths_len]  (e.g. [413,2,76])
+                        let data_slice_3d: ArrayView3<i64> =
+                            hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
 
-                ensure!(
-                    data_slice_3d.ndim() == 3,
-                    "Sliced 'hm' data is not 3-dimensional, got {}D",
-                    data_slice_3d.ndim()
-                );
+                        let signed_data_slice: Array3<i64> = &data_slice_3d * &sign_arr;
+                        let signed_data_slice: Array3<f64> = signed_data_slice.mapv(|v| v as f64);
 
-                let signed_data_slice: Array3<i64> = &data_slice_3d * &sign_arr;
-                // Convert to f64
-                let signed_data_slice: Array3<f64> = signed_data_slice.mapv(|v| v as f64);
-
-                calc_subdivided_bfields(
-                    &timevals,
-                    &signed_data_slice,
-                    GateCount(gate_count),
-                    LastGateOn(last_gate_on),
-                    SubDivStrideNs(subdivision_time_ns),
-                    CountTeslaVal(cnt_tesla_val),
-                )
+                        calc_subdivided_bfields(
+                            &timevals,
+                            &signed_data_slice,
+                            GateCount(gate_count),
+                            LastGateOn(last_gate_on),
+                            SubDivStrideNs(subdivision_time_ns),
+                            CountTeslaVal(cnt_tesla_val),
+                        )
+                    })
+                    .collect::<Vec<_>>()
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
@@ -385,6 +390,7 @@ impl<'h5> HmData<'h5> {
         clippy::type_complexity,
         reason = "Lint is mostly triggered due to the metadata vector of tuple strings, which isn't that complex"
     )]
+    #[plotinator_proc_macros::log_time]
     pub fn build_plots_and_metadata(
         &mut self,
         gps_timestamps: &[f64],
