@@ -4,6 +4,7 @@ use ndarray::{
     OwnedRepr, s,
 };
 use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
 
 use crate::tsc::metadata::RootMetadata;
 
@@ -274,23 +275,23 @@ impl<'h5> HmData<'h5> {
         // Precompute cumulative time offsets from widths (these are per-sample times)
         let timevals: ndarray::Array1<u32> = gate_samples.gate_sample_cumulative_time_sum();
         let gate_count = gate_samples.gate_count();
-        let mut all_points: Vec<Vec<[f64; 2]>> = Vec::with_capacity(n_time);
-        let mut all_zero_positions = Vec::with_capacity(n_time);
 
-        for t_idx in 0..n_time {
-            // data slice shape: [n_subdivisions, 2, widths_len]  (e.g. [413,2,76])
-            let data_slice_3d = hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
-            ensure!(
-                data_slice_3d.ndim() == 3,
-                "Sliced 'hm' data is not 3-dimensional, got {}D",
-                data_slice_3d.ndim()
-            );
+        let results: Vec<_> = (0..n_time)
+            .into_par_iter()
+            .map(|t_idx| {
+                // data slice shape: [n_subdivisions, 2, widths_len]  (e.g. [413,2,76])
+                let data_slice_3d = hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
 
-            let signed_data_slice: Array3<i64> = &data_slice_3d * &sign_arr; // still [n_subdivisions, 2, widths_len]
-            // Convert to f64
-            let signed_data_slice: Array3<f64> = signed_data_slice.mapv(|v| v as f64);
+                ensure!(
+                    data_slice_3d.ndim() == 3,
+                    "Sliced 'hm' data is not 3-dimensional, got {}D",
+                    data_slice_3d.ndim()
+                );
 
-            let (ZCoilZeroPositions(zero_positions_this_t_idx), ZCoilBField(points_all_subdiv)) =
+                let signed_data_slice: Array3<i64> = &data_slice_3d * &sign_arr;
+                // Convert to f64
+                let signed_data_slice: Array3<f64> = signed_data_slice.mapv(|v| v as f64);
+
                 calc_subdivided_bfields(
                     &timevals,
                     &signed_data_slice,
@@ -298,11 +299,15 @@ impl<'h5> HmData<'h5> {
                     LastGateOn(last_gate_on),
                     SubDivStrideNs(subdivision_time_ns),
                     CountTeslaVal(cnt_tesla_val),
-                )?;
+                )
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
 
-            all_zero_positions.push(zero_positions_this_t_idx);
-            all_points.push(points_all_subdiv);
-        }
+        // Unpack results
+        let (all_zero_positions, all_points): (Vec<_>, Vec<_>) = results
+            .into_iter()
+            .map(|(ZCoilZeroPositions(z), ZCoilBField(b))| (z, b))
+            .unzip();
 
         Ok((
             AllZCoilZeroPositions(all_zero_positions),
