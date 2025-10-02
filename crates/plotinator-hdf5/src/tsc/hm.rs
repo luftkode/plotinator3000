@@ -1,9 +1,197 @@
-use anyhow::{bail, ensure};
-use ndarray::{ArrayBase, Dim, OwnedRepr};
-use plotinator_log_if::prelude::RawPlot;
+use anyhow::{Context as _, bail, ensure};
+use ndarray::{
+    Array1, Array2, Array3, Array4, ArrayBase, ArrayView1, ArrayView2, ArrayView3, Axis, Dim,
+    OwnedRepr, s,
+};
+use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+
+use crate::tsc::metadata::RootMetadata;
 
 // 6-dimensional array: [N, 413, 2, 76, 6, 4]
 type HmArray = ArrayBase<OwnedRepr<i64>, Dim<[usize; 6]>>;
+
+struct CountTeslaVal(f64);
+struct SubDivStrideNs(f64);
+pub(crate) struct LastGateOn(pub usize);
+struct GateCount(usize);
+
+pub(crate) struct ZCoilZeroPositions(pub Vec<[f64; 2]>);
+pub(crate) struct AllZCoilZeroPositions(pub Vec<Vec<[f64; 2]>>);
+
+pub(crate) struct ZCoilBField(pub Vec<[f64; 2]>);
+pub(crate) struct AllZCoilBField(pub Vec<Vec<[f64; 2]>>);
+
+/// Helper function to calculate the cumulative sum of a 1D array view.
+fn cumulative_sum_f64(array: &ArrayView1<f64>) -> Array1<f64> {
+    let mut sum = 0.0;
+    array
+        .iter()
+        .map(|&x| {
+            sum += x;
+            sum
+        })
+        .collect()
+}
+
+fn calc_subdivided_bfields(
+    timevals: &Array1<u32>,
+    signed_data_slice: &Array3<f64>,
+    GateCount(gate_cnt): GateCount,
+    LastGateOn(last_gate_on): LastGateOn,
+    SubDivStrideNs(subdiv_stride_ns): SubDivStrideNs,
+    CountTeslaVal(cnt_tesla_val): CountTeslaVal,
+) -> anyhow::Result<(ZCoilZeroPositions, ZCoilBField)> {
+    // mean over Axis(1) (the sign axis) -> shape [n_subdivisions, widths_len]
+    let avg_per_subdiv = signed_data_slice
+        .mean_axis(Axis(1))
+        .ok_or_else(|| anyhow::anyhow!("Failed to average over sign axis"))?;
+
+    // Validate widths length matches
+    log::trace!(
+        "avg_per_subdiv shape: {:?}, gate count: {gate_cnt}",
+        avg_per_subdiv.shape(),
+    );
+    ensure!(
+        avg_per_subdiv.shape()[1] == gate_cnt,
+        "Shape mismatch: avg_per_subdiv width dim ({}) != widths length ({gate_cnt})",
+        avg_per_subdiv.shape()[1]
+    );
+
+    let mut points_all_subdiv: Vec<[f64; 2]> =
+        Vec::with_capacity(avg_per_subdiv.shape()[0] * gate_cnt);
+    let mut zero_positions_this_t_idx = Vec::with_capacity(avg_per_subdiv.shape()[0]);
+
+    for (i, subdiv_row) in avg_per_subdiv.outer_iter().enumerate() {
+        let timeoffset: f64 = subdiv_stride_ns * i as f64;
+        // subdiv_row is length widths_len
+        let cumsum_avgdat = cumulative_sum_f64(&subdiv_row.view());
+        let plotdata = cumsum_avgdat.mapv(|v| v * cnt_tesla_val);
+
+        zero_positions_this_t_idx.push([
+            timevals[last_gate_on] as f64 + timeoffset,
+            plotdata[last_gate_on] * 1e9,
+        ]);
+
+        // Combine into vector of [time (ns), value (nT)] points for this subdivision
+        let subdiv_points = timevals
+            .iter()
+            .zip(plotdata.iter())
+            .map(|(&t, &p)| [t as f64 + timeoffset, p * 1e9])
+            .collect::<Vec<[f64; 2]>>();
+
+        points_all_subdiv.extend(subdiv_points);
+    }
+    Ok((
+        ZCoilZeroPositions(zero_positions_this_t_idx),
+        ZCoilBField(points_all_subdiv),
+    ))
+}
+
+/// Wrapper around the data from `/RX/monomial_basis_data/hm_gate_samples`
+struct HmGateSamples {
+    gate_widths: Array1<i32>,
+}
+
+impl HmGateSamples {
+    // Parse from an open RX/mono
+    fn parse_from_hm_h5(hdf5: &hdf5::File) -> anyhow::Result<Self> {
+        let gate_samples_ds = hdf5.dataset("/RX/monomial_basis_data/hm_gate_samples")?;
+        let gate_widths: Array1<i32> = gate_samples_ds
+            .read_slice_1d(s![.., 0, 0])
+            .context("failed slicing gate samples dataset")?;
+        Ok(Self { gate_widths })
+    }
+
+    fn gate_count(&self) -> usize {
+        self.gate_widths.len()
+    }
+
+    /// Relative gate times in ns
+    #[inline]
+    fn gate_sample_cumulative_time_sum(&self) -> Array1<u32> {
+        const TIME_FACTOR: u32 = 200; // ns
+        let mut sum: u32 = 0;
+        self.gate_widths
+            .view()
+            .iter()
+            .map(|v| {
+                sum += *v as u32;
+                sum * TIME_FACTOR
+            })
+            .collect()
+    }
+}
+
+/// Wrapper around the data from `/RX/monomial_basis_data/hm_vm2`
+struct HmVm2 {
+    cnt_vm2: Array2<f64>,
+}
+
+impl HmVm2 {
+    fn parse_from_h5(hdf5: &hdf5::File) -> anyhow::Result<Self> {
+        let vm2_ds = hdf5.dataset("/RX/monomial_basis_data/hm_vm2")?;
+        let cnt_vm2: Array2<f64> = vm2_ds
+            .read_slice_2d(s![.., .., 0])
+            .context("failed slicing vm2 dataset")?;
+        Ok(Self { cnt_vm2 })
+    }
+
+    /// Returns the conversion value from count to tesla for a specific channel
+    ///
+    /// Channel 1/3/5 is coil Z/X/Y
+    fn cnt_testa_val(&self, channel: usize) -> anyhow::Result<f64> {
+        const SAMPLE_RATE: f64 = 5e6; // 5 MHz
+        let cnt_tesla = self
+            .cnt_vm2
+            .get((0, channel))
+            .ok_or_else(|| anyhow::anyhow!("failed to get cnt_vm2 value at [0, {channel}]"))?;
+        Ok(cnt_tesla / SAMPLE_RATE)
+    }
+}
+
+/// Wrapper around the data from `/RX/monomial_basis_data/hm_timestrides`
+struct HmTimestrides {
+    timestrides: Array1<f64>,
+}
+
+impl HmTimestrides {
+    fn parse_from_h5(hdf5: &hdf5::File) -> anyhow::Result<Self> {
+        let timestrides_dataset = hdf5.dataset("/RX/monomial_basis_data/hm_timestrides")?;
+        let timestrides: Array1<f64> = timestrides_dataset
+            .read()
+            .context("failed to read timestrides dataset")?;
+        log::debug!("{timestrides:?}");
+        Ok(Self { timestrides })
+    }
+
+    // Returns the stride converted to nanoseconds for the subdivided HM data (highest resolution)
+    fn subdivision_time_ns(&self) -> f64 {
+        self.timestrides[1] * 1000.
+    }
+}
+
+/// Wrapper around the data from `/RX/monomial_basis_data/hm_sign`
+#[derive(Debug)]
+struct HmSign {
+    sign_data: Array4<i64>,
+}
+
+impl HmSign {
+    fn parse_from_h5(hdf5: &hdf5::File) -> anyhow::Result<Self> {
+        let sign_dataset = hdf5.dataset("/RX/monomial_basis_data/hm_sign")?;
+        let sign_data: Array4<i64> = sign_dataset.read()?; // Actually stored as i32
+        Ok(Self { sign_data })
+    }
+
+    // Reshape the signed dataset for broadcasting on the subdivided hm data for a single box and channel
+    fn sign_reshaped_for_broadcast(&self) -> Array3<i64> {
+        // Python: sign[..., 0, 0] -> [2, 1]
+        let s: ArrayView2<i64> = self.sign_data.slice(s![.., .., 0, 0]);
+        // Reshape sign for broadcasting: [2,1] -> [1,2,1]
+        let s: ArrayView3<i64> = s.insert_axis(Axis(0));
+        s.to_owned()
+    }
+}
 
 /// Wrapper around the hm dataset from `/RX/monomial_basis_data/hm`
 pub(crate) struct HmData<'h5> {
@@ -46,6 +234,80 @@ impl<'h5> HmData<'h5> {
             self.inner = Some(hm_data);
         }
         Ok(())
+    }
+
+    /// Calculates B-field data
+    ///
+    /// # Arguments
+    /// * `channel` - The channel index to use for the calculation. 1/3/5 is Z,X,Y coil
+    /// * `box_idx` - The box index to use for the calculation
+    /// * `last_gate_on` - is the gate number for the last gate of on time
+    #[plotinator_proc_macros::log_time]
+    pub fn calculate_b_field(
+        &mut self,
+        channel: usize,
+        box_idx: usize,
+        last_gate_on: usize,
+    ) -> anyhow::Result<(AllZCoilZeroPositions, AllZCoilBField)> {
+        // 1. Ensure the main 'hm' dataset is loaded
+        self.load_full()?;
+
+        let hm_data = self
+            .inner
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("HM data not loaded"))?;
+
+        // Read 'widths' from ".../hm_gate_samples"
+        let gate_samples = HmGateSamples::parse_from_hm_h5(self.h5file)?;
+
+        let hm_vm2 = HmVm2::parse_from_h5(self.h5file)?;
+        let cnt_tesla_val = hm_vm2.cnt_testa_val(channel)?;
+
+        // Read 'sign' data from ".../hm_sign"
+        let sign_arr: Array3<i64> =
+            HmSign::parse_from_h5(self.h5file)?.sign_reshaped_for_broadcast();
+
+        let subdivision_time_ns = HmTimestrides::parse_from_h5(self.h5file)?.subdivision_time_ns();
+
+        let n_time = self.shape[0];
+
+        // Precompute cumulative time offsets from widths (these are per-sample times)
+        let timevals: ndarray::Array1<u32> = gate_samples.gate_sample_cumulative_time_sum();
+        let gate_count = gate_samples.gate_count();
+        let mut all_points: Vec<Vec<[f64; 2]>> = Vec::with_capacity(n_time);
+        let mut all_zero_positions = Vec::with_capacity(n_time);
+
+        for t_idx in 0..n_time {
+            // data slice shape: [n_subdivisions, 2, widths_len]  (e.g. [413,2,76])
+            let data_slice_3d = hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
+            ensure!(
+                data_slice_3d.ndim() == 3,
+                "Sliced 'hm' data is not 3-dimensional, got {}D",
+                data_slice_3d.ndim()
+            );
+
+            let signed_data_slice: Array3<i64> = &data_slice_3d * &sign_arr; // still [n_subdivisions, 2, widths_len]
+            // Convert to f64
+            let signed_data_slice: Array3<f64> = signed_data_slice.mapv(|v| v as f64);
+
+            let (ZCoilZeroPositions(zero_positions_this_t_idx), ZCoilBField(points_all_subdiv)) =
+                calc_subdivided_bfields(
+                    &timevals,
+                    &signed_data_slice,
+                    GateCount(gate_count),
+                    LastGateOn(last_gate_on),
+                    SubDivStrideNs(subdivision_time_ns),
+                    CountTeslaVal(cnt_tesla_val),
+                )?;
+
+            all_zero_positions.push(zero_positions_this_t_idx);
+            all_points.push(points_all_subdiv);
+        }
+
+        Ok((
+            AllZCoilZeroPositions(all_zero_positions),
+            AllZCoilBField(all_points),
+        ))
     }
 
     #[allow(
@@ -114,17 +376,61 @@ impl<'h5> HmData<'h5> {
     }
 
     // Build metadata without loading full data
+    #[allow(
+        clippy::type_complexity,
+        reason = "Lint is mostly triggered due to the metadata vector of tuple strings, which isn't that complex"
+    )]
     pub fn build_plots_and_metadata(
-        &self,
+        &mut self,
         gps_timestamps: &[f64],
-    ) -> (Vec<RawPlot>, Vec<(String, String)>) {
+        root_metadata: &RootMetadata,
+    ) -> anyhow::Result<(Vec<RawPlot>, Vec<(String, String)>)> {
         let hm_len = self.shape()[0];
         let gps_len = gps_timestamps.len();
         let metadata = vec![
             ("HM length".to_owned(), hm_len.to_string()),
             ("GPS length".to_owned(), gps_len.to_string()),
         ];
-        (vec![], metadata)
+
+        let (AllZCoilZeroPositions(zero_positions_nested), AllZCoilBField(bfield_samples_nested)) =
+            self.calculate_b_field(1, 1, root_metadata.last_gate_on_count())?;
+
+        let mut final_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
+        let mut final_zero_points = Vec::with_capacity(zero_positions_nested.len());
+
+        for ((mut b_samples, mut z_samples), gps_ts) in bfield_samples_nested
+            .into_iter()
+            .zip(zero_positions_nested.into_iter())
+            .zip(gps_timestamps.iter())
+        {
+            // Apply timestamp to b-field points for this GPS mark
+            for sample in &mut b_samples {
+                sample[0] += gps_ts;
+            }
+            final_bfield_points.append(&mut b_samples);
+
+            // Apply timestamp to zero-position points for this GPS mark
+            for sample in &mut z_samples {
+                sample[0] += gps_ts;
+            }
+            final_zero_points.append(&mut z_samples);
+        }
+
+        Ok((
+            vec![
+                RawPlot::new(
+                    "0-position (Z) [nT]".to_owned(),
+                    final_zero_points,
+                    ExpectedPlotRange::Thousands,
+                ),
+                RawPlot::new(
+                    "B-field (Z) [nT]".to_owned(),
+                    final_bfield_points,
+                    ExpectedPlotRange::Thousands,
+                ),
+            ],
+            metadata,
+        ))
     }
 }
 
@@ -177,10 +483,12 @@ mod tests {
         let h5file = hdf5::File::open(tsc())?;
         let mut hm_data = HmData::from_hdf5(&h5file)?;
         hm_data.load_full()?;
+        let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
 
         let gps_timestamps = vec![0.0, 1.0, 2.0, 3.0];
 
-        let (_plots, metadata) = hm_data.build_plots_and_metadata(&gps_timestamps);
+        let (_plots, metadata) =
+            hm_data.build_plots_and_metadata(&gps_timestamps, &root_metadata)?;
         let shape = hm_data.shape();
 
         assert_eq!(metadata.len(), 2);
@@ -197,6 +505,60 @@ mod tests {
         // Verify we can access boundary elements
         assert!(hm_data.get([3, 412, 1, 75, 5, 3]).is_some());
         assert!(hm_data.get([4, 0, 0, 0, 0, 0]).is_none()); // Out of bounds
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_calculate_b_field_zero_pos_snapshot() -> TestResult {
+        let h5file = hdf5::File::open(tsc())?;
+        let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
+        let mut hm_data = HmData::from_hdf5(&h5file)?;
+
+        // Define channel and box_idx for the test
+        let channel = 1;
+        let box_idx = 1;
+
+        // Call the new function
+        let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
+            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+
+        let first_zvec = zero_positions.first().unwrap();
+        assert_eq!(first_zvec.len(), 413);
+
+        let first_10_zero_pos: Vec<[f64; 2]> = first_zvec.iter().copied().take(10).collect();
+
+        insta::assert_debug_snapshot!(first_10_zero_pos);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_calculate_b_field_snapshot() -> TestResult {
+        let h5file = hdf5::File::open(tsc())?;
+        let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
+        let mut hm_data = HmData::from_hdf5(&h5file)?;
+
+        // Define channel and box_idx for the test
+        let channel = 1;
+        let box_idx = 1;
+
+        // Call the new function
+        let (_zero_positions, AllZCoilBField(b_field_points)) =
+            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+
+        // Assert that the function produced a result
+        assert!(
+            !b_field_points.is_empty(),
+            "B-field vector should not be empty"
+        );
+
+        let first_bfield_vec = b_field_points.first().unwrap();
+        assert_eq!(first_bfield_vec.len(), 31388);
+
+        let first_10_b_field: Vec<[f64; 2]> = first_bfield_vec.iter().copied().take(10).collect();
+
+        insta::assert_debug_snapshot!(first_10_b_field);
 
         Ok(())
     }

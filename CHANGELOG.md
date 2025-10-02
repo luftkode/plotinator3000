@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Added B-field and zero position plots for Z-coil high-moment
+
 ### Dependencies
 
 - `wasm-bindgen-futures`: 0.4.53 → 0.4.54 ([#356](https://github.com/luftkode/plotinator3000/pull/356))
