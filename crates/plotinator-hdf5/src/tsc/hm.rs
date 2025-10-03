@@ -193,7 +193,7 @@ pub(crate) struct HmData<'h5> {
     h5file: &'h5 hdf5::File, // Keep file open for future access
     dataset_name: String,    // Path to dataset
 
-    // 6-dimensional array: [N, 413, 2, 76, 6, 4]
+    // The HM dataset is a 6-dimensional array: [N, 413, 2, 76, 6, 4]
     // Dimensions
     // [0]: Time in 1.1s resolution, aligned with GPS marks
     // [1]: Full resolution time
@@ -244,8 +244,11 @@ impl<'h5> HmData<'h5> {
         let cnt_tesla_val = hm_vm2.cnt_testa_val(channel)?;
 
         // Read 'sign' data from ".../hm_sign"
-        let sign_arr: Array3<i64> =
-            HmSign::parse_from_h5(self.h5file)?.sign_reshaped_for_broadcast();
+        // purposefully converted to f64 to prevent doing that in the hot loop
+        // it turns on multiplication that could be i64 to f64, but the precision loss is not measurable
+        let sign_arr: Array3<f64> = HmSign::parse_from_h5(self.h5file)?
+            .sign_reshaped_for_broadcast()
+            .mapv(|v| v as f64);
 
         let subdivision_time_ns = HmTimestrides::parse_from_h5(self.h5file)?.subdivision_time_ns();
 
@@ -262,29 +265,31 @@ impl<'h5> HmData<'h5> {
             n_time as f64 * 1.1
         );
         // Use chunked parallelism: process multiple iterations per thread
-        // Each chunk should take a few milliseconds to amortize thread overhead
+        // Each chunk should take a few milliseconds + I/O to amortize thread overhead
         const CHUNK_SIZE: usize = 32;
 
         let results: Vec<_> = (0..n_time)
             .collect::<Vec<_>>()
             .par_chunks(CHUNK_SIZE)
-            .flat_map(|chunk| {
-                chunk
-                    .iter()
-                    .map(|&t_idx| {
-                        // data slice shape: [n_subdivisions, 2, widths_len]  (e.g. [413,2,76])
-                        // let data_slice_3d: ArrayView3<i64> =
-                        //     hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
+            .flat_map(|time_chunk| {
+                let start_idx = time_chunk[0];
+                let end_idx = *time_chunk.last().unwrap() + 1;
 
-                        // Read the 3D slice directly from the HDF5 file for the current time index `t_idx`.
-                        // This avoids loading the entire 6D array into memory.
-                        // Shape of slice: [n_subdivisions, 2, widths_len] (e.g., [413, 2, 76])
-                        let data_slice_3d: Array3<i64> = hm_dataset
-                            .read_slice(s![t_idx, .., .., .., channel, box_idx])
-                            .with_context(|| format!("Failed to read slice for t_idx={t_idx}"))?;
+                // Read one large 4D chunk from HDF5 to reduce I/O sys calls
+                let data_chunk_4d: Array4<f64> = hm_dataset
+                    .read_slice(s![start_idx..end_idx, .., .., .., channel, box_idx])
+                    .with_context(|| {
+                        format!("Failed to read chunk for t_idx {start_idx}..{end_idx}")
+                    })
+                    .expect("failed reading chunk slice from HM dataset");
 
-                        let signed_data_slice: Array3<i64> = &data_slice_3d * &sign_arr;
-                        let signed_data_slice: Array3<f64> = signed_data_slice.mapv(|v| v as f64);
+                // Iterate over the in-memory 4D chunk
+                data_chunk_4d
+                    .outer_iter()
+                    .map(|data_slice_3d| {
+                        // This could be multiplication between two i64 slices, but for optimization we use f64, the precision loss
+                        // cannot be measured in our snapshots, so it's definitely good enough
+                        let signed_data_slice: Array3<f64> = &data_slice_3d * &sign_arr;
 
                         calc_subdivided_bfields(
                             &timevals,
