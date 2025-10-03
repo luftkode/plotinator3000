@@ -1,15 +1,9 @@
-use anyhow::{Context as _, bail, ensure};
-use ndarray::{
-    Array1, Array2, Array3, Array4, ArrayBase, ArrayView1, ArrayView2, ArrayView3, Axis, Dim,
-    OwnedRepr, s,
-};
+use anyhow::{Context as _, ensure};
+use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
 use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
 use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
 
 use crate::tsc::metadata::RootMetadata;
-
-// 6-dimensional array: [N, 413, 2, 76, 6, 4]
-type HmArray = ArrayBase<OwnedRepr<i64>, Dim<[usize; 6]>>;
 
 struct CountTeslaVal(f64);
 struct SubDivStrideNs(f64);
@@ -198,8 +192,16 @@ impl HmSign {
 pub(crate) struct HmData<'h5> {
     h5file: &'h5 hdf5::File, // Keep file open for future access
     dataset_name: String,    // Path to dataset
-    shape: [usize; 6],       // Only load shape initially
-    inner: Option<HmArray>,  // Load full data lazily when needed
+
+    // 6-dimensional array: [N, 413, 2, 76, 6, 4]
+    // Dimensions
+    // [0]: Time in 1.1s resolution, aligned with GPS marks
+    // [1]: Full resolution time
+    // [2]: Half resolution (signed) (+/-)
+    // [3]: ?
+    // [4]: Channel, 1/3/5 is the production coils, 1 is Z
+    // [5]: Sample methods, 1 is Box car, 2 is linear, 3 is hyperbolic(?), 4 is ?
+    shape: [usize; 6], // Only load shape initially
 }
 
 impl<'h5> HmData<'h5> {
@@ -215,23 +217,11 @@ impl<'h5> HmData<'h5> {
             h5file: h5,
             dataset_name,
             shape,
-            inner: None, // don't read data yet
         })
     }
 
     pub fn shape(&self) -> &[usize] {
         self.shape.as_ref()
-    }
-
-    /// Load full data only if needed
-    #[plotinator_proc_macros::log_time]
-    pub fn load_full(&mut self) -> hdf5::Result<()> {
-        if self.inner.is_none() {
-            let dataset = self.h5file.dataset(&self.dataset_name)?;
-            let hm_data = dataset.read::<i64, _>()?;
-            self.inner = Some(hm_data);
-        }
-        Ok(())
     }
 
     /// Calculates B-field data
@@ -242,19 +232,11 @@ impl<'h5> HmData<'h5> {
     /// * `last_gate_on` - is the gate number for the last gate of on time
     #[plotinator_proc_macros::log_time]
     pub fn calculate_b_field(
-        &mut self,
+        &self,
         channel: usize,
         box_idx: usize,
         last_gate_on: usize,
     ) -> anyhow::Result<(AllZCoilZeroPositions, AllZCoilBField)> {
-        // 1. Ensure the main 'hm' dataset is loaded
-        self.load_full()?;
-
-        let hm_data = self
-            .inner
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("HM data not loaded"))?;
-
         // Read 'widths' from ".../hm_gate_samples"
         let gate_samples = HmGateSamples::parse_from_hm_h5(self.h5file)?;
 
@@ -273,6 +255,8 @@ impl<'h5> HmData<'h5> {
         let timevals: ndarray::Array1<u32> = gate_samples.gate_sample_cumulative_time_sum();
         let gate_count = gate_samples.gate_count();
 
+        let hm_dataset = self.h5file.dataset(&self.dataset_name)?;
+
         log::debug!(
             "Processing {n_time} periods of 1.1s HM data ({:.0}s)",
             n_time as f64 * 1.1
@@ -289,8 +273,15 @@ impl<'h5> HmData<'h5> {
                     .iter()
                     .map(|&t_idx| {
                         // data slice shape: [n_subdivisions, 2, widths_len]  (e.g. [413,2,76])
-                        let data_slice_3d: ArrayView3<i64> =
-                            hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
+                        // let data_slice_3d: ArrayView3<i64> =
+                        //     hm_data.slice(s![t_idx, .., .., .., channel, box_idx]);
+
+                        // Read the 3D slice directly from the HDF5 file for the current time index `t_idx`.
+                        // This avoids loading the entire 6D array into memory.
+                        // Shape of slice: [n_subdivisions, 2, widths_len] (e.g., [413, 2, 76])
+                        let data_slice_3d: Array3<i64> = hm_dataset
+                            .read_slice(s![t_idx, .., .., .., channel, box_idx])
+                            .with_context(|| format!("Failed to read slice for t_idx={t_idx}"))?;
 
                         let signed_data_slice: Array3<i64> = &data_slice_3d * &sign_arr;
                         let signed_data_slice: Array3<f64> = signed_data_slice.mapv(|v| v as f64);
@@ -324,65 +315,12 @@ impl<'h5> HmData<'h5> {
         dead_code,
         reason = "We will need this later, and want to test that the functionality doesn't break"
     )]
-    /// Create time-aligned point series from GPS timestamps
-    /// Returns Vec<[f64; 2]> where each element is [timestamp, `hm_value`]
-    /// The first dimension of hm data should match (or be 1 less than) GPS marks count
-    pub fn create_time_series(
-        &self,
-        gps_timestamps: &[f64],
-        coords: [usize; 5], // [dim1, dim2, dim3, dim4, dim5] - first dim varies with time
-    ) -> anyhow::Result<Vec<[f64; 2]>> {
-        let hm_len = self.shape()[0]; // First dimension length
-        let gps_len = gps_timestamps.len();
-
-        // Validate alignment: hm length should match GPS or be 1 less
-        ensure!(
-            hm_len == gps_len || hm_len == gps_len - 1,
-            format!(
-                "HM data length ({hm_len}) doesn't align with GPS timestamps ({gps_len}). Expected {gps_len} or {}",
-                gps_len - 1
-            )
-        );
-
-        let mut time_series = Vec::with_capacity(hm_len);
-        let [dim1, dim2, dim3, dim4, dim5] = coords;
-
-        for (i, gps_ts) in gps_timestamps.iter().enumerate().take(hm_len) {
-            if let Some(hm_value) = self.get([i, dim1, dim2, dim3, dim4, dim5]) {
-                time_series.push([*gps_ts, *hm_value as f64]);
-            } else {
-                bail!(
-                    "Invalid HM coordinates at index {i}: [{i}, {dim1}, {dim2}, {dim3}, {dim4}, {dim5}]"
-                );
-            }
-        }
-
-        Ok(time_series)
-    }
-
-    #[allow(
-        dead_code,
-        reason = "We will need this later, and want to test that the functionality doesn't break"
-    )]
-    /// Access element at specific coordinates [dim0, dim1, dim2, dim3, dim4, dim5]
-    /// Shape is [N, 413, 2, 76, 6, 4]
-    pub fn get(&self, coords: [usize; 6]) -> Option<&i64> {
-        self.inner.as_ref()?.get(coords)
-    }
-
-    #[allow(
-        dead_code,
-        reason = "We will need this later, and want to test that the functionality doesn't break"
-    )]
     /// Get a slice along the first dimension at fixed other coordinates
     /// Example: `get_slice_dim0([0, 1, 1, 1, 1])`
-    pub fn get_slice_dim0(&self, coords: [usize; 5]) -> Option<ndarray::ArrayView1<i64>> {
+    pub fn get_slice_dim0(&self, coords: [usize; 5]) -> hdf5::Result<Array1<i64>> {
         let [dim1, dim2, dim3, dim4, dim5] = coords;
-        self.inner
-            .as_ref()?
-            .slice(ndarray::s![.., dim1, dim2, dim3, dim4, dim5])
-            .into_dimensionality()
-            .ok()
+        let dataset = self.h5file.dataset(&self.dataset_name)?;
+        dataset.read_slice_1d(s![.., dim1, dim2, dim3, dim4, dim5])
     }
 
     // Build metadata without loading full data
@@ -392,7 +330,7 @@ impl<'h5> HmData<'h5> {
     )]
     #[plotinator_proc_macros::log_time]
     pub fn build_plots_and_metadata(
-        &mut self,
+        &self,
         gps_timestamps: &[f64],
         root_metadata: &RootMetadata,
     ) -> anyhow::Result<(Vec<RawPlot>, Vec<(String, String)>)> {
@@ -454,46 +392,21 @@ mod tests {
     #[test]
     fn read_hm_data() -> TestResult {
         let h5file = hdf5::File::open(tsc())?;
-        let mut hm_data = HmData::from_hdf5(&h5file)?;
+        let hm_data = HmData::from_hdf5(&h5file)?;
 
         println!("HM Data shape: {:?}", hm_data.shape());
 
-        // Test accessing specific elements (triggers lazy load)
-        hm_data.load_full()?; // optional, can rely on get() lazy load
-        if let Some(value) = hm_data.get([0, 0, 0, 0, 0, 0]) {
-            println!("Element [0,0,0,0,0,0]: {value}");
-        }
-
         // Test accessing a slice
-        if let Some(slice) = hm_data.get_slice_dim0([0, 0, 0, 0, 0]) {
-            println!("Slice along first dimension: {slice:?}");
-        }
+        let slice = hm_data.get_slice_dim0([0, 0, 0, 0, 0])?;
+        println!("Slice along first dimension: {slice:?}");
 
-        // Take a small sample for snapshot testing to avoid huge output
-        let sample_coords = [
-            [0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0],
-            [2, 10, 0, 10, 0, 0],
-            [3, 100, 1, 50, 5, 3],
-        ];
-
-        let mut sample_values = Vec::new();
-        for coords in sample_coords {
-            if let Some(value) = hm_data.get(coords) {
-                sample_values.push((coords, *value));
-            }
-        }
-
-        insta::assert_debug_snapshot!(sample_values);
         Ok(())
     }
 
     #[test]
     fn test_hm_data_dimensions() -> TestResult {
         let h5file = hdf5::File::open(tsc())?;
-        let mut hm_data = HmData::from_hdf5(&h5file)?;
-        hm_data.load_full()?;
+        let hm_data = HmData::from_hdf5(&h5file)?;
         let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
 
         let gps_timestamps = vec![0.0, 1.0, 2.0, 3.0];
@@ -513,10 +426,6 @@ mod tests {
         assert_eq!(shape[4], 6, "Fifth dimension should be 6");
         assert_eq!(shape[5], 4, "Sixth dimension should be 4");
 
-        // Verify we can access boundary elements
-        assert!(hm_data.get([3, 412, 1, 75, 5, 3]).is_some());
-        assert!(hm_data.get([4, 0, 0, 0, 0, 0]).is_none()); // Out of bounds
-
         Ok(())
     }
 
@@ -524,7 +433,7 @@ mod tests {
     fn test_calculate_b_field_zero_pos_snapshot() -> TestResult {
         let h5file = hdf5::File::open(tsc())?;
         let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
-        let mut hm_data = HmData::from_hdf5(&h5file)?;
+        let hm = HmData::from_hdf5(&h5file)?;
 
         // Define channel and box_idx for the test
         let channel = 1;
@@ -532,7 +441,7 @@ mod tests {
 
         // Call the new function
         let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
-            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
 
         let first_zvec = zero_positions.first().unwrap();
         assert_eq!(first_zvec.len(), 413);
@@ -548,7 +457,7 @@ mod tests {
     fn test_calculate_b_field_snapshot() -> TestResult {
         let h5file = hdf5::File::open(tsc())?;
         let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
-        let mut hm_data = HmData::from_hdf5(&h5file)?;
+        let hm_data = HmData::from_hdf5(&h5file)?;
 
         // Define channel and box_idx for the test
         let channel = 1;

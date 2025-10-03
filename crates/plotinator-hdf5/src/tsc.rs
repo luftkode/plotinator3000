@@ -40,7 +40,7 @@ impl SkytemHdf5 for Tsc {
         let mut metadata = root_metadata.metadata_strings();
 
         let start = Instant::now();
-        let mut hm = HmData::from_hdf5(&h5)?;
+        let hm = HmData::from_hdf5(&h5)?;
         log::info!("Read HmData in {:.1?}", start.elapsed());
 
         let start = Instant::now();
@@ -72,7 +72,6 @@ impl SkytemHdf5 for Tsc {
         log::info!("Creating HM plots");
         let start = Instant::now();
         let gps_time = gps_marks.timestamps();
-        hm.load_full()?;
         let (hm_plots, mut hm_metadata) = hm.build_plots_and_metadata(&gps_time, &root_metadata)?;
         plots.extend(hm_plots);
         metadata.append(&mut hm_metadata);
@@ -132,17 +131,13 @@ mod tests {
     use testresult::TestResult;
 
     #[test]
-    fn test_read_tsc() -> TestResult {
+    fn test_read_tsc_gps_marks_timestamps() -> TestResult {
         let h5file = hdf5::File::open(tsc())?;
 
         let gps_marks = GpsMarkRecords::from_hdf5(&h5file)?;
-        let mut hm = HmData::from_hdf5(&h5file)?;
-        hm.load_full()?;
-
         let gps_time = gps_marks.timestamps();
-        let hm_series = hm.create_time_series(&gps_time, [0, 0, 0, 0, 0]);
-
-        insta::assert_debug_snapshot!(hm_series);
+        let first_10_gps_time: Vec<f64> = gps_time.into_iter().take(10).collect();
+        insta::assert_debug_snapshot!(first_10_gps_time);
 
         Ok(())
     }
@@ -152,7 +147,7 @@ mod tests {
         let h5file = hdf5::File::open(tsc())?;
         let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
         let gps_marks = GpsMarkRecords::from_hdf5(&h5file)?;
-        let mut hm_data = HmData::from_hdf5(&h5file)?;
+        let hm_data = HmData::from_hdf5(&h5file)?;
 
         let gps_timestamps = gps_marks.timestamps();
         let (plots, _metadata) =
