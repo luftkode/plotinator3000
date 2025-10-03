@@ -3560,6 +3560,7 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-macros",
  "plotinator-plot-util",
+ "plotinator-proc-macros",
  "plotinator-test-util",
  "rayon",
  "serde",
