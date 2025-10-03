@@ -1,7 +1,7 @@
-use anyhow::bail;
 use chrono::TimeZone as _;
 use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
+use ndarray::Array2;
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
@@ -24,12 +24,8 @@ impl SkytemHdf5 for Wasp200 {
         let heights: ndarray::Array2<f32> = height_dataset.read()?;
         log::info!("Got wasp wasp heights with {} samples", heights.len());
 
-        let timestamp_data: ndarray::Array2<Timestamp> = timestamp_dataset.read_2d()?;
-        if timestamp_data.is_empty() {
-            bail!("No timestamps in wasp200 dataset");
-        }
         let (timestamps, first_timestamp, delta_t_samples_opt) =
-            Self::extract_timestamps(&timestamp_data);
+            Self::extract_timestamps(&timestamp_dataset)?;
 
         let mut height_with_ts: Vec<[f64; 2]> = Vec::new();
 
@@ -139,9 +135,9 @@ impl Wasp200 {
     }
 
     fn extract_timestamps(
-        timestamp_data: &ndarray::Array2<Timestamp>,
-    ) -> (Vec<f64>, DateTime<Utc>, Option<RawPlot>) {
-        let timestamps_raw: Vec<i64> = timestamp_data.iter().map(|t| t.time).collect();
+        timestamp_dataset: &hdf5::Dataset,
+    ) -> anyhow::Result<(Vec<f64>, DateTime<Utc>, Option<RawPlot>)> {
+        let timestamps_raw: Vec<i64> = read_timestamps(timestamp_dataset)?;
         let first_timestamp: DateTime<Utc> = chrono::Utc
             .timestamp_nanos(*timestamps_raw.first().expect("Empty timestamps"))
             .to_utc();
@@ -154,8 +150,24 @@ impl Wasp200 {
             timestamps.push(t as f64);
         }
 
-        (timestamps, first_timestamp, delta_t_samples)
+        Ok((timestamps, first_timestamp, delta_t_samples))
     }
+}
+
+fn read_timestamps(timestamp_dataset: &hdf5::Dataset) -> anyhow::Result<Vec<i64>> {
+    let timestamps: Vec<i64> = match timestamp_dataset.read_raw() {
+        Ok(t) => t,
+        Err(e) => {
+            log::warn!(
+                "Failed reading Njord altimeter timestamp dataset as simple i64: {e} - trying as compound data type"
+            );
+            // Read timestamp as 2D array of `Timestamp` structs, then extract `.time`
+            let timestamp_data: Array2<Timestamp> = timestamp_dataset.read_2d::<Timestamp>()?;
+            timestamp_data.iter().map(|t| t.time).collect()
+        }
+    };
+
+    Ok(timestamps)
 }
 
 #[cfg(test)]

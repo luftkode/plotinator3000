@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [1.36.0]
+
 ### Added
 
+- Support for the new `wasp200` HDF5 format
 - Added B-field and zero position plots for Z-coil high-moment
 
 ### Dependencies
