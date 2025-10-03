@@ -1,0 +1,10 @@
+---
+source: crates/plotinator-hdf5/src/tsc.rs
+expression: first_10_gps_time
+---
+[
+    1.7556088924523802e18,
+    1.7556088935537728e18,
+    1.7556088946551662e18,
+    1.7556088957565594e18,
+]

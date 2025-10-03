@@ -8,11 +8,14 @@ use plotinator_log_if::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::tsc::{gps_marks::GpsMarkRecords, gps_pvt::GpsPvtRecords, hm::HmData};
+use crate::tsc::{
+    gps_marks::GpsMarkRecords, gps_pvt::GpsPvtRecords, hm::HmData, metadata::RootMetadata,
+};
 
 mod gps_marks;
 mod gps_pvt;
 mod hm;
+mod metadata;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Tsc {
@@ -31,6 +34,11 @@ impl SkytemHdf5 for Tsc {
         let start_reading = Instant::now();
         let h5 = hdf5::File::open(path)?;
         log::info!("== Reading TSC datasets");
+
+        // Read top level metadata
+        let root_metadata = RootMetadata::parse_from_tsc(&h5)?;
+        let mut metadata = root_metadata.metadata_strings();
+
         let start = Instant::now();
         let hm = HmData::from_hdf5(&h5)?;
         log::info!("Read HmData in {:.1?}", start.elapsed());
@@ -54,7 +62,8 @@ impl SkytemHdf5 for Tsc {
         log::info!("== Building plots");
         let start = Instant::now();
         log::info!("Creating GPS marks plots");
-        let (mut plots, mut metadata) = gps_marks.build_plots_and_metadata();
+        let (mut plots, mut gps_metadata) = gps_marks.build_plots_and_metadata();
+        metadata.append(&mut gps_metadata);
         log::info!("Created GPS marks plots in {:.1?}", start.elapsed());
         log::info!("Creating GPS PVT plots");
         let start = Instant::now();
@@ -63,9 +72,9 @@ impl SkytemHdf5 for Tsc {
         log::info!("Creating HM plots");
         let start = Instant::now();
         let gps_time = gps_marks.timestamps();
-        let (hm_plots, hm_metadata) = hm.build_plots_and_metadata(&gps_time);
+        let (hm_plots, mut hm_metadata) = hm.build_plots_and_metadata(&gps_time, &root_metadata)?;
         plots.extend(hm_plots);
-        metadata.extend(hm_metadata);
+        metadata.append(&mut hm_metadata);
         log::info!("Created HM plots in {:.1?}", start.elapsed());
         log::info!(
             "== Finishing build plots in {:.1?}",
@@ -117,23 +126,41 @@ impl Plotable for Tsc {
 
 #[cfg(test)]
 mod tests {
-    use crate::tsc::{gps_marks::GpsMarkRecords, hm::HmData};
+    use crate::tsc::{gps_marks::GpsMarkRecords, hm::HmData, metadata::RootMetadata};
     use plotinator_test_util::test_file_defs::tsc::*;
     use testresult::TestResult;
 
     #[test]
-    fn test_read_tsc() -> TestResult {
+    fn test_read_tsc_gps_marks_timestamps() -> TestResult {
         let h5file = hdf5::File::open(tsc())?;
 
         let gps_marks = GpsMarkRecords::from_hdf5(&h5file)?;
-        let mut hm = HmData::from_hdf5(&h5file)?;
-        hm.load_full()?;
-
         let gps_time = gps_marks.timestamps();
+        let first_10_gps_time: Vec<f64> = gps_time.into_iter().take(10).collect();
+        insta::assert_debug_snapshot!(first_10_gps_time);
 
-        let hm_series = hm.create_time_series(&gps_time, [0, 0, 0, 0, 0]);
+        Ok(())
+    }
 
-        insta::assert_debug_snapshot!(hm_series);
+    #[test]
+    fn test_read_bfield_and_zero_pos() -> TestResult {
+        let h5file = hdf5::File::open(tsc())?;
+        let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
+        let gps_marks = GpsMarkRecords::from_hdf5(&h5file)?;
+        let hm_data = HmData::from_hdf5(&h5file)?;
+
+        let gps_timestamps = gps_marks.timestamps();
+        let (plots, _metadata) =
+            hm_data.build_plots_and_metadata(&gps_timestamps, &root_metadata)?;
+
+        let zero_pos = plots.first().unwrap();
+        let bfields = &plots[1];
+
+        let zero_pos_first_10: Vec<[f64; 2]> = zero_pos.points().iter().copied().take(10).collect();
+        let bfield_first_10: Vec<[f64; 2]> = bfields.points().iter().copied().take(10).collect();
+
+        insta::assert_debug_snapshot!(zero_pos_first_10);
+        insta::assert_debug_snapshot!(bfield_first_10);
 
         Ok(())
     }

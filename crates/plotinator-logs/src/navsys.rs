@@ -250,12 +250,12 @@ impl NavSysSps {
                 ExpectedPlotRange::Thousands,
             ),
             RawPlot::new(
-                "GP1 Satelittes".into(),
+                "GP1 Satellites".into(),
                 raw_gp1_points_num_satellites,
                 ExpectedPlotRange::OneToOneHundred,
             ),
             RawPlot::new(
-                "GP2 Satelittes".into(),
+                "GP2 Satellites".into(),
                 raw_gp2_points_num_satellites,
                 ExpectedPlotRange::OneToOneHundred,
             ),

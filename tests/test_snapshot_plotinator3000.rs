@@ -49,7 +49,7 @@ fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
     harness.drop_file(mbed_pid_v6_regular());
     harness.run();
 
-    // Place the cursor in the middle plot area to see that the cursor "alighment-lines" are present
+    // Place the cursor in the middle plot area to see that the cursor "alignment-lines" are present
     // across the plot areas
     let center_pos = harness.get_screen_rect().center();
     let left_center_pos = harness.get_screen_rect().left_center();

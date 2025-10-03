@@ -107,7 +107,7 @@ const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
     },
     LogFormat {
         title: "TSC",
-        description: "GPS data from the TS (TEM data is not supported)",
+        description: "GPS data, and Z coil B-field + Zero position plots, from the TS",
         link: "https://github.com/luftkode/tib3d-script",
         subitems: None,
     },
