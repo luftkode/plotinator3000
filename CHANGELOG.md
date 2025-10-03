@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Added
+
+- Added B-field and zero position plots for Z-coil high-moment
+
 ### Dependencies
 
 - `wasm-bindgen-futures`: 0.4.53 → 0.4.54 ([#356](https://github.com/luftkode/plotinator3000/pull/356))
@@ -89,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update dependencies
 - Optimize loading Njord-Ins datasets by parallelizing the HDF5 reading and preprocessing
-- Paralellize downsampling (mipmap generation) if the loaded dataset is very large
+- Parallelize downsampling (mipmap generation) if the loaded dataset is very large
 - Various other minor optimizations
 
 ## [1.28.0]

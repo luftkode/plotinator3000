@@ -129,11 +129,25 @@ pub(crate) fn read_any_attribute_to_string(attr: &Attribute) -> hdf5::Result<Str
             Ok(value)
         }
         TypeDescriptor::Float(float_size) => {
-            let value: String = match float_size {
-                hdf5::types::FloatSize::U4 => attr.read_scalar::<f32>()?.to_string(),
-                hdf5::types::FloatSize::U8 => attr.read_scalar::<f64>()?.to_string(),
+            let s = match float_size {
+                hdf5::types::FloatSize::U4 => {
+                    if attr.size() > 1 {
+                        let values: Vec<f32> = attr.read_raw::<f32>()?;
+                        format!("{values:?}")
+                    } else {
+                        attr.read_scalar::<f32>()?.to_string()
+                    }
+                }
+                hdf5::types::FloatSize::U8 => {
+                    if attr.size() > 1 {
+                        let values: Vec<f64> = attr.read_raw::<f64>()?;
+                        format!("{values:?}")
+                    } else {
+                        attr.read_scalar::<f64>()?.to_string()
+                    }
+                }
             };
-            Ok(value)
+            Ok(s)
         }
         TypeDescriptor::Boolean => {
             let value: bool = attr.read_scalar()?;
