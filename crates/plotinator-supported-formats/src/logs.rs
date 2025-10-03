@@ -99,6 +99,12 @@ macro_rules! define_supported_log_formats {
                     $( Self::$variant(l, _) => l.metadata(), )*
                 }
             }
+
+            fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
+                match self {
+                    $( Self::$variant(l, _) => l.coordinates(), )*
+                }
+            }
         }
     };
 }

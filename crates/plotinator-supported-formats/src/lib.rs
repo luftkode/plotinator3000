@@ -191,6 +191,17 @@ impl Plotable for SupportedFormat {
             Self::MqttData(mqtt) => mqtt.metadata(),
         }
     }
+
+    fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
+        match self {
+            Self::Log(l) => l.coordinates(),
+            Self::Csv(c) => c.coordinates(),
+            #[cfg(feature = "hdf5")]
+            #[cfg(not(target_arch = "wasm32"))]
+            Self::HDF5(hdf) => hdf.coordinates(),
+            Self::MqttData(mqtt) => mqtt.coordinates(),
+        }
+    }
 }
 
 #[cfg(test)]

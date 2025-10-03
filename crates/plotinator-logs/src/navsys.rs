@@ -18,6 +18,7 @@ pub struct NavSysSps {
     header: NavSysSpsHeader,
     entries: Vec<NavSysSpsEntry>,
     raw_plots: Vec<RawPlot>,
+    coordinates: Vec<Vec<(f64, f64)>>,
 }
 
 impl NavSysSps {
@@ -36,7 +37,11 @@ impl NavSysSps {
         clippy::too_many_lines,
         reason = "There's a lot of plottable stuff in navsys sps, maybe this could be prettier, but yea..."
     )]
-    fn build_raw_plots(entries: &[NavSysSpsEntry]) -> Vec<RawPlot> {
+    fn build_raw_plots(entries: &[NavSysSpsEntry]) -> (Vec<Vec<(f64, f64)>>, Vec<RawPlot>) {
+        let mut coordinates = vec![];
+        let mut gp1_track = Vec::new();
+        let mut gp2_track = Vec::new();
+
         let mut raw_he1_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_he2_points_altitude: Vec<[f64; 2]> = Vec::new();
         let mut raw_he3_points_altitude: Vec<[f64; 2]> = Vec::new();
@@ -130,6 +135,8 @@ impl NavSysSps {
                     raw_gp1_points_vdop.push([ts, e.vdop().into()]);
                     raw_gp1_points_pdop.push([ts, e.pdop().into()]);
                     raw_gp1_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+
+                    gp1_track.push((e.latitude_deg(), e.longitude_deg()));
                 }
                 NavSysSpsEntry::GP2(e) => {
                     let ts = e.timestamp_ns();
@@ -142,6 +149,7 @@ impl NavSysSps {
                     raw_gp2_points_vdop.push([ts, e.vdop().into()]);
                     raw_gp2_points_pdop.push([ts, e.pdop().into()]);
                     raw_gp2_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
+                    gp2_track.push((e.latitude_deg(), e.longitude_deg()));
                 }
                 NavSysSpsEntry::MA1(e) => {
                     raw_mag1_points.push([e.timestamp_ns(), e.field_nanotesla()]);
@@ -333,7 +341,13 @@ impl NavSysSps {
             }
         }
 
-        raw_plots
+        if !gp1_track.is_empty() {
+            coordinates.push(gp1_track);
+        }
+        if !gp2_track.is_empty() {
+            coordinates.push(gp2_track);
+        }
+        (coordinates, raw_plots)
     }
 }
 
@@ -379,6 +393,9 @@ impl Plotable for NavSysSps {
 
         Some(metadata)
     }
+    fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
+        Some(self.coordinates.clone())
+    }
 }
 
 impl Parseable for NavSysSps {
@@ -392,13 +409,14 @@ impl Parseable for NavSysSps {
         let (entries, bytes_read) = parse_to_vec(reader);
         total_bytes_read += bytes_read;
 
-        let raw_plots = Self::build_raw_plots(&entries);
+        let (coordinates, raw_plots) = Self::build_raw_plots(&entries);
 
         Ok((
             Self {
                 header,
                 entries,
                 raw_plots,
+                coordinates,
             },
             total_bytes_read,
         ))

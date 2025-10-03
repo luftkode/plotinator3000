@@ -12,6 +12,10 @@ pub trait Plotable {
     fn labels(&self) -> Option<&[PlotLabels]>;
     /// Returns metadata if any, as a list of key/values
     fn metadata(&self) -> Option<Vec<(String, String)>>;
+    /// Returns a vector of coordinates if the dataset contains coordinates
+    fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
+        None
+    }
 }
 
 /// Implement conversion from a type that implements [`Plotable`] to a generic dynamic [`Plotable`] type
