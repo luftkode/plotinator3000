@@ -271,38 +271,47 @@ impl<'h5> HmData<'h5> {
         let results: Vec<_> = (0..n_time)
             .collect::<Vec<_>>()
             .par_chunks(CHUNK_SIZE)
-            .flat_map(|time_chunk| {
-                let start_idx = time_chunk[0];
-                let end_idx = *time_chunk.last().unwrap() + 1;
+            .map(
+                |time_chunk| -> anyhow::Result<Vec<(ZCoilZeroPositions, ZCoilBField)>> {
+                    let start_idx = time_chunk
+                        .first()
+                        .ok_or_else(|| anyhow::anyhow!("Empty time chunk"))?;
+                    let end_idx = time_chunk
+                        .last()
+                        .ok_or_else(|| anyhow::anyhow!("Empty time chunk"))?
+                        + 1;
 
-                // Read one large 4D chunk from HDF5 to reduce I/O sys calls
-                let data_chunk_4d: Array4<f64> = hm_dataset
-                    .read_slice(s![start_idx..end_idx, .., .., .., channel, box_idx])
-                    .with_context(|| {
-                        format!("Failed to read chunk for t_idx {start_idx}..{end_idx}")
-                    })
-                    .expect("failed reading chunk slice from HM dataset");
+                    // Read one large 4D chunk from HDF5 to reduce I/O sys calls
+                    let data_chunk_4d: Array4<f64> = hm_dataset
+                        .read_slice(s![*start_idx..end_idx, .., .., .., channel, box_idx])
+                        .with_context(|| {
+                            format!("Failed to read chunk for t_idx {start_idx}..{end_idx}")
+                        })?;
 
-                // Iterate over the in-memory 4D chunk
-                data_chunk_4d
-                    .outer_iter()
-                    .map(|data_slice_3d| {
-                        // This could be multiplication between two i64 slices, but for optimization we use f64, the precision loss
-                        // cannot be measured in our snapshots, so it's definitely good enough
-                        let signed_data_slice: Array3<f64> = &data_slice_3d * &sign_arr;
+                    // Iterate over the in-memory 4D chunk
+                    data_chunk_4d
+                        .outer_iter()
+                        .map(|data_slice_3d| {
+                            // This could be multiplication between two i64 slices, but for optimization we use f64, the precision loss
+                            // cannot be measured in our snapshots, so it's definitely good enough
+                            let signed_data_slice: Array3<f64> = &data_slice_3d * &sign_arr;
 
-                        calc_subdivided_bfields(
-                            &timevals,
-                            &signed_data_slice,
-                            GateCount(gate_count),
-                            LastGateOn(last_gate_on),
-                            SubDivStrideNs(subdivision_time_ns),
-                            CountTeslaVal(cnt_tesla_val),
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
+                            calc_subdivided_bfields(
+                                &timevals,
+                                &signed_data_slice,
+                                GateCount(gate_count),
+                                LastGateOn(last_gate_on),
+                                SubDivStrideNs(subdivision_time_ns),
+                                CountTeslaVal(cnt_tesla_val),
+                            )
+                        })
+                        .collect()
+                },
+            )
+            .collect::<anyhow::Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect();
 
         // Unpack results
         let (all_zero_positions, all_points): (Vec<_>, Vec<_>) = results
@@ -444,7 +453,6 @@ mod tests {
         let channel = 1;
         let box_idx = 1;
 
-        // Call the new function
         let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
             hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
 
@@ -468,7 +476,6 @@ mod tests {
         let channel = 1;
         let box_idx = 1;
 
-        // Call the new function
         let (_zero_positions, AllZCoilBField(b_field_points)) =
             hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
 
@@ -485,6 +492,22 @@ mod tests {
 
         insta::assert_debug_snapshot!(first_10_b_field);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_calculate_b_field_tsc_stub() -> TestResult {
+        let h5file = hdf5::File::open(tsc_stub())?;
+        let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
+        let hm = HmData::from_hdf5(&h5file)?;
+
+        let channel = 1;
+        let box_idx = 1;
+
+        let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
+            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+
+        assert_eq!(zero_positions.len(), 0); // It's a stub file
         Ok(())
     }
 }
