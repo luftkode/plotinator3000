@@ -1,5 +1,7 @@
-use egui::{CentralPanel, Frame, RichText, ViewportBuilder, ViewportId};
-use egui_phosphor::regular::{CHECK_SQUARE, GLOBE, GLOBE_HEMISPHERE_WEST, SQUARE};
+use egui::{CentralPanel, Color32, Frame, RichText, ViewportBuilder, ViewportId};
+use egui_phosphor::regular::{
+    CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SQUARE,
+};
 use plotinator_log_if::prelude::GeoSpatialData;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
@@ -109,7 +111,7 @@ impl MapViewPort {
                     self.fit_map_to_paths();
                 }
                 MapCommand::CursorPos(time_pos) => {
-                    log::debug!("Got cursor time: {time_pos:.}");
+                    log::trace!("Got cursor time: {time_pos:.}");
                     cursor_pos = Some(time_pos);
                 }
                 MapCommand::FitToAllPaths => {
@@ -217,7 +219,7 @@ impl MapViewPort {
 
                         if ui
                             .button(if map_state.is_satellite {
-                                RichText::new(format!("{GLOBE} OSM       {GLOBE}")).strong()
+                                RichText::new(format!("{GLOBE} Open Street Map {GLOBE}")).strong()
                             } else {
                                 RichText::new(format!("{GLOBE_HEMISPHERE_WEST} Satellite {GLOBE_HEMISPHERE_WEST}")).strong()
                             })
@@ -255,52 +257,71 @@ impl MapViewPort {
                             ui.label("No paths loaded");
                             return;
                         }
+                        ui.separator();
+                        egui::Grid::new("legend_grid")
+                            .striped(true)
+                            .show(ui, |ui| {
+                                // Column headers
+                                ui.label(""); // empty cell for toggle + name
+                                ui.label("vel");
+                                ui.label("alt");
+                                ui.label("head");
+                                ui.end_row();
 
-                        for (i, path_entry) in self.map_data.geo_data.iter_mut().enumerate() {
-                            let path = &path_entry.data;
-                            let visible = &mut path_entry.visible;
+                                for (i, path_entry) in self.map_data.geo_data.iter_mut().enumerate() {
+                                    let path = &path_entry.data;
 
-                            ui.horizontal(|ui| {
-                                // Toggle button
-                                let indicator = if *visible {
-                                    egui::RichText::new(CHECK_SQUARE).color(path.color)
-                                } else {
-                                    egui::RichText::new(SQUARE).color(path.color)
-                                };
-                                let button_resp = ui.button(indicator);
+                                    let mut path_ui_hovered = false;
+                                     ui.horizontal(|ui| {
+                                        // Visibility toggle
+                                        let indicator = if path_entry.visible {
+                                            RichText::new(CHECK_SQUARE).color(path.color).weak()
+                                        } else {
+                                            RichText::new(SQUARE).color(path.color).strong()
+                                        };
+                                        if ui.button(indicator).clicked() {
+                                            path_entry.visible = !path_entry.visible;
+                                        }
+                                        ui.label(&path.name);
 
-                                if button_resp.clicked() {
-                                    *visible = !*visible;
-                                }
-                                let name_label_resp = ui.label(&path.name);
+                                        if ui.ui_contains_pointer() {
+                                            path_ui_hovered = true;
+                                        }
+                                    });
 
-                                // Metadata flags
-                                let mut meta = String::new();
-                                if path.points.first().and_then(|p| p.speed).is_some() {
-                                    meta.push_str("S ");
-                                }
-                                if path.points.first().and_then(|p| p.altitude).is_some() {
-                                    meta.push_str("A ");
-                                }
-                                if path.points.first().and_then(|p| p.heading).is_some() {
-                                    meta.push_str("H ");
-                                }
-                                let mut meta_label_hovered = false;
-                                if !meta.is_empty() {
-                                    meta_label_hovered = ui.label(format!("[{}]", meta.trim())).hovered();
-                                }
+                                    let first_point = path.points.first();
+                                    let mut attr_indicator_label = |has_attr| {
+                                        let has_attr_text = if has_attr {
+                                            RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
+                                        } else {
+                                             RichText::new(CIRCLE).weak()
+                                        };
+                                        if ui.label(has_attr_text).hovered() {
+                                            path_ui_hovered = true;
+                                        }
+                                    };
 
+                                    // Velocity column
+                                    let has_speed = first_point.and_then(|p| p.speed).is_some();
+                                    attr_indicator_label(has_speed);
 
+                                    // Altitude column
+                                    let has_alt = first_point.and_then(|p| p.altitude).is_some();
+                                    attr_indicator_label(has_alt);
 
-                                // Track hover
-                                if button_resp.hovered() || name_label_resp.hovered() || meta_label_hovered {
-                                    self.hovered_path = Some(i);
+                                    // Heading column
+                                    let has_heading = first_point.and_then(|p| p.heading).is_some();
+                                    attr_indicator_label(has_heading);
+                                    ui.end_row();
+
+                                    // Hover highlighting
+                                    if path_ui_hovered {
+                                        self.hovered_path = Some(i);
+                                    }
                                 }
                             });
-                        }
 
                         // Reset hovered if nothing hovered this frame
-
                         if !ui.ui_contains_pointer() {
                             self.hovered_path = None;
                         }

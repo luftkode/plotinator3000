@@ -78,7 +78,7 @@ impl MapUiCommander {
                 || (self.tx.is_none() && self.tmp_queue.is_some())
         );
         if let Some(tx) = self.tx.as_ref() {
-            log::debug!(
+            log::trace!(
                 "Sending map command: {}",
                 match &cmd {
                     MapCommand::AddGeoData(_) => "AddGeoData",
