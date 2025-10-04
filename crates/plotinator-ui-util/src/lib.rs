@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
@@ -50,11 +52,12 @@ pub fn highlight_plot_rect(ui: &egui_plot::PlotUi) {
     );
 }
 
-pub fn auto_color(auto_color_idx: &mut usize) -> Color32 {
+pub fn auto_color() -> Color32 {
     // source: https://docs.rs/egui_plot/0.29.0/src/egui_plot/plot_ui.rs.html#21
     // should be replaced/updated if they improve their implementation or provide a public API for this
-    let i = *auto_color_idx;
-    *auto_color_idx += 1;
+
+    static COLOR_COUNTER: AtomicUsize = AtomicUsize::new(0);
+    let i = COLOR_COUNTER.fetch_add(1, Ordering::Relaxed);
     let golden_ratio = (5.0_f32.sqrt() - 1.0) / 2.0; // 0.61803398875
     let h = i as f32 * golden_ratio;
     egui::epaint::Hsva::new(h, 0.85, 0.5, 1.0).into() // TODO(emilk): OkLab or some other perspective color space

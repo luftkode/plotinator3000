@@ -2,6 +2,8 @@ use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone as _, Utc};
 use plotinator_log_if::prelude::*;
 use std::io::{self, BufRead as _};
 
+const LEGEND_NAME: &str = "GrafNav-PPP";
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct GrafNavPPP {
     raw_plots: Vec<RawPlot>,
@@ -23,7 +25,7 @@ struct GrafNavPPPRow {
     pdop: f64,
     h_ell: f64,
     num_satellites: i32,
-    cog: f64,
+    cog: f64, // course over ground (heading)
     v_east: f64,
     v_north: f64,
     v_up: f64,
@@ -204,96 +206,116 @@ impl Parseable for GrafNavPPP {
 
         metadata.push(("Dataset length".into(), row_len.to_string()));
 
+        let mut timestamps = Vec::with_capacity(entries.len());
+        let mut latitude = Vec::with_capacity(entries.len());
+        let mut longitude = Vec::with_capacity(entries.len());
+        let mut altitude = Vec::with_capacity(entries.len());
+        let mut speed = Vec::with_capacity(entries.len());
+        let mut heading = Vec::with_capacity(entries.len());
+
+        for e in &entries {
+            timestamps.push(e.timestamp_ns());
+            latitude.push(e.latitude);
+            longitude.push(e.longitude);
+            altitude.push(e.h_ell);
+            speed.push(e.hz_speed);
+            heading.push(e.cog);
+        }
+
+        let geo_data: RawPlot = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+            .timestamp(&timestamps)
+            .lon(&longitude)
+            .lat(&latitude)
+            .altitude(&altitude)
+            .speed(&speed)
+            .heading(&heading)
+            .build()
+            .expect("invalid builder")
+            .into();
+
         let raw_plots = vec![
             // Position
-            RawPlot::new(
-                "Latitude °".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.latitude),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Longitude °".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.longitude),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Height MSL [m]".into(),
+            geo_data,
+            RawPlotCommon::new(
+                format!("Height MSL [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_msl),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Height Ellipsoid [m]".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Height Ellipsoid [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_ell),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
+            )
+            .into(),
             // UTM Coordinates
-            RawPlot::new(
-                "Northing [m]".into(),
+            RawPlotCommon::new(
+                format!("Northing [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.northing),
                 ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "Easting [m]".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Easting [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.easting),
                 ExpectedPlotRange::Thousands,
-            ),
+            )
+            .into(),
             // Velocity
-            RawPlot::new(
-                "Velocity East [km/h]".into(),
+            RawPlotCommon::new(
+                format!("Velocity East [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_east),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Velocity North [km/h]".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Velocity North [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_north),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Velocity Up [km/h]".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Velocity Up [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_up),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Horizontal Speed [km/h]".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.hz_speed),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+            )
+            .into(),
             // Quality indicators
-            RawPlot::new(
-                "Quality Factor".into(),
+            RawPlotCommon::new(
+                format!("Quality Factor ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.quality as f64),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "PDOP".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("PDOP ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pdop),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Number of Satellites".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Number of Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(
                     &entries,
                     |e| e.timestamp_ns(),
                     |e| e.num_satellites as f64,
                 ),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
+            )
+            .into(),
             // Other
-            RawPlot::new(
-                "Course Over Ground [°]".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.cog),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Undulation [m]".into(),
+            RawPlotCommon::new(
+                format!("Undulation [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.undulation),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Sequence Number".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Sequence Number ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.seq_num as f64),
                 ExpectedPlotRange::OneToOneHundred,
-            ),
+            )
+            .into(),
         ];
 
         Ok((

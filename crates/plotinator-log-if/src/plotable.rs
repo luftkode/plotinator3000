@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::rawplot::RawPlot;
+
 pub trait Plotable {
     /// Returns a slice of all the plottable data.
     fn raw_plots(&self) -> &[RawPlot];
@@ -12,10 +14,6 @@ pub trait Plotable {
     fn labels(&self) -> Option<&[PlotLabels]>;
     /// Returns metadata if any, as a list of key/values
     fn metadata(&self) -> Option<Vec<(String, String)>>;
-    /// Returns a vector of coordinates if the dataset contains coordinates
-    fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
-        None
-    }
 }
 
 /// Implement conversion from a type that implements [`Plotable`] to a generic dynamic [`Plotable`] type
@@ -37,40 +35,6 @@ pub enum ExpectedPlotRange {
     Percentage,
     OneToOneHundred,
     Thousands,
-}
-
-/// [`RawPlot`] represents some plottable data from a log, e.g. RPM measurements
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct RawPlot {
-    name: String,
-    points: Vec<[f64; 2]>,
-    expected_range: ExpectedPlotRange,
-}
-
-impl RawPlot {
-    pub fn new(name: String, points: Vec<[f64; 2]>, expected_range: ExpectedPlotRange) -> Self {
-        Self {
-            name,
-            points,
-            expected_range,
-        }
-    }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-    pub fn points(&self) -> &[[f64; 2]] {
-        &self.points
-    }
-    pub fn points_as_mut(&mut self) -> &mut [[f64; 2]] {
-        &mut self.points
-    }
-    pub fn expected_range(&self) -> ExpectedPlotRange {
-        self.expected_range
-    }
-    /// Get the label of the plot from the given `id` ie. `"<name> #<id>"`
-    pub fn label_from_id(&self, id: u16) -> String {
-        format!("{} #{id}", self.name())
-    }
 }
 
 /// [`PlotLabels`] represents some text label that should be displayed in the plot

@@ -1,6 +1,9 @@
 use anyhow::{Context as _, ensure};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
-use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use plotinator_log_if::{
+    prelude::{ExpectedPlotRange, RawPlotCommon},
+    rawplot::RawPlot,
+};
 use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
 
 use crate::tsc::metadata::RootMetadata;
@@ -381,16 +384,18 @@ impl<'h5> HmData<'h5> {
 
         Ok((
             vec![
-                RawPlot::new(
+                RawPlotCommon::new(
                     "0-position (Z) [nT]".to_owned(),
                     final_zero_points,
                     ExpectedPlotRange::Thousands,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "B-field (Z) [nT]".to_owned(),
                     final_bfield_points,
                     ExpectedPlotRange::Thousands,
-                ),
+                )
+                .into(),
             ],
             metadata,
         ))

@@ -10,15 +10,230 @@ use header::NavSysSpsHeader;
 use plotinator_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
+use crate::navsys::entries::gps::Gps;
+
 pub(crate) mod entries;
 pub(crate) mod header;
+
+// Helper struct to collect GPS data during iteration
+#[derive(Default)]
+pub(crate) struct GpsDataCollector {
+    timestamps: Vec<f64>,
+    latitude: Vec<f64>,
+    longitude: Vec<f64>,
+    altitude: Vec<f64>,
+    speed: Vec<f64>,
+    time_delta: Vec<[f64; 2]>,
+    satellites: Vec<[f64; 2]>,
+    hdop: Vec<[f64; 2]>,
+    vdop: Vec<[f64; 2]>,
+    pdop: Vec<[f64; 2]>,
+}
+
+impl GpsDataCollector {
+    pub(crate) fn add_entry(&mut self, e: &Gps) {
+        let ts = e.timestamp_ns();
+
+        // For GeoSpatial builder - only add if both lat and lon are valid
+        if !e.latitude().is_nan() && !e.longitude().is_nan() {
+            self.timestamps.push(ts);
+            self.latitude.push(e.latitude_deg());
+            self.longitude.push(e.longitude_deg());
+
+            if !e.altitude_above_mean_sea().is_nan() {
+                self.altitude.push(e.altitude_above_mean_sea().into());
+            }
+            if !e.speed_kmh().is_nan() {
+                self.speed.push(e.speed_kmh().into());
+            }
+        }
+
+        // Additional plots
+        self.time_delta.push([ts, e.gps_time_delta_ms()]);
+        self.satellites.push([ts, e.num_satellites().into()]);
+
+        if !e.hdop().is_nan() {
+            self.hdop.push([ts, e.hdop().into()]);
+        }
+        if !e.vdop().is_nan() {
+            self.vdop.push([ts, e.vdop().into()]);
+        }
+        if !e.pdop().is_nan() {
+            self.pdop.push([ts, e.pdop().into()]);
+        }
+    }
+
+    pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
+        // Create GeoSpatial plot if we have valid position data
+        if !self.timestamps.is_empty() {
+            let mut builder = GeoSpatialDataBuilder::new(sensor_name.to_string())
+                .timestamp(&self.timestamps)
+                .lat(&self.latitude)
+                .lon(&self.longitude);
+
+            if !self.altitude.is_empty() {
+                builder = builder.altitude(&self.altitude);
+            }
+            if !self.speed.is_empty() {
+                builder = builder.speed(&self.speed);
+            }
+
+            if let Ok(geo_data) = builder.build() {
+                raw_plots.push(RawPlot::from(geo_data));
+            }
+        }
+
+        // Create additional generic plots
+        if !self.time_delta.is_empty() {
+            raw_plots.push(
+                RawPlotCommon::new(
+                    format!("Time delta [ms] ({sensor_name})"),
+                    self.time_delta,
+                    ExpectedPlotRange::Thousands,
+                )
+                .into(),
+            );
+        }
+        if !self.satellites.is_empty() {
+            raw_plots.push(
+                RawPlotCommon::new(
+                    format!("Satellites ({sensor_name})"),
+                    self.satellites,
+                    ExpectedPlotRange::OneToOneHundred,
+                )
+                .into(),
+            );
+        }
+        if !self.hdop.is_empty() {
+            raw_plots.push(
+                RawPlotCommon::new(
+                    format!("HDOP ({sensor_name})"),
+                    self.hdop,
+                    ExpectedPlotRange::OneToOneHundred,
+                )
+                .into(),
+            );
+        }
+        if !self.vdop.is_empty() {
+            raw_plots.push(
+                RawPlotCommon::new(
+                    format!("VDOP ({sensor_name})"),
+                    self.vdop,
+                    ExpectedPlotRange::OneToOneHundred,
+                )
+                .into(),
+            );
+        }
+        if !self.pdop.is_empty() {
+            raw_plots.push(
+                RawPlotCommon::new(
+                    format!("PDOP ({sensor_name})"),
+                    self.pdop,
+                    ExpectedPlotRange::OneToOneHundred,
+                )
+                .into(),
+            );
+        }
+    }
+}
+
+// Helper struct for height sensor data
+#[derive(Default)]
+pub(crate) struct HeightDataCollector {
+    altitude: Vec<[f64; 2]>,
+    invalid: Vec<[f64; 2]>,
+    invalid_count: u64,
+}
+
+impl HeightDataCollector {
+    pub(crate) fn add_entry(&mut self, ts: f64, altitude: Option<f64>) {
+        if let Some(alt) = altitude {
+            self.altitude.push([ts, alt]);
+        } else {
+            self.invalid_count += 1;
+            self.invalid.push([ts, self.invalid_count as f64]);
+        }
+    }
+
+    pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
+        if !self.altitude.is_empty() {
+            raw_plots.push(RawPlot::from(RawPlotCommon::new(
+                format!("Altitude [M] ({sensor_name})"),
+                self.altitude,
+                ExpectedPlotRange::OneToOneHundred,
+            )));
+        }
+        if !self.invalid.is_empty() {
+            raw_plots.push(RawPlot::from(RawPlotCommon::new(
+                format!("Invalid Count ({sensor_name})"),
+                self.invalid,
+                ExpectedPlotRange::Thousands,
+            )));
+        }
+    }
+}
+
+// Helper struct for tilt sensor data
+#[derive(Default)]
+pub(crate) struct TiltDataCollector {
+    pitch: Vec<[f64; 2]>,
+    roll: Vec<[f64; 2]>,
+}
+
+impl TiltDataCollector {
+    pub(crate) fn add_entry(&mut self, ts: f64, pitch: f64, roll: f64) {
+        self.pitch.push([ts, pitch]);
+        self.roll.push([ts, roll]);
+    }
+
+    pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
+        if !self.pitch.is_empty() {
+            raw_plots.push(RawPlot::from(RawPlotCommon::new(
+                format!("Pitch° ({sensor_name})"),
+                self.pitch,
+                ExpectedPlotRange::OneToOneHundred,
+            )));
+        }
+        if !self.roll.is_empty() {
+            raw_plots.push(RawPlot::from(RawPlotCommon::new(
+                format!("Roll° ({sensor_name})"),
+                self.roll,
+                ExpectedPlotRange::OneToOneHundred,
+            )));
+        }
+    }
+}
+
+// Helper struct for magnetometer data
+#[derive(Default)]
+pub(crate) struct MagDataCollector {
+    values: Vec<[f64; 2]>,
+}
+
+impl MagDataCollector {
+    pub(crate) fn add_entry(&mut self, ts: f64, field: f64) {
+        self.values.push([ts, field]);
+    }
+
+    pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
+        if !self.values.is_empty() {
+            raw_plots.push(
+                RawPlotCommon::new(
+                    format!("B-field [nT] ({sensor_name})"),
+                    self.values,
+                    ExpectedPlotRange::Thousands,
+                )
+                .into(),
+            );
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct NavSysSps {
     header: NavSysSpsHeader,
     entries: Vec<NavSysSpsEntry>,
     raw_plots: Vec<RawPlot>,
-    coordinates: Vec<Vec<(f64, f64)>>,
 }
 
 impl NavSysSps {
@@ -37,317 +252,97 @@ impl NavSysSps {
         clippy::too_many_lines,
         reason = "There's a lot of plottable stuff in navsys sps, maybe this could be prettier, but yea..."
     )]
-    fn build_raw_plots(entries: &[NavSysSpsEntry]) -> (Vec<Vec<(f64, f64)>>, Vec<RawPlot>) {
-        let mut coordinates = vec![];
-        let mut gp1_track = Vec::new();
-        let mut gp2_track = Vec::new();
+    fn build_raw_plots(entries: &[NavSysSpsEntry]) -> Vec<RawPlot> {
+        let mut he1 = HeightDataCollector::default();
+        let mut he2 = HeightDataCollector::default();
+        let mut he3 = HeightDataCollector::default();
+        let mut hex = HeightDataCollector::default();
 
-        let mut raw_he1_points_altitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_he2_points_altitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_he3_points_altitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_hex_points_altitude: Vec<[f64; 2]> = Vec::new();
-        let mut he1_invalid_value_count: u64 = 0;
-        let mut raw_he1_points_invalid_value: Vec<[f64; 2]> = Vec::new();
-        let mut he2_invalid_value_count: u64 = 0;
-        let mut raw_he2_points_invalid_value: Vec<[f64; 2]> = Vec::new();
-        let mut he3_invalid_value_count: u64 = 0;
-        let mut raw_he3_points_invalid_value: Vec<[f64; 2]> = Vec::new();
-        let mut hex_invalid_value_count: u64 = 0;
-        let mut raw_hex_points_invalid_value: Vec<[f64; 2]> = Vec::new();
-        let mut raw_tl1_points_pitch: Vec<[f64; 2]> = Vec::new();
-        let mut raw_tl2_points_pitch: Vec<[f64; 2]> = Vec::new();
-        let mut raw_tl1_points_roll: Vec<[f64; 2]> = Vec::new();
-        let mut raw_tl2_points_roll: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_latitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_latitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_longitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_longitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_gps_time_delta_ms: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_gps_time_delta_ms: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_num_satellites: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_num_satellites: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_speed_kmh: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_speed_kmh: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_hdop: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_hdop: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_vdop: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_vdop: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_pdop: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_pdop: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp1_points_altitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_gp2_points_altitude: Vec<[f64; 2]> = Vec::new();
-        let mut raw_mag1_points: Vec<[f64; 2]> = Vec::new();
+        let mut tl1 = TiltDataCollector::default();
+        let mut tl2 = TiltDataCollector::default();
 
+        let mut gp1 = GpsDataCollector::default();
+        let mut gp2 = GpsDataCollector::default();
+
+        let mut ma1 = MagDataCollector::default();
+
+        // Collect all data
         for entry in entries {
             match entry {
                 NavSysSpsEntry::HE1(e) => {
-                    if let Some(altitude) = e.altitude_m() {
-                        raw_he1_points_altitude.push([e.timestamp_ns(), altitude]);
-                    } else {
-                        he1_invalid_value_count += 1;
-                        raw_he1_points_invalid_value
-                            .push([e.timestamp_ns(), he1_invalid_value_count as f64]);
-                    }
+                    he1.add_entry(e.timestamp_ns(), e.altitude_m());
                 }
                 NavSysSpsEntry::HE2(e) => {
-                    if let Some(altitude) = e.altitude_m() {
-                        raw_he2_points_altitude.push([e.timestamp_ns(), altitude]);
-                    } else {
-                        he2_invalid_value_count += 1;
-                        raw_he2_points_invalid_value
-                            .push([e.timestamp_ns(), he2_invalid_value_count as f64]);
-                    }
+                    he2.add_entry(e.timestamp_ns(), e.altitude_m());
                 }
                 NavSysSpsEntry::HE3(e) => {
-                    if let Some(altitude) = e.altitude_m() {
-                        raw_he3_points_altitude.push([e.timestamp_ns(), altitude]);
-                    } else {
-                        he3_invalid_value_count += 1;
-                        raw_he3_points_invalid_value
-                            .push([e.timestamp_ns(), he3_invalid_value_count as f64]);
-                    }
+                    he3.add_entry(e.timestamp_ns(), e.altitude_m());
                 }
                 NavSysSpsEntry::HEx(e) => {
-                    if let Some(altitude) = e.altitude_m() {
-                        raw_hex_points_altitude.push([e.timestamp_ns(), altitude]);
-                    } else {
-                        hex_invalid_value_count += 1;
-                        raw_hex_points_invalid_value
-                            .push([e.timestamp_ns(), hex_invalid_value_count as f64]);
-                    }
+                    hex.add_entry(e.timestamp_ns(), e.altitude_m());
                 }
                 NavSysSpsEntry::TL1(e) => {
-                    raw_tl1_points_pitch.push([e.timestamp_ns(), e.pitch_angle_degrees()]);
-                    raw_tl1_points_roll.push([e.timestamp_ns(), e.roll_angle_degrees()]);
+                    tl1.add_entry(
+                        e.timestamp_ns(),
+                        e.pitch_angle_degrees(),
+                        e.roll_angle_degrees(),
+                    );
                 }
                 NavSysSpsEntry::TL2(e) => {
-                    raw_tl2_points_pitch.push([e.timestamp_ns(), e.pitch_angle_degrees()]);
-                    raw_tl2_points_roll.push([e.timestamp_ns(), e.roll_angle_degrees()]);
+                    tl2.add_entry(
+                        e.timestamp_ns(),
+                        e.pitch_angle_degrees(),
+                        e.roll_angle_degrees(),
+                    );
                 }
                 NavSysSpsEntry::GP1(e) => {
-                    let ts = e.timestamp_ns();
-                    raw_gp1_points_latitude.push([ts, e.latitude()]);
-                    raw_gp1_points_longitude.push([ts, e.longitude()]);
-                    raw_gp1_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
-                    raw_gp1_points_num_satellites.push([ts, e.num_satellites().into()]);
-                    raw_gp1_points_speed_kmh.push([ts, e.speed_kmh().into()]);
-                    raw_gp1_points_hdop.push([ts, e.hdop().into()]);
-                    raw_gp1_points_vdop.push([ts, e.vdop().into()]);
-                    raw_gp1_points_pdop.push([ts, e.pdop().into()]);
-                    raw_gp1_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
-
-                    gp1_track.push((e.latitude_deg(), e.longitude_deg()));
+                    gp1.add_entry(e);
                 }
                 NavSysSpsEntry::GP2(e) => {
-                    let ts = e.timestamp_ns();
-                    raw_gp2_points_latitude.push([ts, e.latitude()]);
-                    raw_gp2_points_longitude.push([ts, e.longitude()]);
-                    raw_gp2_points_gps_time_delta_ms.push([ts, e.gps_time_delta_ms()]);
-                    raw_gp2_points_num_satellites.push([ts, e.num_satellites().into()]);
-                    raw_gp2_points_speed_kmh.push([ts, e.speed_kmh().into()]);
-                    raw_gp2_points_hdop.push([ts, e.hdop().into()]);
-                    raw_gp2_points_vdop.push([ts, e.vdop().into()]);
-                    raw_gp2_points_pdop.push([ts, e.pdop().into()]);
-                    raw_gp2_points_altitude.push([ts, e.altitude_above_mean_sea().into()]);
-                    gp2_track.push((e.latitude_deg(), e.longitude_deg()));
+                    gp2.add_entry(e);
                 }
                 NavSysSpsEntry::MA1(e) => {
-                    raw_mag1_points.push([e.timestamp_ns(), e.field_nanotesla()]);
+                    ma1.add_entry(e.timestamp_ns(), e.field_nanotesla());
                 }
                 _ => log::error!("Ignoring unknown navsys.sps entry: {entry}"),
             }
         }
 
-        let mut raw_plots = vec![
-            RawPlot::new(
-                "HE1 Altitude [M]".into(),
-                raw_he1_points_altitude,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "HE2 Altitude [M]".into(),
-                raw_he2_points_altitude,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "HE3 Altitude [M]".into(),
-                raw_he3_points_altitude,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "HEx Altitude [M]".into(),
-                raw_hex_points_altitude,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "HE1 Invalid Count".into(),
-                raw_he1_points_invalid_value,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "HE2 Invalid Count".into(),
-                raw_he2_points_invalid_value,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "HE3 Invalid Count".into(),
-                raw_he3_points_invalid_value,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "HEx Invalid Count".into(),
-                raw_hex_points_invalid_value,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "TL1 Pitch".into(),
-                raw_tl1_points_pitch,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "TL2 Pitch".into(),
-                raw_tl2_points_pitch,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "TL1 Roll".into(),
-                raw_tl1_points_roll,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "TL2 Roll".into(),
-                raw_tl2_points_roll,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP1 Latitude".into(),
-                raw_gp1_points_latitude,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "GP2 Latitude".into(),
-                raw_gp2_points_latitude,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "GP1 Longitude".into(),
-                raw_gp1_points_longitude,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "GP2 Longitude".into(),
-                raw_gp2_points_longitude,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "GP1 Time delta [ms]".into(),
-                raw_gp1_points_gps_time_delta_ms,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "GP2 Time delta [ms]".into(),
-                raw_gp2_points_gps_time_delta_ms,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "GP1 Satellites".into(),
-                raw_gp1_points_num_satellites,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP2 Satellites".into(),
-                raw_gp2_points_num_satellites,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP1 Speed [km/h]".into(),
-                raw_gp1_points_speed_kmh,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP2 Speed [km/h]".into(),
-                raw_gp2_points_speed_kmh,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP1 HDOP".into(),
-                raw_gp1_points_hdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP2 HDOP".into(),
-                raw_gp2_points_hdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP1 VDOP".into(),
-                raw_gp1_points_vdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP2 VDOP".into(),
-                raw_gp2_points_vdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP1 PDOP".into(),
-                raw_gp1_points_pdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP2 PDOP".into(),
-                raw_gp2_points_pdop,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP1 Altitude [m]".into(),
-                raw_gp1_points_altitude,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GP2 Altitude [m]".into(),
-                raw_gp2_points_altitude,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "MA1 B-field [nT]".into(),
-                raw_mag1_points,
-                ExpectedPlotRange::Thousands,
-            ),
-        ];
-        raw_plots.retain(|rp| {
-            if rp.points().is_empty() {
-                log::debug!("{} has no data", rp.name());
-                false
-            } else {
-                true
-            }
-        });
+        // Build all plots
+        let mut raw_plots = Vec::new();
 
-        // ensure that no timestamps are identical.
-        for rp in &mut raw_plots {
-            // Track the last timestamp we've seen
-            let mut last_timestamp = f64::NEG_INFINITY;
+        he1.build_plots("HE1", &mut raw_plots);
+        he2.build_plots("HE2", &mut raw_plots);
+        he3.build_plots("HE3", &mut raw_plots);
+        hex.build_plots("HEx", &mut raw_plots);
 
-            for p in rp.points_as_mut() {
-                if p[0] <= last_timestamp {
-                    // For large nanosecond timestamps, we need to ensure the increment is enough to be represented by f64
-                    // Calculate the minimum increment that will actually change the value
-                    let min_representable_delta = last_timestamp * f64::EPSILON;
-                    p[0] = last_timestamp + min_representable_delta;
-                }
+        tl1.build_plots("TL1", &mut raw_plots);
+        tl2.build_plots("TL2", &mut raw_plots);
 
-                last_timestamp = p[0];
+        gp1.build_plots("GP1", &mut raw_plots);
+        gp2.build_plots("GP2", &mut raw_plots);
+
+        ma1.build_plots("MA1", &mut raw_plots);
+
+        // Ensure no duplicate timestamps
+        for plot in &mut raw_plots {
+            if let RawPlot::Generic { common } = plot {
+                ensure_unique_timestamps(common.points_as_mut());
             }
         }
 
-        if !gp1_track.is_empty() {
-            coordinates.push(gp1_track);
+        raw_plots
+    }
+}
+
+pub(crate) fn ensure_unique_timestamps(points: &mut [[f64; 2]]) {
+    let mut last_timestamp = f64::NEG_INFINITY;
+    for p in points {
+        if p[0] <= last_timestamp {
+            let min_representable_delta = last_timestamp * f64::EPSILON;
+            p[0] = last_timestamp + min_representable_delta;
         }
-        if !gp2_track.is_empty() {
-            coordinates.push(gp2_track);
-        }
-        (coordinates, raw_plots)
+        last_timestamp = p[0];
     }
 }
 
@@ -393,9 +388,6 @@ impl Plotable for NavSysSps {
 
         Some(metadata)
     }
-    fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
-        Some(self.coordinates.clone())
-    }
 }
 
 impl Parseable for NavSysSps {
@@ -409,14 +401,13 @@ impl Parseable for NavSysSps {
         let (entries, bytes_read) = parse_to_vec(reader);
         total_bytes_read += bytes_read;
 
-        let (coordinates, raw_plots) = Self::build_raw_plots(&entries);
+        let raw_plots = Self::build_raw_plots(&entries);
 
         Ok((
             Self {
                 header,
                 entries,
                 raw_plots,
-                coordinates,
             },
             total_bytes_read,
         ))

@@ -2706,6 +2706,7 @@ checksum = "46fdb647ebde000f43b5b53f773c30cf9b0cb4300453208713fa38b2c70935a0"
 dependencies = [
  "console",
  "once_cell",
+ "regex",
  "similar",
 ]
 
@@ -3904,8 +3905,11 @@ version = "1.36.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "egui",
  "log",
+ "plotinator-ui-util",
  "serde",
+ "walkers",
 ]
 
 [[package]]
@@ -3935,6 +3939,14 @@ version = "1.36.0"
 dependencies = [
  "profiling",
  "puffin",
+]
+
+[[package]]
+name = "plotinator-map"
+version = "1.36.0"
+dependencies = [
+ "egui",
+ "walkers",
 ]
 
 [[package]]
@@ -4014,6 +4026,7 @@ dependencies = [
  "num-traits",
  "plotinator-log-if",
  "plotinator-macros",
+ "plotinator-map",
  "plotinator-proc-macros",
  "plotinator-ui-util",
  "pretty_assertions",
@@ -4124,6 +4137,7 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-logs",
  "plotinator-macros",
+ "plotinator-map",
  "plotinator-mqtt",
  "plotinator-mqtt-ui",
  "plotinator-plot-ui",
@@ -5844,6 +5858,7 @@ dependencies = [
  "lru",
  "reqwest",
  "reqwest-middleware",
+ "serde",
  "thiserror 2.0.17",
  "tokio",
  "wasm-bindgen-futures",

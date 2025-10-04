@@ -10,6 +10,8 @@ use chrono::NaiveDateTime;
 use plotinator_log_if::{log::LogEntry, parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
 
+const LEGEND: &str = "Gen";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
     entries: Vec<GeneratorLogEntry>,
@@ -140,72 +142,84 @@ impl GitMetadata for GeneratorLog {
 // Helper function to keep all the boiler plate of building each plot
 fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
     vec![
-        RawPlot::new(
-            "Rotor [R]".into(),
+        RawPlotCommon::new(
+            format!("Rotor [R] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.r_rotor.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "RPM".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("RPM ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.rpm.into()),
             ExpectedPlotRange::Thousands,
-        ),
-        RawPlot::new(
-            "Power [W]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Power [W] ({LEGEND})"),
             plot_points_from_log_entry(
                 entries,
                 |e| e.timestamp_ns(),
                 |e| f64::from(e.vout) * f64::from(e.i_in),
             ),
             ExpectedPlotRange::Thousands,
-        ),
-        RawPlot::new(
-            "PWM [%]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("PWM [%] ({LEGEND})"),
             // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.pwm / 100.0).into()),
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Load [%]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Load [%] ({LEGEND})"),
             // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.load / 100.0).into()),
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Rotor [I]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Rotor [I] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_rotor.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Temp1 °C".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Temp1 °C ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp1.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Temp2 °C".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Temp2 °C ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp2.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "I_in".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("I_in ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_in.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Iout".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Iout ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_out.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Vbat [V]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Vbat [V] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vbat.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Vout [V]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Vout [V] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vout.into()),
             ExpectedPlotRange::OneToOneHundred,
-        ),
+        )
+        .into(),
     ]
 }
 

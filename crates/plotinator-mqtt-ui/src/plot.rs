@@ -1,7 +1,10 @@
 use chrono::DateTime;
 use egui::Color32;
 use egui_plot::PlotPoint;
-use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use plotinator_log_if::{
+    prelude::{ExpectedPlotRange, RawPlotCommon},
+    rawplot::RawPlot,
+};
 use plotinator_mqtt::data::listener::{
     MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
 };
@@ -14,7 +17,6 @@ use crate::serializable::{SerializableMqttPlotData, SerializableMqttPlotPoints};
 #[derive(Default, Clone)]
 pub struct MqttPlotData {
     pub(crate) mqtt_plot_data: Vec<(MqttPlotPoints, Color32)>,
-    next_auto_color_idx: usize,
 }
 
 impl MqttPlotData {
@@ -29,8 +31,8 @@ impl MqttPlotData {
                 TopicPayload::Points(mut plot_points) => mp.data.append(&mut plot_points),
             }
         } else {
-            let color = plotinator_ui_util::auto_color(&mut self.next_auto_color_idx);
-            self.mqtt_plot_data.push((data.into(), color));
+            self.mqtt_plot_data
+                .push((data.into(), plotinator_ui_util::auto_color()));
         }
     }
 
@@ -71,7 +73,7 @@ impl From<MqttTopicData> for MqttPlotPoints {
     }
 }
 
-impl TryFrom<MqttPlotPoints> for RawPlot {
+impl TryFrom<MqttPlotPoints> for RawPlotCommon {
     type Error = anyhow::Error;
 
     fn try_from(mqtt_pp: MqttPlotPoints) -> Result<Self, Self::Error> {
@@ -103,10 +105,7 @@ impl TryFrom<MqttPlotPoints> for RawPlot {
 
 impl From<MqttPlotData> for SerializableMqttPlotData {
     fn from(original: MqttPlotData) -> Self {
-        let MqttPlotData {
-            mqtt_plot_data,
-            next_auto_color_idx: _,
-        } = original;
+        let MqttPlotData { mqtt_plot_data } = original;
         let mut first_timestamp = None;
         for (p, _) in &mqtt_plot_data {
             if p.data.len() < 2 {
@@ -127,7 +126,7 @@ impl From<MqttPlotData> for SerializableMqttPlotData {
         let ts = first_timestamp.format("%d/%m/%Y %H:%M");
         let descriptive_name = format!("MQTT {ts}");
 
-        let raw_plots: Vec<RawPlot> = mqtt_plot_data
+        let raw_plots: Vec<RawPlotCommon> = mqtt_plot_data
             .into_iter()
             .filter_map(|(m, _)| m.try_into().ok())
             .collect();
@@ -135,6 +134,7 @@ impl From<MqttPlotData> for SerializableMqttPlotData {
         for rp in &raw_plots {
             debug_assert!(rp.points().len() > 1);
         }
+        let raw_plots: Vec<RawPlot> = raw_plots.into_iter().map(Into::into).collect();
 
         Self {
             descriptive_name,

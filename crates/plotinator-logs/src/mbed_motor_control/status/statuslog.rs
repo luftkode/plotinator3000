@@ -21,6 +21,8 @@ use super::{
     header::StatusLogHeader,
 };
 
+const LEGEND: &str = "MBED Status";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct StatusLog {
     header: StatusLogHeader,
@@ -46,7 +48,10 @@ impl StatusLog {
     }
 
     // helper function build all the plots that can be made from a statuslog
-    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
+    fn build_raw_plots(
+        startup_timestamp_ns: f64,
+        entries: &[StatusLogEntry],
+    ) -> Vec<RawPlotCommon> {
         let entry_count = entries.len();
         let mut engine_temp_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut fan_on_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -153,47 +158,47 @@ impl StatusLog {
         setpoint: Vec<[f64; 2]>,
         motor_state: Vec<[f64; 2]>,
         runtime_h: Vec<[f64; 2]>,
-    ) -> Vec<RawPlot> {
+    ) -> Vec<RawPlotCommon> {
         let mut raw_plots = vec![];
         if !engine_temp.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Engine Temp °C".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Engine Temp °C ({LEGEND})"),
                 engine_temp,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
         if !fan_on.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Fan On".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Fan On ({LEGEND})"),
                 fan_on,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !vbat.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Vbat [V]".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Vbat [V] ({LEGEND})"),
                 vbat,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
         if !setpoint.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Setpoint".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Setpoint ({LEGEND})"),
                 setpoint,
                 ExpectedPlotRange::Thousands,
             ));
         }
 
         if !motor_state.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Motor State".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Motor State ({LEGEND})"),
                 motor_state,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
         if !runtime_h.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Runtime [h]".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Runtime [h] ({LEGEND})"),
                 runtime_h,
                 ExpectedPlotRange::OneToOneHundred,
             ));
@@ -279,6 +284,7 @@ impl Parseable for StatusLog {
                 }
             }
         }
+        let all_plots_raw = all_plots_raw.into_iter().map(Into::into).collect();
 
         Ok((
             Self {

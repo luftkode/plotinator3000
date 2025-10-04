@@ -15,6 +15,8 @@ use crate::navsys::{
     header::{CalibrationData, TiltSensorID},
 };
 
+const LEGEND: &str = "TL";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct InclinometerSps {
     tilt_sensor_id: TiltSensorID,
@@ -136,8 +138,8 @@ impl Parseable for InclinometerSps {
         for (sensor_id, (pitch_points, roll_points)) in sensor_groups {
             // Create pitch plot for this sensor
             if !pitch_points.is_empty() {
-                raw_plots.push(RawPlot::new(
-                    format!("TL{sensor_id} Pitch °"),
+                raw_plots.push(RawPlotCommon::new(
+                    format!("Pitch°  {LEGEND}{sensor_id}°"),
                     pitch_points,
                     ExpectedPlotRange::OneToOneHundred,
                 ));
@@ -145,8 +147,8 @@ impl Parseable for InclinometerSps {
 
             // Create roll plot for this sensor
             if !roll_points.is_empty() {
-                raw_plots.push(RawPlot::new(
-                    format!("TL{sensor_id} Roll °"),
+                raw_plots.push(RawPlotCommon::new(
+                    format!("Roll° {LEGEND}{sensor_id}"),
                     roll_points,
                     ExpectedPlotRange::OneToOneHundred,
                 ));
@@ -169,7 +171,7 @@ impl Parseable for InclinometerSps {
                 calibration_data_1,
                 calibration_data_2,
                 entries,
-                raw_plots,
+                raw_plots: raw_plots.into_iter().map(Into::into).collect(),
             },
             bytes_read,
         ))

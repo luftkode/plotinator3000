@@ -17,6 +17,8 @@ use super::{
     header::PidLogHeader,
 };
 
+const LEGEND: &str = "MBED PID";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
     header: PidLogHeader,
@@ -41,7 +43,7 @@ impl PidLog {
     }
 
     // helper function build all the plots that can be made from a pidlog
-    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlot> {
+    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlotCommon> {
         let entry_count = entries.len();
         let mut rpm_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut pid_output_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -104,53 +106,53 @@ impl PidLog {
         first_valid_rpm_count: Vec<[f64; 2]>,
         fan_on: Vec<[f64; 2]>,
         vbat: Vec<[f64; 2]>,
-    ) -> Vec<RawPlot> {
+    ) -> Vec<RawPlotCommon> {
         let mut raw_plots = vec![];
         if !rpm.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "RPM".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("RPM ({LEGEND})"),
                 rpm,
                 ExpectedPlotRange::Thousands,
             ));
         }
         if !pid_output.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "PID Output".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("PID Output ({LEGEND})"),
                 pid_output,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !servo_duty_cycle.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Servo Duty Cycle".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Servo Duty Cycle ({LEGEND})"),
                 servo_duty_cycle,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !rpm_error_count.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "RPM Error Count".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("RPM Error Count ({LEGEND})"),
                 rpm_error_count,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
         if !first_valid_rpm_count.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "First Valid RPM Count".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("First Valid RPM Count ({LEGEND})"),
                 first_valid_rpm_count,
                 ExpectedPlotRange::OneToOneHundred,
             ));
         }
         if !fan_on.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Fan On".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Fan On ({LEGEND})"),
                 fan_on,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !vbat.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Vbat [V]".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Vbat [V] ({LEGEND})"),
                 vbat,
                 ExpectedPlotRange::OneToOneHundred,
             ));
@@ -233,6 +235,8 @@ impl Parseable for PidLog {
                 }
             }
         }
+
+        let all_plots_raw = all_plots_raw.into_iter().map(Into::into).collect();
 
         Ok((
             Self {

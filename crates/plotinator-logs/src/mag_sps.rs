@@ -32,9 +32,13 @@ impl MagSps {
 
     fn is_reader_valid(reader: &mut impl io::BufRead) -> bool {
         // If 3 lines can be read successfully then it's valid
-        MagSensor::from_reader(reader).is_ok()
-            && MagSensor::from_reader(reader).is_ok()
-            && MagSensor::from_reader(reader).is_ok()
+        for _ in 0..=3 {
+            if let Err(e) = MagSensor::from_reader(reader) {
+                log::debug!("Not a valid NavSys MA line: {e}");
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -110,7 +114,7 @@ impl Parseable for MagSps {
         let mut raw_plots = Vec::new();
         for (sensor_id, mag_points) in sensor_groups {
             if !mag_points.is_empty() {
-                raw_plots.push(RawPlot::new(
+                raw_plots.push(RawPlotCommon::new(
                     format!("Sensor {sensor_id} B-field [nT]"),
                     mag_points,
                     ExpectedPlotRange::Thousands,
@@ -127,6 +131,7 @@ impl Parseable for MagSps {
                 true
             }
         });
+        let raw_plots: Vec<RawPlot> = raw_plots.into_iter().map(Into::into).collect();
 
         Ok((Self { entries, raw_plots }, bytes_read))
     }

@@ -4,7 +4,7 @@ use hdf5::{
     Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
-use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlotCommon};
 
 /// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
@@ -194,7 +194,7 @@ pub(crate) fn open_dataset(
 pub(crate) fn gen_time_between_samples_rawplot(
     timestamps: &[i64],
     rawplot_name_suffix: &str,
-) -> Option<RawPlot> {
+) -> Option<RawPlotCommon> {
     calc_time_between_samples(timestamps)
         .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
 }
@@ -202,13 +202,13 @@ pub(crate) fn gen_time_between_samples_rawplot(
 pub(crate) fn gen_time_between_samples_rawplot_2d(
     timestamps: &ndarray::Array2<i64>,
     rawplot_name_suffix: &str,
-) -> Option<RawPlot> {
+) -> Option<RawPlotCommon> {
     calc_time_between_samples_2d(timestamps)
         .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
 }
 
-fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, rawplot_name_suffix: &str) -> RawPlot {
-    RawPlot::new(
+fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, rawplot_name_suffix: &str) -> RawPlotCommon {
+    RawPlotCommon::new(
         format!("Δt sample [ms] {rawplot_name_suffix}"),
         points,
         ExpectedPlotRange::OneToOneHundred,

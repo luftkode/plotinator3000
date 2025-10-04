@@ -111,9 +111,9 @@ impl LogPlotUi {
             box_selection.selected(),
         );
 
-        for log in loaded_files {
-            util::add_plot_data_to_plot_collections(plots, log, plot_settings);
-            stored_plot_files.push(log.clone());
+        for file in loaded_files {
+            util::add_plot_data_to_plot_collections(plots, file, plot_settings);
+            stored_plot_files.push(file.clone());
         }
 
         if !loaded_files.is_empty() {

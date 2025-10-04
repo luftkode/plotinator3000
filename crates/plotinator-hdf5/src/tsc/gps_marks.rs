@@ -3,7 +3,8 @@ use hdf5::H5Type;
 use ndarray::{ArrayBase, Dim, OwnedRepr};
 use plotinator_log_if::{
     leap_seconds::{GpsWeek, TowMs, TowSubMs, gps_to_unix_ns},
-    prelude::{ExpectedPlotRange, RawPlot},
+    prelude::{ExpectedPlotRange, RawPlotCommon},
+    rawplot::RawPlot,
 };
 
 type GpsMarks = ArrayBase<OwnedRepr<GpsMarkRecord>, Dim<[usize; 1]>>;
@@ -89,58 +90,69 @@ impl GpsMarkRecords {
         ));
         (
             vec![
-                RawPlot::new(
+                RawPlotCommon::new(
                     "Pulse width [µs]".to_owned(),
                     pulse_width,
                     ExpectedPlotRange::Thousands,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "Accuracy estimate [ns]".to_owned(),
                     acc_est,
                     ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new("Count".to_owned(), count, ExpectedPlotRange::Thousands),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new("Count".to_owned(), count, ExpectedPlotRange::Thousands).into(),
+                RawPlotCommon::new(
                     "Mode running [bool]".to_owned(),
                     mode_running,
                     ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new("Run [bool]".to_owned(), run, ExpectedPlotRange::Percentage),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new("Run [bool]".to_owned(), run, ExpectedPlotRange::Percentage)
+                    .into(),
+                RawPlotCommon::new(
                     "New falling edge [bool]".to_owned(),
                     new_falling_edge,
                     ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "Timebase GNSS [bool]".to_owned(),
                     timebase_gnss,
                     ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "Timebase UTC [bool]".to_owned(),
                     timebase_utc,
                     ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "UTC available [bool]".to_owned(),
                     utc_avail,
                     ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "Time valid [bool]".to_owned(),
                     time_valid,
                     ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "New rising edge [bool]".to_owned(),
                     new_rising_edge,
                     ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "Timestamp Δt [s]".to_owned(),
                     delta_computer.take_plot_points(),
                     ExpectedPlotRange::OneToOneHundred,
-                ),
+                )
+                .into(),
             ],
             metadata,
         )

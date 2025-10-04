@@ -399,4 +399,10 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
         assert!(Gps::from_str(navsys_sps).is_ok());
         assert!(Gps::from_str(certus_sps).is_ok());
     }
+
+    #[test]
+    fn test_gps_from_str_data_binder_conv() {
+        let data_binder_conv_sps = "GP2 2025 09 01 08 23 09 137 5613.06620 1008.86800 08:23:09.000 10 WGS84 0.0 0.9 1.4 1.7 66.6";
+        assert!(Gps::from_str(data_binder_conv_sps).is_ok());
+    }
 }

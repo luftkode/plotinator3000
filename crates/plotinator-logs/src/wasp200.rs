@@ -26,7 +26,12 @@ impl Wasp200Sps {
             return false;
         };
         let mut reader = BufReader::new(file);
-        AltimeterEntry::from_reader(&mut reader).is_ok()
+        if let Err(e) = AltimeterEntry::from_reader(&mut reader) {
+            log::debug!("Not a valid NavSys HE line: {e}");
+            false
+        } else {
+            true
+        }
     }
 }
 
@@ -97,7 +102,7 @@ impl Parseable for Wasp200Sps {
             }
         }
 
-        let mut raw_plots = vec![RawPlot::new(
+        let mut raw_plots = vec![RawPlotCommon::new(
             "Wasp200 Altitude [M]".into(),
             raw_points_altitude,
             ExpectedPlotRange::OneToOneHundred,
@@ -110,6 +115,7 @@ impl Parseable for Wasp200Sps {
                 true
             }
         });
+        let raw_plots = raw_plots.into_iter().map(Into::into).collect();
 
         Ok((Self { entries, raw_plots }, bytes_read))
     }

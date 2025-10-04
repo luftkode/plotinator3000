@@ -67,12 +67,6 @@ macro_rules! define_supported_hdf5_formats {
                     $( SupportedHdf5Format::$variant(inner) => inner.metadata(), )*
                 }
             }
-
-            fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
-                match self {
-                    $( SupportedHdf5Format::$variant(inner) => inner.coordinates(), )*
-                }
-            }
         }
     };
 }

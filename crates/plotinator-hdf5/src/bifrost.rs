@@ -117,22 +117,26 @@ fn process_points_to_rawplots(
         combined_currents.push(p1);
     }
 
-    let plot_polarity0 = RawPlot::new(
+    let plot_polarity0 = RawPlotCommon::new(
         "+ Polarity [A]".to_owned(),
         polarity0_currents,
         ExpectedPlotRange::OneToOneHundred,
     );
-    let plot_polarity1 = RawPlot::new(
+    let plot_polarity1 = RawPlotCommon::new(
         "- Polarity [A]".to_owned(),
         polarity1_currents,
         ExpectedPlotRange::OneToOneHundred,
     );
-    let plot_combined = RawPlot::new(
+    let plot_combined = RawPlotCommon::new(
         "Combined [A]".to_owned(),
         combined_currents,
         ExpectedPlotRange::OneToOneHundred,
     );
-    vec![plot_polarity0, plot_polarity1, plot_combined]
+    vec![
+        plot_polarity0.into(),
+        plot_polarity1.into(),
+        plot_combined.into(),
+    ]
 }
 
 impl Plotable for BifrostLoopCurrent {
@@ -223,13 +227,16 @@ mod tests {
             assert_eq!(metadata_kv, expected_metadata_kv);
         }
 
-        let plot_polarity1 = bifrost_currents.raw_plots()[1].points();
+        match &bifrost_currents.raw_plots()[1] {
+            RawPlot::Generic { common } => {
+                let expected_first_value = 4.434181213378906;
+                assert_eq!(common.points().first().unwrap()[1], expected_first_value);
 
-        let expected_first_value = 4.434181213378906;
-        assert_eq!(plot_polarity1.first().unwrap()[1], expected_first_value);
-
-        let expected_last_value = 17.78993797302246;
-        assert_eq!(plot_polarity1.last().unwrap()[1], expected_last_value);
+                let expected_last_value = 17.78993797302246;
+                assert_eq!(common.points().last().unwrap()[1], expected_last_value);
+            }
+            _ => unreachable!(),
+        };
 
         Ok(())
     }

@@ -2,6 +2,7 @@ use std::io;
 
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
+use ndarray::Array2;
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +10,8 @@ use crate::{
     stream_descriptor::StreamDescriptor,
     util::{assert_description_in_attrs, log_all_attributes, read_string_attribute},
 };
+
+const LEGEND_NAME: &str = "frame-TL";
 
 impl SkytemHdf5 for FrameInclinometers {
     #[allow(
@@ -32,13 +35,13 @@ impl SkytemHdf5 for FrameInclinometers {
         log_all_attributes(&timestamp2_dataset);
         log_all_attributes(&calibration_values_dataset);
 
-        let angles1: ndarray::Array2<f32> = angle1_dataset.read()?;
-        let attitudes1: ndarray::Array2<f32> = attitude1_dataset.read()?;
-        let timestamps1: ndarray::Array2<i64> = timestamp1_dataset.read_2d()?;
+        let angles1: Array2<f32> = angle1_dataset.read()?;
+        let attitudes1: Array2<f32> = attitude1_dataset.read()?;
+        let timestamps1: Array2<i64> = timestamp1_dataset.read_2d()?;
 
-        let angles2: ndarray::Array2<f32> = angle2_dataset.read()?;
-        let attitudes2: ndarray::Array2<f32> = attitude2_dataset.read()?;
-        let timestamps2: ndarray::Array2<i64> = timestamp2_dataset.read_2d()?;
+        let angles2: Array2<f32> = angle2_dataset.read()?;
+        let attitudes2: Array2<f32> = attitude2_dataset.read()?;
+        let timestamps2: Array2<i64> = timestamp2_dataset.read_2d()?;
 
         let mut raw_plots = vec![];
 
@@ -68,24 +71,24 @@ impl SkytemHdf5 for FrameInclinometers {
                 old_roll1_with_ts.push([*timestamp, old_roll as f64]);
             }
 
-            let pitch1_rawplot = RawPlot::new(
-                "Pitch-TL1 °".to_owned(),
+            let pitch1_rawplot = RawPlotCommon::new(
+                format!("Pitch° ({LEGEND_NAME}1)"),
                 pitch1_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             );
-            let roll1_rawplot = RawPlot::new(
-                "Roll-TL1 °".to_owned(),
+            let roll1_rawplot = RawPlotCommon::new(
+                format!("Roll° ({LEGEND_NAME}1)"),
                 roll1_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             );
-            let old_roll1_rawplot = RawPlot::new(
-                "Roll-TL1 (Old) °".to_owned(),
+            let old_roll1_rawplot = RawPlotCommon::new(
+                format!("Roll° (Old) ({LEGEND_NAME}1)"),
                 old_roll1_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             );
-            raw_plots.push(pitch1_rawplot);
-            raw_plots.push(roll1_rawplot);
-            raw_plots.push(old_roll1_rawplot);
+            raw_plots.push(pitch1_rawplot.into());
+            raw_plots.push(roll1_rawplot.into());
+            raw_plots.push(old_roll1_rawplot.into());
         }
 
         if let Some((timestamps2, first_timestamp2)) = Self::process_timestamps(&timestamps2) {
@@ -116,26 +119,26 @@ impl SkytemHdf5 for FrameInclinometers {
                 old_roll2_with_ts.push([*timestamp, old_roll as f64]);
             }
 
-            let pitch2_rawplot = RawPlot::new(
-                "Pitch-TL2 °".to_owned(),
+            let pitch2_rawplot = RawPlotCommon::new(
+                format!("Pitch° ({LEGEND_NAME}2)"),
                 pitch2_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             );
 
-            let roll2_rawplot = RawPlot::new(
-                "Roll-TL2 °".to_owned(),
+            let roll2_rawplot = RawPlotCommon::new(
+                format!("Roll° ({LEGEND_NAME}2)"),
                 roll2_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             );
-            let old_roll2_rawplot = RawPlot::new(
-                "Roll-TL2 (Old) °".to_owned(),
+            let old_roll2_rawplot = RawPlotCommon::new(
+                format!("Roll° (Old) ({LEGEND_NAME}2)"),
                 old_roll2_with_ts,
                 ExpectedPlotRange::OneToOneHundred,
             );
 
-            raw_plots.push(pitch2_rawplot);
-            raw_plots.push(roll2_rawplot);
-            raw_plots.push(old_roll2_rawplot);
+            raw_plots.push(pitch2_rawplot.into());
+            raw_plots.push(roll2_rawplot.into());
+            raw_plots.push(old_roll2_rawplot.into());
         }
 
         let metadata = Self::extract_metadata(
@@ -220,9 +223,7 @@ impl FrameInclinometers {
         ))
     }
 
-    fn process_timestamps(
-        timestamp_data: &ndarray::Array2<i64>,
-    ) -> Option<(Vec<f64>, DateTime<Utc>)> {
+    fn process_timestamps(timestamp_data: &Array2<i64>) -> Option<(Vec<f64>, DateTime<Utc>)> {
         let first = timestamp_data.first()?;
         let first_timestamp: DateTime<Utc> = chrono::Utc.timestamp_nanos(*first).to_utc();
 
@@ -285,7 +286,10 @@ mod tests {
         let frame_inclinometers = FrameInclinometers::from_path(frame_inclinometers())?;
         assert_eq!(frame_inclinometers.metadata.len(), 72);
         assert_eq!(frame_inclinometers.raw_plots.len(), 6);
-        assert_eq!(frame_inclinometers.raw_plots[0].points().len(), 32);
+        match &frame_inclinometers.raw_plots[0] {
+            RawPlot::Generic { common } => assert_eq!(common.points().len(), 32),
+            _ => unreachable!(),
+        }
 
         Ok(())
     }

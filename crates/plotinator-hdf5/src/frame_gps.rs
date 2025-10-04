@@ -6,7 +6,8 @@ use hdf5::types::FixedAscii;
 use ndarray::Array2;
 use plotinator_log_if::{
     hdf5::SkytemHdf5,
-    prelude::{ExpectedPlotRange, PlotLabels, Plotable, RawPlot},
+    prelude::{ExpectedPlotRange, GeoSpatialDataBuilder, PlotLabels, Plotable, RawPlotCommon},
+    rawplot::RawPlot,
 };
 use serde::{Deserialize, Serialize};
 
@@ -18,13 +19,14 @@ use crate::{
 
 mod iter;
 
+const LEGEND_NAME: &str = "frame-GP";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FrameGps {
     starting_timestamp_utc: DateTime<Utc>,
     dataset_description: String,
     raw_plots: Vec<RawPlot>,
     metadata: Vec<(String, String)>,
-    coordinates: Vec<Vec<(f64, f64)>>,
 }
 
 impl SkytemHdf5 for FrameGps {
@@ -32,19 +34,10 @@ impl SkytemHdf5 for FrameGps {
         let datasets = FrameGpsDatasets::open(path)?;
 
         let starting_timestamp_utc = datasets.first_timestamp();
-        let (coordinates1, mut raw_plots) = datasets.gps_data_to_rawplots(1)?;
-        let (coordinates2, raw_plots2) = datasets.gps_data_to_rawplots(2)?;
+        let mut raw_plots = datasets.gps_data_to_rawplots(1)?;
+        let mut raw_plots2 = datasets.gps_data_to_rawplots(2)?;
 
-        raw_plots.extend(raw_plots2);
-
-        raw_plots.retain(|rp| {
-            if rp.points().is_empty() {
-                log::debug!("{} has no data", rp.name());
-                false
-            } else {
-                true
-            }
-        });
+        raw_plots.append(&mut raw_plots2);
 
         let metadata = datasets.extract_metadata()?;
 
@@ -53,7 +46,6 @@ impl SkytemHdf5 for FrameGps {
             dataset_description: "Frame GPS".to_owned(),
             raw_plots,
             metadata,
-            coordinates: vec![coordinates1, coordinates2],
         })
     }
 }
@@ -77,10 +69,6 @@ impl Plotable for FrameGps {
 
     fn metadata(&self) -> Option<Vec<(String, String)>> {
         Some(self.metadata.clone())
-    }
-
-    fn coordinates(&self) -> Option<Vec<Vec<(f64, f64)>>> {
-        Some(self.coordinates.clone())
     }
 }
 
@@ -228,19 +216,19 @@ impl FrameGpsDatasets {
     }
 
     #[allow(clippy::too_many_lines, reason = "long but simple")]
-    fn gps_data_to_rawplots(&self, id: u8) -> io::Result<(Vec<(f64, f64)>, Vec<RawPlot>)> {
+    fn gps_data_to_rawplots(&self, id: u8) -> anyhow::Result<Vec<RawPlot>> {
         let gps_data = self.gps_data(id)?;
         let data_len = self.len(id)?;
-        let mut coordinates = Vec::with_capacity(data_len);
+        let mut timestamps = Vec::with_capacity(data_len);
         let mut hdop = Vec::with_capacity(data_len);
         let mut pdop = Vec::with_capacity(data_len);
         let mut vdop = Vec::with_capacity(data_len);
         let mut gps_time_offset = Vec::with_capacity(data_len);
         let mut mode = Vec::with_capacity(data_len);
-        let mut lat = Vec::with_capacity(data_len);
-        let mut lon = Vec::with_capacity(data_len);
-        let mut alt = Vec::with_capacity(data_len);
-        let mut speed = Vec::with_capacity(data_len);
+        let mut lat: Vec<f64> = Vec::with_capacity(data_len);
+        let mut lon: Vec<f64> = Vec::with_capacity(data_len);
+        let mut alt: Vec<f64> = Vec::with_capacity(data_len);
+        let mut speed: Vec<f64> = Vec::with_capacity(data_len);
         let mut sats = Vec::with_capacity(data_len);
         let mut alt_nan_count = Vec::with_capacity(data_len);
         let mut alt_nan_bool = Vec::with_capacity(data_len);
@@ -248,6 +236,7 @@ impl FrameGpsDatasets {
 
         for entry in gps_data.iter() {
             let ts = *entry.timestamp as f64;
+            timestamps.push(ts);
 
             let hdop_sample = *entry.hdop;
             if !hdop_sample.is_nan() {
@@ -264,7 +253,7 @@ impl FrameGpsDatasets {
             mode.push([ts, *entry.mode as f64]);
             let speed_sample = *entry.speed;
             if !speed_sample.is_nan() {
-                speed.push([ts, (*entry.speed).into()]);
+                speed.push((*entry.speed).into());
             }
             sats.push([ts, *entry.satellites as f64]);
 
@@ -273,20 +262,17 @@ impl FrameGpsDatasets {
                 let lon_sample = entry.position[1];
                 let alt_sample = entry.position[2];
                 if !lat_sample.is_nan() {
-                    lat.push([ts, lat_sample]);
+                    lat.push(lat_sample);
                 }
                 if !lon_sample.is_nan() {
-                    lon.push([ts, lon_sample]);
-                }
-                if !lat_sample.is_nan() && !lon_sample.is_nan() {
-                    coordinates.push((lon_sample, lat_sample));
+                    lon.push(lon_sample);
                 }
                 if alt_sample.is_nan() {
                     alt_nan_cnt += 1;
                     alt_nan_bool.push([ts, 1.0]);
                 } else {
                     alt_nan_bool.push([ts, 0.0]);
-                    alt.push([ts, alt_sample]);
+                    alt.push(alt_sample);
                 }
                 alt_nan_count.push([ts, alt_nan_cnt as f64]);
             } else {
@@ -305,71 +291,69 @@ impl FrameGpsDatasets {
                 log::warn!("Invalid GPS time offset: {gps_time}");
             };
         }
-        Ok((
-            coordinates,
-            vec![
-                RawPlot::new(
-                    format!("HDOP-GP{id}"),
-                    hdop,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("PDOP-GP{id}"),
-                    pdop,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("VDOP-GP{id}"),
-                    vdop,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Time Offset (ms)-GP{id}"),
-                    gps_time_offset,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Mode-GP{id}"),
-                    mode,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Latitude-GP{id}"),
-                    lat,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Longitude-GP{id}"),
-                    lon,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Altitude-GP{id}"),
-                    alt,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Altitude-NaN-cnt-GP{id}"),
-                    alt_nan_count,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Altitude-NaN-GP{id}"),
-                    alt_nan_bool,
-                    ExpectedPlotRange::Percentage,
-                ),
-                RawPlot::new(
-                    format!("Speed-GP{id}"),
-                    speed,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-                RawPlot::new(
-                    format!("Satellites-GP{id}"),
-                    sats,
-                    ExpectedPlotRange::OneToOneHundred,
-                ),
-            ],
-        ))
+
+        let geo_data: RawPlot = GeoSpatialDataBuilder::new(format!("({LEGEND_NAME}{id})"))
+            .timestamp(&timestamps)
+            .lat(&lat)
+            .lon(&lon)
+            .altitude(&alt)
+            .speed(&speed)
+            .build()?
+            .into();
+
+        let raw_plots = vec![
+            RawPlotCommon::new(
+                format!("HDOP ({LEGEND_NAME}{id})"),
+                hdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlotCommon::new(
+                format!("PDOP ({LEGEND_NAME}{id})"),
+                pdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlotCommon::new(
+                format!("VDOP ({LEGEND_NAME}{id})"),
+                vdop,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlotCommon::new(
+                format!("Time Offset [ms] ({LEGEND_NAME}{id})"),
+                gps_time_offset,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlotCommon::new(
+                format!("Mode ({LEGEND_NAME}{id})"),
+                mode,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlotCommon::new(
+                format!("Altitude-NaN-cnt ({LEGEND_NAME}{id})"),
+                alt_nan_count,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+            RawPlotCommon::new(
+                format!("Altitude-NaN ({LEGEND_NAME}{id})"),
+                alt_nan_bool,
+                ExpectedPlotRange::Percentage,
+            ),
+            RawPlotCommon::new(
+                format!("Satellites ({LEGEND_NAME}{id})"),
+                sats,
+                ExpectedPlotRange::OneToOneHundred,
+            ),
+        ];
+
+        let mut plots = vec![geo_data];
+        for rp in raw_plots {
+            if rp.points().is_empty() {
+                log::debug!("{} has no data", rp.name());
+            } else {
+                plots.push(rp.into());
+            }
+        }
+
+        Ok(plots)
     }
 
     fn timestamp_dataset(&self, id: u8) -> io::Result<Array2<i64>> {

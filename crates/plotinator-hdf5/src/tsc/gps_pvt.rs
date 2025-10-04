@@ -1,13 +1,16 @@
 use chrono::{DateTime, Utc};
 use hdf5::H5Type;
-use ndarray::{ArrayBase, Dim, OwnedRepr};
-use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use ndarray::Array1;
+use plotinator_log_if::{
+    prelude::{ExpectedPlotRange, GeoSpatialDataBuilder, RawPlotCommon},
+    rawplot::RawPlot,
+};
 
-type GpsPvts = ArrayBase<OwnedRepr<GpsPvtRecord>, Dim<[usize; 1]>>;
+use crate::tsc::TSC_LEGEND_NAME;
 
 /// Wrapper around all the [`GpsPvtRecord`]s from a TSC.h5 file
 pub(crate) struct GpsPvtRecords {
-    inner: GpsPvts,
+    inner: Array1<GpsPvtRecord>,
 }
 
 impl GpsPvtRecords {
@@ -32,17 +35,20 @@ impl GpsPvtRecords {
     pub fn build_plots(&self) -> Vec<RawPlot> {
         let time = self.timestamps();
 
-        let mut numsv = Vec::with_capacity(time.len());
+        let mut timestamps = Vec::with_capacity(time.len());
         let mut height = Vec::with_capacity(time.len());
-        let mut h_msl = Vec::with_capacity(time.len());
         let mut gspeed = Vec::with_capacity(time.len());
         let mut heading = Vec::with_capacity(time.len());
+        let mut lat_deg = Vec::with_capacity(time.len());
+        let mut lon_deg = Vec::with_capacity(time.len());
+
+        let mut h_msl = Vec::with_capacity(time.len());
+        let mut h_elips = Vec::with_capacity(time.len());
+        let mut numsv = Vec::with_capacity(time.len());
         let mut hacc = Vec::with_capacity(time.len());
         let mut vacc = Vec::with_capacity(time.len());
         let mut sacc = Vec::with_capacity(time.len());
         let mut pdop = Vec::with_capacity(time.len());
-        let mut lat_deg = Vec::with_capacity(time.len());
-        let mut lon_deg = Vec::with_capacity(time.len());
         let mut vel_n = Vec::with_capacity(time.len());
         let mut vel_e = Vec::with_capacity(time.len());
         let mut vel_d = Vec::with_capacity(time.len());
@@ -69,17 +75,20 @@ impl GpsPvtRecords {
                 log::warn!("Ignoring NAV-PVT data from invalid timestamp");
                 continue;
             };
+            timestamps.push(t);
+            height.push(e.height_meters());
+            gspeed.push(e.ground_speed_kmh());
+            heading.push(e.head_mot as f64 * 1e-5); // degrees
+            lat_deg.push(e.latitude_degrees());
+            lon_deg.push(e.longitude_degrees());
+
             numsv.push([t, e.num_sv as f64]);
-            height.push([t, e.height_meters()]);
             h_msl.push([t, e.height_msl_meters()]);
-            gspeed.push([t, e.ground_speed_ms()]);
-            heading.push([t, e.head_mot as f64 * 1e-5]); // degrees
+            h_elips.push([t, e.height_meters()]);
             hacc.push([t, e.h_acc as f64 * 1e-3]); // mm -> m
             vacc.push([t, e.v_acc as f64 * 1e-3]); // mm -> m
             sacc.push([t, e.s_acc as f64 * 1e-3]); // mm/s -> m/s
             pdop.push([t, e.p_dop as f64 * 0.01]);
-            lat_deg.push([t, e.latitude_degrees()]);
-            lon_deg.push([t, e.longitude_degrees()]);
             vel_n.push([t, e.vel_n as f64 * 1e-3]); // mm/s -> m/s
             vel_e.push([t, e.vel_e as f64 * 1e-3]); // mm/s -> m/s
             vel_d.push([t, e.vel_d as f64 * 1e-3]); // mm/s -> m/s
@@ -105,135 +114,148 @@ impl GpsPvtRecords {
             confirmed_time.push([t, e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_TIME)]);
         }
 
+        let geo_data: RawPlot = GeoSpatialDataBuilder::new(TSC_LEGEND_NAME.to_owned())
+            .timestamp(&timestamps)
+            .lat(&lat_deg)
+            .lon(&lon_deg)
+            .altitude(&height)
+            .speed(&gspeed)
+            .heading(&heading)
+            .build()
+            .expect("invalid builder")
+            .into();
+
         vec![
-            RawPlot::new(
+            geo_data,
+            RawPlotCommon::new(
                 "Satellites".to_owned(),
                 numsv,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Height [ellipsoid, m]".to_owned(),
-                height,
+                h_elips,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Height [MSL, m]".to_owned(),
                 h_msl,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Ground speed [m/s]".to_owned(),
-                gspeed,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Heading [deg]".to_owned(),
-                heading,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Horizontal accuracy [m]".to_owned(),
                 hacc,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Vertical accuracy [m]".to_owned(),
                 vacc,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Speed accuracy [m/s]".to_owned(),
                 sacc,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Position DOP".to_owned(),
                 pdop,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Latitude [deg]".to_owned(),
-                lat_deg,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Longitude [deg]".to_owned(),
-                lon_deg,
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Velocity North [m/s]".to_owned(),
                 vel_n,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Velocity East [m/s]".to_owned(),
                 vel_e,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Velocity Down [m/s]".to_owned(),
                 vel_d,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Magnetic Declination [deg]".to_owned(),
                 mag_dec,
                 ExpectedPlotRange::OneToOneHundred,
-            ),
+            )
+            .into(),
             // Valid flags
-            RawPlot::new(
+            RawPlotCommon::new(
                 "Valid Date [bool]".to_owned(),
                 valid_date,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Valid Time [bool]".to_owned(),
                 valid_time,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Valid Fully Resolved [bool]".to_owned(),
                 valid_fully_resolved,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Valid Magnetic Declination [bool]".to_owned(),
                 valid_mag,
                 ExpectedPlotRange::Percentage,
-            ),
+            )
+            .into(),
             // Status flags
-            RawPlot::new(
+            RawPlotCommon::new(
                 "GNSS Fix OK [bool]".to_owned(),
                 gnss_fix_ok,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Differential Solution [bool]".to_owned(),
                 diff_soln,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Head Vehicle Valid [bool]".to_owned(),
                 head_veh_valid,
                 ExpectedPlotRange::Percentage,
-            ),
+            )
+            .into(),
             // Additional flags
-            RawPlot::new(
+            RawPlotCommon::new(
                 "Confirmed Available [bool]".to_owned(),
                 confirmed_avail,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Confirmed Date [bool]".to_owned(),
                 confirmed_date,
                 ExpectedPlotRange::Percentage,
-            ),
-            RawPlot::new(
+            )
+            .into(),
+            RawPlotCommon::new(
                 "Confirmed Time [bool]".to_owned(),
                 confirmed_time,
                 ExpectedPlotRange::Percentage,
-            ),
+            )
+            .into(),
         ]
     }
 }
@@ -436,9 +458,9 @@ impl GpsPvtRecord {
         self.h_msl as f64 * 1e-3
     }
 
-    /// Get ground speed in m/s
-    pub fn ground_speed_ms(&self) -> f64 {
-        self.g_speed as f64 * 1e-3
+    /// Get ground speed in km/h
+    pub fn ground_speed_kmh(&self) -> f64 {
+        self.g_speed as f64 * 3.6e-3
     }
 
     /// Extract flag from `valid_flag` field as float (0.0 or 1.0)
@@ -484,7 +506,7 @@ mod tests {
             eprintln!(
                 "Height: {:.3}m, Speed: {:.3}m/s",
                 g.height_meters(),
-                g.ground_speed_ms()
+                g.ground_speed_kmh()
             );
         }
 
@@ -508,7 +530,7 @@ mod tests {
             eprintln!(
                 "Height: {:.3}m, Speed: {:.3}m/s",
                 g.height_meters(),
-                g.ground_speed_ms()
+                g.ground_speed_kmh()
             );
         }
 

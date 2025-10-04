@@ -4,7 +4,8 @@ use anyhow::bail;
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{
     hdf5::SkytemHdf5,
-    prelude::{PlotLabels, Plotable, RawPlot},
+    prelude::{PlotLabels, Plotable},
+    rawplot::RawPlot,
 };
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +17,8 @@ mod gps_marks;
 mod gps_pvt;
 mod hm;
 mod metadata;
+
+pub(crate) const TSC_LEGEND_NAME: &str = "TSC";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Tsc {
@@ -85,12 +88,15 @@ impl SkytemHdf5 for Tsc {
             total_start.elapsed()
         );
 
-        plots.retain(|p| {
-            if p.points().len() < 2 {
-                log::warn!("Discarding plot with less than 2 points: {}", p.name());
-                false
-            } else {
-                true
+        plots.retain(|p| match p {
+            RawPlot::GeoSpatial { geo_data: _ } => true,
+            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
+                if common.points().len() < 2 {
+                    log::warn!("Discarding plot with less than 2 points: {}", common.name());
+                    false
+                } else {
+                    true
+                }
             }
         });
 
@@ -127,6 +133,7 @@ impl Plotable for Tsc {
 #[cfg(test)]
 mod tests {
     use crate::tsc::{gps_marks::GpsMarkRecords, hm::HmData, metadata::RootMetadata};
+    use plotinator_log_if::rawplot::RawPlot;
     use plotinator_test_util::test_file_defs::tsc::*;
     use testresult::TestResult;
 
@@ -153,11 +160,14 @@ mod tests {
         let (plots, _metadata) =
             hm_data.build_plots_and_metadata(&gps_timestamps, &root_metadata)?;
 
-        let zero_pos = plots.first().unwrap();
-        let bfields = &plots[1];
-
-        let zero_pos_first_10: Vec<[f64; 2]> = zero_pos.points().iter().copied().take(10).collect();
-        let bfield_first_10: Vec<[f64; 2]> = bfields.points().iter().copied().take(10).collect();
+        let zero_pos_first_10: Vec<[f64; 2]> = match plots.first().unwrap() {
+            RawPlot::Generic { common } => common.points().iter().copied().take(10).collect(),
+            _ => unreachable!(),
+        };
+        let bfield_first_10: Vec<[f64; 2]> = match &plots[1] {
+            RawPlot::Generic { common } => common.points().iter().copied().take(10).collect(),
+            _ => unreachable!(),
+        };
 
         insta::assert_debug_snapshot!(zero_pos_first_10);
         insta::assert_debug_snapshot!(bfield_first_10);
