@@ -54,8 +54,7 @@ struct NjordInsPPPRow {
 impl NjordInsPPPRow {
     /// Returns the horizontal speed (ignoring vertical component) in km/h
     fn horizontal_speed_kmh(&self) -> f64 {
-        let speed_mps = (self.vel_n.powi(2) + self.vel_e.powi(2)).sqrt();
-        speed_mps * 3.6
+        self.vel_n.hypot(self.vel_e) * 3.6
     }
 }
 
