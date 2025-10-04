@@ -188,7 +188,7 @@ impl GeoSpatialData {
         self.cached.speed_min_max
     }
 
-    /// Builds and returns all the [RawPlotCommon] that can be extracted from the underlying data
+    /// Builds and returns all the [`RawPlotCommon`] that can be extracted from the underlying data
     pub fn raw_plots_common(&self) -> Vec<RawPlotCommon> {
         let data_len = self.points.len();
         let altitude_len = if self.points.first().is_some_and(|p| p.altitude.is_some()) {
@@ -377,6 +377,6 @@ mod tests {
             .build()
             .unwrap()
             .unwrap();
-        assert_eq!(geo_data.points[0].altitude, Some(altitude[0]))
+        assert_eq!(geo_data.points[0].altitude, Some(altitude[0]));
     }
 }

@@ -5,7 +5,7 @@ use walkers::Projector;
 use crate::PathEntry;
 
 pub(crate) fn draw_path(
-    ui: &mut egui::Ui,
+    ui: &egui::Ui,
     projector: &Projector,
     path: &GeoSpatialData,
     should_draw_heading_arrows: bool,
@@ -216,8 +216,8 @@ pub(crate) fn draw_altitude_labels(painter: &egui::Painter, screen_points: &[(Po
             continue;
         };
 
-        // Check every 10th point as a candidate
-        if i % 10 != 0 {
+        // Check every 8th point as a candidate
+        if i % 8 != 0 {
             continue;
         }
 
@@ -237,7 +237,7 @@ pub(crate) fn draw_altitude_labels(painter: &egui::Painter, screen_points: &[(Po
 }
 
 fn draw_altitude_label(painter: &egui::Painter, point: Pos2, altitude: f64) {
-    let text = format!("{:.0}m", altitude);
+    let text = format!("{altitude:.0}m");
     let font_id = egui::FontId::proportional(11.0);
     let text_color = Color32::BLACK;
     let bg_color = Color32::from_rgba_unmultiplied(255, 255, 255, 200);
@@ -258,7 +258,7 @@ fn draw_altitude_label(painter: &egui::Painter, point: Pos2, altitude: f64) {
 }
 
 pub(crate) fn draw_cursor_highlights(
-    ui: &mut egui::Ui,
+    ui: &egui::Ui,
     projector: &Projector,
     geo_data_series: &[PathEntry],
     cursor_time: f64,
@@ -313,11 +313,7 @@ pub(crate) fn draw_cursor_highlights(
     }
 }
 
-pub(crate) fn highlight_whole_path(
-    ui: &mut egui::Ui,
-    projector: &Projector,
-    path: &GeoSpatialData,
-) {
+pub(crate) fn highlight_whole_path(ui: &egui::Ui, projector: &Projector, path: &GeoSpatialData) {
     let painter = ui.painter();
 
     let screen_points: Vec<Pos2> = path

@@ -66,7 +66,7 @@ impl GpsDataCollector {
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
         // Create GeoSpatial plot if we have valid position data
         if !self.timestamps.is_empty() {
-            let mut builder = GeoSpatialDataBuilder::new(sensor_name.to_string())
+            let mut builder = GeoSpatialDataBuilder::new(sensor_name.to_owned())
                 .timestamp(&self.timestamps)
                 .lat(&self.latitude)
                 .lon(&self.longitude);

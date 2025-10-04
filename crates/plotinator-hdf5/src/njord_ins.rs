@@ -100,7 +100,7 @@ impl SkytemHdf5 for NjordIns {
                 ) {
                     Ok(p) => orientation_position_plots = Some(p),
                     Err(e) => {
-                        log::error!("Failed to process Njord INS orientation and position: {e}")
+                        log::error!("Failed to process Njord INS orientation and position: {e}");
                     }
                 }
             });
@@ -458,7 +458,7 @@ fn process_orientation_and_position(
     let mut longitudes = Vec::with_capacity(dataset_len);
     let mut heights = Vec::with_capacity(dataset_len);
 
-    for row in position.rows().into_iter() {
+    for row in position.rows() {
         let latitude = row[0];
         let longitude = row[1];
         let height = row[2] / 100.; // Convert from cm to M

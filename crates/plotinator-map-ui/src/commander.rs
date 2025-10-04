@@ -8,7 +8,7 @@ use crate::MapCommand;
 pub struct MapUiCommander {
     /// Whether or not the Map is open for commands
     ///
-    /// should be in sync with the [MapViewPort]
+    /// should be in sync with the [`MapViewPort`]
     open: bool,
     // Have we received geospatial data at any time?
     pub any_data_received: bool,
@@ -35,7 +35,7 @@ impl Default for MapUiCommander {
 }
 
 impl MapUiCommander {
-    /// Retrieve channels between [MapUiCommander] and the [MapViewPort]
+    /// Retrieve channels between [MapUiCommander] and the [`MapViewPort`]
     pub fn channels() -> (Sender<MapCommand>, Receiver<MapCommand>) {
         channel()
     }
@@ -58,7 +58,7 @@ impl MapUiCommander {
         self.send_cmd(MapCommand::AddGeoData(geo_data));
     }
 
-    /// Send the current cursor position on the time axis to the [MapViewPort]
+    /// Send the current cursor position on the time axis to the [`MapViewPort`]
     ///
     /// used for highlighting a path point on the map if the time is close enough
     pub fn cursor_time_pos(&mut self, pos: f64) {
@@ -95,12 +95,12 @@ impl MapUiCommander {
         }
     }
 
-    /// Close the command channel, should be in sync with whether or not the [MapViewPort] is open
+    /// Close the command channel, should be in sync with whether or not the [`MapViewPort`] is open
     pub fn close(&mut self) {
         self.open = false;
     }
 
-    /// Open the command channel, should be in sync with whether or not the [MapViewPort] is open
+    /// Open the command channel, should be in sync with whether or not the [`MapViewPort`] is open
     pub fn open(&mut self) {
         self.open = true;
     }

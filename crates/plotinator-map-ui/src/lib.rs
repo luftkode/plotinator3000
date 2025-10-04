@@ -1,4 +1,4 @@
-use egui::{CentralPanel, Frame, RichText, ViewportBuilder, ViewportId, text::LayoutJob};
+use egui::{CentralPanel, Frame, RichText, ViewportBuilder, ViewportId};
 use egui_phosphor::regular::{CHECK_SQUARE, GLOBE, GLOBE_HEMISPHERE_WEST, SQUARE};
 use plotinator_log_if::prelude::GeoSpatialData;
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,7 @@ pub struct MapViewPort {
 }
 
 impl MapViewPort {
-    /// Open the [MapViewPort]
+    /// Open the [`MapViewPort`]
     ///
     /// if it's the first time it's opened, it will start loading map tiles and
     /// return a [Sender<MapCommand>] for interacting with the Map from other contexts
@@ -158,7 +158,7 @@ impl MapViewPort {
                 self.poll_commands();
 
                 CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
-                    let map_state = self.map_tile_state.as_mut().unwrap();
+                    let map_state = self.map_tile_state.as_mut().expect("unsound condition");
 
                     let zoom_level = map_state.map_memory.zoom();
                     log::trace!("map zoom: {zoom_level:.1}");
@@ -183,14 +183,14 @@ impl MapViewPort {
 
                             draw::draw_path(
                                 ui,
-                                &projector,
+                                projector,
                                 &path_entry.data,
                                 should_draw_heading_arrows,
                                 should_draw_height_labels,
                             );
 
                             if is_hovered {
-                                draw::highlight_whole_path(ui, &projector, &path_entry.data);
+                                draw::highlight_whole_path(ui, projector, &path_entry.data);
                             }
                         }
 
@@ -199,7 +199,7 @@ impl MapViewPort {
                         if let Some(cursor_time) = self.plot_time_cursor_pos {
                             draw::draw_cursor_highlights(
                                 ui,
-                                &projector,
+                                projector,
                                 &self.map_data.geo_data,
                                 cursor_time,
                             );
@@ -213,7 +213,7 @@ impl MapViewPort {
                     .default_pos(egui::pos2(0.0, 10.0))
                     .default_size([200.0, 150.0])
                     .show(ctx, |ui| {
-                        let map_state = self.map_tile_state.as_mut().unwrap();
+                        let map_state = self.map_tile_state.as_mut().expect("unsound condition");
 
                         if ui
                             .button(if map_state.is_satellite {
@@ -239,11 +239,10 @@ impl MapViewPort {
                                 TilesKind::MapboxSatellite(HttpTiles::new(
                                     walkers::sources::Mapbox {
                                         style: walkers::sources::MapboxStyle::Satellite,
-                                        access_token: mapbox_access_token.to_owned().map(|s| s.to_string()).unwrap_or_else(||{
+                                        access_token: mapbox_access_token.map_or_else(|| {
                                             log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
-                                            std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token").to_owned()
-
-                                        }),
+                                            std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token").clone()
+                                        }, |s| s.to_owned()),
                                         high_resolution: true,
                                     },
                                     ctx_clone,
@@ -324,8 +323,7 @@ pub enum TilesKind {
 impl AsMut<dyn Tiles> for TilesKind {
     fn as_mut(&mut self) -> &mut (dyn Tiles + 'static) {
         match self {
-            TilesKind::OSM(tiles) => tiles,
-            TilesKind::MapboxSatellite(tiles) => tiles,
+            Self::OSM(tiles) | Self::MapboxSatellite(tiles) => tiles,
         }
     }
 }
@@ -333,8 +331,7 @@ impl AsMut<dyn Tiles> for TilesKind {
 impl AsRef<dyn Tiles> for TilesKind {
     fn as_ref(&self) -> &(dyn Tiles + 'static) {
         match self {
-            TilesKind::OSM(tiles) => tiles,
-            TilesKind::MapboxSatellite(tiles) => tiles,
+            Self::OSM(tiles) | Self::MapboxSatellite(tiles) => tiles,
         }
     }
 }

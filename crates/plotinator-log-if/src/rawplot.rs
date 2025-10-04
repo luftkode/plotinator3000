@@ -22,13 +22,13 @@ pub enum RawPlot {
 
 impl From<RawPlotCommon> for RawPlot {
     fn from(common: RawPlotCommon) -> Self {
-        RawPlot::Generic { common }
+        Self::Generic { common }
     }
 }
 
 impl From<GeoSpatialData> for RawPlot {
     fn from(geo_data: GeoSpatialData) -> Self {
-        RawPlot::GeoSpatial { geo_data }
+        Self::GeoSpatial { geo_data }
     }
 }
 
