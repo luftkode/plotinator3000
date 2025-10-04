@@ -4004,6 +4004,7 @@ dependencies = [
  "log",
  "plotinator-log-if",
  "plotinator-macros",
+ "plotinator-map-ui",
  "plotinator-mqtt",
  "plotinator-mqtt-ui",
  "plotinator-plot-util",

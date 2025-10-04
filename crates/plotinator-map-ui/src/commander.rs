@@ -75,6 +75,14 @@ impl MapUiCommander {
                 || (self.tx.is_none() && self.tmp_queue.is_some())
         );
         if let Some(tx) = self.tx.as_ref() {
+            log::debug!(
+                "Sending map command: {}",
+                match &cmd {
+                    MapCommand::AddGeoData(_) => "AddGeoData",
+                    MapCommand::CursorPos(_) => "CursorPos",
+                    MapCommand::FitToAllPaths => "FitToAllPaths",
+                }
+            );
             if let Err(e) = tx.send(cmd) {
                 log::error!("Failed sending Map command, map is closed: {e}");
                 debug_assert!(false);
@@ -92,5 +100,10 @@ impl MapUiCommander {
     /// Open the command channel, should be in sync with whether or not the [MapViewPort] is open
     pub fn open(&mut self) {
         self.open = true;
+    }
+
+    /// Sync the open state with map
+    pub fn sync_open(&mut self, is_map_open: bool) {
+        self.open = is_map_open;
     }
 }

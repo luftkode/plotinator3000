@@ -47,5 +47,6 @@ impl eframe::App for AppWithMap {
             self.has_map_opened = true;
             self.open_map_viewport(ctx);
         }
+        self.app.map_commander.sync_open(self.map_view.open);
     }
 }

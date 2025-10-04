@@ -149,6 +149,7 @@ impl eframe::App for App {
                 &mut self.first_frame,
                 &new_loaded_files,
                 &mut self.toasts,
+                &mut self.map_commander,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.mqtt,
             );

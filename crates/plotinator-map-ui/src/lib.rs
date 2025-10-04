@@ -25,6 +25,8 @@ pub struct MapViewPort {
     map_tile_state: Option<MapTileState>,
     #[serde(skip)]
     cmd_recv: Option<Receiver<MapCommand>>,
+    /// The time corresponding to the cursor position in the plot area
+    plot_time_cursor_pos: Option<f64>,
 }
 
 impl MapViewPort {
@@ -58,6 +60,7 @@ impl MapViewPort {
     }
 
     pub fn poll_commands(&mut self) {
+        let mut cursor_pos: Option<f64> = None;
         while let Ok(cmd) = self
             .cmd_recv
             .as_ref()
@@ -91,11 +94,17 @@ impl MapViewPort {
                     self.map_data.geo_data.push(geo_data);
                     self.fit_map_to_paths();
                 }
-                MapCommand::CursorPos(time_pos) => todo!(),
+                MapCommand::CursorPos(time_pos) => {
+                    log::debug!("Got cursor time: {time_pos:.}");
+                    cursor_pos = Some(time_pos);
+                }
                 MapCommand::FitToAllPaths => {
                     self.fit_map_to_paths();
                 }
             }
+        }
+        if let Some(pos) = cursor_pos {
+            self.plot_time_cursor_pos = Some(pos);
         }
     }
 
@@ -149,6 +158,15 @@ impl MapViewPort {
                                 geo_data,
                                 should_draw_heading_arrows,
                                 should_draw_height_labels,
+                            );
+                        }
+                        // Draw highlighted points based on cursor position
+                        if let Some(cursor_time) = self.plot_time_cursor_pos {
+                            draw_cursor_highlights(
+                                ui,
+                                &projector,
+                                &self.map_data.geo_data,
+                                cursor_time,
                             );
                         }
                     });
@@ -431,7 +449,6 @@ fn draw_heading_arrow(
         DEFAULT_ARROW_LENGTH
     };
 
-    // --- Correct Angle and Geometry Calculation ---
     // 0° North -> Up, 90° East -> Right
     let angle_rad = (90.0 - heading_deg).to_radians() as f32;
     let dir = Vec2::new(angle_rad.cos(), -angle_rad.sin());
@@ -554,4 +571,50 @@ fn draw_altitude_label(painter: &egui::Painter, point: Pos2, altitude: f64) {
 
     // Draw text
     painter.text(text_pos, egui::Align2::LEFT_TOP, text, font_id, text_color);
+}
+
+fn draw_cursor_highlights(
+    ui: &mut egui::Ui,
+    projector: &Projector,
+    geo_data_series: &[GeoSpatialData],
+    cursor_time: f64,
+) {
+    const MAX_TIME_DELTA: f64 = 2_000_000_000.0; // Maximum 2 seconds in nanoseconds
+    const HIGHLIGHT_RADIUS: f32 = 8.0;
+
+    let painter = ui.painter();
+
+    for geo_data in geo_data_series {
+        // Find the closest point within the time threshold
+        let mut closest_point: Option<(&GeoPoint, f64)> = None;
+
+        for point in &geo_data.points {
+            let time_delta = (point.timestamp - cursor_time).abs();
+
+            if time_delta <= MAX_TIME_DELTA {
+                match closest_point {
+                    None => closest_point = Some((point, time_delta)),
+                    Some((_, current_delta)) if time_delta < current_delta => {
+                        closest_point = Some((point, time_delta));
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Draw highlight for the closest point if found
+        if let Some((point, _)) = closest_point {
+            let screen_pos = projector.project(point.position).to_pos2();
+
+            // Draw pulsing circle with the path's color
+            painter.circle_stroke(
+                screen_pos,
+                HIGHLIGHT_RADIUS,
+                Stroke::new(3.0, geo_data.color),
+            );
+
+            // Draw inner filled circle for better visibility
+            painter.circle_filled(screen_pos, 4.0, geo_data.color);
+        }
+    }
 }
