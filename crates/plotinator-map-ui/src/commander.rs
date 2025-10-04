@@ -35,7 +35,7 @@ impl Default for MapUiCommander {
 }
 
 impl MapUiCommander {
-    /// Retrieve channels between [MapUiCommander] and the [`MapViewPort`]
+    /// Retrieve channels between [`MapUiCommander`] and the [`MapViewPort`]
     pub fn channels() -> (Sender<MapCommand>, Receiver<MapCommand>) {
         channel()
     }

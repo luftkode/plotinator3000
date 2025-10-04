@@ -84,7 +84,7 @@ pub(crate) fn draw_heading_arrows(
 
     let mut last_arrow_pos: Option<Pos2> = None;
 
-    for (point_pos, geo_point) in screen_points.iter() {
+    for (point_pos, geo_point) in screen_points {
         // Skip if no heading data
         if geo_point.heading.is_none() {
             continue;
