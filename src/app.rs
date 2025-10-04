@@ -273,6 +273,18 @@ fn show_top_panel(app: &mut App, ctx: &egui::Context) {
             #[cfg(not(target_arch = "wasm32"))]
             misc::not_wasm_show_download_button(ui, app);
 
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                use egui_phosphor::regular::GLOBE_HEMISPHERE_WEST;
+                let mut txt = RichText::new(format!("{GLOBE_HEMISPHERE_WEST} Map"));
+                if app.map_commander.is_open() {
+                    txt = txt.color(egui::Color32::GREEN).strong();
+                }
+                if ui.button(txt).clicked() {
+                    app.map_commander.map_button_clicked = true;
+                }
+            }
+
             misc::show_font_size_drag_value(ui, ctx, app);
             misc::show_theme_toggle_buttons(ui);
             misc::show_homepage_link(ui);

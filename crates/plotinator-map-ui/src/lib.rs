@@ -1,4 +1,5 @@
-use egui::{CentralPanel, Frame, ViewportBuilder, ViewportId};
+use egui::{CentralPanel, Frame, RichText, ViewportBuilder, ViewportId, text::LayoutJob};
+use egui_phosphor::regular::{CHECK_SQUARE, GLOBE, GLOBE_HEMISPHERE_WEST, SQUARE};
 use plotinator_log_if::prelude::GeoSpatialData;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
@@ -145,7 +146,9 @@ impl MapViewPort {
             ViewportId::from_hash_of("map_viewport"),
             ViewportBuilder::default()
                 .with_title("Map")
-                .with_inner_size([800.0, 600.0]),
+                .with_inner_size([800.0, 600.0])
+                .with_drag_and_drop(false)
+                .with_always_on_top(),
             |ctx, _class| {
                 // The closure contains all the UI logic for the viewport.
                 if ctx.input(|i| i.viewport().close_requested()) {
@@ -156,43 +159,6 @@ impl MapViewPort {
 
                 CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
                     let map_state = self.map_tile_state.as_mut().unwrap();
-
-                    if ui
-                        .button(if map_state.is_satellite {
-                            "Switch to OSM"
-                        } else {
-                            "Switch to Satellite"
-                        })
-                        .clicked()
-                    {
-                        let ctx_clone = ctx.clone();
-
-                        // Load Mapbox token from env/compile-time
-                        const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
-                        const MAPBOX_API_TOKEN_FALLBACK: &str = "MAPBOX_ACCESS_TOKEN";
-                        let mapbox_access_token = std::option_env!("PLOTINATOR3000_MAPBOX_API");
-
-                        map_state.tiles = if map_state.is_satellite {
-                            TilesKind::OSM(HttpTiles::new(
-                                walkers::sources::OpenStreetMap,
-                                ctx_clone,
-                            ))
-                        } else {
-                            TilesKind::MapboxSatellite(HttpTiles::new(
-                                walkers::sources::Mapbox {
-                                    style: walkers::sources::MapboxStyle::Satellite,
-                                    access_token: mapbox_access_token.to_owned().map(|s| s.to_string()).unwrap_or_else(||{
-                                        log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
-                                        std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token").to_owned()
-
-                                    }),
-                                    high_resolution: true,
-                                },
-                                ctx_clone,
-                            ))
-                        };
-                        map_state.is_satellite = !map_state.is_satellite;
-                    }
 
                     let zoom_level = map_state.map_memory.zoom();
                     log::trace!("map zoom: {zoom_level:.1}");
@@ -244,9 +210,48 @@ impl MapViewPort {
                 egui::Window::new("Legend")
                     .title_bar(true)
                     .resizable(true)
-                    .default_pos(egui::pos2(10.0, 10.0))
+                    .default_pos(egui::pos2(0.0, 10.0))
                     .default_size([200.0, 150.0])
                     .show(ctx, |ui| {
+                        let map_state = self.map_tile_state.as_mut().unwrap();
+
+                        if ui
+                            .button(if map_state.is_satellite {
+                                RichText::new(format!("{GLOBE} OSM       {GLOBE}")).strong()
+                            } else {
+                                RichText::new(format!("{GLOBE_HEMISPHERE_WEST} Satellite {GLOBE_HEMISPHERE_WEST}")).strong()
+                            })
+                            .clicked()
+                        {
+                            let ctx_clone = ctx.clone();
+
+                            // Load Mapbox token from env/compile-time
+                            const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
+                            const MAPBOX_API_TOKEN_FALLBACK: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
+                            let mapbox_access_token = std::option_env!("PLOTINATOR3000_MAPBOX_API");
+
+                            map_state.tiles = if map_state.is_satellite {
+                                TilesKind::OSM(HttpTiles::new(
+                                    walkers::sources::OpenStreetMap,
+                                    ctx_clone,
+                                ))
+                            } else {
+                                TilesKind::MapboxSatellite(HttpTiles::new(
+                                    walkers::sources::Mapbox {
+                                        style: walkers::sources::MapboxStyle::Satellite,
+                                        access_token: mapbox_access_token.to_owned().map(|s| s.to_string()).unwrap_or_else(||{
+                                            log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
+                                            std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token").to_owned()
+
+                                        }),
+                                        high_resolution: true,
+                                    },
+                                    ctx_clone,
+                                ))
+                            };
+                            map_state.is_satellite = !map_state.is_satellite;
+                        }
+
                         if self.map_data.geo_data.is_empty() {
                             ui.label("No paths loaded");
                             return;
@@ -259,9 +264,9 @@ impl MapViewPort {
                             ui.horizontal(|ui| {
                                 // Toggle button
                                 let indicator = if *visible {
-                                    egui::RichText::new("⬤").color(path.color)
+                                    egui::RichText::new(CHECK_SQUARE).color(path.color)
                                 } else {
-                                    egui::RichText::new("◯").color(path.color)
+                                    egui::RichText::new(SQUARE).color(path.color)
                                 };
                                 let button_resp = ui.button(indicator);
 

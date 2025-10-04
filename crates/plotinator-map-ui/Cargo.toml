@@ -12,6 +12,7 @@ homepage.workspace = true
 plotinator-log-if.workspace = true
 serde.workspace = true
 walkers.workspace = true
+egui-phosphor.workspace = true
 egui.workspace = true
 egui_extras.workspace = true
 log.workspace = true

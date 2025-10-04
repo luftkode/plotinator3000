@@ -3946,6 +3946,7 @@ name = "plotinator-map-ui"
 version = "1.36.0"
 dependencies = [
  "egui",
+ "egui-phosphor",
  "egui_extras",
  "log",
  "plotinator-log-if",

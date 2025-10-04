@@ -29,23 +29,20 @@ impl AppWithMap {
 
 impl eframe::App for AppWithMap {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
-            egui::MenuBar::new().ui(ui, |ui| {
-                ui.menu_button("Windows", |ui| {
-                    if ui.button("Show Map").clicked() {
-                        self.open_map_viewport(ctx);
-                        ui.close();
-                    }
-                });
-            });
-        });
-
         self.map_view.show(ctx);
         self.app.update(ctx, frame);
 
         if !self.has_map_opened && self.app.map_commander.any_data_received {
             self.has_map_opened = true;
             self.open_map_viewport(ctx);
+        }
+        if self.app.map_commander.map_button_clicked {
+            self.app.map_commander.map_button_clicked = false;
+            if self.map_view.open {
+                self.map_view.close();
+            } else {
+                self.open_map_viewport(ctx);
+            }
         }
         self.app.map_commander.sync_open(self.map_view.open);
     }

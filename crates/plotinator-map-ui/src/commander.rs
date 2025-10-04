@@ -12,6 +12,8 @@ pub struct MapUiCommander {
     open: bool,
     // Have we received geospatial data at any time?
     pub any_data_received: bool,
+    /// Set by a click on the map button, toggles visibility of the map viewport
+    pub map_button_clicked: bool,
     #[serde(skip)]
     tx: Option<Sender<MapCommand>>,
     // Used when the app was created with restored state, until the first time the
@@ -25,6 +27,7 @@ impl Default for MapUiCommander {
         Self {
             open: false,
             any_data_received: false,
+            map_button_clicked: false,
             tx: None,
             tmp_queue: Some(vec![]),
         }
@@ -100,6 +103,10 @@ impl MapUiCommander {
     /// Open the command channel, should be in sync with whether or not the [MapViewPort] is open
     pub fn open(&mut self) {
         self.open = true;
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.open
     }
 
     /// Sync the open state with map
