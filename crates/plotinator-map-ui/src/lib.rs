@@ -1,8 +1,10 @@
-use egui::{CentralPanel, Color32, Frame, Pos2, Stroke, ViewportBuilder, ViewportId};
-use plotinator_log_if::prelude::GeoSpatialData;
+use egui::{CentralPanel, Color32, Frame, Pos2, Stroke, Vec2, ViewportBuilder, ViewportId};
+use plotinator_log_if::prelude::{GeoPoint, GeoSpatialData};
 use serde::{Deserialize, Serialize};
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{Receiver, Sender};
 use walkers::{HttpTiles, Map, MapMemory, Position, Projector};
+
+use crate::commander::MapUiCommander;
 
 /// Messages sent from main app to map viewport
 pub enum MapCommand {
@@ -12,96 +14,7 @@ pub enum MapCommand {
     FitToAllPaths,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct MapUiCommander {
-    /// Whether or not the Map is open for commands
-    ///
-    /// should be in sync with the [MapViewPort]
-    open: bool,
-    // Have we received geospatial data at any time?
-    pub any_data_received: bool,
-    #[serde(skip)]
-    tx: Option<Sender<MapCommand>>,
-    // Used when the app was created with restored state, until the first time the
-    // map is opened, where all the pending commands are then sent
-    #[serde(skip)]
-    tmp_queue: Option<Vec<MapCommand>>,
-}
-
-impl Default for MapUiCommander {
-    fn default() -> Self {
-        Self {
-            open: false,
-            any_data_received: false,
-            tx: None,
-            tmp_queue: Some(vec![]),
-        }
-    }
-}
-
-impl MapUiCommander {
-    /// Retrieve channels between [MapUiCommander] and the [MapViewPort]
-    pub fn channels() -> (Sender<MapCommand>, Receiver<MapCommand>) {
-        channel()
-    }
-
-    pub fn init(&mut self, tx: Sender<MapCommand>) {
-        log::debug!("Initializing MapUiCommander");
-        debug_assert!(self.tmp_queue.is_some());
-        debug_assert!(self.tx.is_none());
-        self.tx = Some(tx);
-        if let Some(queue) = self.tmp_queue.take() {
-            for pending_cmd in queue.into_iter().rev() {
-                self.send_cmd(pending_cmd);
-            }
-        }
-    }
-
-    pub fn add_geo_data(&mut self, geo_data: GeoSpatialData) {
-        log::debug!("Sending geo data to map: {}", geo_data.name);
-        self.any_data_received = true;
-        self.send_cmd(MapCommand::AddGeoData(geo_data));
-    }
-
-    /// Send the current cursor position on the time axis to the [MapViewPort]
-    ///
-    /// used for highlighting a path point on the map if the time is close enough
-    pub fn cursor_time_pos(&mut self, pos: f64) {
-        if self.open {
-            self.send_cmd(MapCommand::CursorPos(pos));
-        }
-    }
-
-    /// Fit the Map to include all the loaded paths
-    pub fn fit_to_all_paths(&mut self) {
-        self.send_cmd(MapCommand::FitToAllPaths);
-    }
-
-    fn send_cmd(&mut self, cmd: MapCommand) {
-        debug_assert!(
-            (self.tx.is_some() && self.tmp_queue.is_none())
-                || (self.tx.is_none() && self.tmp_queue.is_some())
-        );
-        if let Some(tx) = self.tx.as_ref() {
-            if let Err(e) = tx.send(cmd) {
-                log::error!("Failed sending Map command, map is closed: {e}");
-                debug_assert!(false);
-            }
-        } else if let Some(queue) = &mut self.tmp_queue {
-            queue.push(cmd);
-        }
-    }
-
-    /// Close the command channel, should be in sync with whether or not the [MapViewPort] is open
-    pub fn close(&mut self) {
-        self.open = false;
-    }
-
-    /// Open the command channel, should be in sync with whether or not the [MapViewPort] is open
-    pub fn open(&mut self) {
-        self.open = true;
-    }
-}
+pub mod commander;
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct MapViewPort {
@@ -153,7 +66,28 @@ impl MapViewPort {
         {
             match cmd {
                 MapCommand::AddGeoData(geo_data) => {
-                    log::debug!("Received geo data {}", geo_data.name);
+                    if let Some(first_point) = geo_data.points.first() {
+                        let has_speed = first_point.speed.is_some();
+                        let has_altitude = first_point.altitude.is_some();
+                        let has_heading = first_point.heading.is_some();
+                        log::info!(
+                            "Received geo data {}, points include speed={has_speed}, altitude={has_altitude}, heading={has_heading}",
+                            geo_data.name
+                        );
+                    } else {
+                        log::info!("Received basic geo data {}", geo_data.name);
+                    }
+                    debug_assert!(
+                        geo_data.points.iter().all(|p| !p.timestamp.is_nan()
+                            && !p.position.x().is_nan()
+                            && !p.position.y().is_nan()
+                            && !p
+                                .altitude
+                                .is_some_and(|a| a.is_nan() && p.speed.is_some_and(|s| s.is_nan()))
+                            && !p.heading.is_some_and(|h| h.is_nan())),
+                        "GeoSpatialData with NaN values: {}",
+                        geo_data.name
+                    );
                     self.map_data.geo_data.push(geo_data);
                     self.fit_map_to_paths();
                 }
@@ -199,17 +133,69 @@ impl MapViewPort {
                 self.poll_commands();
 
                 let MapTileState { map_memory, tiles } = self.map_tile_state.as_mut().unwrap();
-
+                let zoom_level = map_memory.zoom();
+                log::trace!("map zoom: {zoom_level:.1}");
+                let should_draw_height_labels = zoom_level > 18.;
+                let should_draw_heading_arrows = zoom_level > 21.;
                 CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
                     let map = Map::new(Some(tiles), map_memory, self.map_data.center_position)
                         .double_click_to_zoom(true);
 
                     map.show(ui, |ui, projector, _map_rect| {
                         for geo_data in &self.map_data.geo_data {
-                            draw_path(ui, &projector, geo_data);
+                            draw_path(
+                                ui,
+                                &projector,
+                                geo_data,
+                                should_draw_heading_arrows,
+                                should_draw_height_labels,
+                            );
                         }
                     });
                 });
+
+                egui::Window::new("Legend")
+                    .title_bar(true)
+                    .resizable(true)
+                    .default_pos(egui::pos2(10.0, 10.0))
+                    .default_size([200.0, 150.0])
+                    .show(ctx, |ui| {
+                        if self.map_data.geo_data.is_empty() {
+                            ui.label("No paths loaded");
+                            return;
+                        }
+
+                        for path in &self.map_data.geo_data {
+                            // First point determines metadata availability
+                            let has_heading = path.points.first().and_then(|p| p.heading).is_some();
+                            let has_speed = path.points.first().and_then(|p| p.speed).is_some();
+                            let has_altitude =
+                                path.points.first().and_then(|p| p.altitude).is_some();
+
+                            ui.horizontal(|ui| {
+                                // Color indicator
+                                ui.colored_label(path.color, "⬤");
+
+                                // Path name
+                                ui.label(&path.name);
+
+                                // Metadata flags
+                                let mut meta = String::new();
+                                if has_speed {
+                                    meta.push_str("S ");
+                                }
+                                if has_altitude {
+                                    meta.push_str("A ");
+                                }
+                                if has_heading {
+                                    meta.push_str("H ");
+                                }
+                                if !meta.is_empty() {
+                                    ui.label(format!("[{}]", meta.trim()));
+                                }
+                            });
+                        }
+                    });
             },
         );
 
@@ -262,6 +248,8 @@ fn fit_map_to_paths(
     for gd in geo_data.iter() {
         let (tmp_min_lat, tmp_max_lat) = gd.lat_bounds();
         let (tmp_min_lon, tmp_max_lon) = gd.lon_bounds();
+        log::debug!("{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]", gd.name);
+        log::debug!("{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]", gd.name);
         if let Some(min_lat) = min_lat.as_mut() {
             *min_lat = min_lat.min(tmp_min_lat);
         } else {
@@ -314,59 +302,256 @@ fn fit_map_to_paths(
     Some((center, zoom))
 }
 
-fn draw_path(ui: &mut egui::Ui, projector: &Projector, path: &GeoSpatialData) {
+fn draw_path(
+    ui: &mut egui::Ui,
+    projector: &Projector,
+    path: &GeoSpatialData,
+    should_draw_heading_arrows: bool,
+    should_draw_height_labels: bool,
+) {
     if path.points.len() < 2 {
         return;
     }
 
     let painter = ui.painter();
-    let color = path.color;
+    let path_color = path.color;
 
-    // Convert geographic coordinates to screen coordinates
-    let screen_points: Vec<(Pos2, Option<f64>)> = path
+    // We need the full GeoPoint data at each screen position to access speed and heading.
+    let screen_points: Vec<(Pos2, &GeoPoint)> = path
         .points
         .iter()
-        .map(|p| (projector.project(p.position).to_pos2(), p.heading))
+        .map(|p| (projector.project(p.position).to_pos2(), p))
         .collect();
 
-    // Draw the path as a colored line
-    let stroke = Stroke::new(3.0, color);
+    // Draw the path as a colored line with altitude-based opacity
+    const MAX_ALTITUDE: f64 = 1000.0;
 
     for window in screen_points.windows(2) {
+        // Use the altitude from the first point of the segment
+        let altitude = window[0].1.altitude.unwrap_or(0.0);
+        let opacity = (altitude / MAX_ALTITUDE).clamp(0.0, 1.0);
+
+        // Scale the alpha channel of the path color based on altitude
+        let alpha = (255.0 * opacity) as u8;
+        let segment_color = Color32::from_rgba_unmultiplied(
+            path_color.r(),
+            path_color.g(),
+            path_color.b(),
+            alpha.max(20), // Minimum alpha of 20 to ensure visibility
+        );
+
+        let stroke = Stroke::new(3.0, segment_color);
         painter.line_segment([window[0].0, window[1].0], stroke);
     }
 
-    // Draw circles and heading arrows at each point
-    for (point, heading) in &screen_points {
-        painter.circle_stroke(*point, 4.0, Stroke::new(1.0, color));
+    // Get the speed range for the entire path to normalize arrow lengths.
+    let speed_range = path.speed_bounds();
 
-        // Draw heading arrow if available
-        if let Some(heading_deg) = heading {
-            draw_heading_arrow(painter, *point, *heading_deg, color);
+    // Draw circles at each point
+    for (point_pos, _geo_point) in &screen_points {
+        painter.circle_stroke(*point_pos, 2.0, Stroke::new(1.0, path_color));
+    }
+
+    // Draw heading arrows with distance-based filtering
+    if should_draw_heading_arrows {
+        draw_heading_arrows(painter, &screen_points, path_color, speed_range);
+    }
+
+    if should_draw_height_labels {
+        draw_altitude_labels(painter, &screen_points);
+    }
+
+    // Draw start marker (filled black circle)
+    if let Some((start_pos, _)) = screen_points.first() {
+        draw_start_marker(painter, *start_pos);
+    }
+
+    // Draw end marker (black cross)
+    if let Some((end_pos, _)) = screen_points.last() {
+        draw_end_marker(painter, *end_pos);
+    }
+}
+
+fn draw_heading_arrows(
+    painter: &egui::Painter,
+    screen_points: &[(Pos2, &GeoPoint)],
+    path_color: Color32,
+    speed_range: (f64, f64),
+) {
+    const MIN_ARROW_DISTANCE: f32 = 40.0; // Minimum pixels between arrows
+
+    let mut last_arrow_pos: Option<Pos2> = None;
+
+    for (point_pos, geo_point) in screen_points.iter() {
+        // Skip if no heading data
+        if geo_point.heading.is_none() {
+            continue;
+        }
+
+        // Check distance from last drawn arrow
+        let should_draw = if let Some(last_pos) = last_arrow_pos {
+            let distance = point_pos.distance(last_pos);
+            distance >= MIN_ARROW_DISTANCE
+        } else {
+            true // Always draw the first arrow
+        };
+
+        if should_draw {
+            draw_heading_arrow(painter, *point_pos, geo_point, path_color, speed_range);
+            last_arrow_pos = Some(*point_pos);
         }
     }
 }
 
-fn draw_heading_arrow(painter: &egui::Painter, center: Pos2, heading_deg: f64, color: Color32) {
-    // Convert heading to radians for trigonometric functions.
-    // Screen coordinates have Y pointing down, so we subtract from 90 degrees.
+fn draw_heading_arrow(
+    painter: &egui::Painter,
+    center: Pos2,
+    geo_point: &plotinator_log_if::prelude::GeoPoint,
+    _path_color: Color32, // No longer needed, but kept for signature consistency
+    speed_range: (f64, f64),
+) {
+    let Some(heading_deg) = geo_point.heading else {
+        return;
+    };
+
+    const MIN_ARROW_LENGTH: f32 = 4.0;
+    const MAX_ARROW_LENGTH: f32 = 30.0;
+    const DEFAULT_ARROW_LENGTH: f32 = 12.0;
+
+    let arrow_length = if let Some(speed) = geo_point.speed {
+        let (min_speed, max_speed) = speed_range;
+        if max_speed > min_speed {
+            let speed_ratio =
+                ((speed - min_speed) / (max_speed - min_speed)).clamp(0.0, 1.0) as f32;
+            MIN_ARROW_LENGTH + speed_ratio * (MAX_ARROW_LENGTH - MIN_ARROW_LENGTH)
+        } else {
+            DEFAULT_ARROW_LENGTH
+        }
+    } else {
+        DEFAULT_ARROW_LENGTH
+    };
+
+    // --- Correct Angle and Geometry Calculation ---
+    // 0° North -> Up, 90° East -> Right
     let angle_rad = (90.0 - heading_deg).to_radians() as f32;
+    let dir = Vec2::new(angle_rad.cos(), -angle_rad.sin());
 
-    let arrow_length = 12.0_f32;
-    let arrow_width = 8.0_f32;
+    let tip = center + dir * arrow_length;
 
-    // Calculate arrow tip position relative to the center
-    let tip = center + arrow_length * egui::vec2(angle_rad.cos(), -angle_rad.sin());
+    // Calculate the two barbs for the arrowhead by rotating the backward vector
+    let barb_length = arrow_length * 0.4;
+    let barb_angle = 25.0_f32.to_radians();
+    let back_dir = -dir;
 
-    // Calculate the two base corners of the triangle
-    let perpendicular_angle = angle_rad + std::f32::consts::PI / 2.0;
-    let base_offset = arrow_width / 2.0;
-    let base_vec = base_offset * egui::vec2(perpendicular_angle.cos(), -perpendicular_angle.sin());
+    let rot = egui::emath::Rot2::from_angle(barb_angle);
+    let barb1 = tip + (rot * back_dir) * barb_length;
+    let barb2 = tip + (rot.inverse() * back_dir) * barb_length;
 
-    let left = center - base_vec;
-    let right = center + base_vec;
+    let outline_color = Color32::BLACK;
+    let outline_stroke = Stroke::new(1.5, outline_color);
 
-    // Draw a filled triangle
-    let points = vec![tip, left, right];
-    painter.add(egui::Shape::convex_polygon(points, color, Stroke::NONE));
+    painter.line_segment([center, tip], outline_stroke);
+    painter.line_segment([tip, barb1], outline_stroke);
+    painter.line_segment([tip, barb2], outline_stroke);
+}
+
+fn draw_start_marker(painter: &egui::Painter, center: Pos2) {
+    const MARKER_RADIUS: f32 = 6.0;
+
+    // Draw white outline for better visibility
+    painter.circle_filled(center, MARKER_RADIUS + 1.0, Color32::WHITE);
+    // Draw black filled circle
+    painter.circle_filled(center, MARKER_RADIUS, Color32::BLACK);
+}
+
+fn draw_end_marker(painter: &egui::Painter, center: Pos2) {
+    const CROSS_SIZE: f32 = 8.0;
+    const CROSS_THICKNESS: f32 = 2.5;
+
+    let stroke = Stroke::new(CROSS_THICKNESS, Color32::BLACK);
+    let outline_stroke = Stroke::new(CROSS_THICKNESS + 1.0, Color32::WHITE);
+
+    // Draw white outline for better visibility
+    painter.line_segment(
+        [
+            center + Vec2::new(-CROSS_SIZE, -CROSS_SIZE),
+            center + Vec2::new(CROSS_SIZE, CROSS_SIZE),
+        ],
+        outline_stroke,
+    );
+    painter.line_segment(
+        [
+            center + Vec2::new(-CROSS_SIZE, CROSS_SIZE),
+            center + Vec2::new(CROSS_SIZE, -CROSS_SIZE),
+        ],
+        outline_stroke,
+    );
+
+    // Draw black cross
+    painter.line_segment(
+        [
+            center + Vec2::new(-CROSS_SIZE, -CROSS_SIZE),
+            center + Vec2::new(CROSS_SIZE, CROSS_SIZE),
+        ],
+        stroke,
+    );
+    painter.line_segment(
+        [
+            center + Vec2::new(-CROSS_SIZE, CROSS_SIZE),
+            center + Vec2::new(CROSS_SIZE, -CROSS_SIZE),
+        ],
+        stroke,
+    );
+}
+
+fn draw_altitude_labels(painter: &egui::Painter, screen_points: &[(Pos2, &GeoPoint)]) {
+    const MIN_LABEL_DISTANCE: f32 = 60.0; // Minimum pixels between labels
+
+    let mut last_label_pos: Option<Pos2> = None;
+
+    for (i, (point_pos, geo_point)) in screen_points.iter().enumerate() {
+        // Skip if no altitude data
+        let Some(altitude) = geo_point.altitude else {
+            continue;
+        };
+
+        // Check every 10th point as a candidate
+        if i % 10 != 0 {
+            continue;
+        }
+
+        // Check distance from last drawn label
+        let should_draw = if let Some(last_pos) = last_label_pos {
+            let distance = point_pos.distance(last_pos);
+            distance >= MIN_LABEL_DISTANCE
+        } else {
+            true // Always draw the first label
+        };
+
+        if should_draw {
+            draw_altitude_label(painter, *point_pos, altitude);
+            last_label_pos = Some(*point_pos);
+        }
+    }
+}
+
+fn draw_altitude_label(painter: &egui::Painter, point: Pos2, altitude: f64) {
+    let text = format!("{:.0}m", altitude);
+    let font_id = egui::FontId::proportional(11.0);
+    let text_color = Color32::BLACK;
+    let bg_color = Color32::from_rgba_unmultiplied(255, 255, 255, 200);
+
+    // Offset the text slightly above and to the right of the point
+    let text_pos = point + Vec2::new(5.0, -8.0);
+
+    // Get text dimensions for background
+    let galley = painter.layout_no_wrap(text.clone(), font_id.clone(), text_color);
+    let text_rect = egui::Rect::from_min_size(text_pos, galley.size());
+    let padded_rect = text_rect.expand(2.0);
+
+    // Draw background
+    painter.rect_filled(padded_rect, 2.0, bg_color);
+
+    // Draw text
+    painter.text(text_pos, egui::Align2::LEFT_TOP, text, font_id, text_color);
 }

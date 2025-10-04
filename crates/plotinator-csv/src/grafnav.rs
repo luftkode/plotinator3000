@@ -222,7 +222,7 @@ impl Parseable for GrafNavPPP {
             heading.push(e.cog);
         }
 
-        let geo_data: RawPlot = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+        let geo_data: Option<GeoSpatialData> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
             .timestamp(&timestamps)
             .lon(&longitude)
             .lat(&latitude)
@@ -230,12 +230,10 @@ impl Parseable for GrafNavPPP {
             .speed(&speed)
             .heading(&heading)
             .build()
-            .expect("invalid builder")
-            .into();
+            .expect("invalid builder");
 
-        let raw_plots = vec![
+        let mut raw_plots = vec![
             // Position
-            geo_data,
             RawPlotCommon::new(
                 format!("Height MSL [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_msl),
@@ -317,6 +315,10 @@ impl Parseable for GrafNavPPP {
             )
             .into(),
         ];
+
+        if let Some(geo_data) = geo_data {
+            raw_plots.push(geo_data.into());
+        }
 
         Ok((
             Self {

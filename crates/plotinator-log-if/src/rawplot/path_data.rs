@@ -1,4 +1,4 @@
-use egui::{Color32, Pos2, Stroke, epaint::PathShape};
+use egui::Color32;
 use plotinator_ui_util::auto_color;
 use serde::{Deserialize, Serialize};
 use walkers::{Position, lat_lon};
@@ -100,7 +100,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
         self
     }
 
-    pub fn build(self) -> anyhow::Result<GeoSpatialData> {
+    pub fn build(self) -> anyhow::Result<Option<GeoSpatialData>> {
         let Self {
             name,
             timestamp,
@@ -114,6 +114,13 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
         let ts = timestamp.ok_or_else(|| anyhow::anyhow!("timestamp data is required"))?;
         let lat = lat.ok_or_else(|| anyhow::anyhow!("lat data is required"))?;
         let lon = lon.ok_or_else(|| anyhow::anyhow!("lon data is required"))?;
+
+        if ts.len() < 2 {
+            log::warn!(
+                "Cannot build GeoSpatialData from dataset '{name}' with length less than 2 points"
+            );
+            return Ok(None);
+        }
 
         let len = ts.len().min(lat.len()).min(lon.len());
         let mut points = Vec::with_capacity(len);
@@ -140,7 +147,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
             points.push(point);
         }
 
-        Ok(GeoSpatialData::new(name, points))
+        Ok(Some(GeoSpatialData::new(name, points)))
     }
 }
 
@@ -174,6 +181,11 @@ impl GeoSpatialData {
     /// Get the longitude bounds (min, max) if available
     pub fn lon_bounds(&self) -> (f64, f64) {
         self.cached.lon_min_max
+    }
+
+    /// Get the speed bounds (min, max) if available
+    pub fn speed_bounds(&self) -> (f64, f64) {
+        self.cached.speed_min_max
     }
 
     /// Builds and returns all the [RawPlotCommon] that can be extracted from the underlying data
@@ -254,7 +266,7 @@ impl GeoSpatialData {
         }
 
         plots.retain(|rp| {
-            if rp.points().is_empty() {
+            if rp.points().len() < 2 {
                 log::debug!("{} has no data", rp.name());
                 false
             } else {
@@ -269,6 +281,8 @@ impl GeoSpatialData {
 struct CachedValues {
     lat_min_max: (f64, f64),
     lon_min_max: (f64, f64),
+    speed_min_max: (f64, f64),
+    altitude_min_max: (f64, f64),
 }
 
 impl CachedValues {
@@ -283,6 +297,14 @@ impl CachedValues {
         let mut lon_min = f64::INFINITY;
         let mut lon_max = f64::NEG_INFINITY;
 
+        // Compute speed bounds
+        let mut speed_min = f64::INFINITY;
+        let mut speed_max = f64::NEG_INFINITY;
+
+        // Compute altitude bounds
+        let mut altitude_min = f64::INFINITY;
+        let mut altitude_max = f64::NEG_INFINITY;
+
         for point in points {
             let lat = point.position.y();
             let lon = point.position.x();
@@ -290,43 +312,45 @@ impl CachedValues {
             lat_max = lat_max.max(lat);
             lon_min = lon_min.min(lon);
             lon_max = lon_max.max(lon);
+
+            if let Some(speed) = point.speed {
+                speed_min = speed_min.min(speed);
+                speed_max = speed_max.max(speed);
+            }
+            if let Some(altitude) = point.altitude
+                && altitude.is_sign_positive()
+                && altitude < 3000.
+            {
+                altitude_min = altitude_min.min(altitude);
+                altitude_max = altitude_max.max(altitude);
+            }
         }
 
         let lat_min_max = (lat_min, lat_max);
         let lon_min_max = (lon_min, lon_max);
 
+        // If no points had speed data, speed_max will still be NEG_INFINITY.
+        // In this case, we can set a default range like (0.0, 0.0).
+        let speed_min_max = if speed_max.is_finite() {
+            (speed_min, speed_max)
+        } else {
+            (0.0, 0.0)
+        };
+
+        // If no points had altitude data, altitude_max will still be NEG_INFINITY.
+        // In this case, we can set a default range like (0.0, 0.0).
+        let altitude_min_max = if altitude_max.is_finite() {
+            (altitude_min, altitude_max)
+        } else {
+            (0.0, 0.0)
+        };
+
         Self {
             lat_min_max,
             lon_min_max,
+            speed_min_max,
+            altitude_min_max,
         }
-    }
-
-    fn create_arrow_points(
-        center: Pos2,
-        heading_deg: f64,
-        arrow_length: f32,
-        arrow_width: f32,
-    ) -> Vec<Pos2> {
-        let angle_rad = (90.0 - heading_deg).to_radians() as f32;
-
-        // Calculate arrow tip position
-        let tip_x = center.x + arrow_length * angle_rad.cos();
-        let tip_y = center.y - arrow_length * angle_rad.sin();
-        let tip = Pos2::new(tip_x, tip_y);
-
-        // Calculate arrow base corners
-        let perpendicular = angle_rad + std::f32::consts::PI / 2.0;
-        let base_offset = arrow_width / 2.0;
-
-        let left_x = center.x + base_offset * perpendicular.cos();
-        let left_y = center.y - base_offset * perpendicular.sin();
-        let left = Pos2::new(left_x, left_y);
-
-        let right_x = center.x - base_offset * perpendicular.cos();
-        let right_y = center.y + base_offset * perpendicular.sin();
-        let right = Pos2::new(right_x, right_y);
-
-        vec![tip, left, right]
     }
 }
 
@@ -351,6 +375,7 @@ mod tests {
             .speed(speed)
             .heading(heading)
             .build()
+            .unwrap()
             .unwrap();
         assert_eq!(geo_data.points[0].altitude, Some(altitude[0]))
     }

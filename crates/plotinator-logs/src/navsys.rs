@@ -78,7 +78,7 @@ impl GpsDataCollector {
                 builder = builder.speed(&self.speed);
             }
 
-            if let Ok(geo_data) = builder.build() {
+            if let Ok(Some(geo_data)) = builder.build() {
                 raw_plots.push(RawPlot::from(geo_data));
             }
         }

@@ -478,16 +478,15 @@ fn process_orientation_and_position(
         headings.push(heading);
     }
 
-    let geo_data = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+    let geo_data: Option<GeoSpatialData> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
         .timestamp(timestamps)
         .lat(&latitudes)
         .lon(&longitudes)
         .heading(&headings)
         .altitude(&heights)
-        .build()?
-        .into();
+        .build()?;
 
-    Ok(vec![
+    let mut plots = vec![
         RawPlotCommon::new(
             format!("Roll° ({LEGEND_NAME})"),
             rolls,
@@ -500,8 +499,12 @@ fn process_orientation_and_position(
             ExpectedPlotRange::OneToOneHundred,
         )
         .into(),
-        geo_data,
-    ])
+    ];
+    if let Some(geo_data) = geo_data {
+        plots.push(geo_data.into());
+    }
+
+    Ok(plots)
 }
 
 fn combine_timestamps(

@@ -224,7 +224,7 @@ impl Parseable for NjordInsPPP {
             heading.push(e.heading);
         }
 
-        let geo_data: RawPlot = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+        let geo_data: Option<GeoSpatialData> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
             .timestamp(&timestamps)
             .lon(&longitude)
             .lat(&latitude)
@@ -232,11 +232,9 @@ impl Parseable for NjordInsPPP {
             .speed(&speed)
             .heading(&heading)
             .build()
-            .expect("invalid builder")
-            .into();
+            .expect("invalid builder");
 
-        let raw_plots = vec![
-            geo_data,
+        let mut raw_plots = vec![
             // Attitude
             RawPlotCommon::new(
                 format!("Pitch° ({LEGEND_NAME})"),
@@ -375,6 +373,9 @@ impl Parseable for NjordInsPPP {
             )
             .into(),
         ];
+        if let Some(geo_data) = geo_data {
+            raw_plots.push(geo_data.into());
+        }
 
         let total_bytes_read = header_bytes_read + entries_bytes_read;
 

@@ -3,7 +3,7 @@ use crate::app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular::FLOPPY_DISK;
-use plotinator_map_ui::MapUiCommander;
+use plotinator_map_ui::commander::MapUiCommander;
 use plotinator_plot_ui::LogPlotUi;
 
 use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};

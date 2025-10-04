@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use hdf5::H5Type;
 use ndarray::Array1;
 use plotinator_log_if::{
-    prelude::{ExpectedPlotRange, GeoSpatialDataBuilder, RawPlotCommon},
+    prelude::{ExpectedPlotRange, GeoSpatialData, GeoSpatialDataBuilder, RawPlotCommon},
     rawplot::RawPlot,
 };
 
@@ -114,19 +114,18 @@ impl GpsPvtRecords {
             confirmed_time.push([t, e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_TIME)]);
         }
 
-        let geo_data: RawPlot = GeoSpatialDataBuilder::new(TSC_LEGEND_NAME.to_owned())
-            .timestamp(&timestamps)
-            .lat(&lat_deg)
-            .lon(&lon_deg)
-            .altitude(&height)
-            .speed(&gspeed)
-            .heading(&heading)
-            .build()
-            .expect("invalid builder")
-            .into();
+        let geo_data: Option<GeoSpatialData> =
+            GeoSpatialDataBuilder::new(TSC_LEGEND_NAME.to_owned())
+                .timestamp(&timestamps)
+                .lat(&lat_deg)
+                .lon(&lon_deg)
+                .altitude(&height)
+                .speed(&gspeed)
+                .heading(&heading)
+                .build()
+                .expect("invalid builder");
 
-        vec![
-            geo_data,
+        let mut plots = vec![
             RawPlotCommon::new(
                 "Satellites".to_owned(),
                 numsv,
@@ -256,7 +255,11 @@ impl GpsPvtRecords {
                 ExpectedPlotRange::Percentage,
             )
             .into(),
-        ]
+        ];
+        if let Some(geo_data) = geo_data {
+            plots.push(geo_data.into());
+        }
+        plots
     }
 }
 /// UBX-NAV-PVT message payload structure
