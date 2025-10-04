@@ -312,3 +312,34 @@ pub(crate) fn draw_cursor_highlights(
         }
     }
 }
+
+pub(crate) fn highlight_whole_path(
+    ui: &mut egui::Ui,
+    projector: &Projector,
+    path: &GeoSpatialData,
+) {
+    let painter = ui.painter();
+
+    let screen_points: Vec<Pos2> = path
+        .points
+        .iter()
+        .map(|p| projector.project(p.position).to_pos2())
+        .collect();
+
+    if screen_points.len() < 2 {
+        return;
+    }
+
+    // Draw a thicker halo around the path
+    let highlight_color =
+        Color32::from_rgba_unmultiplied(path.color.r(), path.color.g(), path.color.b(), 120);
+
+    for window in screen_points.windows(2) {
+        painter.line_segment([window[0], window[1]], Stroke::new(6.0, highlight_color));
+    }
+
+    // highlight each point
+    for point in &screen_points {
+        painter.circle_stroke(*point, 6.0, Stroke::new(2.0, highlight_color));
+    }
+}

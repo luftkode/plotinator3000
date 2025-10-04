@@ -27,7 +27,10 @@ pub struct MapViewPort {
     #[serde(skip)]
     cmd_recv: Option<Receiver<MapCommand>>,
     /// The time corresponding to the cursor position in the plot area
+    #[serde(skip)]
     plot_time_cursor_pos: Option<f64>,
+    #[serde(skip)]
+    hovered_path: Option<usize>, // index of hovered path
 }
 
 impl MapViewPort {
@@ -205,10 +208,13 @@ impl MapViewPort {
                     .double_click_to_zoom(true);
 
                     map.show(ui, |ui, projector, _map_rect| {
-                        for path_entry in &self.map_data.geo_data {
+                        for (i, path_entry) in self.map_data.geo_data.iter().enumerate() {
                             if !path_entry.visible {
                                 continue;
                             }
+
+                            let is_hovered = self.hovered_path == Some(i);
+
                             draw::draw_path(
                                 ui,
                                 &projector,
@@ -216,7 +222,12 @@ impl MapViewPort {
                                 should_draw_heading_arrows,
                                 should_draw_height_labels,
                             );
+
+                            if is_hovered {
+                                draw::highlight_whole_path(ui, &projector, &path_entry.data);
+                            }
                         }
+
 
                         // Draw highlighted points based on cursor position
                         if let Some(cursor_time) = self.plot_time_cursor_pos {
@@ -241,42 +252,54 @@ impl MapViewPort {
                             return;
                         }
 
-                        for path_entry in &mut self.map_data.geo_data {
-    let path = &path_entry.data;
-    let visible = &mut path_entry.visible;
+                        for (i, path_entry) in self.map_data.geo_data.iter_mut().enumerate() {
+                            let path = &path_entry.data;
+                            let visible = &mut path_entry.visible;
 
-    // Toggle button (circle filled if visible, outline if not)
-    let indicator = if *visible {
-        egui::RichText::new("⬤").color(path.color)
-    } else {
-        egui::RichText::new("◯").color(path.color)
-    };
+                            ui.horizontal(|ui| {
+                                // Toggle button
+                                let indicator = if *visible {
+                                    egui::RichText::new("⬤").color(path.color)
+                                } else {
+                                    egui::RichText::new("◯").color(path.color)
+                                };
+                                let button_resp = ui.button(indicator);
 
-    ui.horizontal(|ui| {
-        if ui.button(indicator).clicked() {
-            *visible = !*visible;
-        }
+                                if button_resp.clicked() {
+                                    *visible = !*visible;
+                                }
+                                let name_label_resp = ui.label(&path.name);
 
-        // Path name
-        ui.label(&path.name);
+                                // Metadata flags
+                                let mut meta = String::new();
+                                if path.points.first().and_then(|p| p.speed).is_some() {
+                                    meta.push_str("S ");
+                                }
+                                if path.points.first().and_then(|p| p.altitude).is_some() {
+                                    meta.push_str("A ");
+                                }
+                                if path.points.first().and_then(|p| p.heading).is_some() {
+                                    meta.push_str("H ");
+                                }
+                                let mut meta_label_hovered = false;
+                                if !meta.is_empty() {
+                                    meta_label_hovered = ui.label(format!("[{}]", meta.trim())).hovered();
+                                }
 
-        // Metadata flags
-        let mut meta = String::new();
-        if path.points.first().and_then(|p| p.speed).is_some() {
-            meta.push_str("S ");
-        }
-        if path.points.first().and_then(|p| p.altitude).is_some() {
-            meta.push_str("A ");
-        }
-        if path.points.first().and_then(|p| p.heading).is_some() {
-            meta.push_str("H ");
-        }
-        if !meta.is_empty() {
-            ui.label(format!("[{}]", meta.trim()));
-        }
-    });
-}
 
+
+                                // Track hover
+                                if button_resp.hovered() || name_label_resp.hovered() || meta_label_hovered {
+                                    self.hovered_path = Some(i);
+                                }
+                            });
+                        }
+
+                        // Reset hovered if nothing hovered this frame
+
+                        if !ui.ui_contains_pointer() {
+                            self.hovered_path = None;
+                        }
                     });
             },
         );
