@@ -3942,10 +3942,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "plotinator-map"
+name = "plotinator-map-ui"
 version = "1.36.0"
 dependencies = [
  "egui",
+ "egui_extras",
+ "log",
+ "plotinator-log-if",
+ "serde",
  "walkers",
 ]
 
@@ -4026,7 +4030,6 @@ dependencies = [
  "num-traits",
  "plotinator-log-if",
  "plotinator-macros",
- "plotinator-map",
  "plotinator-proc-macros",
  "plotinator-ui-util",
  "pretty_assertions",
@@ -4137,7 +4140,7 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-logs",
  "plotinator-macros",
- "plotinator-map",
+ "plotinator-map-ui",
  "plotinator-mqtt",
  "plotinator-mqtt-ui",
  "plotinator-plot-ui",

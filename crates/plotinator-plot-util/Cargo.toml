@@ -16,7 +16,6 @@ plotinator-log-if.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-macros.workspace = true
 plotinator-proc-macros.workspace = true
-plotinator-map.workspace = true
 puffin = { workspace = true, optional = true }
 egui_plot.workspace = true
 egui.workspace = true

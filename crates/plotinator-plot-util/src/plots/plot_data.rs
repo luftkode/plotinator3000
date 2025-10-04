@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
 use plotinator_log_if::prelude::RawPlotCommon;
-use plotinator_map::PathData;
 use plotinator_ui_util::auto_color;
 use serde::{Deserialize, Serialize};
 
@@ -176,21 +175,10 @@ impl CookedPlot {
         }
     }
 
-    /// Stroke color. Default is `Color32::TRANSPARENT` which means a color will be auto-assigned.
-    pub fn color(mut self, color: impl Into<Color32>) -> Self {
-        self.color = color.into();
-        self
-    }
-
     /// Stroke color.
     #[inline]
     pub fn get_color(&self) -> Color32 {
         self.color
-    }
-
-    pub fn take_path_data_if_coordinates(&mut self) -> Option<PathData> {
-        debug_assert_ne!(self.color, Color32::TRANSPARENT);
-        todo!()
     }
 
     pub fn get_raw(&self) -> PointList {

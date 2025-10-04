@@ -3,6 +3,7 @@ use crate::app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular::FLOPPY_DISK;
+use plotinator_map_ui::MapUiCommander;
 use plotinator_plot_ui::LogPlotUi;
 
 use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
@@ -22,14 +23,13 @@ pub struct App {
     first_frame: bool,
     #[serde(skip)]
     toasts: Toasts,
+    pub(crate) map_commander: MapUiCommander,
 
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
     font_size_init: bool,
     error_message: Option<String>,
-
-    pub(crate) coordinates_data: Option<Vec<Vec<(f64, f64)>>>,
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
     #[serde(skip)]
@@ -68,7 +68,7 @@ impl Default for App {
             font_size_init: false,
             error_message: None,
 
-            coordinates_data: None,
+            map_commander: MapUiCommander::default(),
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt: plotinator_mqtt_ui::connection::MqttConnection::default(),
@@ -142,27 +142,23 @@ impl eframe::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             misc::notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
-            let loaded_files = self.loaded_files.take_loaded_files();
-            for file in &loaded_files {
-                log::info!("Received dataset {}", file.descriptive_name());
-                use plotinator_log_if::plotable::Plotable as _;
-                if let Some(coords) = file.coordinates() {
-                    log::info!("Adding coordinates data from {}", file.descriptive_name());
-                    if let Some(existing_coords) = &mut self.coordinates_data {
-                        existing_coords.extend(coords);
-                    } else {
-                        self.coordinates_data = Some(coords);
-                    }
-                }
-            }
+            let new_loaded_files = self.loaded_files.take_loaded_files();
+
             self.plot.ui(
                 ui,
                 &mut self.first_frame,
-                &loaded_files,
+                &new_loaded_files,
                 &mut self.toasts,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.mqtt,
             );
+            for file in new_loaded_files {
+                log::info!("Received dataset {}", file.descriptive_name());
+                use plotinator_log_if::plotable::Plotable as _;
+                for geo_data in file.geo_spatial_data() {
+                    self.map_commander.add_geo_data(geo_data);
+                }
+            }
 
             if self.plot.plot_count() == 0 {
                 supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown

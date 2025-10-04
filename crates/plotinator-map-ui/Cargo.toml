@@ -1,5 +1,5 @@
 [package]
-name = "plotinator-map"
+name = "plotinator-map-ui"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true
@@ -9,8 +9,12 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+plotinator-log-if.workspace = true
+serde.workspace = true
 walkers.workspace = true
 egui.workspace = true
+egui_extras.workspace = true
+log.workspace = true
 
 [lints]
 workspace = true

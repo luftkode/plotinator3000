@@ -133,6 +133,45 @@ impl SupportedFormat {
             Self::MqttData(_) => None,
         }
     }
+
+    /// Consumes self and returns all the [GeoSpatialData] contained within, if any
+    ///
+    /// This is meant for after the regular plots have already been processed and the geo data can be sent
+    /// to the map view
+    pub fn geo_spatial_data(self) -> Vec<GeoSpatialData> {
+        let mut geo_spatial_data: Vec<GeoSpatialData> = vec![];
+        match self {
+            SupportedFormat::Log(supported_log) => {
+                for rp in supported_log.raw_plots() {
+                    if let RawPlot::GeoSpatial { geo_data } = rp {
+                        geo_spatial_data.push(geo_data.clone());
+                    }
+                }
+            }
+            SupportedFormat::Csv(supported_csv) => {
+                for rp in supported_csv.raw_plots() {
+                    if let RawPlot::GeoSpatial { geo_data } = rp {
+                        geo_spatial_data.push(geo_data.clone());
+                    }
+                }
+            }
+            SupportedFormat::HDF5(supported_hdf5_format) => {
+                for rp in supported_hdf5_format.raw_plots() {
+                    if let RawPlot::GeoSpatial { geo_data } = rp {
+                        geo_spatial_data.push(geo_data.clone());
+                    }
+                }
+            }
+            SupportedFormat::MqttData(serializable_mqtt_plot_data) => {
+                for rp in serializable_mqtt_plot_data.raw_plots() {
+                    if let RawPlot::GeoSpatial { geo_data } = rp {
+                        geo_spatial_data.push(geo_data.clone());
+                    }
+                }
+            }
+        }
+        geo_spatial_data
+    }
 }
 
 impl Plotable for SupportedFormat {

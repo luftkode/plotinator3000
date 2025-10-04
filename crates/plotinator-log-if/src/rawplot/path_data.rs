@@ -1,4 +1,4 @@
-use egui::Color32;
+use egui::{Color32, Pos2, Stroke, epaint::PathShape};
 use plotinator_ui_util::auto_color;
 use serde::{Deserialize, Serialize};
 use walkers::{Position, lat_lon};
@@ -140,11 +140,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
             points.push(point);
         }
 
-        Ok(GeoSpatialData {
-            name,
-            points,
-            color: auto_color(),
-        })
+        Ok(GeoSpatialData::new(name, points))
     }
 }
 
@@ -154,15 +150,30 @@ pub struct GeoSpatialData {
     pub name: String,
     pub points: Vec<GeoPoint>,
     pub color: Color32,
+
+    cached: CachedValues,
 }
 
 impl GeoSpatialData {
     pub fn new(name: String, points: Vec<GeoPoint>) -> Self {
+        let color = auto_color();
+        let cached = CachedValues::compute(&points);
         Self {
             name,
             points,
-            color: auto_color(),
+            color,
+            cached,
         }
+    }
+
+    /// Get the latitude bounds (min, max) if available
+    pub fn lat_bounds(&self) -> (f64, f64) {
+        self.cached.lat_min_max
+    }
+
+    /// Get the longitude bounds (min, max) if available
+    pub fn lon_bounds(&self) -> (f64, f64) {
+        self.cached.lon_min_max
     }
 
     /// Builds and returns all the [RawPlotCommon] that can be extracted from the underlying data
@@ -251,6 +262,71 @@ impl GeoSpatialData {
             }
         });
         plots
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+struct CachedValues {
+    lat_min_max: (f64, f64),
+    lon_min_max: (f64, f64),
+}
+
+impl CachedValues {
+    fn compute(points: &[GeoPoint]) -> Self {
+        if points.is_empty() {
+            return Self::default();
+        }
+
+        // Compute lat/lon bounds
+        let mut lat_min = f64::INFINITY;
+        let mut lat_max = f64::NEG_INFINITY;
+        let mut lon_min = f64::INFINITY;
+        let mut lon_max = f64::NEG_INFINITY;
+
+        for point in points {
+            let lat = point.position.y();
+            let lon = point.position.x();
+            lat_min = lat_min.min(lat);
+            lat_max = lat_max.max(lat);
+            lon_min = lon_min.min(lon);
+            lon_max = lon_max.max(lon);
+        }
+
+        let lat_min_max = (lat_min, lat_max);
+        let lon_min_max = (lon_min, lon_max);
+
+        Self {
+            lat_min_max,
+            lon_min_max,
+        }
+    }
+
+    fn create_arrow_points(
+        center: Pos2,
+        heading_deg: f64,
+        arrow_length: f32,
+        arrow_width: f32,
+    ) -> Vec<Pos2> {
+        let angle_rad = (90.0 - heading_deg).to_radians() as f32;
+
+        // Calculate arrow tip position
+        let tip_x = center.x + arrow_length * angle_rad.cos();
+        let tip_y = center.y - arrow_length * angle_rad.sin();
+        let tip = Pos2::new(tip_x, tip_y);
+
+        // Calculate arrow base corners
+        let perpendicular = angle_rad + std::f32::consts::PI / 2.0;
+        let base_offset = arrow_width / 2.0;
+
+        let left_x = center.x + base_offset * perpendicular.cos();
+        let left_y = center.y - base_offset * perpendicular.sin();
+        let left = Pos2::new(left_x, left_y);
+
+        let right_x = center.x - base_offset * perpendicular.cos();
+        let right_y = center.y + base_offset * perpendicular.sin();
+        let right = Pos2::new(right_x, right_y);
+
+        vec![tip, left, right]
     }
 }
 
