@@ -2,6 +2,8 @@ use egui::{Color32, Pos2, Stroke, Vec2};
 use plotinator_log_if::prelude::{GeoPoint, GeoSpatialData};
 use walkers::Projector;
 
+use crate::PathEntry;
+
 pub(crate) fn draw_path(
     ui: &mut egui::Ui,
     projector: &Projector,
@@ -258,7 +260,7 @@ fn draw_altitude_label(painter: &egui::Painter, point: Pos2, altitude: f64) {
 pub(crate) fn draw_cursor_highlights(
     ui: &mut egui::Ui,
     projector: &Projector,
-    geo_data_series: &[GeoSpatialData],
+    geo_data_series: &[PathEntry],
     cursor_time: f64,
 ) {
     const MAX_TIME_DELTA: f64 = 2_000_000_000.0; // Maximum 2 seconds in nanoseconds
@@ -266,7 +268,11 @@ pub(crate) fn draw_cursor_highlights(
 
     let painter = ui.painter();
 
-    for geo_data in geo_data_series {
+    for path in geo_data_series {
+        if !path.visible {
+            continue;
+        }
+        let geo_data = &path.data;
         // Find the closest point within the time threshold
         let mut closest_point: Option<(&GeoPoint, f64)> = None;
 

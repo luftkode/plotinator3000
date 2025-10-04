@@ -98,7 +98,10 @@ impl MapViewPort {
                         "GeoSpatialData with NaN values: {}",
                         geo_data.name
                     );
-                    self.map_data.geo_data.push(geo_data);
+                    self.map_data.geo_data.push(PathEntry {
+                        data: geo_data,
+                        visible: true,
+                    });
                     self.fit_map_to_paths();
                 }
                 MapCommand::CursorPos(time_pos) => {
@@ -202,15 +205,19 @@ impl MapViewPort {
                     .double_click_to_zoom(true);
 
                     map.show(ui, |ui, projector, _map_rect| {
-                        for geo_data in &self.map_data.geo_data {
+                        for path_entry in &self.map_data.geo_data {
+                            if !path_entry.visible {
+                                continue;
+                            }
                             draw::draw_path(
                                 ui,
                                 &projector,
-                                geo_data,
+                                &path_entry.data,
                                 should_draw_heading_arrows,
                                 should_draw_height_labels,
                             );
                         }
+
                         // Draw highlighted points based on cursor position
                         if let Some(cursor_time) = self.plot_time_cursor_pos {
                             draw::draw_cursor_highlights(
@@ -234,36 +241,42 @@ impl MapViewPort {
                             return;
                         }
 
-                        for path in &self.map_data.geo_data {
-                            // First point determines metadata availability
-                            let has_heading = path.points.first().and_then(|p| p.heading).is_some();
-                            let has_speed = path.points.first().and_then(|p| p.speed).is_some();
-                            let has_altitude =
-                                path.points.first().and_then(|p| p.altitude).is_some();
+                        for path_entry in &mut self.map_data.geo_data {
+    let path = &path_entry.data;
+    let visible = &mut path_entry.visible;
 
-                            ui.horizontal(|ui| {
-                                // Color indicator
-                                ui.colored_label(path.color, "⬤");
+    // Toggle button (circle filled if visible, outline if not)
+    let indicator = if *visible {
+        egui::RichText::new("⬤").color(path.color)
+    } else {
+        egui::RichText::new("◯").color(path.color)
+    };
 
-                                // Path name
-                                ui.label(&path.name);
+    ui.horizontal(|ui| {
+        if ui.button(indicator).clicked() {
+            *visible = !*visible;
+        }
 
-                                // Metadata flags
-                                let mut meta = String::new();
-                                if has_speed {
-                                    meta.push_str("S ");
-                                }
-                                if has_altitude {
-                                    meta.push_str("A ");
-                                }
-                                if has_heading {
-                                    meta.push_str("H ");
-                                }
-                                if !meta.is_empty() {
-                                    ui.label(format!("[{}]", meta.trim()));
-                                }
-                            });
-                        }
+        // Path name
+        ui.label(&path.name);
+
+        // Metadata flags
+        let mut meta = String::new();
+        if path.points.first().and_then(|p| p.speed).is_some() {
+            meta.push_str("S ");
+        }
+        if path.points.first().and_then(|p| p.altitude).is_some() {
+            meta.push_str("A ");
+        }
+        if path.points.first().and_then(|p| p.heading).is_some() {
+            meta.push_str("H ");
+        }
+        if !meta.is_empty() {
+            ui.label(format!("[{}]", meta.trim()));
+        }
+    });
+}
+
                     });
             },
         );
@@ -304,10 +317,15 @@ pub struct MapTileState {
     pub is_satellite: bool,
 }
 
-/// Persistent map state that survives viewport closure
+#[derive(Clone, Deserialize, Serialize)]
+pub struct PathEntry {
+    pub data: GeoSpatialData,
+    pub visible: bool,
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct MapData {
-    pub geo_data: Vec<GeoSpatialData>,
+    pub geo_data: Vec<PathEntry>,
     pub highlighted: Option<Position>,
     pub center_position: Position,
     pub zoom: f64,
@@ -324,10 +342,7 @@ impl Default for MapData {
     }
 }
 
-fn fit_map_to_paths(
-    map_memory: &mut MapMemory,
-    geo_data: &[GeoSpatialData],
-) -> Option<(Position, f64)> {
+fn fit_map_to_paths(map_memory: &mut MapMemory, geo_data: &[PathEntry]) -> Option<(Position, f64)> {
     if geo_data.is_empty() {
         return None;
     }
@@ -338,7 +353,8 @@ fn fit_map_to_paths(
     let mut min_lon: Option<f64> = None;
     let mut max_lon: Option<f64> = None;
 
-    for gd in geo_data.iter() {
+    for path in geo_data.iter().filter(|p| p.visible) {
+        let gd = &path.data;
         let (tmp_min_lat, tmp_max_lat) = gd.lat_bounds();
         let (tmp_min_lon, tmp_max_lon) = gd.lon_bounds();
         log::debug!("{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]", gd.name);
