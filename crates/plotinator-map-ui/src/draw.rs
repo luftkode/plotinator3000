@@ -4,12 +4,22 @@ use walkers::Projector;
 
 use crate::PathEntry;
 
+pub struct DrawSettings {
+    pub(crate) draw_heading_arrows: bool,
+    pub(crate) telemetry_label: TelemetryLabelSettings,
+}
+
+pub struct TelemetryLabelSettings {
+    pub(crate) draw: bool,
+    pub(crate) with_speed: bool,
+    pub(crate) with_altitude: bool,
+}
+
 pub(crate) fn draw_path(
     ui: &egui::Ui,
     projector: &Projector,
     path: &GeoSpatialData,
-    should_draw_heading_arrows: bool,
-    should_draw_height_labels: bool,
+    settings: &DrawSettings,
 ) {
     if path.points.len() < 2 {
         return;
@@ -55,12 +65,12 @@ pub(crate) fn draw_path(
     }
 
     // Draw heading arrows with distance-based filtering
-    if should_draw_heading_arrows {
+    if settings.draw_heading_arrows {
         draw_heading_arrows(painter, &screen_points, speed_range);
     }
 
-    if should_draw_height_labels {
-        draw_altitude_labels(painter, &screen_points);
+    if settings.telemetry_label.draw {
+        draw_telemetry_labels(painter, &settings.telemetry_label, &screen_points);
     }
 
     // Draw start marker (filled black circle)
@@ -196,7 +206,11 @@ fn draw_end_marker(painter: &Painter, center: Pos2) {
     painter.line_segment(line2(center), stroke);
 }
 
-pub(crate) fn draw_altitude_labels(painter: &Painter, screen_points: &[(Pos2, &GeoPoint)]) {
+pub(crate) fn draw_telemetry_labels(
+    painter: &Painter,
+    settings: &TelemetryLabelSettings,
+    screen_points: &[(Pos2, &GeoPoint)],
+) {
     const MIN_LABEL_DISTANCE: f32 = 60.0; // Minimum pixels between labels
 
     let mut last_label_pos: Option<Pos2> = None;
@@ -219,11 +233,11 @@ pub(crate) fn draw_altitude_labels(painter: &Painter, screen_points: &[(Pos2, &G
         // Check distance from last drawn label
         if points_since_drawn >= POINT_SEPARATION {
             if last_label_pos.is_none_or(|lp| point_pos.distance(lp) >= MIN_LABEL_DISTANCE) {
-                draw_telemetry_label(painter, *point_pos, geo_point);
+                draw_telemetry_label(painter, settings, *point_pos, geo_point);
                 last_label_pos = Some(*point_pos);
                 points_since_drawn = 0;
             } else if let Some((p, gp)) = point_candidate {
-                draw_telemetry_label(painter, p, gp);
+                draw_telemetry_label(painter, settings, p, gp);
                 last_label_pos = Some(p);
                 points_since_drawn = 0;
             }
@@ -231,18 +245,29 @@ pub(crate) fn draw_altitude_labels(painter: &Painter, screen_points: &[(Pos2, &G
     }
 }
 
-fn draw_telemetry_label(painter: &Painter, point: Pos2, geo_point: &GeoPoint) {
+fn draw_telemetry_label(
+    painter: &Painter,
+    settings: &TelemetryLabelSettings,
+    point: Pos2,
+    geo_point: &GeoPoint,
+) {
     let mut lines = Vec::new();
 
-    if let Some(altitude) = geo_point.altitude {
-        lines.push(format!("{altitude:.0}m"));
+    if let Some(altitude) = geo_point.altitude
+        && settings.with_altitude
+    {
+        lines.push(format!("{altitude:.0} m"));
     }
-    if let Some(speed) = geo_point.speed {
+    if let Some(speed) = geo_point.speed
+        && settings.with_speed
+    {
         lines.push(format!("{speed:.1} km/h"));
     }
-    if let Some(heading) = geo_point.heading {
-        lines.push(format!("{heading:.0}°"));
-    }
+    // A developer might want to sanity check the heading values, but other than
+    // that it is redundant as the arrow marker will show the heading
+    // if let Some(heading) = geo_point.heading {
+    //     lines.push(format!("{heading:.0}°"));
+    // }
 
     // If no data available, don't draw anything
     if lines.is_empty() {
@@ -301,7 +326,7 @@ pub(crate) fn draw_cursor_highlights(
     const HIGHLIGHT_RADIUS: f32 = 8.0;
 
     for path in geo_data_series {
-        if !path.visible {
+        if !path.settings.visible {
             continue;
         }
         let geo_data = &path.data;

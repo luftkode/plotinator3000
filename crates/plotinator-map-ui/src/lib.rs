@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{HttpTiles, Map, MapMemory, Position, Tiles};
 
-use crate::commander::MapUiCommander;
+use crate::{
+    commander::MapUiCommander,
+    draw::{DrawSettings, TelemetryLabelSettings},
+};
 
 /// Messages sent from main app to map viewport
 pub enum MapCommand {
@@ -106,7 +109,7 @@ impl MapViewPort {
                     );
                     self.map_data.geo_data.push(PathEntry {
                         data: geo_data,
-                        visible: true,
+                        settings: Default::default(),
                     });
                     self.fit_map_to_paths();
                 }
@@ -184,8 +187,6 @@ impl MapViewPort {
             .expect("map_tile_state is required but not initialized");
 
         let zoom_level = map_state.map_memory.zoom();
-        let should_draw_height_labels = zoom_level > 18.0;
-        let should_draw_heading_arrows = zoom_level > 19.4;
 
         let map = Map::new(
             Some(map_state.tiles.as_mut()),
@@ -195,23 +196,26 @@ impl MapViewPort {
         .double_click_to_zoom(true);
 
         map.show(ui, |ui, projector, _map_rect| {
-            for (i, path_entry) in self.map_data.geo_data.iter().enumerate() {
-                if !path_entry.visible {
+            for (i, path) in self.map_data.geo_data.iter().enumerate() {
+                if !path.settings.visible {
                     continue;
                 }
 
                 let is_hovered = self.hovered_path == Some(i);
 
-                draw::draw_path(
-                    ui,
-                    projector,
-                    &path_entry.data,
-                    should_draw_heading_arrows,
-                    should_draw_height_labels,
-                );
+                let draw_settings = DrawSettings {
+                    draw_heading_arrows: zoom_level > 18.0 && path.settings.show_heading,
+                    telemetry_label: TelemetryLabelSettings {
+                        draw: zoom_level > 19.4,
+                        with_speed: path.settings.show_speed,
+                        with_altitude: path.settings.show_altitude,
+                    },
+                };
+
+                draw::draw_path(ui, projector, &path.data, &draw_settings);
 
                 if is_hovered {
-                    draw::highlight_whole_path(ui.painter(), projector, &path_entry.data);
+                    draw::highlight_whole_path(ui.painter(), projector, &path.data);
                 }
             }
 
@@ -307,7 +311,7 @@ impl MapViewPort {
             ui.label(""); // empty cell for toggle + name
             ui.label("vel");
             ui.label("alt");
-            ui.label("head");
+            ui.label("hdg");
             ui.end_row();
 
             for (i, path_entry) in self.map_data.geo_data.iter_mut().enumerate() {
@@ -316,15 +320,15 @@ impl MapViewPort {
                 let mut path_ui_hovered = false;
                 ui.horizontal(|ui| {
                     // Visibility toggle
-                    let indicator = if path_entry.visible {
+                    let indicator = if path_entry.settings.visible {
                         RichText::new(CHECK_SQUARE).color(path.color).weak()
                     } else {
                         RichText::new(SQUARE).color(path.color).strong()
                     };
                     if ui.button(indicator).clicked() {
-                        path_entry.visible = !path_entry.visible;
+                        path_entry.settings.visible = !path_entry.settings.visible;
                     }
-                    ui.label(&path.name);
+                    ui.label(RichText::new(&path.name).strong());
 
                     if ui.ui_contains_pointer() {
                         path_ui_hovered = true;
@@ -332,28 +336,36 @@ impl MapViewPort {
                 });
 
                 let first_point = path.points.first();
-                let mut attr_indicator_label = |has_attr| {
+                let mut attr_indicator_label = |has_attr: bool, show_attr: &mut bool| {
                     let has_attr_text = if has_attr {
-                        RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
+                        if *show_attr {
+                            RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
+                        } else {
+                            RichText::new(CIRCLE).color(Color32::GREEN).weak()
+                        }
                     } else {
                         RichText::new(CIRCLE).weak()
                     };
-                    if ui.label(has_attr_text).hovered() {
+                    let resp = ui.button(has_attr_text);
+                    if resp.clicked() {
+                        *show_attr = !*show_attr;
+                    }
+                    if resp.hovered() {
                         path_ui_hovered = true;
                     }
                 };
 
                 // Velocity column
                 let has_speed = first_point.and_then(|p| p.speed).is_some();
-                attr_indicator_label(has_speed);
+                attr_indicator_label(has_speed, &mut path_entry.settings.show_speed);
 
                 // Altitude column
                 let has_alt = first_point.and_then(|p| p.altitude).is_some();
-                attr_indicator_label(has_alt);
+                attr_indicator_label(has_alt, &mut path_entry.settings.show_altitude);
 
                 // Heading column
                 let has_heading = first_point.and_then(|p| p.heading).is_some();
-                attr_indicator_label(has_heading);
+                attr_indicator_label(has_heading, &mut path_entry.settings.show_heading);
                 ui.end_row();
 
                 // Hover highlighting
@@ -392,10 +404,29 @@ pub struct MapTileState {
     pub is_satellite: bool,
 }
 
+#[derive(Clone, Copy, Deserialize, Serialize)]
+pub struct PathEntrySettings {
+    pub visible: bool,
+    pub show_heading: bool,  // if applicable
+    pub show_altitude: bool, // if applicable
+    pub show_speed: bool,    // if applicable
+}
+
+impl Default for PathEntrySettings {
+    fn default() -> Self {
+        Self {
+            visible: true,
+            show_heading: true,
+            show_altitude: true,
+            show_speed: true,
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct PathEntry {
     pub data: GeoSpatialData,
-    pub visible: bool,
+    pub settings: PathEntrySettings,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -466,7 +497,7 @@ impl BoundingBox {
 }
 
 fn calculate_bounding_box(geo_data: &[PathEntry]) -> Option<BoundingBox> {
-    let visible_paths: Vec<&PathEntry> = geo_data.iter().filter(|p| p.visible).collect();
+    let visible_paths: Vec<&PathEntry> = geo_data.iter().filter(|p| p.settings.visible).collect();
 
     if visible_paths.is_empty() {
         return None;
