@@ -365,79 +365,32 @@ fn process_filter_status(
         external_heading_active.push([*ts, row[12] as f64]);
     }
 
+    fn make_rawplot(name: &str, data: Vec<[f64; 2]>) -> RawPlot {
+        RawPlotCommon::new(name.to_owned(), data, ExpectedPlotRange::Percentage).into()
+    }
+
     vec![
-        RawPlotCommon::new(
-            "Orientation Filter Initialized [bool]".to_owned(),
+        make_rawplot(
+            "Orientation Filter Initialized [bool]",
             orientation_filter_initialized,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Navigation Filter Initialized [bool]".to_owned(),
+        ),
+        make_rawplot(
+            "Navigation Filter Initialized [bool]",
             navigation_filter_initialized,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Heading Initialized [bool]".to_owned(),
-            heading_initialized,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "UTC Time Initialized [bool]".to_owned(),
-            utc_time_initialized,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Event 1 Occurred [bool]".to_owned(),
-            event_1_occurred,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Event 2 Occurred [bool]".to_owned(),
-            event_2_occurred,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Internal GNSS Enabled [bool]".to_owned(),
-            internal_gnss_enabled,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Velocity Heading Enabled [bool]".to_owned(),
-            velocity_heading_enabled,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Atmospheric Altitude Enabled [bool]".to_owned(),
+        ),
+        make_rawplot("Heading Initialized [bool]", heading_initialized),
+        make_rawplot("UTC Time Initialized [bool]", utc_time_initialized),
+        make_rawplot("Event 1 Occurred [bool]", event_1_occurred),
+        make_rawplot("Event 2 Occurred [bool]", event_2_occurred),
+        make_rawplot("Internal GNSS Enabled [bool]", internal_gnss_enabled),
+        make_rawplot("Velocity Heading Enabled [bool]", velocity_heading_enabled),
+        make_rawplot(
+            "Atmospheric Altitude Enabled [bool]",
             atmospheric_altitude_enabled,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "External Position Active [bool]".to_owned(),
-            external_position_active,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "External Velocity Active [bool]".to_owned(),
-            external_velocity_active,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "External Heading Active [bool]".to_owned(),
-            external_heading_active,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
+        ),
+        make_rawplot("External Position Active [bool]", external_position_active),
+        make_rawplot("External Velocity Active [bool]", external_velocity_active),
+        make_rawplot("External Heading Active [bool]", external_heading_active),
     ]
 }
 

@@ -4,40 +4,6 @@ expression: njord_ins
 ---
 NjordInsPPP {
     raw_plots: [
-        GeoSpatial {
-            geo_data: GeoSpatialData {
-                name: "NjordInsPPP",
-                points: [
-                    GeoPoint {
-                        timestamp: 1.757435852060122e18,
-                        position: POINT(10.037770381937543 56.16089116138246),
-                        heading: Some(
-                            293.7360522244404,
-                        ),
-                        altitude: Some(
-                            73.88893217076051,
-                        ),
-                        speed: Some(
-                            0.05108631769453102,
-                        ),
-                    },
-                    GeoPoint {
-                        timestamp: 1.757435852080242e18,
-                        position: POINT(10.037770379401547 56.16089115927095),
-                        heading: Some(
-                            293.7357925781802,
-                        ),
-                        altitude: Some(
-                            73.88883762837278,
-                        ),
-                        speed: Some(
-                            0.05223826693011415,
-                        ),
-                    },
-                ],
-                color: [RANDOMIZED COLOR]
-            },
-        },
         Generic {
             common: RawPlotCommon {
                 name: "Pitch° (NjordInsPPP)",
@@ -410,6 +376,58 @@ NjordInsPPP {
                 ],
                 expected_range: OneToOneHundred,
                 color: None,
+            },
+        },
+        GeoSpatial {
+            geo_data: GeoSpatialData {
+                name: "NjordInsPPP",
+                points: [
+                    GeoPoint {
+                        timestamp: 1.757435852060122e18,
+                        position: POINT(10.037770381937543 56.16089116138246),
+                        heading: Some(
+                            293.7360522244404,
+                        ),
+                        altitude: Some(
+                            73.88893217076051,
+                        ),
+                        speed: Some(
+                            0.05108631769453102,
+                        ),
+                    },
+                    GeoPoint {
+                        timestamp: 1.757435852080242e18,
+                        position: POINT(10.037770379401547 56.16089115927095),
+                        heading: Some(
+                            293.7357925781802,
+                        ),
+                        altitude: Some(
+                            73.88883762837278,
+                        ),
+                        speed: Some(
+                            0.05223826693011415,
+                        ),
+                    },
+                ],
+                color: [RANDOMIZED COLOR]
+                cached: CachedValues {
+                    lat_min_max: (
+                        56.16089115927095,
+                        56.16089116138246,
+                    ),
+                    lon_min_max: (
+                        10.037770379401547,
+                        10.037770381937543,
+                    ),
+                    speed_min_max: (
+                        0.05108631769453102,
+                        0.05223826693011415,
+                    ),
+                    altitude_min_max: (
+                        73.88883762837278,
+                        73.88893217076051,
+                    ),
+                },
             },
         },
     ],

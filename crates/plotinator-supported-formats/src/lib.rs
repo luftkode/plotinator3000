@@ -155,6 +155,7 @@ impl SupportedFormat {
                     }
                 }
             }
+            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(supported_hdf5_format) => {
                 for rp in supported_hdf5_format.raw_plots() {
                     if let RawPlot::GeoSpatial { geo_data } = rp {

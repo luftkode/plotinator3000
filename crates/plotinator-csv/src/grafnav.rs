@@ -428,7 +428,11 @@ mod tests {
     fn test_read_csv() {
         let mut reader = BufReader::new(TEST_2_ROWS.as_bytes());
         let (grafnavppp, read_bytes) = GrafNavPPP::from_reader(&mut reader).unwrap();
-        insta::assert_debug_snapshot!(grafnavppp);
+        insta::with_settings!({filters => vec![
+            (r"color: #\w+,", "color: [RANDOMIZED COLOR]"),
+        ]}, {
+            insta::assert_debug_snapshot!(grafnavppp);
+        });
         insta::assert_debug_snapshot!(read_bytes);
     }
 
