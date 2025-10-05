@@ -1,4 +1,4 @@
-use egui::{Color32, Painter, Pos2, Stroke, Vec2, vec2};
+use egui::{Color32, FontId, Painter, Pos2, Stroke, Vec2, vec2};
 use plotinator_log_if::prelude::{GeoPoint, GeoSpatialData};
 use walkers::Projector;
 
@@ -104,6 +104,7 @@ pub(crate) fn draw_heading_arrows(
     }
 }
 
+#[inline]
 pub(crate) fn draw_heading_arrow(
     painter: &egui::Painter,
     center: Pos2,
@@ -121,6 +122,7 @@ pub(crate) fn draw_heading_arrow(
     painter.line_segment(barb2, outline_stroke);
 }
 
+#[inline]
 pub(crate) fn calculate_arrow_geometry(
     center: Pos2,
     geo_point: &GeoPoint,
@@ -198,23 +200,18 @@ pub(crate) fn draw_altitude_labels(painter: &Painter, screen_points: &[(Pos2, &G
     const MIN_LABEL_DISTANCE: f32 = 60.0; // Minimum pixels between labels
 
     let mut last_label_pos: Option<Pos2> = None;
-
     const POINT_SEPARATION: usize = 8;
     let mut points_since_drawn = 0;
-    let mut point_candidate: Option<Pos2> = None;
+    let mut point_candidate: Option<(Pos2, &GeoPoint)> = None;
 
     for (point_pos, geo_point) in screen_points {
         points_since_drawn += 1;
-        // Skip if no altitude data
-        let Some(altitude) = geo_point.altitude else {
-            continue;
-        };
 
         if points_since_drawn < POINT_SEPARATION {
             if points_since_drawn > POINT_SEPARATION / 2
                 && last_label_pos.is_none_or(|lp| point_pos.distance(lp) >= MIN_LABEL_DISTANCE)
             {
-                point_candidate = Some(*point_pos);
+                point_candidate = Some((*point_pos, geo_point));
             }
             continue;
         }
@@ -222,11 +219,11 @@ pub(crate) fn draw_altitude_labels(painter: &Painter, screen_points: &[(Pos2, &G
         // Check distance from last drawn label
         if points_since_drawn >= POINT_SEPARATION {
             if last_label_pos.is_none_or(|lp| point_pos.distance(lp) >= MIN_LABEL_DISTANCE) {
-                draw_altitude_label(painter, *point_pos, altitude);
+                draw_telemetry_label(painter, *point_pos, geo_point);
                 last_label_pos = Some(*point_pos);
                 points_since_drawn = 0;
-            } else if let Some(p) = point_candidate {
-                draw_altitude_label(painter, p, altitude);
+            } else if let Some((p, gp)) = point_candidate {
+                draw_telemetry_label(painter, p, gp);
                 last_label_pos = Some(p);
                 points_since_drawn = 0;
             }
@@ -234,25 +231,63 @@ pub(crate) fn draw_altitude_labels(painter: &Painter, screen_points: &[(Pos2, &G
     }
 }
 
-fn draw_altitude_label(painter: &Painter, point: Pos2, altitude: f64) {
-    let text = format!("{altitude:.0}m");
-    let font_id = egui::FontId::proportional(11.0);
-    let text_color = Color32::BLACK;
+fn draw_telemetry_label(painter: &Painter, point: Pos2, geo_point: &GeoPoint) {
+    let mut lines = Vec::new();
+
+    if let Some(altitude) = geo_point.altitude {
+        lines.push(format!("{altitude:.0}m"));
+    }
+    if let Some(speed) = geo_point.speed {
+        lines.push(format!("{speed:.1} km/h"));
+    }
+    if let Some(heading) = geo_point.heading {
+        lines.push(format!("{heading:.0}°"));
+    }
+
+    // If no data available, don't draw anything
+    if lines.is_empty() {
+        return;
+    }
+
+    const FONT_ID: FontId = FontId::proportional(11.0);
+    const TEXT_COLOR: Color32 = Color32::BLACK;
     let bg_color = Color32::from_rgba_unmultiplied(255, 255, 255, 200);
 
     // Offset the text slightly above and to the right of the point
-    let text_pos = point + Vec2::new(5.0, -8.0);
+    let text_pos = point + vec2(5.0, -8.0);
 
-    // Get text dimensions for background
-    let galley = painter.layout_no_wrap(text.clone(), font_id.clone(), text_color);
-    let text_rect = egui::Rect::from_min_size(text_pos, galley.size());
+    // Calculate the bounding box for all lines
+    let mut max_width: f32 = 0.0;
+    let mut total_height = 0.0;
+    let line_spacing = 2.0;
+
+    for line in &lines {
+        let galley = painter.layout_no_wrap(line.clone(), FONT_ID.clone(), TEXT_COLOR);
+        max_width = max_width.max(galley.size().x);
+        total_height += galley.size().y + line_spacing;
+    }
+    total_height -= line_spacing; // Remove spacing after last line
+
+    // Create rect for background
+    let text_rect = egui::Rect::from_min_size(text_pos, Vec2::new(max_width, total_height));
     let padded_rect = text_rect.expand(2.0);
 
     // Draw background
     painter.rect_filled(padded_rect, 2.0, bg_color);
 
-    // Draw text
-    painter.text(text_pos, egui::Align2::LEFT_TOP, text, font_id, text_color);
+    // Draw each line of text
+    let mut current_y = text_pos.y;
+    for line in lines {
+        let galley = painter.layout_no_wrap(line.clone(), FONT_ID.clone(), TEXT_COLOR);
+        painter.text(
+            Pos2::new(text_pos.x, current_y),
+            egui::Align2::LEFT_TOP,
+            line,
+            FONT_ID.clone(),
+            TEXT_COLOR,
+        );
+        current_y += galley.size().y + line_spacing;
+    }
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough
