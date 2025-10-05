@@ -156,7 +156,6 @@ impl MapViewPort {
                 .with_drag_and_drop(false)
                 .with_always_on_top(),
             |ctx, _class| {
-                // The closure contains all the UI logic for the viewport.
                 if ctx.input(|i| i.viewport().close_requested()) {
                     is_still_open = false;
                 }
@@ -164,111 +163,10 @@ impl MapViewPort {
                 self.poll_commands();
 
                 CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
-                    let map_state = self.map_tile_state.as_mut().expect("unsound condition");
-
-                    let zoom_level = map_state.map_memory.zoom();
-                    log::trace!("map zoom: {zoom_level:.1}");
-
-                    let should_draw_height_labels = zoom_level > 18.;
-                    let should_draw_heading_arrows = zoom_level >19.4;
-
-                    let map = Map::new(
-                        Some(map_state.tiles.as_mut()),
-                        &mut map_state.map_memory,
-                        self.map_data.center_position,
-                    )
-                    .double_click_to_zoom(true);
-
-                    map.show(ui, |ui, projector, _map_rect| {
-                        for (i, path_entry) in self.map_data.geo_data.iter().enumerate() {
-                            if !path_entry.visible {
-                                continue;
-                            }
-
-                            let is_hovered = self.hovered_path == Some(i);
-
-                            draw::draw_path(
-                                ui,
-                                projector,
-                                &path_entry.data,
-                                should_draw_heading_arrows,
-                                should_draw_height_labels,
-                            );
-
-                            if is_hovered {
-                                draw::highlight_whole_path(ui, projector, &path_entry.data);
-                            }
-                        }
-
-
-                        // Draw highlighted points based on cursor position
-                        if let Some(cursor_time) = self.plot_time_cursor_pos {
-                            draw::draw_cursor_highlights(
-                                ui,
-                                projector,
-                                &self.map_data.geo_data,
-                                cursor_time,
-                            );
-                        }
-                    });
+                    self.show_map_panel(ui);
                 });
 
-                egui::Window::new("Legend")
-                    .title_bar(true)
-                    .resizable(true)
-                    .default_pos(egui::pos2(0.0, 10.0))
-                    .default_size([200.0, 150.0])
-                    .show(ctx, |ui| {
-                        let map_state = self.map_tile_state.as_mut().expect("unsound condition");
-
-                        if ui
-                            .button(if map_state.is_satellite {
-                                RichText::new(format!("{GLOBE} Open Street Map {GLOBE}")).strong()
-                            } else {
-                                RichText::new(format!("{GLOBE_HEMISPHERE_WEST} Satellite {GLOBE_HEMISPHERE_WEST}")).strong()
-                            })
-                            .clicked()
-                        {
-                            let ctx_clone = ctx.clone();
-
-                            // Load Mapbox token from env/compile-time
-                            const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
-                            const MAPBOX_API_TOKEN_FALLBACK: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
-                            let mapbox_access_token = std::option_env!("PLOTINATOR3000_MAPBOX_API");
-
-                            map_state.tiles = if map_state.is_satellite {
-                                TilesKind::OSM(HttpTiles::new(
-                                    walkers::sources::OpenStreetMap,
-                                    ctx_clone,
-                                ))
-                            } else {
-                                TilesKind::MapboxSatellite(HttpTiles::new(
-                                    walkers::sources::Mapbox {
-                                        style: walkers::sources::MapboxStyle::Satellite,
-                                        access_token: mapbox_access_token.map_or_else(|| {
-                                            log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
-                                            std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token").clone()
-                                        }, |s| s.to_owned()),
-                                        high_resolution: true,
-                                    },
-                                    ctx_clone,
-                                ))
-                            };
-                            map_state.is_satellite = !map_state.is_satellite;
-                        }
-
-                        if self.map_data.geo_data.is_empty() {
-                            ui.label("No paths loaded");
-                            return;
-                        }
-                        ui.separator();
-                        self.show_legend_grid(ui);
-
-                        // Reset hovered if nothing hovered this frame
-                        if !ui.ui_contains_pointer() {
-                            self.hovered_path = None;
-                        }
-                    });
+                self.show_legend_window(ctx);
             },
         );
 
@@ -276,6 +174,126 @@ impl MapViewPort {
         if !is_still_open {
             self.close();
         }
+    }
+
+    /// Renders the main map panel and all geographical data on it.
+    fn show_map_panel(&mut self, ui: &mut Ui) {
+        let map_state = self
+            .map_tile_state
+            .as_mut()
+            .expect("map_tile_state is required but not initialized");
+
+        let zoom_level = map_state.map_memory.zoom();
+        let should_draw_height_labels = zoom_level > 18.0;
+        let should_draw_heading_arrows = zoom_level > 19.4;
+
+        let map = Map::new(
+            Some(map_state.tiles.as_mut()),
+            &mut map_state.map_memory,
+            self.map_data.center_position,
+        )
+        .double_click_to_zoom(true);
+
+        map.show(ui, |ui, projector, _map_rect| {
+            for (i, path_entry) in self.map_data.geo_data.iter().enumerate() {
+                if !path_entry.visible {
+                    continue;
+                }
+
+                let is_hovered = self.hovered_path == Some(i);
+
+                draw::draw_path(
+                    ui,
+                    projector,
+                    &path_entry.data,
+                    should_draw_heading_arrows,
+                    should_draw_height_labels,
+                );
+
+                if is_hovered {
+                    draw::highlight_whole_path(ui, projector, &path_entry.data);
+                }
+            }
+
+            if let Some(cursor_time) = self.plot_time_cursor_pos {
+                draw::draw_cursor_highlights(ui, projector, &self.map_data.geo_data, cursor_time);
+            }
+        });
+    }
+
+    /// Renders the legend window with map controls and path information.
+    fn show_legend_window(&mut self, ctx: &egui::Context) {
+        egui::Window::new("Legend")
+            .title_bar(true)
+            .resizable(true)
+            .default_pos(egui::pos2(0.0, 10.0))
+            .default_size([200.0, 150.0])
+            .show(ctx, |ui| {
+                let map_state = self
+                    .map_tile_state
+                    .as_mut()
+                    .expect("map_tile_state is required but not initialized");
+
+                let button_text = if map_state.is_satellite {
+                    RichText::new(format!("{GLOBE} Open Street Map {GLOBE}")).strong()
+                } else {
+                    RichText::new(format!(
+                        "{GLOBE_HEMISPHERE_WEST} Satellite {GLOBE_HEMISPHERE_WEST}"
+                    ))
+                    .strong()
+                };
+
+                if ui.button(button_text).clicked() {
+                    self.toggle_map_style(ctx);
+                }
+
+                if self.map_data.geo_data.is_empty() {
+                    ui.label("No paths loaded");
+                } else {
+                    ui.separator();
+                    self.show_legend_grid(ui);
+                }
+
+                // Reset hovered state if the mouse leaves the legend window
+                if !ui.ui_contains_pointer() {
+                    self.hovered_path = None;
+                }
+            });
+    }
+
+    /// Toggles the map tile source between OpenStreetMap and Mapbox Satellite.
+    fn toggle_map_style(&mut self, ctx: &egui::Context) {
+        let map_state = self
+            .map_tile_state
+            .as_mut()
+            .expect("map_tile_state is required but not initialized");
+        let ctx_clone = ctx.clone();
+
+        if map_state.is_satellite {
+            map_state.tiles =
+                TilesKind::OSM(HttpTiles::new(walkers::sources::OpenStreetMap, ctx_clone));
+        } else {
+            const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
+            const MAPBOX_API_TOKEN_FALLBACK: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
+
+            let access_token = option_env!("PLOTINATOR3000_MAPBOX_API").map_or_else(
+                || {
+                    log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
+                    std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token")
+                },
+                |s| s.to_owned(),
+            );
+
+            map_state.tiles = TilesKind::MapboxSatellite(HttpTiles::new(
+                walkers::sources::Mapbox {
+                    style: walkers::sources::MapboxStyle::Satellite,
+                    access_token,
+                    high_resolution: true,
+                },
+                ctx_clone,
+            ));
+        }
+        map_state.is_satellite = !map_state.is_satellite;
     }
 
     fn show_legend_grid(&mut self, ui: &mut Ui) {

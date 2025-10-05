@@ -295,7 +295,7 @@ fn process_system_status(
 }
 
 fn process_filter_status(
-    filter_status: &ndarray::Array2<f32>,
+    filter_status: &Array2<f32>,
     timestamps: &[f64],
     dataset_len: usize,
 ) -> Vec<RawPlot> {
@@ -507,10 +507,7 @@ fn process_orientation_and_position(
     Ok(plots)
 }
 
-fn combine_timestamps(
-    unix_time: &ndarray::Array2<i64>,
-    microseconds: &ndarray::Array2<i64>,
-) -> Vec<i64> {
+fn combine_timestamps(unix_time: &Array2<i64>, microseconds: &Array2<i64>) -> Vec<i64> {
     unix_time
         .iter()
         .zip(microseconds.iter())
@@ -573,8 +570,8 @@ impl NjordIns {
             Self::EXPECT_DIMENSION,
         )?;
 
-        let unix_time: ndarray::Array2<i64> = unix_time_dataset.read()?;
-        let microseconds: ndarray::Array2<i64> = microseconds_dataset.read()?;
+        let unix_time: Array2<i64> = unix_time_dataset.read()?;
+        let microseconds: Array2<i64> = microseconds_dataset.read()?;
         let timestamps: Vec<i64> = combine_timestamps(&unix_time, &microseconds);
         let first_timestamp = *timestamps.first().expect("No timestamps in dataset");
         let time_between_samples =
@@ -599,7 +596,7 @@ impl NjordIns {
             Self::EXPECT_DIMENSION,
         )?;
 
-        let gps_unix_time: ndarray::Array2<i64> = gps_unix_time.read()?;
+        let gps_unix_time: Array2<i64> = gps_unix_time.read()?;
 
         let mut time_offset = Vec::with_capacity(sys_time.len());
 
