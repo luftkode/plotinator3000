@@ -80,7 +80,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Test ${{ matrix.os }}
-        run: cargo nextest run --workspace --profile ci --run-ignored=all
+        run: cargo nextest run --workspace --profile ci --run-ignored=all --no-fail-fast
 
       # So that we can inspect why it failed
       - name: Upload snapshots (including diffs)
