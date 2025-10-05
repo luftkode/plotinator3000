@@ -2,7 +2,7 @@ use std::{
     fmt, fs,
     io::{self, BufReader},
     path::Path,
-    str::FromStr,
+    str::FromStr as _,
 };
 
 use chrono::{DateTime, Utc};

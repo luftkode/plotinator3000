@@ -36,6 +36,27 @@ pub struct Gps {
     altitude_above_mean_sea: f32,
 }
 
+/// Convert NMEA-style coordinate (ddmm.mmmm or dddmm.mmmm) into decimal degrees.
+fn nmea_to_decimal(coord: f64) -> f64 {
+    if coord.is_nan() {
+        return f64::NAN;
+    }
+
+    let sign = if coord.is_sign_negative() { -1.0 } else { 1.0 };
+    let abs = coord.abs();
+
+    let int_part = abs.trunc();
+    let frac_part = abs.fract();
+
+    // minutes are last two digits of int_part + fractional minutes
+    let minutes = (int_part % 100.0) + frac_part;
+
+    // degrees are everything before the last two digits
+    let degrees = (int_part / 100.0).trunc(); // safe because abs >= 0
+
+    sign * (degrees + (minutes / 60.0))
+}
+
 impl Gps {
     pub(crate) fn timestamp(&self) -> DateTime<Utc> {
         self.timestamp
@@ -74,37 +95,14 @@ impl Gps {
         (system_ms - gps_ms) as f64
     }
 
-    /// Convert NMEA-style coordinate (ddmm.mmmm or dddmm.mmmm) into decimal degrees
-    fn nmea_to_decimal(coord: f64) -> f64 {
-        if coord.is_nan() {
-            return f64::NAN;
-        }
-
-        // Extract degrees/minutes depending on number of digits before the decimal
-        let coord_str = format!("{coord:.8}");
-        let split_at = if coord_str.contains('.') {
-            coord_str.find('.').unwrap()
-        } else {
-            coord_str.len()
-        };
-
-        // Latitude usually has 4 digits before '.', longitude 5 — we can derive
-        // degrees = everything except the last two before decimal
-        let deg_digits = split_at - 2;
-        let degrees: f64 = coord_str[..deg_digits].parse().unwrap_or(0.0);
-        let minutes: f64 = coord_str[deg_digits..].parse().unwrap_or(0.0);
-
-        degrees + (minutes / 60.0)
-    }
-
     /// Returns latitude in decimal degrees
     pub(crate) fn latitude_deg(&self) -> f64 {
-        Self::nmea_to_decimal(self.latitude)
+        nmea_to_decimal(self.latitude)
     }
 
     /// Returns longitude in decimal degrees
     pub(crate) fn longitude_deg(&self) -> f64 {
-        Self::nmea_to_decimal(self.longitude)
+        nmea_to_decimal(self.longitude)
     }
 
     #[allow(
@@ -404,5 +402,61 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
     fn test_gps_from_str_data_binder_conv() {
         let data_binder_conv_sps = "GP2 2025 09 01 08 23 09 137 5613.06620 1008.86800 08:23:09.000 10 WGS84 0.0 0.9 1.4 1.7 66.6";
         assert!(Gps::from_str(data_binder_conv_sps).is_ok());
+    }
+
+    #[test]
+    fn test_nmea_to_decimal_conversion() {
+        // 49°16.45′ = 49 + 16.45 / 60 = 49.274166...
+        let nmea_val = 4916.45;
+        let expected = 49.274166;
+        let result = nmea_to_decimal(nmea_val);
+        let deviation_from_expected = (result - expected).abs();
+        assert!(deviation_from_expected < 1e-6, "latitude conversion failed");
+
+        // 123°19.943′ = 123 + 19.943 / 60 = 123.332383...
+        let nmea_val = 12319.943;
+        let expected = 123.332383;
+        let deviation_from_expected = (nmea_to_decimal(nmea_val) - expected).abs();
+        assert!(
+            deviation_from_expected < 1e-6,
+            "longitude conversion failed"
+        );
+
+        // 12°34.5678′ = 12 + 34.5678 / 60 = 12.57613...
+        let nmea_val = 1234.5678;
+        let expected = 12.57613;
+        let deviation_from_expected = (nmea_to_decimal(nmea_val) - expected).abs();
+        assert!(deviation_from_expected < 1e-10, "fractional minutes failed");
+
+        assert_eq!(nmea_to_decimal(0.0), 0.0);
+
+        // Negative coordinates (e.g. western or southern hemisphere)
+        // -49°16.45′ = -(49 + 16.45 / 60) = -49.274166...
+        let nmea_val = -4916.45;
+        let expected = -49.274166;
+        let deviation_from_expected = (nmea_to_decimal(nmea_val) - expected).abs();
+        assert!(
+            deviation_from_expected < 1e-6,
+            "negative latitude conversion failed"
+        );
+
+        // -123°19.943′ = -(123 + 19.943 / 60) = -123.332383...
+        let nmea_val = -12319.943;
+        let expected = -123.332383;
+        let deviation_from_expected = (nmea_to_decimal(nmea_val) - expected).abs();
+        assert!(
+            deviation_from_expected < 1e-6,
+            "negative longitude conversion failed"
+        );
+
+        // High-precision edge case
+        let nmea_val = 4559.9999;
+        let expected = 45.9999983;
+        let deviation_from_expected = (nmea_to_decimal(nmea_val) - expected).abs();
+        assert!(deviation_from_expected < 1e-6, "high-precision case failed");
+
+        // NaN should return NaN
+        let result = nmea_to_decimal(f64::NAN);
+        assert!(result.is_nan(), "NaN handling failed");
     }
 }
