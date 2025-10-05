@@ -1,4 +1,4 @@
-use egui::{CentralPanel, Color32, Frame, RichText, ViewportBuilder, ViewportId};
+use egui::{CentralPanel, Color32, Frame, RichText, Ui, ViewportBuilder, ViewportId};
 use egui_phosphor::regular::{
     CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SQUARE,
 };
@@ -126,7 +126,11 @@ impl MapViewPort {
 
     fn fit_map_to_paths(&mut self) {
         if let Some((center, zoom)) = fit_map_to_paths(
-            &mut self.map_tile_state.as_mut().unwrap().map_memory,
+            &mut self
+                .map_tile_state
+                .as_mut()
+                .expect("unsound condition")
+                .map_memory,
             &self.map_data.geo_data,
         ) {
             // Update stored position and zoom
@@ -258,68 +262,7 @@ impl MapViewPort {
                             return;
                         }
                         ui.separator();
-                        egui::Grid::new("legend_grid")
-                            .striped(true)
-                            .show(ui, |ui| {
-                                // Column headers
-                                ui.label(""); // empty cell for toggle + name
-                                ui.label("vel");
-                                ui.label("alt");
-                                ui.label("head");
-                                ui.end_row();
-
-                                for (i, path_entry) in self.map_data.geo_data.iter_mut().enumerate() {
-                                    let path = &path_entry.data;
-
-                                    let mut path_ui_hovered = false;
-                                     ui.horizontal(|ui| {
-                                        // Visibility toggle
-                                        let indicator = if path_entry.visible {
-                                            RichText::new(CHECK_SQUARE).color(path.color).weak()
-                                        } else {
-                                            RichText::new(SQUARE).color(path.color).strong()
-                                        };
-                                        if ui.button(indicator).clicked() {
-                                            path_entry.visible = !path_entry.visible;
-                                        }
-                                        ui.label(&path.name);
-
-                                        if ui.ui_contains_pointer() {
-                                            path_ui_hovered = true;
-                                        }
-                                    });
-
-                                    let first_point = path.points.first();
-                                    let mut attr_indicator_label = |has_attr| {
-                                        let has_attr_text = if has_attr {
-                                            RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
-                                        } else {
-                                             RichText::new(CIRCLE).weak()
-                                        };
-                                        if ui.label(has_attr_text).hovered() {
-                                            path_ui_hovered = true;
-                                        }
-                                    };
-
-                                    // Velocity column
-                                    let has_speed = first_point.and_then(|p| p.speed).is_some();
-                                    attr_indicator_label(has_speed);
-
-                                    // Altitude column
-                                    let has_alt = first_point.and_then(|p| p.altitude).is_some();
-                                    attr_indicator_label(has_alt);
-
-                                    // Heading column
-                                    let has_heading = first_point.and_then(|p| p.heading).is_some();
-                                    attr_indicator_label(has_heading);
-                                    ui.end_row();
-
-                                    // Hover highlighting
-                                    if path_ui_hovered {
-                                        self.hovered_path = Some(i);
-                                    }
-                                }
-                            });
+                        self.show_legend_grid(ui);
 
                         // Reset hovered if nothing hovered this frame
                         if !ui.ui_contains_pointer() {
@@ -333,6 +276,69 @@ impl MapViewPort {
         if !is_still_open {
             self.close();
         }
+    }
+
+    fn show_legend_grid(&mut self, ui: &mut Ui) {
+        egui::Grid::new("legend_grid").striped(true).show(ui, |ui| {
+            // Column headers
+            ui.label(""); // empty cell for toggle + name
+            ui.label("vel");
+            ui.label("alt");
+            ui.label("head");
+            ui.end_row();
+
+            for (i, path_entry) in self.map_data.geo_data.iter_mut().enumerate() {
+                let path = &path_entry.data;
+
+                let mut path_ui_hovered = false;
+                ui.horizontal(|ui| {
+                    // Visibility toggle
+                    let indicator = if path_entry.visible {
+                        RichText::new(CHECK_SQUARE).color(path.color).weak()
+                    } else {
+                        RichText::new(SQUARE).color(path.color).strong()
+                    };
+                    if ui.button(indicator).clicked() {
+                        path_entry.visible = !path_entry.visible;
+                    }
+                    ui.label(&path.name);
+
+                    if ui.ui_contains_pointer() {
+                        path_ui_hovered = true;
+                    }
+                });
+
+                let first_point = path.points.first();
+                let mut attr_indicator_label = |has_attr| {
+                    let has_attr_text = if has_attr {
+                        RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
+                    } else {
+                        RichText::new(CIRCLE).weak()
+                    };
+                    if ui.label(has_attr_text).hovered() {
+                        path_ui_hovered = true;
+                    }
+                };
+
+                // Velocity column
+                let has_speed = first_point.and_then(|p| p.speed).is_some();
+                attr_indicator_label(has_speed);
+
+                // Altitude column
+                let has_alt = first_point.and_then(|p| p.altitude).is_some();
+                attr_indicator_label(has_alt);
+
+                // Heading column
+                let has_heading = first_point.and_then(|p| p.heading).is_some();
+                attr_indicator_label(has_heading);
+                ui.end_row();
+
+                // Hover highlighting
+                if path_ui_hovered {
+                    self.hovered_path = Some(i);
+                }
+            }
+        });
     }
 }
 
