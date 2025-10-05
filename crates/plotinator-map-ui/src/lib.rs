@@ -418,70 +418,83 @@ impl Default for MapData {
 }
 
 fn fit_map_to_paths(map_memory: &mut MapMemory, geo_data: &[PathEntry]) -> Option<(Position, f64)> {
-    if geo_data.is_empty() {
-        return None;
-    }
+    let bounds = calculate_bounding_box(geo_data)?;
 
-    // Find bounding box
-    let mut min_lat: Option<f64> = None;
-    let mut max_lat: Option<f64> = None;
-    let mut min_lon: Option<f64> = None;
-    let mut max_lon: Option<f64> = None;
-
-    for path in geo_data.iter().filter(|p| p.visible) {
-        let gd = &path.data;
-        let (tmp_min_lat, tmp_max_lat) = gd.lat_bounds();
-        let (tmp_min_lon, tmp_max_lon) = gd.lon_bounds();
-        log::debug!("{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]", gd.name);
-        log::debug!("{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]", gd.name);
-        if let Some(min_lat) = min_lat.as_mut() {
-            *min_lat = min_lat.min(tmp_min_lat);
-        } else {
-            min_lat = Some(tmp_min_lat);
-        }
-        if let Some(max_lat) = max_lat.as_mut() {
-            *max_lat = max_lat.min(tmp_max_lat);
-        } else {
-            max_lat = Some(tmp_max_lat);
-        }
-        if let Some(min_lon) = min_lon.as_mut() {
-            *min_lon = min_lon.min(tmp_min_lon);
-        } else {
-            min_lon = Some(tmp_min_lon);
-        }
-        if let Some(max_lon) = max_lon.as_mut() {
-            *max_lon = max_lon.min(tmp_max_lon);
-        } else {
-            max_lon = Some(tmp_max_lon);
-        }
-    }
-
-    let (Some(min_lat), Some(max_lat), Some(min_lon), Some(max_lon)) =
-        (min_lat, max_lat, min_lon, max_lon)
-    else {
-        return None;
-    };
-
-    // Calculate center
-    let center_lat = (min_lat + max_lat) / 2.0;
-    let center_lon = (min_lon + max_lon) / 2.0;
-    let center = Position::new(center_lon, center_lat);
-
-    // Calculate appropriate zoom level
-    let lat_span = max_lat - min_lat;
-    let lon_span = max_lon - min_lon;
-    let max_span = lat_span.max(lon_span);
-
-    let zoom = if max_span > 0.0 {
-        let padded_span = max_span * 1.5;
-        let zoom = (360.0 / padded_span).log2();
-        zoom.clamp(2.0, 18.0)
-    } else {
-        10.0
-    };
+    let center = Position::new(bounds.center_lon(), bounds.center_lat());
+    let zoom = bounds.zoom_level_to_fit_all();
 
     map_memory.center_at(center);
     let _ = map_memory.set_zoom(zoom);
 
     Some((center, zoom))
+}
+
+struct BoundingBox {
+    min_lat: f64,
+    max_lat: f64,
+    min_lon: f64,
+    max_lon: f64,
+}
+
+impl BoundingBox {
+    fn center_lat(&self) -> f64 {
+        (self.min_lat + self.max_lat) / 2.0
+    }
+
+    fn center_lon(&self) -> f64 {
+        (self.min_lon + self.max_lon) / 2.0
+    }
+
+    fn lat_span(&self) -> f64 {
+        self.max_lat - self.min_lat
+    }
+
+    fn lon_span(&self) -> f64 {
+        self.max_lon - self.min_lon
+    }
+
+    fn zoom_level_to_fit_all(&self) -> f64 {
+        let max_span = self.lat_span().max(self.lon_span());
+        if max_span > 0.0 {
+            let padded_span = max_span * 1.5;
+            let zoom = (360.0 / padded_span).log2();
+            zoom.clamp(2.0, 18.0)
+        } else {
+            10.0
+        }
+    }
+}
+
+fn calculate_bounding_box(geo_data: &[PathEntry]) -> Option<BoundingBox> {
+    let visible_paths: Vec<&PathEntry> = geo_data.iter().filter(|p| p.visible).collect();
+
+    if visible_paths.is_empty() {
+        return None;
+    }
+
+    let mut min_lat = f64::INFINITY;
+    let mut max_lat = f64::NEG_INFINITY;
+    let mut min_lon = f64::INFINITY;
+    let mut max_lon = f64::NEG_INFINITY;
+
+    for path in visible_paths {
+        let gd = &path.data;
+        let (tmp_min_lat, tmp_max_lat) = gd.lat_bounds();
+        let (tmp_min_lon, tmp_max_lon) = gd.lon_bounds();
+
+        log::debug!("{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]", gd.name);
+        log::debug!("{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]", gd.name);
+
+        min_lat = min_lat.min(tmp_min_lat);
+        max_lat = max_lat.max(tmp_max_lat);
+        min_lon = min_lon.min(tmp_min_lon);
+        max_lon = max_lon.max(tmp_max_lon);
+    }
+
+    Some(BoundingBox {
+        min_lat,
+        max_lat,
+        min_lon,
+        max_lon,
+    })
 }
