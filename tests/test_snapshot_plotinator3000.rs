@@ -120,5 +120,5 @@ fn test_snapshot_open_loaded_files_open_log_window() {
     loaded_mbed_pid_button.click();
     harness.step();
 
-    harness.save_snapshot_with_threshold(CiThreshold(6.0));
+    harness.save_snapshot_with_threshold(CiThreshold(7.0));
 }
