@@ -5,11 +5,12 @@ use egui_phosphor::regular::{
 use plotinator_log_if::prelude::GeoSpatialData;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
-use walkers::{HttpTiles, Map, MapMemory, Position, Tiles};
+use walkers::Map;
 
 use crate::{
     commander::MapUiCommander,
     draw::{DrawSettings, TelemetryLabelSettings},
+    map_state::MapState,
 };
 
 /// Messages sent from main app to map viewport
@@ -22,14 +23,13 @@ pub enum MapCommand {
 
 pub mod commander;
 mod draw;
+mod map_state;
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct MapViewPort {
     pub open: bool,
-    map_data: MapData,
-    // Cached map data (external), instantiated on first open, loaded on demand
-    #[serde(skip)]
-    map_tile_state: Option<MapTileState>,
+    pub geo_data: Vec<PathEntry>,
+    map_state: MapState,
     #[serde(skip)]
     cmd_recv: Option<Receiver<MapCommand>>,
     /// The time corresponding to the cursor position in the plot area
@@ -45,20 +45,9 @@ impl MapViewPort {
     /// if it's the first time it's opened, it will start loading map tiles and
     /// return a [Sender<MapCommand>] for interacting with the Map from other contexts
     pub fn open(&mut self, ctx: &egui::Context) -> Option<Sender<MapCommand>> {
-        if self.map_tile_state.is_none() {
+        if self.map_state.tile_state.is_none() {
             egui_extras::install_image_loaders(ctx);
-
-            let tiles =
-                TilesKind::OSM(HttpTiles::new(walkers::sources::OpenStreetMap, ctx.clone()));
-            let mut map_memory = MapMemory::default();
-            map_memory.center_at(self.map_data.center_position);
-            let _ = map_memory.set_zoom(self.map_data.zoom);
-
-            self.map_tile_state = Some(MapTileState {
-                map_memory,
-                tiles,
-                is_satellite: false,
-            });
+            self.map_state.init(ctx.clone());
         }
         let mut maybe_map_send = None;
         if self.cmd_recv.is_none() {
@@ -96,29 +85,16 @@ impl MapViewPort {
                     } else {
                         log::info!("Received basic geo data {}", geo_data.name);
                     }
-                    debug_assert!(
-                        geo_data.points.iter().all(|p| !p.timestamp.is_nan()
-                            && !p.position.x().is_nan()
-                            && !p.position.y().is_nan()
-                            && !p
-                                .altitude
-                                .is_some_and(|a| a.is_nan() && p.speed.is_some_and(|s| s.is_nan()))
-                            && !p.heading.is_some_and(|h| h.is_nan())),
-                        "GeoSpatialData with NaN values: {}",
-                        geo_data.name
-                    );
-                    self.map_data.geo_data.push(PathEntry {
-                        data: geo_data,
-                        settings: Default::default(),
-                    });
-                    self.fit_map_to_paths();
+
+                    self.add_geo_data(geo_data);
+                    self.map_state.zoom_to_fit(&self.geo_data);
                 }
                 MapCommand::CursorPos(time_pos) => {
                     log::trace!("Got cursor time: {time_pos:.}");
                     cursor_pos = Some(time_pos);
                 }
                 MapCommand::FitToAllPaths => {
-                    self.fit_map_to_paths();
+                    self.map_state.zoom_to_fit(&self.geo_data);
                 }
             }
         }
@@ -127,19 +103,22 @@ impl MapViewPort {
         }
     }
 
-    fn fit_map_to_paths(&mut self) {
-        if let Some((center, zoom)) = fit_map_to_paths(
-            &mut self
-                .map_tile_state
-                .as_mut()
-                .expect("unsound condition")
-                .map_memory,
-            &self.map_data.geo_data,
-        ) {
-            // Update stored position and zoom
-            self.map_data.center_position = center;
-            self.map_data.zoom = zoom;
-        }
+    pub fn add_geo_data(&mut self, geo_data: GeoSpatialData) {
+        debug_assert!(
+            geo_data.points.iter().all(|p| !p.timestamp.is_nan()
+                && !p.position.x().is_nan()
+                && !p.position.y().is_nan()
+                && !p
+                    .altitude
+                    .is_some_and(|a| a.is_nan() && p.speed.is_some_and(|s| s.is_nan()))
+                && !p.heading.is_some_and(|h| h.is_nan())),
+            "GeoSpatialData with NaN values: {}",
+            geo_data.name
+        );
+        self.geo_data.push(PathEntry {
+            data: geo_data,
+            settings: Default::default(),
+        });
     }
 
     /// Shows the map viewport and handles its UI.
@@ -181,22 +160,23 @@ impl MapViewPort {
 
     /// Renders the main map panel and all geographical data on it.
     fn show_map_panel(&mut self, ui: &mut Ui) {
-        let map_state = self
-            .map_tile_state
-            .as_mut()
+        let map_center_position = self.map_state.data().center_position;
+        let tile_state = self
+            .map_state
+            .tile_state_as_mut()
             .expect("map_tile_state is required but not initialized");
 
-        let zoom_level = map_state.map_memory.zoom();
+        let zoom_level = tile_state.zoom_level();
 
         let map = Map::new(
-            Some(map_state.tiles.as_mut()),
-            &mut map_state.map_memory,
-            self.map_data.center_position,
+            Some(tile_state.tiles.as_mut()),
+            &mut tile_state.map_memory,
+            map_center_position,
         )
         .double_click_to_zoom(true);
 
         map.show(ui, |ui, projector, _map_rect| {
-            for (i, path) in self.map_data.geo_data.iter().enumerate() {
+            for (i, path) in self.geo_data.iter().enumerate() {
                 if !path.settings.visible {
                     continue;
                 }
@@ -220,12 +200,7 @@ impl MapViewPort {
             }
 
             if let Some(cursor_time) = self.plot_time_cursor_pos {
-                draw::draw_cursor_highlights(
-                    ui.painter(),
-                    projector,
-                    &self.map_data.geo_data,
-                    cursor_time,
-                );
+                draw::draw_cursor_highlights(ui.painter(), projector, &self.geo_data, cursor_time);
             }
         });
     }
@@ -239,8 +214,8 @@ impl MapViewPort {
             .default_size([200.0, 150.0])
             .show(ctx, |ui| {
                 let map_state = self
-                    .map_tile_state
-                    .as_mut()
+                    .map_state
+                    .tile_state_as_mut()
                     .expect("map_tile_state is required but not initialized");
 
                 let button_text = if map_state.is_satellite {
@@ -253,10 +228,10 @@ impl MapViewPort {
                 };
 
                 if ui.button(button_text).clicked() {
-                    self.toggle_map_style(ctx);
+                    self.map_state.toggle_map_style(ctx.clone());
                 }
 
-                if self.map_data.geo_data.is_empty() {
+                if self.geo_data.is_empty() {
                     ui.label("No paths loaded");
                 } else {
                     ui.separator();
@@ -270,41 +245,6 @@ impl MapViewPort {
             });
     }
 
-    /// Toggles the map tile source between OpenStreetMap and Mapbox Satellite.
-    fn toggle_map_style(&mut self, ctx: &egui::Context) {
-        let map_state = self
-            .map_tile_state
-            .as_mut()
-            .expect("map_tile_state is required but not initialized");
-        let ctx_clone = ctx.clone();
-
-        if map_state.is_satellite {
-            map_state.tiles =
-                TilesKind::OSM(HttpTiles::new(walkers::sources::OpenStreetMap, ctx_clone));
-        } else {
-            const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
-            const MAPBOX_API_TOKEN_FALLBACK: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
-
-            let access_token = option_env!("PLOTINATOR3000_MAPBOX_API").map_or_else(
-                || {
-                    log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
-                    std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token")
-                },
-                |s| s.to_owned(),
-            );
-
-            map_state.tiles = TilesKind::MapboxSatellite(HttpTiles::new(
-                walkers::sources::Mapbox {
-                    style: walkers::sources::MapboxStyle::Satellite,
-                    access_token,
-                    high_resolution: true,
-                },
-                ctx_clone,
-            ));
-        }
-        map_state.is_satellite = !map_state.is_satellite;
-    }
-
     fn show_legend_grid(&mut self, ui: &mut Ui) {
         egui::Grid::new("legend_grid").striped(true).show(ui, |ui| {
             // Column headers
@@ -314,7 +254,7 @@ impl MapViewPort {
             ui.label("hdg");
             ui.end_row();
 
-            for (i, path_entry) in self.map_data.geo_data.iter_mut().enumerate() {
+            for (i, path_entry) in self.geo_data.iter_mut().enumerate() {
                 let path = &path_entry.data;
 
                 let mut path_ui_hovered = false;
@@ -377,33 +317,6 @@ impl MapViewPort {
     }
 }
 
-pub enum TilesKind {
-    OSM(HttpTiles),
-    MapboxSatellite(HttpTiles),
-}
-
-impl AsMut<dyn Tiles> for TilesKind {
-    fn as_mut(&mut self) -> &mut (dyn Tiles + 'static) {
-        match self {
-            Self::OSM(tiles) | Self::MapboxSatellite(tiles) => tiles,
-        }
-    }
-}
-
-impl AsRef<dyn Tiles> for TilesKind {
-    fn as_ref(&self) -> &(dyn Tiles + 'static) {
-        match self {
-            Self::OSM(tiles) | Self::MapboxSatellite(tiles) => tiles,
-        }
-    }
-}
-
-pub struct MapTileState {
-    map_memory: MapMemory,
-    pub tiles: TilesKind,
-    pub is_satellite: bool,
-}
-
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct PathEntrySettings {
     pub visible: bool,
@@ -427,105 +340,4 @@ impl Default for PathEntrySettings {
 pub struct PathEntry {
     pub data: GeoSpatialData,
     pub settings: PathEntrySettings,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-pub struct MapData {
-    pub geo_data: Vec<PathEntry>,
-    pub highlighted: Option<Position>,
-    pub center_position: Position,
-    pub zoom: f64,
-}
-
-impl Default for MapData {
-    fn default() -> Self {
-        Self {
-            geo_data: Vec::new(),
-            highlighted: None,
-            center_position: Position::new(-0.1278, 51.5074), // London (lon, lat)
-            zoom: 10.0,
-        }
-    }
-}
-
-fn fit_map_to_paths(map_memory: &mut MapMemory, geo_data: &[PathEntry]) -> Option<(Position, f64)> {
-    let bounds = calculate_bounding_box(geo_data)?;
-
-    let center = Position::new(bounds.center_lon(), bounds.center_lat());
-    let zoom = bounds.zoom_level_to_fit_all();
-
-    map_memory.center_at(center);
-    let _ = map_memory.set_zoom(zoom);
-
-    Some((center, zoom))
-}
-
-struct BoundingBox {
-    min_lat: f64,
-    max_lat: f64,
-    min_lon: f64,
-    max_lon: f64,
-}
-
-impl BoundingBox {
-    fn center_lat(&self) -> f64 {
-        (self.min_lat + self.max_lat) / 2.0
-    }
-
-    fn center_lon(&self) -> f64 {
-        (self.min_lon + self.max_lon) / 2.0
-    }
-
-    fn lat_span(&self) -> f64 {
-        self.max_lat - self.min_lat
-    }
-
-    fn lon_span(&self) -> f64 {
-        self.max_lon - self.min_lon
-    }
-
-    fn zoom_level_to_fit_all(&self) -> f64 {
-        let max_span = self.lat_span().max(self.lon_span());
-        if max_span > 0.0 {
-            let padded_span = max_span * 1.5;
-            let zoom = (360.0 / padded_span).log2();
-            zoom.clamp(2.0, 18.0)
-        } else {
-            10.0
-        }
-    }
-}
-
-fn calculate_bounding_box(geo_data: &[PathEntry]) -> Option<BoundingBox> {
-    let visible_paths: Vec<&PathEntry> = geo_data.iter().filter(|p| p.settings.visible).collect();
-
-    if visible_paths.is_empty() {
-        return None;
-    }
-
-    let mut min_lat = f64::INFINITY;
-    let mut max_lat = f64::NEG_INFINITY;
-    let mut min_lon = f64::INFINITY;
-    let mut max_lon = f64::NEG_INFINITY;
-
-    for path in visible_paths {
-        let gd = &path.data;
-        let (tmp_min_lat, tmp_max_lat) = gd.lat_bounds();
-        let (tmp_min_lon, tmp_max_lon) = gd.lon_bounds();
-
-        log::debug!("{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]", gd.name);
-        log::debug!("{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]", gd.name);
-
-        min_lat = min_lat.min(tmp_min_lat);
-        max_lat = max_lat.max(tmp_max_lat);
-        min_lon = min_lon.min(tmp_min_lon);
-        max_lon = max_lon.max(tmp_max_lon);
-    }
-
-    Some(BoundingBox {
-        min_lat,
-        max_lat,
-        min_lon,
-        max_lon,
-    })
 }
