@@ -10,6 +10,7 @@ homepage.workspace = true
 
 [dependencies]
 plotinator-log-if.workspace = true
+plotinator-proc-macros.workspace = true
 serde.workspace = true
 walkers.workspace = true
 egui-phosphor.workspace = true

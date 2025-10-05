@@ -255,6 +255,7 @@ fn draw_altitude_label(painter: &Painter, point: Pos2, altitude: f64) {
     painter.text(text_pos, egui::Align2::LEFT_TOP, text, font_id, text_color);
 }
 
+/// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough
 pub(crate) fn draw_cursor_highlights(
     painter: &Painter,
     projector: &Projector,
@@ -270,11 +271,31 @@ pub(crate) fn draw_cursor_highlights(
         }
         let geo_data = &path.data;
         // Find the closest point within the time threshold
+
+        // Binary search to find the insertion point for cursor_time
+        let candidate_idx = match geo_data
+            .points
+            .binary_search_by(|point| point.timestamp.total_cmp(&cursor_time))
+        {
+            Ok(exact_idx) => exact_idx,
+            Err(insert_idx) => insert_idx,
+        };
+
         let mut closest_point: Option<(&GeoPoint, f64)> = None;
 
-        for point in &geo_data.points {
-            let time_delta = (point.timestamp - cursor_time).abs();
+        // Check the point at candidate_idx and the one before it (if exists)
+        if candidate_idx < geo_data.points.len() {
+            let point = &geo_data.points[candidate_idx];
+            let time_delta = point.timestamp - cursor_time;
+            if time_delta <= MAX_TIME_DELTA {
+                closest_point = Some((point, time_delta));
+            }
+        }
 
+        // Check the point before cursor_time
+        if candidate_idx > 0 {
+            let point = &geo_data.points[candidate_idx - 1];
+            let time_delta = cursor_time - point.timestamp;
             if time_delta <= MAX_TIME_DELTA {
                 match closest_point {
                     None => closest_point = Some((point, time_delta)),

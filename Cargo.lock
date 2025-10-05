@@ -3950,6 +3950,7 @@ dependencies = [
  "egui_extras",
  "log",
  "plotinator-log-if",
+ "plotinator-proc-macros",
  "serde",
  "walkers",
 ]
