@@ -78,15 +78,15 @@ impl HarnessWrapper {
     /// access to a GPU. Typically a threshold of 1-2 is enough to not get false positives,
     /// but for a snapshot that includes a plot with lots of narrow lines (like plotting Mbed PID log)
     /// the threshold will need to be higher.
-    pub fn save_snapshot_with_threshold(&mut self, threshold: CiThreshold) {
+    pub fn save_snapshot_with_threshold(&mut self, CiThreshold(threshold): CiThreshold) {
         let is_macos = cfg!(target_os = "macos");
         self.harness.fit_contents();
 
         if std::env::var("CI").is_ok_and(|v| v == "true") {
             // Only macos runners have access to a GPU
             if is_macos {
-                eprintln!("Using CI mac OS threshold: {}", threshold.0);
-                let opt = egui_kittest::SnapshotOptions::new().threshold(threshold.0);
+                eprintln!("Using CI mac OS threshold: {threshold}");
+                let opt = egui_kittest::SnapshotOptions::new().threshold(threshold);
                 self.harness.snapshot_options(&self.name, &opt);
             }
         } else {

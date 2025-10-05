@@ -109,12 +109,26 @@ pub(crate) fn draw_heading_arrow(
     painter: &egui::Painter,
     center: Pos2,
     geo_point: &plotinator_log_if::prelude::GeoPoint,
-    _path_color: Color32, // No longer needed, but kept for signature consistency
+    _path_color: Color32,
     speed_range: (f64, f64),
 ) {
-    let Some(heading_deg) = geo_point.heading else {
+    let Some((main_line, barb1, barb2)) = calculate_arrow_geometry(center, geo_point, speed_range)
+    else {
         return;
     };
+    let outline_color = Color32::BLACK;
+    let outline_stroke = Stroke::new(1.5, outline_color);
+    painter.line_segment(main_line, outline_stroke);
+    painter.line_segment(barb1, outline_stroke);
+    painter.line_segment(barb2, outline_stroke);
+}
+
+pub(crate) fn calculate_arrow_geometry(
+    center: Pos2,
+    geo_point: &GeoPoint,
+    speed_range: (f64, f64),
+) -> Option<([Pos2; 2], [Pos2; 2], [Pos2; 2])> {
+    let heading_deg = geo_point.heading?; // Return None if no heading
 
     const MIN_ARROW_LENGTH: f32 = 4.0;
     const MAX_ARROW_LENGTH: f32 = 30.0;
@@ -136,24 +150,17 @@ pub(crate) fn draw_heading_arrow(
     // 0° North -> Up, 90° East -> Right
     let angle_rad = (90.0 - heading_deg).to_radians() as f32;
     let dir = Vec2::new(angle_rad.cos(), -angle_rad.sin());
-
     let tip = center + dir * arrow_length;
 
-    // Calculate the two barbs for the arrowhead by rotating the backward vector
+    // Calculate barbs
     let barb_length = arrow_length * 0.4;
     let barb_angle = 25.0_f32.to_radians();
     let back_dir = -dir;
-
     let rot = egui::emath::Rot2::from_angle(barb_angle);
     let barb1 = tip + (rot * back_dir) * barb_length;
     let barb2 = tip + (rot.inverse() * back_dir) * barb_length;
 
-    let outline_color = Color32::BLACK;
-    let outline_stroke = Stroke::new(1.5, outline_color);
-
-    painter.line_segment([center, tip], outline_stroke);
-    painter.line_segment([tip, barb1], outline_stroke);
-    painter.line_segment([tip, barb2], outline_stroke);
+    Some(([center, tip], [tip, barb1], [tip, barb2]))
 }
 
 fn draw_start_marker(painter: &egui::Painter, center: Pos2) {
