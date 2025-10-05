@@ -42,21 +42,10 @@ impl MapState {
             map_state.tiles =
                 TilesKind::OpenStreetMap(HttpTiles::new(walkers::sources::OpenStreetMap, ctx));
         } else {
-            const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
-            const MAPBOX_API_TOKEN_FALLBACK: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
-
-            let access_token = option_env!("PLOTINATOR3000_MAPBOX_API").map_or_else(
-                || {
-                    log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
-                    std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox api token")
-                },
-                |s| s.to_owned(),
-            );
-
             map_state.tiles = TilesKind::MapboxSatellite(HttpTiles::new(
                 walkers::sources::Mapbox {
                     style: walkers::sources::MapboxStyle::Satellite,
-                    access_token,
+                    access_token: get_mapbox_api_token(),
                     high_resolution: true,
                 },
                 ctx,
@@ -217,4 +206,31 @@ fn calculate_bounding_box(geo_data: &[PathEntry]) -> Option<BoundingBox> {
         min_lon,
         max_lon,
     })
+}
+
+const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
+const MAPBOX_API_TOKEN_FALLBACK: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
+fn get_mapbox_api_token() -> String {
+    option_env!("PLOTINATOR3000_MAPBOX_API").map_or_else(
+        || {
+            log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
+            std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox API token")
+        },
+        |s| s.to_owned(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "meant to prove that CI sets a mapbox API token"]
+    fn test_get_mapbox_api_token() {
+        let api_token_is_not_empty = !get_mapbox_api_token().is_empty();
+        debug_assert!(
+            api_token_is_not_empty,
+            "expected CI to set the map box API token in the environment variable: {MAPBOX_API_TOKEN_COMPILE_TIME_NAME}"
+        );
+    }
 }
