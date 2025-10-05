@@ -211,12 +211,17 @@ impl MapViewPort {
                 );
 
                 if is_hovered {
-                    draw::highlight_whole_path(ui, projector, &path_entry.data);
+                    draw::highlight_whole_path(ui.painter(), projector, &path_entry.data);
                 }
             }
 
             if let Some(cursor_time) = self.plot_time_cursor_pos {
-                draw::draw_cursor_highlights(ui, projector, &self.map_data.geo_data, cursor_time);
+                draw::draw_cursor_highlights(
+                    ui.painter(),
+                    projector,
+                    &self.map_data.geo_data,
+                    cursor_time,
+                );
             }
         });
     }

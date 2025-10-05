@@ -1,4 +1,4 @@
-use egui::{Color32, Pos2, Stroke, Vec2};
+use egui::{Color32, Painter, Pos2, Stroke, Vec2, vec2};
 use plotinator_log_if::prelude::{GeoPoint, GeoSpatialData};
 use walkers::Projector;
 
@@ -56,7 +56,7 @@ pub(crate) fn draw_path(
 
     // Draw heading arrows with distance-based filtering
     if should_draw_heading_arrows {
-        draw_heading_arrows(painter, &screen_points, path_color, speed_range);
+        draw_heading_arrows(painter, &screen_points, speed_range);
     }
 
     if should_draw_height_labels {
@@ -77,7 +77,6 @@ pub(crate) fn draw_path(
 pub(crate) fn draw_heading_arrows(
     painter: &egui::Painter,
     screen_points: &[(Pos2, &GeoPoint)],
-    path_color: Color32,
     speed_range: (f64, f64),
 ) {
     const MIN_ARROW_DISTANCE: f32 = 20.0; // Minimum pixels between arrows
@@ -99,7 +98,7 @@ pub(crate) fn draw_heading_arrows(
         };
 
         if should_draw {
-            draw_heading_arrow(painter, *point_pos, geo_point, path_color, speed_range);
+            draw_heading_arrow(painter, *point_pos, geo_point, speed_range);
             last_arrow_pos = Some(*point_pos);
         }
     }
@@ -109,7 +108,6 @@ pub(crate) fn draw_heading_arrow(
     painter: &egui::Painter,
     center: Pos2,
     geo_point: &plotinator_log_if::prelude::GeoPoint,
-    _path_color: Color32,
     speed_range: (f64, f64),
 ) {
     let Some((main_line, barb1, barb2)) = calculate_arrow_geometry(center, geo_point, speed_range)
@@ -128,7 +126,7 @@ pub(crate) fn calculate_arrow_geometry(
     geo_point: &GeoPoint,
     speed_range: (f64, f64),
 ) -> Option<([Pos2; 2], [Pos2; 2], [Pos2; 2])> {
-    let heading_deg = geo_point.heading?; // Return None if no heading
+    let heading_deg = geo_point.heading?;
 
     const MIN_ARROW_LENGTH: f32 = 4.0;
     const MAX_ARROW_LENGTH: f32 = 30.0;
@@ -165,85 +163,78 @@ pub(crate) fn calculate_arrow_geometry(
 
 fn draw_start_marker(painter: &egui::Painter, center: Pos2) {
     const MARKER_RADIUS: f32 = 6.0;
-
-    // Draw white outline for better visibility
     painter.circle_filled(center, MARKER_RADIUS + 1.0, Color32::WHITE);
-    // Draw black filled circle
     painter.circle_filled(center, MARKER_RADIUS, Color32::BLACK);
 }
 
-fn draw_end_marker(painter: &egui::Painter, center: Pos2) {
+fn draw_end_marker(painter: &Painter, center: Pos2) {
     const CROSS_SIZE: f32 = 8.0;
     const CROSS_THICKNESS: f32 = 2.5;
 
     let stroke = Stroke::new(CROSS_THICKNESS, Color32::BLACK);
     let outline_stroke = Stroke::new(CROSS_THICKNESS + 1.0, Color32::WHITE);
 
+    fn line1(center: Pos2) -> [Pos2; 2] {
+        [
+            center + vec2(-CROSS_SIZE, -CROSS_SIZE),
+            center + vec2(CROSS_SIZE, CROSS_SIZE),
+        ]
+    }
+    fn line2(center: Pos2) -> [Pos2; 2] {
+        [
+            center + Vec2::new(-CROSS_SIZE, CROSS_SIZE),
+            center + Vec2::new(CROSS_SIZE, -CROSS_SIZE),
+        ]
+    }
     // Draw white outline for better visibility
-    painter.line_segment(
-        [
-            center + Vec2::new(-CROSS_SIZE, -CROSS_SIZE),
-            center + Vec2::new(CROSS_SIZE, CROSS_SIZE),
-        ],
-        outline_stroke,
-    );
-    painter.line_segment(
-        [
-            center + Vec2::new(-CROSS_SIZE, CROSS_SIZE),
-            center + Vec2::new(CROSS_SIZE, -CROSS_SIZE),
-        ],
-        outline_stroke,
-    );
-
+    painter.line_segment(line1(center), outline_stroke);
+    painter.line_segment(line2(center), outline_stroke);
     // Draw black cross
-    painter.line_segment(
-        [
-            center + Vec2::new(-CROSS_SIZE, -CROSS_SIZE),
-            center + Vec2::new(CROSS_SIZE, CROSS_SIZE),
-        ],
-        stroke,
-    );
-    painter.line_segment(
-        [
-            center + Vec2::new(-CROSS_SIZE, CROSS_SIZE),
-            center + Vec2::new(CROSS_SIZE, -CROSS_SIZE),
-        ],
-        stroke,
-    );
+    painter.line_segment(line1(center), stroke);
+    painter.line_segment(line2(center), stroke);
 }
 
-pub(crate) fn draw_altitude_labels(painter: &egui::Painter, screen_points: &[(Pos2, &GeoPoint)]) {
+pub(crate) fn draw_altitude_labels(painter: &Painter, screen_points: &[(Pos2, &GeoPoint)]) {
     const MIN_LABEL_DISTANCE: f32 = 60.0; // Minimum pixels between labels
 
     let mut last_label_pos: Option<Pos2> = None;
 
-    for (i, (point_pos, geo_point)) in screen_points.iter().enumerate() {
+    const POINT_SEPARATION: usize = 8;
+    let mut points_since_drawn = 0;
+    let mut point_candidate: Option<Pos2> = None;
+
+    for (point_pos, geo_point) in screen_points {
+        points_since_drawn += 1;
         // Skip if no altitude data
         let Some(altitude) = geo_point.altitude else {
             continue;
         };
 
-        // Check every 8th point as a candidate
-        if i % 8 != 0 {
+        if points_since_drawn < POINT_SEPARATION {
+            if points_since_drawn > POINT_SEPARATION / 2
+                && last_label_pos.is_none_or(|lp| point_pos.distance(lp) >= MIN_LABEL_DISTANCE)
+            {
+                point_candidate = Some(*point_pos);
+            }
             continue;
         }
 
         // Check distance from last drawn label
-        let should_draw = if let Some(last_pos) = last_label_pos {
-            let distance = point_pos.distance(last_pos);
-            distance >= MIN_LABEL_DISTANCE
-        } else {
-            true // Always draw the first label
-        };
-
-        if should_draw {
-            draw_altitude_label(painter, *point_pos, altitude);
-            last_label_pos = Some(*point_pos);
+        if points_since_drawn >= POINT_SEPARATION {
+            if last_label_pos.is_none_or(|lp| point_pos.distance(lp) >= MIN_LABEL_DISTANCE) {
+                draw_altitude_label(painter, *point_pos, altitude);
+                last_label_pos = Some(*point_pos);
+                points_since_drawn = 0;
+            } else if let Some(p) = point_candidate {
+                draw_altitude_label(painter, p, altitude);
+                last_label_pos = Some(p);
+                points_since_drawn = 0;
+            }
         }
     }
 }
 
-fn draw_altitude_label(painter: &egui::Painter, point: Pos2, altitude: f64) {
+fn draw_altitude_label(painter: &Painter, point: Pos2, altitude: f64) {
     let text = format!("{altitude:.0}m");
     let font_id = egui::FontId::proportional(11.0);
     let text_color = Color32::BLACK;
@@ -265,15 +256,13 @@ fn draw_altitude_label(painter: &egui::Painter, point: Pos2, altitude: f64) {
 }
 
 pub(crate) fn draw_cursor_highlights(
-    ui: &egui::Ui,
+    painter: &Painter,
     projector: &Projector,
     geo_data_series: &[PathEntry],
     cursor_time: f64,
 ) {
     const MAX_TIME_DELTA: f64 = 2_000_000_000.0; // Maximum 2 seconds in nanoseconds
     const HIGHLIGHT_RADIUS: f32 = 8.0;
-
-    let painter = ui.painter();
 
     for path in geo_data_series {
         if !path.visible {
@@ -320,9 +309,11 @@ pub(crate) fn draw_cursor_highlights(
     }
 }
 
-pub(crate) fn highlight_whole_path(ui: &egui::Ui, projector: &Projector, path: &GeoSpatialData) {
-    let painter = ui.painter();
-
+pub(crate) fn highlight_whole_path(
+    painter: &Painter,
+    projector: &Projector,
+    path: &GeoSpatialData,
+) {
     let screen_points: Vec<Pos2> = path
         .points
         .iter()
