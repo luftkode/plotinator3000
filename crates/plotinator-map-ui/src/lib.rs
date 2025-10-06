@@ -95,40 +95,21 @@ impl MapViewPort {
                                     primary_data.name
                                 );
                             } else {
-                                log::info!("Received basic geo data {}", primary_data.name);
+                                log::info!(
+                                    "Received basic geo data {} with only coordinates",
+                                    primary_data.name
+                                );
                             }
-                            let tmp_unmerged_aux: Vec<AuxiliaryGeoSpatialData> =
-                                self.unmerged_aux_data.drain(..).collect();
 
-                            for unmerged_aux in tmp_unmerged_aux {
-                                if unmerged_aux.is_compatible_with(&primary_data, 5e6) {
-                                    if let Err(e) = primary_data.merge_auxiliary(&unmerged_aux, 5e6)
-                                    {
-                                        log::error!(
-                                            "Failed to merge '{}' with '{}': {e}",
-                                            primary_data.name,
-                                            unmerged_aux.name
-                                        );
-                                        self.unmerged_aux_data.push(unmerged_aux);
-                                    }
-                                } else {
-                                    self.unmerged_aux_data.push(unmerged_aux);
-                                }
+                            for unmerged_aux in &self.unmerged_aux_data {
+                                let _ = primary_data.merge_auxiliary(unmerged_aux, 5e9);
                             }
 
                             self.add_geo_data(primary_data);
                         }
                         GeoSpatialDataset::AuxGeoSpatialData(aux_data) => {
                             for path in &mut self.geo_data {
-                                if aux_data.is_compatible_with(&path.data, 5e6) {
-                                    if let Err(e) = path.data.merge_auxiliary(&aux_data, 5e6) {
-                                        log::error!(
-                                            "Failed to merge '{}' with '{}': {e}",
-                                            path.data.name,
-                                            aux_data.name
-                                        );
-                                    }
-                                }
+                                let _ = path.data.merge_auxiliary(&aux_data, 5e9);
                             }
                         }
                     }
