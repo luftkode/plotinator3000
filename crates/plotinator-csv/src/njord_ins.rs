@@ -400,13 +400,13 @@ impl Parseable for NjordInsPPP {
         }
 
         let trimmed_header = header.trim();
-        if trimmed_header != EXPECTED_HEADER {
+        if trimmed_header == EXPECTED_HEADER {
+            Ok(())
+        } else {
             Err(format!(
                 "Not a valid '{}' header mismatch, expected '{EXPECTED_HEADER}', got '{trimmed_header}'",
                 Self::DESCRIPTIVE_NAME
             ))
-        } else {
-            Ok(())
         }
     }
 }

@@ -371,10 +371,10 @@ impl Parseable for GrafNavPPP {
         if trimmed.starts_with("Program:") && trimmed.contains("GrafNav Version") {
             Ok(())
         } else {
-            return Err(format!(
+            Err(format!(
                 "Not a valid '{}', First non-empty line should start with \"Project:\" and contain \"GrafNav Version\", got: {trimmed}",
                 Self::DESCRIPTIVE_NAME
-            ));
+            ))
         }
     }
 }

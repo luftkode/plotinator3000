@@ -454,7 +454,7 @@ fn process_orientation_and_position(
         .into(),
     ];
     if let Some(geo_data) = geo_data {
-        plots.push(geo_data.into());
+        plots.push(geo_data);
     }
 
     Ok(plots)
