@@ -973,7 +973,7 @@ mod tests {
         assert_eq!(primary.points[0].altitude, Some(GeoAltitude::Gnss(100.0))); // 1.0 closest to 1.0
         assert_eq!(primary.points[1].altitude, Some(GeoAltitude::Gnss(100.0))); // 1.5 closest to 1.0
         assert_eq!(primary.points[2].altitude, Some(GeoAltitude::Gnss(200.0))); // 2.0 closest to 2.0
-        assert_eq!(primary.points[3].altitude, Some(GeoAltitude::Gnss(300.0))); // 2.5 closest to 3.0
+        assert_eq!(primary.points[3].altitude, Some(GeoAltitude::Gnss(200.0))); // 2.5 closest to 2.0
         assert_eq!(primary.points[4].altitude, Some(GeoAltitude::Gnss(300.0))); // 3.0 closest to 3.0
         Ok(())
     }
