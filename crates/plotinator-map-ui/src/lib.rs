@@ -1,6 +1,6 @@
 use egui::{
-    CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui, ViewportBuilder,
-    ViewportId, Window,
+    Align2, CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui,
+    ViewportBuilder, ViewportId, Window,
 };
 use egui_phosphor::regular::{
     CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL, SQUARE,
@@ -248,6 +248,8 @@ impl MapViewPort {
                 draw::draw_cursor_highlights(ui.painter(), projector, &self.geo_data, cursor_time);
             }
         });
+
+        Self::zoom_controls(ui, &mut tile_state.map_memory);
     }
 
     /// Renders the legend window with path information.
@@ -340,6 +342,26 @@ impl MapViewPort {
                 }
             }
         });
+    }
+
+    /// Simple GUI to zoom in and out.
+    pub fn zoom_controls(ui: &Ui, map_memory: &mut walkers::MapMemory) {
+        Window::new("map_zoom_ctrls")
+            .collapsible(false)
+            .resizable(false)
+            .title_bar(false)
+            .anchor(Align2::LEFT_BOTTOM, [10., -10.])
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button(RichText::new("➕").heading()).clicked() {
+                        let _ = map_memory.zoom_in();
+                    }
+
+                    if ui.button(RichText::new("➖").heading()).clicked() {
+                        let _ = map_memory.zoom_out();
+                    }
+                });
+            });
     }
 }
 
