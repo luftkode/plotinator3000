@@ -58,16 +58,8 @@ pub(crate) fn read_string_attribute(attr: &Attribute) -> hdf5::Result<String> {
             let value: VarLenUnicode = attr.read_scalar()?;
             Ok(value.as_str().to_owned())
         }
-        // Handle fixed-length ASCII string
-        TypeDescriptor::FixedAscii(_) => {
-            let buf = attr.read_raw()?;
-            let string = String::from_utf8_lossy(&buf)
-                .trim_end_matches('\0')
-                .to_owned();
-            Ok(string)
-        }
-        // Handle fixed-length UTF-8 string
-        TypeDescriptor::FixedUnicode(_) => {
+        // Handle fixed-length ASCII or UTF-8 string
+        TypeDescriptor::FixedAscii(_) | TypeDescriptor::FixedUnicode(_) => {
             let buf = attr.read_raw()?;
             let string = String::from_utf8_lossy(&buf)
                 .trim_end_matches('\0')
@@ -94,16 +86,8 @@ pub(crate) fn read_any_attribute_to_string(attr: &Attribute) -> hdf5::Result<Str
             let value: VarLenUnicode = attr.read_scalar()?;
             Ok(value.as_str().to_owned())
         }
-        // Handle fixed-length ASCII string
-        TypeDescriptor::FixedAscii(_) => {
-            let buf = attr.read_raw()?;
-            let string = String::from_utf8_lossy(&buf)
-                .trim_end_matches('\0')
-                .to_owned();
-            Ok(string)
-        }
-        // Handle fixed-length UTF-8 string
-        TypeDescriptor::FixedUnicode(_) => {
+        // Handle fixed-length ASCII or UTF-8 string
+        TypeDescriptor::FixedAscii(_) | TypeDescriptor::FixedUnicode(_) => {
             let buf = attr.read_raw()?;
             let string = String::from_utf8_lossy(&buf)
                 .trim_end_matches('\0')

@@ -257,10 +257,10 @@ impl DeltaComputer {
             self.all_stats.push(delta_s);
 
             // Add to normal_stats only if step increment is 1
-            if let Some(prev_count) = self.prev_count {
-                if curr_count.wrapping_sub(prev_count) == 1 {
-                    self.normal_stats.push(delta_s);
-                }
+            if let Some(prev_count) = self.prev_count
+                && curr_count.wrapping_sub(prev_count) == 1
+            {
+                self.normal_stats.push(delta_s);
             }
         }
 

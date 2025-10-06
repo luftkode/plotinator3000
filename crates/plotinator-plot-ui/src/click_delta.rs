@@ -117,32 +117,31 @@ impl ClickDelta {
 
     pub fn ui<'a>(&'a self, plot_ui: &mut PlotUi<'a>, plot_type: PlotType) {
         // We only paint the click delta graphics on the plot type that matches the one that was clicked
-        if self.plot_type().is_some_and(|pt| pt == plot_type) {
-            if let Some(p) = self.get_click_points() {
-                let delta_color = Self::delta_color(plot_ui.ctx());
-                Self::ui_click_markers(plot_ui, p, delta_color);
+        if self.plot_type().is_some_and(|pt| pt == plot_type)
+            && let Some(p) = self.get_click_points()
+        {
+            let delta_color = Self::delta_color(plot_ui.ctx());
+            Self::ui_click_markers(plot_ui, p, delta_color);
 
-                match self.get_click_coords() {
-                    (None, None) => (),
-                    (None, Some(_)) => unreachable!("Second click populated when first is empty"),
-                    (Some(fpoint), None) => {
-                        if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
-                            let pcoord = [pointer_coord.x, pointer_coord.y];
-                            let delta_line =
-                                Line::new("", PlotPoints::new([fpoint, pcoord].into()))
-                                    .color(delta_color);
+            match self.get_click_coords() {
+                (None, None) => (),
+                (None, Some(_)) => unreachable!("Second click populated when first is empty"),
+                (Some(fpoint), None) => {
+                    if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
+                        let pcoord = [pointer_coord.x, pointer_coord.y];
+                        let delta_line = Line::new("", PlotPoints::new([fpoint, pcoord].into()))
+                            .color(delta_color);
 
-                            Self::ui_delta_line(plot_ui, delta_line, fpoint, pcoord);
-                        }
+                        Self::ui_delta_line(plot_ui, delta_line, fpoint, pcoord);
                     }
-                    (Some(fpoint), Some(spoint)) => {
-                        let delta_line = Line::new("", PlotPoints::new([fpoint, spoint].into()))
-                            .color(delta_color)
-                            .name("Δ Click")
-                            .style(egui_plot::LineStyle::Dashed { length: 10.0 });
+                }
+                (Some(fpoint), Some(spoint)) => {
+                    let delta_line = Line::new("", PlotPoints::new([fpoint, spoint].into()))
+                        .color(delta_color)
+                        .name("Δ Click")
+                        .style(egui_plot::LineStyle::Dashed { length: 10.0 });
 
-                        Self::ui_delta_line(plot_ui, delta_line, fpoint, spoint);
-                    }
+                    Self::ui_delta_line(plot_ui, delta_line, fpoint, spoint);
                 }
             }
         }

@@ -128,20 +128,20 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
         for i in 0..len {
             let mut point = GeoPoint::new(ts[i], (lat[i], lon[i]));
 
-            if let Some(h) = heading {
-                if i < h.len() {
-                    point = point.with_heading(h[i]);
-                }
+            if let Some(h) = heading
+                && i < h.len()
+            {
+                point = point.with_heading(h[i]);
             }
-            if let Some(a) = altitude {
-                if i < a.len() {
-                    point = point.with_altitude(a[i]);
-                }
+            if let Some(a) = altitude
+                && i < a.len()
+            {
+                point = point.with_altitude(a[i]);
             }
-            if let Some(s) = speed {
-                if i < s.len() {
-                    point = point.with_speed(s[i]);
-                }
+            if let Some(s) = speed
+                && i < s.len()
+            {
+                point = point.with_speed(s[i]);
             }
 
             points.push(point);

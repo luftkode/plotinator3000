@@ -231,10 +231,9 @@ fn show_discovered_topics_section(
             )
             .on_hover_text("Continuously find topics (subscribes to #)")
             .clicked()
+        && let Ok(port) = broker_port.parse::<u16>()
     {
-        if let Ok(port) = broker_port.parse::<u16>() {
-            topic_discoverer.start(broker_host.to_owned(), port);
-        }
+        topic_discoverer.start(broker_host.to_owned(), port);
     }
 
     if topic_discoverer.active() {

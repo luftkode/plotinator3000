@@ -151,10 +151,8 @@ fn fill_log_plots(
             if plot_settings.highlight(ptype) {
                 plotinator_ui_util::highlight_plot_rect(plot_ui);
             }
-            if area_hovered {
-                if let Some(final_zoom_factor) = final_zoom_factor {
-                    plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
-                }
+            if area_hovered && let Some(final_zoom_factor) = final_zoom_factor {
+                plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
             }
 
             if plot_ui.response().double_clicked() || reset_plot_bounds {

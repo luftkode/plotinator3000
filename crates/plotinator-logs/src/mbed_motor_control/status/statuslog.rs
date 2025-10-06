@@ -272,15 +272,15 @@ impl Parseable for StatusLog {
 
         let all_plots_raw = Self::build_raw_plots(startup_timestamp_ns, &vec_of_entries);
         // Iterate through the plots and make sure all the first timestamps match
-        if let Some(first_plot) = all_plots_raw.first() {
-            if let Some([first_timestamp, ..]) = first_plot.points().first() {
-                for p in &all_plots_raw {
-                    if let Some([current_first_timestamp, ..]) = p.points().first() {
-                        debug_assert_eq!(
-                            current_first_timestamp, first_timestamp,
-                            "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
-                        );
-                    }
+        if let Some(first_plot) = all_plots_raw.first()
+            && let Some([first_timestamp, ..]) = first_plot.points().first()
+        {
+            for p in &all_plots_raw {
+                if let Some([current_first_timestamp, ..]) = p.points().first() {
+                    debug_assert_eq!(
+                        current_first_timestamp, first_timestamp,
+                        "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
+                    );
                 }
             }
         }

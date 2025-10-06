@@ -61,34 +61,33 @@ impl BrokerValidator {
         }
 
         // Debounce and validate after a timeout
-        if let Some(last_change) = self.last_input_change {
-            if last_change.elapsed() >= Duration::from_millis(500)
-                && self.status() == ValidatorStatus::Inactive
-            {
-                let (tx, rx) = std::sync::mpsc::channel();
-                self.broker_validation_receiver = Some(rx);
-                self.status = ValidatorStatus::Connecting;
-                self.last_input_change = None;
+        if let Some(last_change) = self.last_input_change
+            && last_change.elapsed() >= Duration::from_millis(500)
+            && self.status() == ValidatorStatus::Inactive
+        {
+            let (tx, rx) = std::sync::mpsc::channel();
+            self.broker_validation_receiver = Some(rx);
+            self.status = ValidatorStatus::Connecting;
+            self.last_input_change = None;
 
-                spawn_validation_thread((ip, port), tx);
-            }
+            spawn_validation_thread((ip, port), tx);
         }
 
         // Check for validation results, if we got a result we store the result and reset the check status
-        if let Some(receiver) = &mut self.broker_validation_receiver {
-            if let Ok(result) = receiver.try_recv() {
-                // If the broker is reachable we continue so we can resolve its version
-                match result {
-                    BrokerStatus::Reachable => self.status = ValidatorStatus::RetrievingVersion,
-                    BrokerStatus::ReachableVersion(_)
-                    | BrokerStatus::None
-                    | BrokerStatus::Unreachable(_) => {
-                        self.status = ValidatorStatus::Inactive;
-                        self.broker_validation_receiver = None;
-                    }
+        if let Some(receiver) = &mut self.broker_validation_receiver
+            && let Ok(result) = receiver.try_recv()
+        {
+            // If the broker is reachable we continue so we can resolve its version
+            match result {
+                BrokerStatus::Reachable => self.status = ValidatorStatus::RetrievingVersion,
+                BrokerStatus::ReachableVersion(_)
+                | BrokerStatus::None
+                | BrokerStatus::Unreachable(_) => {
+                    self.status = ValidatorStatus::Inactive;
+                    self.broker_validation_receiver = None;
                 }
-                self.broker_status = result;
             }
+            self.broker_status = result;
         }
     }
 }
@@ -185,11 +184,11 @@ fn get_broker_version(addr: SocketAddr) -> Result<String, String> {
     while start.elapsed() < timeout {
         match connection.iter().next() {
             Some(Ok(Event::Incoming(Packet::Publish(publish)))) => {
-                if publish.topic == "$SYS/broker/version" {
-                    if let Ok(version) = String::from_utf8(publish.payload.to_vec()) {
-                        log::info!("Got broker version: {version}");
-                        return Ok(version);
-                    }
+                if publish.topic == "$SYS/broker/version"
+                    && let Ok(version) = String::from_utf8(publish.payload.to_vec())
+                {
+                    log::info!("Got broker version: {version}");
+                    return Ok(version);
                 }
             }
             Some(Err(e)) => return Err(format!("Connection error: {e}")),

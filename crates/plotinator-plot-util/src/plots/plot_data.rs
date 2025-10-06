@@ -181,7 +181,7 @@ impl CookedPlot {
         self.color
     }
 
-    pub fn get_raw(&self) -> PointList {
+    pub fn get_raw(&self) -> PointList<'_> {
         &self.raw_points
     }
 

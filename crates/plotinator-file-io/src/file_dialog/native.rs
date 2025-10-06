@@ -60,17 +60,17 @@ impl NativeFileDialog {
         }
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        if mqtt_plots.is_some() {
-            if let Some(mqtt_plot_data) = mqtt_plots {
-                let supported_formats: Vec<SupportedFormat> =
-                    vec![SupportedFormat::MqttData(mqtt_plot_data.clone().into())];
-                Self::save_data_to_file(
-                    &supported_formats,
-                    title,
-                    "mqtt_data.p3k",
-                    CUSTOM_HEADER_PLOT_DATA,
-                );
-            }
+        if mqtt_plots.is_some()
+            && let Some(mqtt_plot_data) = mqtt_plots
+        {
+            let supported_formats: Vec<SupportedFormat> =
+                vec![SupportedFormat::MqttData(mqtt_plot_data.clone().into())];
+            Self::save_data_to_file(
+                &supported_formats,
+                title,
+                "mqtt_data.p3k",
+                CUSTOM_HEADER_PLOT_DATA,
+            );
         }
     }
 

@@ -209,11 +209,11 @@ pub fn update_if_applicable(version: Version) -> axoupdater::AxoupdateResult<boo
                         }
 
                         // show update window and perform upgrade or cancel it
-                        if let Ok(did_update) = ui::show_simple_update_window(version) {
-                            if did_update {
-                                log::info!("Update performed... Closing");
-                                return Ok(true);
-                            }
+                        if let Ok(did_update) = ui::show_simple_update_window(version)
+                            && did_update
+                        {
+                            log::info!("Update performed... Closing");
+                            return Ok(true);
                         }
                     } else {
                         log::info!("Already running newest version");
@@ -235,11 +235,11 @@ fn bypass_updates() -> bool {
     // This is generally set in the build environment (see config.toml)
     if let Ok(value) = env::var(BYPASS_UPDATES_ENV_VAR) {
         // If we're in the build environment and we detect CI, we don't allow bypassing updates
-        if let Ok(value) = env::var("GITHUB_ACTIONS") {
-            if value == "true" {
-                log::info!("GitHub actions detected, disabling bypass updates");
-                return false;
-            }
+        if let Ok(value) = env::var("GITHUB_ACTIONS")
+            && value == "true"
+        {
+            log::info!("GitHub actions detected, disabling bypass updates");
+            return false;
         }
         if value == "1" || value.eq_ignore_ascii_case("true") {
             log::info!("Update bypassed due to environment variable.");
