@@ -2,7 +2,7 @@
 use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
-use egui_phosphor::regular::FLOPPY_DISK;
+use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN};
 use plotinator_map_ui::commander::MapUiCommander;
 use plotinator_plot_ui::LogPlotUi;
 
@@ -222,10 +222,7 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
         egui::MenuBar::new().ui(ui, |ui| {
             misc::show_app_reset_button(ui, app);
             if ui
-                .button(RichText::new(format!(
-                    "{icon} Open File",
-                    icon = egui_phosphor::regular::FOLDER_OPEN
-                )))
+                .button(RichText::new(format!("{FOLDER_OPEN} Open File")))
                 .clicked()
             {
                 #[cfg(target_arch = "wasm32")]

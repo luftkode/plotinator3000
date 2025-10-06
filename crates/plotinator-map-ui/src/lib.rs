@@ -1,4 +1,7 @@
-use egui::{CentralPanel, Color32, Frame, RichText, Ui, ViewportBuilder, ViewportId};
+use egui::{
+    Button, CentralPanel, Color32, Frame, MenuBar, RichText, TopBottomPanel, Ui, ViewportBuilder,
+    ViewportId,
+};
 use egui_phosphor::regular::{
     CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SQUARE,
 };
@@ -148,6 +151,10 @@ impl MapViewPort {
 
                 self.poll_commands();
 
+                TopBottomPanel::top("map_top_panel").show(ctx, |ui| {
+                    self.show_menu_bar(ui);
+                });
+
                 CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
                     self.show_map_panel(ui);
                 });
@@ -160,6 +167,32 @@ impl MapViewPort {
         if !is_still_open {
             self.close();
         }
+    }
+
+    /// Renders the menu bar at the top of the viewport.
+    fn show_menu_bar(&mut self, ui: &mut Ui) {
+        MenuBar::new().ui(ui, |ui| {
+            let map_state = self
+                .map_state
+                .tile_state_as_mut()
+                .expect("map_tile_state is required but not initialized");
+
+            let is_satellite = map_state.is_satellite;
+            let (icon, text) = if is_satellite {
+                (GLOBE_HEMISPHERE_WEST, "Satellite")
+            } else {
+                (GLOBE, "Open Street Map")
+            };
+            if ui
+                .add_sized(
+                    [150.0, 0.0],
+                    Button::new(RichText::new(format!("{icon} {text}")).strong()),
+                )
+                .clicked()
+            {
+                self.map_state.toggle_map_style(ui.ctx().clone());
+            }
+        });
     }
 
     /// Renders the main map panel and all geographical data on it.
@@ -209,36 +242,17 @@ impl MapViewPort {
         });
     }
 
-    /// Renders the legend window with map controls and path information.
+    /// Renders the legend window with path information.
     fn show_legend_window(&mut self, ctx: &egui::Context) {
         egui::Window::new("Legend")
             .title_bar(true)
             .resizable(true)
-            .default_pos(egui::pos2(0.0, 10.0))
+            .default_pos(egui::pos2(0.0, 32.0))
             .default_size([200.0, 150.0])
             .show(ctx, |ui| {
-                let map_state = self
-                    .map_state
-                    .tile_state_as_mut()
-                    .expect("map_tile_state is required but not initialized");
-
-                let button_text = if map_state.is_satellite {
-                    RichText::new(format!("{GLOBE} Open Street Map {GLOBE}")).strong()
-                } else {
-                    RichText::new(format!(
-                        "{GLOBE_HEMISPHERE_WEST} Satellite {GLOBE_HEMISPHERE_WEST}"
-                    ))
-                    .strong()
-                };
-
-                if ui.button(button_text).clicked() {
-                    self.map_state.toggle_map_style(ctx.clone());
-                }
-
                 if self.geo_data.is_empty() {
                     ui.label("No paths loaded");
                 } else {
-                    ui.separator();
                     self.show_legend_grid(ui);
                 }
 
