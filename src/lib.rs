@@ -2,7 +2,8 @@
 
 use std::sync::OnceLock;
 
-pub use app::App;
+pub use app::GlobalApp;
+pub use app::plot_app::PlotApp;
 use semver::Version;
 mod app;
 
@@ -31,5 +32,3 @@ pub fn get_app_version() -> &'static Version {
 pub mod mqtt;
 #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
 pub mod profiling;
-
-pub mod map_view;

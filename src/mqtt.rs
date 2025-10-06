@@ -5,7 +5,7 @@ use egui_phosphor::regular::{WIFI_HIGH, WIFI_SLASH};
 use plotinator_mqtt_ui::connection::MqttConnectionMode;
 
 pub(crate) fn show_mqtt_connect_button(
-    app: &mut crate::App,
+    app: &mut crate::PlotApp,
     ctx: &egui::Context,
     ui: &mut egui::Ui,
 ) {

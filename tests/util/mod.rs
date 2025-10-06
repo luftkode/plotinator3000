@@ -10,8 +10,8 @@ pub use egui_kittest::{
 };
 pub use std::path::PathBuf;
 
-pub fn get_harness() -> Harness<'static, plotinator3000::App> {
-    Harness::new_eframe(|cc| plotinator3000::App::new(cc))
+pub fn get_harness() -> Harness<'static, plotinator3000::PlotApp> {
+    Harness::new_eframe(|cc| plotinator3000::PlotApp::new(cc))
 }
 
 const DEFAULT_CI_DIFF_THRESHOLD: f32 = 1.5;
@@ -30,7 +30,7 @@ impl Default for CiThreshold {
 
 pub struct HarnessWrapper {
     name: String,
-    harness: Harness<'static, plotinator3000::App>,
+    harness: Harness<'static, plotinator3000::PlotApp>,
 }
 
 impl HarnessWrapper {
