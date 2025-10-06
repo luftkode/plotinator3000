@@ -3952,6 +3952,8 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-proc-macros",
  "serde",
+ "strum 0.27.2",
+ "strum_macros 0.27.2",
  "walkers",
 ]
 

@@ -14,11 +14,14 @@ use crate::{
 };
 
 /// Messages sent from main app to map viewport
+#[derive(strum_macros::Display)]
 pub enum MapCommand {
     AddGeoData(GeoSpatialData),
     /// Cursor position on the time axis
     CursorPos(f64),
     FitToAllPaths,
+    /// Remove all [`GeoSpatialData`]
+    Reset,
 }
 
 pub mod commander;
@@ -96,6 +99,7 @@ impl MapViewPort {
                 MapCommand::FitToAllPaths => {
                     self.map_state.zoom_to_fit(&self.geo_data);
                 }
+                MapCommand::Reset => self.geo_data.clear(),
             }
         }
         if let Some(pos) = cursor_pos {

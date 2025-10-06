@@ -1,4 +1,4 @@
-use egui_phosphor::regular;
+use egui_phosphor::regular::{self, TRASH};
 use plotinator_file_io::loaded_files::LoadedFiles;
 use plotinator_log_if::prelude::Plotable as _;
 use plotinator_plot_ui::WARN_ON_UNPARSED_BYTES_THRESHOLD;
@@ -121,13 +121,7 @@ pub(super) fn not_wasm_show_download_button(ui: &mut egui::Ui, app: &mut PlotApp
 }
 
 pub(super) fn show_app_reset_button(ui: &mut egui::Ui, app: &mut PlotApp) {
-    if ui
-        .button(RichText::new(format!(
-            "{icon} Reset",
-            icon = egui_phosphor::regular::TRASH
-        )))
-        .clicked()
-    {
+    if ui.button(RichText::new(format!("{TRASH} Reset"))).clicked() {
         if app.plot.plot_count() == 0 {
             app.toasts
                 .warning("No loaded plots...")
@@ -141,7 +135,10 @@ pub(super) fn show_app_reset_button(ui: &mut egui::Ui, app: &mut PlotApp) {
         app.plot = plotinator_plot_ui::LogPlotUi::default();
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        app.mqtt.reset();
+        {
+            app.mqtt.reset();
+            app.map_commander.reset_map_data();
+        }
     }
 }
 

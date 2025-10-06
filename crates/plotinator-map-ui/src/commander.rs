@@ -72,20 +72,18 @@ impl MapUiCommander {
         self.send_cmd(MapCommand::FitToAllPaths);
     }
 
+    /// Reset/remove all the [`GeoSpatialData`] from the map
+    pub fn reset_map_data(&mut self) {
+        self.send_cmd(MapCommand::Reset);
+    }
+
     fn send_cmd(&mut self, cmd: MapCommand) {
         debug_assert!(
             (self.tx.is_some() && self.tmp_queue.is_none())
                 || (self.tx.is_none() && self.tmp_queue.is_some())
         );
         if let Some(tx) = self.tx.as_ref() {
-            log::trace!(
-                "Sending map command: {}",
-                match &cmd {
-                    MapCommand::AddGeoData(_) => "AddGeoData",
-                    MapCommand::CursorPos(_) => "CursorPos",
-                    MapCommand::FitToAllPaths => "FitToAllPaths",
-                }
-            );
+            log::log!(log::Level::Trace, "Sending map command: {cmd}");
             if let Err(e) = tx.send(cmd) {
                 log::error!("Failed sending Map command, map is closed: {e}");
                 debug_assert!(false);
