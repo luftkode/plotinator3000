@@ -81,6 +81,8 @@ jobs:
 
       - name: Test ${{ matrix.os }}
         run: cargo nextest run --workspace --profile ci --run-ignored=all --no-fail-fast
+        env:
+          PLOTINATOR3000_MAPBOX_API: ${{ secrets.PLOTINATOR3000_MAPBOX_API }}
 
       # So that we can inspect why it failed
       - name: Upload snapshots (including diffs)
