@@ -1,9 +1,9 @@
 use egui::{
-    Button, CentralPanel, Color32, Frame, MenuBar, RichText, TopBottomPanel, Ui, ViewportBuilder,
-    ViewportId,
+    Button, CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui,
+    ViewportBuilder, ViewportId, Window,
 };
 use egui_phosphor::regular::{
-    CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SQUARE,
+    CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL, SQUARE,
 };
 use plotinator_log_if::prelude::GeoSpatialData;
 use serde::{Deserialize, Serialize};
@@ -93,14 +93,14 @@ impl MapViewPort {
                     }
 
                     self.add_geo_data(geo_data);
-                    self.map_state.zoom_to_fit(&self.geo_data);
+                    self.zoom_to_fit();
                 }
                 MapCommand::CursorPos(time_pos) => {
                     log::trace!("Got cursor time: {time_pos:.}");
                     cursor_pos = Some(time_pos);
                 }
                 MapCommand::FitToAllPaths => {
-                    self.map_state.zoom_to_fit(&self.geo_data);
+                    self.zoom_to_fit();
                 }
                 MapCommand::Reset => self.geo_data.clear(),
             }
@@ -108,6 +108,10 @@ impl MapViewPort {
         if let Some(pos) = cursor_pos {
             self.plot_time_cursor_pos = Some(pos);
         }
+    }
+
+    fn zoom_to_fit(&mut self) {
+        self.map_state.zoom_to_fit(&self.geo_data);
     }
 
     pub fn add_geo_data(&mut self, geo_data: GeoSpatialData) {
@@ -192,6 +196,13 @@ impl MapViewPort {
             {
                 self.map_state.toggle_map_style(ui.ctx().clone());
             }
+
+            if ui
+                .button(RichText::new(format!("{SELECTION_ALL} Zoom to fit")))
+                .clicked()
+            {
+                self.zoom_to_fit();
+            }
         });
     }
 
@@ -244,7 +255,7 @@ impl MapViewPort {
 
     /// Renders the legend window with path information.
     fn show_legend_window(&mut self, ctx: &egui::Context) {
-        egui::Window::new("Legend")
+        Window::new("Legend")
             .title_bar(true)
             .resizable(true)
             .default_pos(egui::pos2(0.0, 32.0))
@@ -264,7 +275,7 @@ impl MapViewPort {
     }
 
     fn show_legend_grid(&mut self, ui: &mut Ui) {
-        egui::Grid::new("legend_grid").striped(true).show(ui, |ui| {
+        Grid::new("legend_grid").striped(true).show(ui, |ui| {
             // Column headers
             ui.label(""); // empty cell for toggle + name
             ui.label("vel");
