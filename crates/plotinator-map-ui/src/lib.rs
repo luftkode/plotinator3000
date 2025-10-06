@@ -1,6 +1,6 @@
 use egui::{
-    Button, CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui,
-    ViewportBuilder, ViewportId, Window,
+    CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui, ViewportBuilder,
+    ViewportId, Window,
 };
 use egui_phosphor::regular::{
     CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL, SQUARE,
@@ -182,16 +182,13 @@ impl MapViewPort {
                 .expect("map_tile_state is required but not initialized");
 
             let is_satellite = map_state.is_satellite;
-            let (icon, text) = if is_satellite {
-                (GLOBE_HEMISPHERE_WEST, "Satellite")
+            let icon = if is_satellite {
+                GLOBE_HEMISPHERE_WEST
             } else {
-                (GLOBE, "Open Street Map")
+                GLOBE
             };
             if ui
-                .add_sized(
-                    [150.0, 0.0],
-                    Button::new(RichText::new(format!("{icon} {text}")).strong()),
-                )
+                .button(RichText::new(format!("{icon} Toggle Map")))
                 .clicked()
             {
                 self.map_state.toggle_map_style(ui.ctx().clone());
