@@ -11,12 +11,12 @@ pub trait Parseable: Sized {
     ///
     /// - A supported format successfully parses the buffer
     /// - All supported formats fail to parse the buffer
-    fn try_from_buf(buf: &[u8]) -> io::Result<(Self, usize)> {
-        if !Self::is_buf_valid(buf) {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Buffer is not a valid '{}'", Self::DESCRIPTIVE_NAME),
-            ));
+    fn try_from_buf(buf: &[u8]) -> anyhow::Result<(Self, usize)> {
+        if let Err(reason) = Self::is_buf_valid(buf) {
+            anyhow::bail!(
+                "Buffer is not a valid '{}: {reason}'",
+                Self::DESCRIPTIVE_NAME
+            );
         }
         let mut reader = io::Cursor::new(buf);
         Self::from_reader(&mut reader)
@@ -24,16 +24,16 @@ pub trait Parseable: Sized {
 
     /// Create an instance of a [`Parseable`] from a reader ([`io::BufRead`]) and return
     /// the instance along with the number of bytes read
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)>;
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)>;
 
-    /// Returns whether or not the buffer is a valid instance of [`Self`]
+    /// Returns `Ok(())` if the buffer is a valid instance of [`Self`], otherwise returns `Err(REASON)`
     ///
     /// Implementers should read and verify the buffer until there's no doubt that this is
     /// a buffer of [`Self`] content, e.g. an `Mbed PID Log`. If several supported formats
-    /// returns true for a given buffer, there's no way to know how to parse it.
+    /// returns `Ok(())` for a given buffer, there's no way to know how to parse it.
     ///
     /// Performance is not a concern here as we are only doing this check once per file
     /// and only when the file is loaded, it is much more important that the check is
     /// extremely rigorous.
-    fn is_buf_valid(buf: &[u8]) -> bool;
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String>;
 }

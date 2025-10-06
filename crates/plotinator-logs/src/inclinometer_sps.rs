@@ -105,7 +105,7 @@ impl GitMetadata for InclinometerSps {
 impl Parseable for InclinometerSps {
     const DESCRIPTIVE_NAME: &str = "InclinometerSps";
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut bytes_read = 0;
         // Parse tilt sensor ID
         let (tilt_sensor_id, bytes_tl_id) = TiltSensorID::from_reader(reader)?;
@@ -177,9 +177,16 @@ impl Parseable for InclinometerSps {
         ))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = BufReader::new(buf);
-        Self::is_reader_valid(&mut reader)
+        if Self::is_reader_valid(&mut reader) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a valid {}: line format mismatch",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 }
 
@@ -239,8 +246,10 @@ mod tests {
 
     #[test]
     fn test_inclinometer_sps_buf_is_valid() {
-        let is_valid = InclinometerSps::is_buf_valid(FRAME_INCLINOMETERS_SPS_BYTES);
-        assert!(is_valid);
+        assert_eq!(
+            InclinometerSps::is_buf_valid(FRAME_INCLINOMETERS_SPS_BYTES),
+            Ok(())
+        );
     }
 
     #[test]

@@ -5,7 +5,7 @@ use egui::{
 use egui_phosphor::regular::{
     CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL, SQUARE,
 };
-use plotinator_log_if::prelude::GeoSpatialData;
+use plotinator_log_if::prelude::{GeoAltitude, GeoSpatialData};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::Map;
@@ -119,9 +119,10 @@ impl MapViewPort {
             geo_data.points.iter().all(|p| !p.timestamp.is_nan()
                 && !p.position.x().is_nan()
                 && !p.position.y().is_nan()
-                && !p
-                    .altitude
-                    .is_some_and(|a| a.is_nan() && p.speed.is_some_and(|s| s.is_nan()))
+                && !p.altitude.is_some_and(|a| match a {
+                    GeoAltitude::Gnss(a) | GeoAltitude::Laser(a) => a.is_nan(),
+                })
+                && !p.speed.is_some_and(|s| s.is_nan())
                 && !p.heading.is_some_and(|h| h.is_nan())),
             "GeoSpatialData with NaN values: {}",
             geo_data.name

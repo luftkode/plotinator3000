@@ -72,7 +72,7 @@ impl GpsDataCollector {
                 .lon(&self.longitude);
 
             if !self.altitude.is_empty() {
-                builder = builder.altitude(&self.altitude);
+                builder = builder.altitude_from_gnss(self.altitude);
             }
             if !self.speed.is_empty() {
                 builder = builder.speed(&self.speed);
@@ -393,7 +393,7 @@ impl Plotable for NavSysSps {
 impl Parseable for NavSysSps {
     const DESCRIPTIVE_NAME: &str = "NavSys Sps";
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
         let (header, bytes_read) = NavSysSpsHeader::from_reader(reader)?;
         total_bytes_read += bytes_read;
@@ -413,9 +413,16 @@ impl Parseable for NavSysSps {
         ))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = BufReader::new(buf);
-        NavSysSpsHeader::from_reader(&mut reader).is_ok()
+        if let Err(e) = NavSysSpsHeader::from_reader(&mut reader) {
+            Err(format!(
+                "Not a valid '{}', failed to read header: {e}",
+                Self::DESCRIPTIVE_NAME
+            ))
+        } else {
+            Ok(())
+        }
     }
 }
 

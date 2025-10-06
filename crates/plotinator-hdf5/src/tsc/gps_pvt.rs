@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use hdf5::H5Type;
 use ndarray::Array1;
 use plotinator_log_if::{
-    prelude::{ExpectedPlotRange, GeoSpatialData, GeoSpatialDataBuilder, RawPlotCommon},
+    prelude::{ExpectedPlotRange, GeoSpatialDataBuilder, RawPlotCommon},
     rawplot::RawPlot,
 };
 
@@ -114,150 +114,134 @@ impl GpsPvtRecords {
             confirmed_time.push([t, e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_TIME)]);
         }
 
-        let geo_data: Option<GeoSpatialData> =
-            GeoSpatialDataBuilder::new(TSC_LEGEND_NAME.to_owned())
-                .timestamp(&timestamps)
-                .lat(&lat_deg)
-                .lon(&lon_deg)
-                .altitude(&height)
-                .speed(&gspeed)
-                .heading(&heading)
-                .build()
-                .expect("invalid builder");
+        let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(TSC_LEGEND_NAME.to_owned())
+            .timestamp(&timestamps)
+            .lat(&lat_deg)
+            .lon(&lon_deg)
+            .altitude_from_gnss(height)
+            .speed(&gspeed)
+            .heading(&heading)
+            .build_into_rawplot()
+            .expect("invalid builder");
 
         let mut plots = vec![
+            RawPlotCommon::new("Satellites", numsv, ExpectedPlotRange::OneToOneHundred).into(),
             RawPlotCommon::new(
-                "Satellites".to_owned(),
-                numsv,
-                ExpectedPlotRange::OneToOneHundred,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Height [ellipsoid, m]".to_owned(),
+                "Height [ellipsoid, m]",
                 h_elips,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
+            RawPlotCommon::new("Height [MSL, m]", h_msl, ExpectedPlotRange::OneToOneHundred).into(),
             RawPlotCommon::new(
-                "Height [MSL, m]".to_owned(),
-                h_msl,
-                ExpectedPlotRange::OneToOneHundred,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Horizontal accuracy [m]".to_owned(),
+                "Horizontal accuracy [m]",
                 hacc,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
             RawPlotCommon::new(
-                "Vertical accuracy [m]".to_owned(),
+                "Vertical accuracy [m]",
                 vacc,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
             RawPlotCommon::new(
-                "Speed accuracy [m/s]".to_owned(),
+                "Speed accuracy [m/s]",
                 sacc,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
+            RawPlotCommon::new("Position DOP", pdop, ExpectedPlotRange::OneToOneHundred).into(),
             RawPlotCommon::new(
-                "Position DOP".to_owned(),
-                pdop,
-                ExpectedPlotRange::OneToOneHundred,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Velocity North [m/s]".to_owned(),
+                "Velocity North [m/s]",
                 vel_n,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
             RawPlotCommon::new(
-                "Velocity East [m/s]".to_owned(),
+                "Velocity East [m/s]",
                 vel_e,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
             RawPlotCommon::new(
-                "Velocity Down [m/s]".to_owned(),
+                "Velocity Down [m/s]",
                 vel_d,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
             RawPlotCommon::new(
-                "Magnetic Declination [deg]".to_owned(),
+                "Magnetic Declination [deg]",
                 mag_dec,
                 ExpectedPlotRange::OneToOneHundred,
             )
             .into(),
             // Valid flags
             RawPlotCommon::new(
-                "Valid Date [bool]".to_owned(),
+                "Valid Date [bool]",
                 valid_date,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             RawPlotCommon::new(
-                "Valid Time [bool]".to_owned(),
+                "Valid Time [bool]",
                 valid_time,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             RawPlotCommon::new(
-                "Valid Fully Resolved [bool]".to_owned(),
+                "Valid Fully Resolved [bool]",
                 valid_fully_resolved,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             RawPlotCommon::new(
-                "Valid Magnetic Declination [bool]".to_owned(),
+                "Valid Magnetic Declination [bool]",
                 valid_mag,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             // Status flags
             RawPlotCommon::new(
-                "GNSS Fix OK [bool]".to_owned(),
+                "GNSS Fix OK [bool]",
                 gnss_fix_ok,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             RawPlotCommon::new(
-                "Differential Solution [bool]".to_owned(),
+                "Differential Solution [bool]",
                 diff_soln,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             RawPlotCommon::new(
-                "Head Vehicle Valid [bool]".to_owned(),
+                "Head Vehicle Valid [bool]",
                 head_veh_valid,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             // Additional flags
             RawPlotCommon::new(
-                "Confirmed Available [bool]".to_owned(),
+                "Confirmed Available [bool]",
                 confirmed_avail,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             RawPlotCommon::new(
-                "Confirmed Date [bool]".to_owned(),
+                "Confirmed Date [bool]",
                 confirmed_date,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
             RawPlotCommon::new(
-                "Confirmed Time [bool]".to_owned(),
+                "Confirmed Time [bool]",
                 confirmed_time,
                 ExpectedPlotRange::Percentage,
             )
             .into(),
         ];
         if let Some(geo_data) = geo_data {
-            plots.push(geo_data.into());
+            plots.push(geo_data);
         }
         plots
     }

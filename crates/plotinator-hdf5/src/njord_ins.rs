@@ -431,13 +431,13 @@ fn process_orientation_and_position(
         headings.push(heading);
     }
 
-    let geo_data: Option<GeoSpatialData> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+    let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
         .timestamp(timestamps)
         .lat(&latitudes)
         .lon(&longitudes)
         .heading(&headings)
-        .altitude(&heights)
-        .build()?;
+        .altitude_from_gnss(heights)
+        .build_into_rawplot()?;
 
     let mut plots = vec![
         RawPlotCommon::new(

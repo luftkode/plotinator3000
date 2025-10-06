@@ -1,3 +1,4 @@
+use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
 use plotinator_log_if::prelude::*;
 use std::io::{self, BufRead as _};
@@ -190,14 +191,14 @@ impl Parseable for NjordInsPPP {
         clippy::too_many_lines,
         reason = "As simple as can be. There's just a lot of columns"
     )]
-    fn from_reader(reader: &mut impl std::io::BufRead) -> std::io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl std::io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut header = String::new();
         let header_bytes_read = reader.read_line(&mut header)?;
         if header.trim() != EXPECTED_HEADER {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("CSV header mismatch, expected: {EXPECTED_HEADER}"),
-            ));
+            bail!(
+                "Not a '{}' CSV header mismatch, expected: {EXPECTED_HEADER}",
+                Self::DESCRIPTIVE_NAME
+            );
         }
 
         let (entries, entries_bytes_read) = parse_to_vec::<NjordInsPPPRow>(reader);
@@ -223,14 +224,14 @@ impl Parseable for NjordInsPPP {
             heading.push(e.heading);
         }
 
-        let geo_data: Option<GeoSpatialData> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+        let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
             .timestamp(&timestamps)
             .lon(&longitude)
             .lat(&latitude)
-            .altitude(&altitude)
+            .altitude_from_gnss(altitude)
             .speed(&speed)
             .heading(&heading)
-            .build()
+            .build_into_rawplot()
             .expect("invalid builder");
 
         let mut raw_plots = vec![
@@ -373,7 +374,7 @@ impl Parseable for NjordInsPPP {
             .into(),
         ];
         if let Some(geo_data) = geo_data {
-            raw_plots.push(geo_data.into());
+            raw_plots.push(geo_data);
         }
 
         let total_bytes_read = header_bytes_read + entries_bytes_read;
@@ -388,13 +389,24 @@ impl Parseable for NjordInsPPP {
         ))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = io::BufReader::new(buf);
         let mut header = String::new();
-        if reader.read_line(&mut header).is_ok() {
-            header.trim() == EXPECTED_HEADER
+        if let Err(e) = reader.read_line(&mut header) {
+            return Err(format!(
+                "Not a valid '{}', failed to read line: {e}",
+                Self::DESCRIPTIVE_NAME
+            ));
+        }
+
+        let trimmed_header = header.trim();
+        if trimmed_header != EXPECTED_HEADER {
+            Err(format!(
+                "Not a valid '{}' header mismatch, expected '{EXPECTED_HEADER}', got '{trimmed_header}'",
+                Self::DESCRIPTIVE_NAME
+            ))
         } else {
-            false
+            Ok(())
         }
     }
 }

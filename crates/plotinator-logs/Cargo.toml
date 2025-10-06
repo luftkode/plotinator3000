@@ -25,6 +25,7 @@ getset.workspace = true
 derive_more.workspace = true
 log.workspace = true
 thiserror.workspace = true
+anyhow.workspace = true
 
 [dev-dependencies]
 plotinator-test-util.workspace = true

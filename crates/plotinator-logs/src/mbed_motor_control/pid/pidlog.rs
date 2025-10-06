@@ -1,13 +1,13 @@
 use crate::mbed_motor_control::mbed_config::MbedConfig as _;
 use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader as _;
+use anyhow::bail;
 use plotinator_log_if::log::LogEntry as _;
-use std::io::Read as _;
 
 use crate::{mbed_motor_control::mbed_header::SIZEOF_UNIQ_DESC, parse_unique_description};
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::{fmt, fs, io, path::Path};
+use std::{fmt, io};
 
 use super::{
     entry::{
@@ -29,19 +29,6 @@ pub struct PidLog {
 }
 
 impl PidLog {
-    /// Checks if the file at the given path is a valid [`PidLog`] file
-    pub fn file_is_valid(path: &Path) -> bool {
-        let Ok(mut file) = fs::File::open(path) else {
-            return false;
-        };
-
-        let mut buffer = vec![0u8; SIZEOF_UNIQ_DESC + 2];
-        match file.read_exact(&mut buffer) {
-            Ok(_) => Self::is_buf_valid(&buffer),
-            Err(_) => false, // Return false if we can't read enough bytes
-        }
-    }
-
     // helper function build all the plots that can be made from a pidlog
     fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlotCommon> {
         let entry_count = entries.len();
@@ -165,16 +152,27 @@ impl Parseable for PidLog {
     const DESCRIPTIVE_NAME: &str = "Mbed PID log";
 
     /// Probes the buffer and check if it starts with [`super::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
-    fn is_buf_valid(content: &[u8]) -> bool {
-        if content.len() < SIZEOF_UNIQ_DESC + 2 {
-            return false;
+    fn is_buf_valid(content: &[u8]) -> Result<(), String> {
+        let content_len = content.len();
+        if content_len < SIZEOF_UNIQ_DESC + 2 {
+            return Err(format!(
+                "Not a '{}': Content len={content_len} is too small",
+                Self::DESCRIPTIVE_NAME,
+            ));
         }
 
         let unique_description = &content[..SIZEOF_UNIQ_DESC];
-        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
+        if parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a '{}' Unique description bytes did not match",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut total_bytes_read: usize = 0;
         let (header, bytes_read) = PidLogHeader::from_reader(reader)?;
         total_bytes_read += bytes_read;
@@ -192,12 +190,7 @@ impl Parseable for PidLog {
                 let (v3_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV3>(reader);
                 (convert_v3_to_pid_log_entry(v3_vec), entry_bytes_read)
             }
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    format!("Unsupported header version: {}", header.version()),
-                ));
-            }
+            _ => bail!("Unsupported header version: {}", header.version()),
         };
 
         total_bytes_read += entry_bytes_read;

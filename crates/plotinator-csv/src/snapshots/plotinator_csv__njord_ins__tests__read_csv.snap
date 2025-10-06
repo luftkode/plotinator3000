@@ -381,6 +381,7 @@ NjordInsPPP {
         GeoSpatial {
             geo_data: GeoSpatialData {
                 name: "NjordInsPPP",
+                merged_with: None,
                 points: [
                     GeoPoint {
                         timestamp: 1.757435852060122e18,
@@ -389,7 +390,9 @@ NjordInsPPP {
                             293.7360522244404,
                         ),
                         altitude: Some(
-                            73.88893217076051,
+                            Gnss(
+                                73.88893217076051,
+                            ),
                         ),
                         speed: Some(
                             0.05108631769453102,
@@ -402,7 +405,9 @@ NjordInsPPP {
                             293.7357925781802,
                         ),
                         altitude: Some(
-                            73.88883762837278,
+                            Gnss(
+                                73.88883762837278,
+                            ),
                         ),
                         speed: Some(
                             0.05223826693011415,

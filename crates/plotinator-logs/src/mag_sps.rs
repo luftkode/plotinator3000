@@ -98,7 +98,7 @@ impl GitMetadata for MagSps {
 impl Parseable for MagSps {
     const DESCRIPTIVE_NAME: &str = "MagSps";
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let (entries, bytes_read): (Vec<MagSensor>, usize) = parse_to_vec(reader);
 
         // Group entries by sensor ID
@@ -136,9 +136,16 @@ impl Parseable for MagSps {
         Ok((Self { entries, raw_plots }, bytes_read))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = BufReader::new(buf);
-        Self::is_reader_valid(&mut reader)
+        if Self::is_reader_valid(&mut reader) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a valid '{}': line format mismatch",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 }
 
@@ -185,8 +192,7 @@ mod tests {
 
     #[test]
     fn test_mag_sps_buf_is_valid() {
-        let is_valid = MagSps::is_buf_valid(FRAME_MAGNETOMETER_SPS_BYTES);
-        assert!(is_valid);
+        assert_eq!(MagSps::is_buf_valid(FRAME_MAGNETOMETER_SPS_BYTES), Ok(()));
     }
 
     #[test]

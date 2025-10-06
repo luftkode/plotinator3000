@@ -246,7 +246,7 @@ impl Plotable for NavSysSpsKitchenSink {
 impl Parseable for NavSysSpsKitchenSink {
     const DESCRIPTIVE_NAME: &str = "NavSys Sps Kitchen Sink";
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut entries = Vec::new();
         let mut total_bytes_read = 0;
 
@@ -297,7 +297,7 @@ impl Parseable for NavSysSpsKitchenSink {
         ))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = BufReader::new(buf);
         let is_valid_tilt_sensor = Self::is_reader_valid_tilt_sensor(&mut reader);
         let mut reader = BufReader::new(buf);
@@ -305,11 +305,19 @@ impl Parseable for NavSysSpsKitchenSink {
         let mut reader = BufReader::new(buf);
         let valid_gps = Self::is_reader_valid_gps(&mut reader);
 
-        MagSps::is_buf_valid(buf)
-            || Wasp200Sps::is_buf_valid(buf)
-            || is_valid_tilt_sensor
-            || valid_tilt_sensor_cal_vals
-            || valid_gps
+        if MagSps::is_buf_valid(buf).is_err()
+            && Wasp200Sps::is_buf_valid(buf).is_err()
+            && !is_valid_tilt_sensor
+            && !valid_tilt_sensor_cal_vals
+            && !valid_gps
+        {
+            Err(format!(
+                "Not a valid '{}': first lines don't match any of the following format: MA, HE, TL, GP, MRK",
+                Self::DESCRIPTIVE_NAME
+            ))
+        } else {
+            Ok(())
+        }
     }
 }
 

@@ -1,7 +1,10 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
-use crate::{prelude::ExpectedPlotRange, rawplot::path_data::GeoSpatialData};
+use crate::{
+    prelude::ExpectedPlotRange,
+    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialData, GeoSpatialDataBuildOutput},
+};
 
 pub mod path_data;
 
@@ -13,6 +16,10 @@ pub enum RawPlot {
     /// Data with at least time and coordinates lat/lon, might also include heading and altitude
     GeoSpatial {
         geo_data: GeoSpatialData,
+    },
+    /// Data with at least time and either heading, altitude, or velocity
+    AuxGeoSpatial {
+        aux_data: AuxiliaryGeoSpatialData,
     },
     /// Flags that can either be 0 or 1
     Boolean {
@@ -32,6 +39,21 @@ impl From<GeoSpatialData> for RawPlot {
     }
 }
 
+impl From<AuxiliaryGeoSpatialData> for RawPlot {
+    fn from(aux_data: AuxiliaryGeoSpatialData) -> Self {
+        Self::AuxGeoSpatial { aux_data }
+    }
+}
+
+impl From<GeoSpatialDataBuildOutput> for RawPlot {
+    fn from(geo_data_build_output: GeoSpatialDataBuildOutput) -> Self {
+        match geo_data_build_output {
+            GeoSpatialDataBuildOutput::GeoSpatialData(geo_spatial_data) => geo_spatial_data.into(),
+            GeoSpatialDataBuildOutput::AuxGeoSpatialData(aux_geo_data) => aux_geo_data.into(),
+        }
+    }
+}
+
 /// [`RawPlot`] represents some plottable data from a log, e.g. RPM measurements
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RawPlotCommon {
@@ -42,9 +64,13 @@ pub struct RawPlotCommon {
 }
 
 impl RawPlotCommon {
-    pub fn new(name: String, points: Vec<[f64; 2]>, expected_range: ExpectedPlotRange) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        points: Vec<[f64; 2]>,
+        expected_range: ExpectedPlotRange,
+    ) -> Self {
         Self {
-            name,
+            name: name.into(),
             points,
             expected_range,
             color: None,

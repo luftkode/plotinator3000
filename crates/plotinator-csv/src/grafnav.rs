@@ -1,3 +1,4 @@
+use anyhow::bail;
 use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone as _, Utc};
 use plotinator_log_if::prelude::*;
 use std::io::{self, BufRead as _};
@@ -153,7 +154,7 @@ impl Parseable for GrafNavPPP {
     const DESCRIPTIVE_NAME: &str = "GrafNav PPP";
 
     #[allow(clippy::too_many_lines, reason = "Long but simple")]
-    fn from_reader(reader: &mut impl std::io::BufRead) -> std::io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl std::io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
         let mut metadata = Vec::new();
         let mut line = String::new();
@@ -165,10 +166,10 @@ impl Parseable for GrafNavPPP {
             total_bytes_read += bytes_read;
 
             if bytes_read == 0 {
-                return Err(io::Error::new(
-                    io::ErrorKind::UnexpectedEof,
-                    "Unexpected end of file while reading metadata",
-                ));
+                bail!(
+                    "Not a valid '{}': Unexpected end of file while reading metadata",
+                    Self::DESCRIPTIVE_NAME
+                );
             }
 
             let trimmed = line.trim();
@@ -222,14 +223,14 @@ impl Parseable for GrafNavPPP {
             heading.push(e.cog);
         }
 
-        let geo_data: Option<GeoSpatialData> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+        let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(LEGEND_NAME)
             .timestamp(&timestamps)
             .lon(&longitude)
             .lat(&latitude)
-            .altitude(&altitude)
+            .altitude_from_gnss(altitude)
             .speed(&speed)
             .heading(&heading)
-            .build()
+            .build_into_rawplot()
             .expect("invalid builder");
 
         let mut raw_plots = vec![
@@ -317,7 +318,7 @@ impl Parseable for GrafNavPPP {
         ];
 
         if let Some(geo_data) = geo_data {
-            raw_plots.push(geo_data.into());
+            raw_plots.push(geo_data);
         }
 
         Ok((
@@ -329,15 +330,18 @@ impl Parseable for GrafNavPPP {
             total_bytes_read,
         ))
     }
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = io::BufReader::new(buf);
         let mut line = String::new();
 
         // Skip empty lines at the beginning
         loop {
             line.clear();
-            if reader.read_line(&mut line).is_err() {
-                return false;
+            if let Err(e) = reader.read_line(&mut line) {
+                return Err(format!(
+                    "Not a valid '{}', failed to read line while skipping empty lines: {e}",
+                    Self::DESCRIPTIVE_NAME
+                ));
             }
 
             let trimmed = line.trim();
@@ -348,17 +352,30 @@ impl Parseable for GrafNavPPP {
 
         // First non-empty line should start with "Project:"
         if !line.trim().starts_with("Project:") {
-            return false;
+            return Err(format!(
+                "Not a valid '{}', First non-empty line should start with \"Project:\"",
+                Self::DESCRIPTIVE_NAME
+            ));
         }
 
         // Second line should start with "Program:" and contain "GrafNav Version"
         line.clear();
-        if reader.read_line(&mut line).is_err() {
-            return false;
+        if let Err(e) = reader.read_line(&mut line) {
+            return Err(format!(
+                "Not a valid '{}', failed to read line while reading second non-empty line: {e}",
+                Self::DESCRIPTIVE_NAME
+            ));
         }
 
         let trimmed = line.trim();
-        trimmed.starts_with("Program:") && trimmed.contains("GrafNav Version")
+        if trimmed.starts_with("Program:") && trimmed.contains("GrafNav Version") {
+            Ok(())
+        } else {
+            return Err(format!(
+                "Not a valid '{}', First non-empty line should start with \"Project:\" and contain \"GrafNav Version\", got: {trimmed}",
+                Self::DESCRIPTIVE_NAME
+            ));
+        }
     }
 }
 

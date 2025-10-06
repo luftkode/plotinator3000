@@ -28,6 +28,7 @@ pub fn add_plot_data_to_plot_collections(
     let first_plot_points_count: usize = data.raw_plots().first().map_or(0, |p| match p {
         RawPlot::Generic { common } | RawPlot::Boolean { common } => common.points().len(),
         RawPlot::GeoSpatial { geo_data } => geo_data.points.len(),
+        RawPlot::AuxGeoSpatial { aux_data } => aux_data.timestamps.len(),
     });
 
     if first_plot_points_count > PARALLEL_THRESHOLD {
@@ -43,6 +44,12 @@ pub fn add_plot_data_to_plot_collections(
         match raw_plot {
             RawPlot::GeoSpatial { geo_data } => {
                 for common in geo_data.raw_plots_common() {
+                    plot_settings
+                        .add_plot_name_if_not_exists(common.name(), data.descriptive_name());
+                }
+            }
+            RawPlot::AuxGeoSpatial { aux_data } => {
+                for common in aux_data.raw_plots_common() {
                     plot_settings
                         .add_plot_name_if_not_exists(common.name(), data.descriptive_name());
                 }
@@ -78,7 +85,7 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
         .par_iter()
         .chain(data.raw_plots().par_iter().filter_map(|rp| match rp {
             RawPlot::Generic { common } | RawPlot::Boolean { common } => Some(common),
-            RawPlot::GeoSpatial { .. } => None,
+            RawPlot::GeoSpatial { .. } | RawPlot::AuxGeoSpatial { .. } => None,
         }))
         .filter_map(|rpc| {
             let label = rpc.label_from_id(data_id);
@@ -147,6 +154,33 @@ fn add_plot_points_to_collections_seq(plots: &mut Plots, data: &SupportedFormat,
                             data_id,
                             data.descriptive_name(),
                         );
+                    }
+                }
+            }
+            RawPlot::AuxGeoSpatial { aux_data } => {
+                for common in aux_data.raw_plots_common() {
+                    match common.expected_range() {
+                        ExpectedPlotRange::Percentage => {
+                            plots.percentage_mut().add_plot_if_not_exists(
+                                &common,
+                                data_id,
+                                data.descriptive_name(),
+                            );
+                        }
+                        ExpectedPlotRange::OneToOneHundred => {
+                            plots.one_to_hundred_mut().add_plot_if_not_exists(
+                                &common,
+                                data_id,
+                                data.descriptive_name(),
+                            );
+                        }
+                        ExpectedPlotRange::Thousands => {
+                            plots.thousands_mut().add_plot_if_not_exists(
+                                &common,
+                                data_id,
+                                data.descriptive_name(),
+                            );
+                        }
                     }
                 }
             }

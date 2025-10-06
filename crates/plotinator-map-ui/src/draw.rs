@@ -40,7 +40,7 @@ pub(crate) fn draw_path(
 
     for window in screen_points.windows(2) {
         // Use the altitude from the first point of the segment
-        let altitude = window[0].1.altitude.unwrap_or(0.0);
+        let altitude = window[0].1.altitude.map_or(0.0, |a| a.val());
         let opacity = (altitude / MAX_ALTITUDE).clamp(0.0, 1.0);
 
         // Scale the alpha channel of the path color based on altitude
@@ -256,7 +256,7 @@ fn draw_telemetry_label(
     if let Some(altitude) = geo_point.altitude
         && settings.with_altitude
     {
-        lines.push(format!("{altitude:.0} m"));
+        lines.push(altitude.to_string());
     }
     if let Some(speed) = geo_point.speed
         && settings.with_speed

@@ -1,9 +1,66 @@
+use std::fmt;
+
+use anyhow::bail;
 use egui::Color32;
 use plotinator_ui_util::auto_color;
 use serde::{Deserialize, Serialize};
 use walkers::{Position, lat_lon};
 
-use crate::{prelude::ExpectedPlotRange, rawplot::RawPlotCommon};
+use crate::{
+    prelude::ExpectedPlotRange,
+    rawplot::{RawPlot, RawPlotCommon},
+};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum RawGeoAltitudes {
+    Gnss(Box<[f64]>),
+    Laser(Box<[f64]>),
+}
+
+impl RawGeoAltitudes {
+    fn len(&self) -> usize {
+        match self {
+            RawGeoAltitudes::Gnss(a) => a.len(),
+            RawGeoAltitudes::Laser(a) => a.len(),
+        }
+    }
+}
+
+/// Altitude sample
+///
+/// Laser is preferred over GNSS, so if [`AuxiliaryGeoSpatialData`] is loaded that is compatible with an existing [`GeoSpatialData`] that only has
+/// altitude from `GNSS` then the altitude will be replaced with the laser altitude
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum GeoAltitude {
+    /// Altitude source is a GNSS receiver
+    Gnss(f64),
+    /// Altitude source is a laser range finder
+    Laser(f64),
+}
+
+impl GeoAltitude {
+    pub fn val(&self) -> f64 {
+        match self {
+            GeoAltitude::Gnss(val) | GeoAltitude::Laser(val) => *val,
+        }
+    }
+
+    pub fn source(&self) -> &str {
+        match self {
+            GeoAltitude::Gnss(_) => "GNSS Receiver",
+            GeoAltitude::Laser(_) => "Laser",
+        }
+    }
+}
+
+impl fmt::Display for GeoAltitude {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GeoAltitude::Gnss(v) | GeoAltitude::Laser(v) => write!(f, "{v:.0} m"),
+        }
+    }
+}
 
 /// A single point in space and time
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -14,7 +71,7 @@ pub struct GeoPoint {
     /// Heading in degrees (0 = North, 90 = East, etc.)
     pub heading: Option<f64>,
     /// Meters
-    pub altitude: Option<f64>,
+    pub altitude: Option<GeoAltitude>,
     /// km/h
     pub speed: Option<f64>,
 }
@@ -35,7 +92,7 @@ impl GeoPoint {
         self
     }
 
-    pub fn with_altitude(mut self, altitude: f64) -> Self {
+    pub fn with_altitude(mut self, altitude: GeoAltitude) -> Self {
         self.altitude = Some(altitude);
         self
     }
@@ -47,21 +104,21 @@ impl GeoPoint {
 }
 
 #[derive(Default)]
-pub struct GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
+pub struct GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
     name: String,
     timestamp: Option<&'a [f64]>,
     lat: Option<&'b [f64]>,
     lon: Option<&'c [f64]>,
     heading: Option<&'d [f64]>,
-    altitude: Option<&'e [f64]>,
+    altitude: Option<RawGeoAltitudes>,
     speed: Option<&'f [f64]>,
 }
 
-impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
+impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
     /// Start building, supplying a name such as `GP1` or `Njord Altimeter`
-    pub fn new(name: String) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name,
+            name: name.into(),
             timestamp: None,
             lat: None,
             lon: None,
@@ -90,9 +147,17 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
         self
     }
 
-    pub fn altitude(mut self, altitude: &'e [f64]) -> Self {
+    fn altitude(mut self, altitude: RawGeoAltitudes) -> Self {
         self.altitude = Some(altitude);
         self
+    }
+
+    pub fn altitude_from_gnss(self, altitude: Vec<f64>) -> Self {
+        self.altitude(RawGeoAltitudes::Gnss(altitude.into_boxed_slice()))
+    }
+
+    pub fn altitude_from_laser(self, altitude: Vec<f64>) -> Self {
+        self.altitude(RawGeoAltitudes::Laser(altitude.into_boxed_slice()))
     }
 
     pub fn speed(mut self, speed: &'f [f64]) -> Self {
@@ -100,7 +165,14 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
         self
     }
 
-    pub fn build(self) -> anyhow::Result<Option<GeoSpatialData>> {
+    /// Convenience build to turn the builder directly into the generic [`RawPlot`]
+    pub fn build_into_rawplot(self) -> anyhow::Result<Option<RawPlot>> {
+        self.build()
+            .map(|maybe_geo| maybe_geo.map(|geo| geo.into()))
+    }
+
+    /// Attempt to turn the builder into [`GeoSpatialDataBuildOutput`]
+    pub fn build(self) -> anyhow::Result<Option<GeoSpatialDataBuildOutput>> {
         let Self {
             name,
             timestamp,
@@ -111,9 +183,11 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
             speed,
         } = self;
 
-        let ts = timestamp.ok_or_else(|| anyhow::anyhow!("timestamp data is required"))?;
-        let lat = lat.ok_or_else(|| anyhow::anyhow!("lat data is required"))?;
-        let lon = lon.ok_or_else(|| anyhow::anyhow!("lon data is required"))?;
+        let Some(ts) = timestamp else {
+            bail!(
+                "Invalid Geo Spatial dataset '{name}': timestamp data is required for building a Geo Spatial dataset"
+            )
+        };
 
         if ts.len() < 2 {
             log::warn!(
@@ -122,42 +196,87 @@ impl<'a, 'b, 'c, 'd, 'e, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'e, 'f> {
             return Ok(None);
         }
 
-        let len = ts.len().min(lat.len()).min(lon.len());
-        let mut points = Vec::with_capacity(len);
+        if let Some(lat) = lat
+            && let Some(lon) = lon
+        {
+            let len = ts.len().min(lat.len()).min(lon.len());
+            let mut points = Vec::with_capacity(len);
 
-        for i in 0..len {
-            let mut point = GeoPoint::new(ts[i], (lat[i], lon[i]));
+            for i in 0..len {
+                let mut point = GeoPoint::new(ts[i], (lat[i], lon[i]));
 
-            if let Some(h) = heading
-                && i < h.len()
-            {
-                point = point.with_heading(h[i]);
-            }
-            if let Some(a) = altitude
-                && i < a.len()
-            {
-                point = point.with_altitude(a[i]);
-            }
-            if let Some(s) = speed
-                && i < s.len()
-            {
-                point = point.with_speed(s[i]);
+                if let Some(h) = heading
+                    && i < h.len()
+                {
+                    point = point.with_heading(h[i]);
+                }
+                if let Some(alt) = &altitude
+                    && i < alt.len()
+                {
+                    match alt {
+                        RawGeoAltitudes::Gnss(alts) => {
+                            point = point.with_altitude(GeoAltitude::Gnss(alts[i]))
+                        }
+                        RawGeoAltitudes::Laser(alts) => {
+                            point = point.with_altitude(GeoAltitude::Laser(alts[i]))
+                        }
+                    }
+                }
+                if let Some(s) = speed
+                    && i < s.len()
+                {
+                    point = point.with_speed(s[i]);
+                }
+
+                points.push(point);
             }
 
-            points.push(point);
+            Ok(Some(GeoSpatialDataBuildOutput::GeoSpatialData(
+                GeoSpatialData::new(name, points),
+            )))
+        } else if heading.is_some() || altitude.is_some() || speed.is_some() {
+            let mut aux_geo_data = AuxiliaryGeoSpatialData::new(name, ts.to_owned());
+            if let Some(hdg) = heading {
+                debug_assert_eq!(hdg.len(), ts.len());
+                aux_geo_data = aux_geo_data.with_heading(hdg.to_owned());
+            }
+            if let Some(alt) = altitude {
+                debug_assert_eq!(alt.len(), ts.len());
+                aux_geo_data = aux_geo_data.with_altitude(alt);
+            }
+            if let Some(spd) = speed {
+                debug_assert_eq!(spd.len(), ts.len());
+                aux_geo_data = aux_geo_data.with_speed(spd.to_owned());
+            }
+            Ok(Some(GeoSpatialDataBuildOutput::AuxGeoSpatialData(
+                aux_geo_data,
+            )))
+        } else {
+            bail!(
+                "Cannot build Geo Spatial dataset '{name}' with neither longitude and lattitude, or either of heading, speed, or altitude"
+            );
         }
-
-        Ok(Some(GeoSpatialData::new(name, points)))
     }
+}
+
+/// Build output of the [`GeoSpatialDataBuilder`]
+///
+/// The contents of the builder determines the output
+pub enum GeoSpatialDataBuildOutput {
+    /// Primary geo spatial data has cooridnates
+    GeoSpatialData(GeoSpatialData),
+    /// Auxiliary geo spatial data has either heading, altitude, or velocity
+    AuxGeoSpatialData(AuxiliaryGeoSpatialData),
 }
 
 /// Represents a path through space and time
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GeoSpatialData {
     pub name: String,
+    /// Name of the [`AuxiliaryGeoSpatialData`] that was merged into this instance (if any)
+    pub merged_with: Option<String>,
     pub points: Vec<GeoPoint>,
     pub color: Color32,
-
     cached: CachedValues,
 }
 
@@ -167,6 +286,7 @@ impl GeoSpatialData {
         let cached = CachedValues::compute(&points);
         Self {
             name,
+            merged_with: None,
             points,
             color,
             cached,
@@ -216,7 +336,7 @@ impl GeoSpatialData {
             latitude.push([t, p.position.y()]);
             longitude.push([t, p.position.x()]);
             if let Some(alt) = p.altitude {
-                altitude.push([t, alt]);
+                altitude.push([t, alt.val()]);
             }
             if let Some(head) = p.heading {
                 heading.push([t, head]);
@@ -275,6 +395,14 @@ impl GeoSpatialData {
         });
         plots
     }
+
+    /// Get the time range covered by the data
+    pub fn time_range(&self) -> Option<(f64, f64)> {
+        Some((
+            self.points.first()?.timestamp,
+            self.points.last()?.timestamp,
+        ))
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -317,7 +445,7 @@ impl CachedValues {
                 speed_min = speed_min.min(speed);
                 speed_max = speed_max.max(speed);
             }
-            if let Some(altitude) = point.altitude
+            if let Some(altitude) = point.altitude.map(|a| a.val())
                 && altitude.is_sign_positive()
                 && altitude < 3000.
             {
@@ -354,29 +482,512 @@ impl CachedValues {
     }
 }
 
+/// Auxiliary time-series data that can be merged with a primary GeoSpatialData
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuxiliaryGeoSpatialData {
+    pub name: String,
+    pub timestamps: Vec<f64>,
+    pub altitudes: Option<RawGeoAltitudes>,
+    pub speeds: Option<Vec<f64>>,
+    pub headings: Option<Vec<f64>>,
+    pub color: Color32,
+}
+
+impl AuxiliaryGeoSpatialData {
+    pub fn new(name: impl Into<String>, timestamps: Vec<f64>) -> Self {
+        let color = auto_color();
+        Self {
+            name: name.into(),
+            timestamps,
+            altitudes: None,
+            speeds: None,
+            headings: None,
+            color,
+        }
+    }
+
+    pub fn with_heading(mut self, heading: Vec<f64>) -> Self {
+        debug_assert_eq!(self.timestamps.len(), heading.len());
+        self.headings = Some(heading);
+        self
+    }
+
+    pub fn with_altitude(mut self, altitude: RawGeoAltitudes) -> Self {
+        debug_assert_eq!(self.timestamps.len(), altitude.len());
+        self.altitudes = Some(altitude);
+        self
+    }
+
+    pub fn with_speed(mut self, speed: Vec<f64>) -> Self {
+        debug_assert_eq!(self.timestamps.len(), speed.len());
+        self.speeds = Some(speed);
+        self
+    }
+
+    /// Builds and returns all the [`RawPlotCommon`] that can be extracted from the underlying data
+    pub fn raw_plots_common(&self) -> Vec<RawPlotCommon> {
+        let color = self.color;
+        let mut plots = vec![];
+        if let Some(headings) = &self.headings {
+            let mut heading = Vec::with_capacity(headings.len());
+            for (t, hdg) in self.timestamps.iter().zip(headings) {
+                heading.push([*t, *hdg]);
+            }
+            if heading.len() > 1 {
+                plots.push(RawPlotCommon::with_color(
+                    format!("Heading° ({})", self.name),
+                    heading,
+                    ExpectedPlotRange::OneToOneHundred,
+                    color,
+                ));
+            }
+        }
+        if let Some(speeds) = &self.speeds {
+            let mut speed = Vec::with_capacity(speeds.len());
+            for (t, hdg) in self.timestamps.iter().zip(speeds) {
+                speed.push([*t, *hdg]);
+            }
+            if speed.len() > 1 {
+                plots.push(RawPlotCommon::with_color(
+                    format!("Speed [km/h] ({})", self.name),
+                    speed,
+                    ExpectedPlotRange::OneToOneHundred,
+                    color,
+                ));
+            }
+        }
+
+        if let Some(altitudes) = &self.altitudes {
+            let altitudes = match altitudes {
+                RawGeoAltitudes::Gnss(a) | RawGeoAltitudes::Laser(a) => a,
+            };
+            let mut altitude = Vec::with_capacity(altitudes.len());
+            for (t, hdg) in self.timestamps.iter().zip(altitudes) {
+                altitude.push([*t, *hdg]);
+            }
+            if altitude.len() > 1 {
+                plots.push(RawPlotCommon::with_color(
+                    format!("Altitude [m] ({})", self.name),
+                    altitude,
+                    ExpectedPlotRange::OneToOneHundred,
+                    color,
+                ));
+            }
+        }
+        plots
+    }
+
+    /// Check if this auxiliary data is compatible with a primary dataset
+    /// Returns true if start/end timestamps align within tolerance_ns (nanoseconds)
+    pub fn is_compatible_with(&self, primary: &GeoSpatialData, tolerance_ns: f64) -> bool {
+        if self.timestamps.is_empty() || primary.points.is_empty() {
+            return false;
+        }
+
+        let Some((aux_start, aux_end)) = self.time_range() else {
+            return false;
+        };
+
+        let Some((primary_start, primary_end)) = primary.time_range() else {
+            return false;
+        };
+
+        (aux_start - primary_start).abs() <= tolerance_ns
+            && (aux_end - primary_end).abs() <= tolerance_ns
+    }
+
+    /// Get the time range covered by the data
+    pub fn time_range(&self) -> Option<(f64, f64)> {
+        Some((*self.timestamps.first()?, *self.timestamps.last()?))
+    }
+}
+
+impl GeoSpatialData {
+    /// Merge auxiliary data into this primary dataset
+    /// Only merges fields that don't already exist in the primary data
+    /// Uses nearest-neighbor matching (NO interpolation) to preserve data integrity
+    pub fn merge_auxiliary(
+        &mut self,
+        aux: &AuxiliaryGeoSpatialData,
+        tolerance_ns: f64,
+    ) -> Result<(), MergeError> {
+        if !aux.is_compatible_with(self, tolerance_ns) {
+            return Err(MergeError::IncompatibleTimeRange);
+        }
+
+        // Check if we already have the data fields
+        let has_altitude = self.points.first().is_some_and(|p| p.altitude.is_some());
+        let has_speed = self.points.first().is_some_and(|p| p.speed.is_some());
+        let has_heading = self.points.first().is_some_and(|p| p.heading.is_some());
+
+        // Merge altitude if we don't have it
+        if let Some(aux_alt) = &aux.altitudes
+            && !has_altitude
+        {
+            self.merge_altitude_nearest(&aux.timestamps, aux_alt);
+        }
+
+        // Similar for speed and heading...
+        if let Some(aux_spd) = &aux.speeds
+            && !has_speed
+        {
+            self.merge_field_nearest(&aux.timestamps, aux_spd, |p, v| {
+                p.speed = Some(v);
+            });
+        }
+
+        if let Some(aux_hdg) = &aux.headings
+            && !has_heading
+        {
+            self.merge_field_nearest(&aux.timestamps, aux_hdg, |p, v| {
+                p.heading = Some(v);
+            });
+        }
+
+        // Recompute cached values after merge
+        self.cached = CachedValues::compute(&self.points);
+
+        Ok(())
+    }
+
+    /// Helper to merge a single field using nearest-neighbor lookup
+    /// Optimized for monotonically increasing timestamps - O(n+m) complexity
+    fn merge_field_nearest<F>(&mut self, aux_times: &[f64], aux_values: &[f64], mut setter: F)
+    where
+        F: FnMut(&mut GeoPoint, f64),
+    {
+        if aux_times.is_empty() || aux_values.is_empty() {
+            return;
+        }
+
+        let mut aux_idx = 0;
+        let last_idx = aux_times.len() - 1;
+
+        for point in &mut self.points {
+            let target = point.timestamp;
+
+            // Advance aux_idx while the next timestamp is closer to target
+            while aux_idx < last_idx {
+                let curr_diff = (aux_times[aux_idx] - target).abs();
+                let next_diff = (aux_times[aux_idx + 1] - target).abs();
+
+                if next_diff < curr_diff {
+                    aux_idx += 1;
+                } else {
+                    break;
+                }
+            }
+
+            setter(point, aux_values[aux_idx]);
+        }
+    }
+
+    /// Helper to merge a single field using nearest-neighbor lookup
+    /// Optimized for monotonically increasing timestamps - O(n+m) complexity
+    fn merge_altitude_nearest(&mut self, aux_times: &[f64], altitudes: &RawGeoAltitudes) {
+        if aux_times.is_empty() {
+            return;
+        }
+
+        let mut is_gnss = false;
+        let mut is_laser = false;
+        let altitudes = match altitudes {
+            RawGeoAltitudes::Gnss(cow) => {
+                is_gnss = true;
+                cow
+            }
+            RawGeoAltitudes::Laser(cow) => {
+                is_laser = true;
+                cow
+            }
+        };
+
+        let mut aux_idx = 0;
+        let last_idx = aux_times.len() - 1;
+
+        for point in &mut self.points {
+            let target = point.timestamp;
+
+            // Advance aux_idx while the next timestamp is closer to target
+            while aux_idx < last_idx {
+                let curr_diff = (aux_times[aux_idx] - target).abs();
+                let next_diff = (aux_times[aux_idx + 1] - target).abs();
+
+                if next_diff < curr_diff {
+                    aux_idx += 1;
+                } else {
+                    break;
+                }
+            }
+
+            let val = altitudes[aux_idx];
+            if is_gnss {
+                point.altitude = Some(GeoAltitude::Gnss(val));
+            } else if is_laser {
+                point.altitude = Some(GeoAltitude::Laser(val));
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MergeError {
+    IncompatibleTimeRange,
+    FieldAlreadyExists,
+}
+
+impl std::fmt::Display for MergeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MergeError::IncompatibleTimeRange => {
+                write!(
+                    f,
+                    "Auxiliary data time range doesn't align with primary dataset"
+                )
+            }
+            MergeError::FieldAlreadyExists => {
+                write!(f, "Field already exists in primary dataset")
+            }
+        }
+    }
+}
+
+impl std::error::Error for MergeError {}
+
 #[cfg(test)]
 mod tests {
+    use testresult::TestResult;
+
     use super::*;
     #[test]
-    fn test_build_geo_spatial_data() {
+    fn test_build_geo_spatial_data() -> TestResult {
         let name = "Data".to_owned();
         let timestamps = &[2., 3., 4.];
         let latitude = &[5., 6., 7.];
         let longitude = &[5.5, 6.6, 7.7];
-        let altitude = &[20., 30., 40.];
+        let altitude = vec![20., 30., 40.];
         let speed = &[2., 2.5, 3.];
         let heading = &[20., 19., 21.];
 
-        let geo_data: GeoSpatialData = GeoSpatialDataBuilder::new(name)
+        let GeoSpatialDataBuildOutput::GeoSpatialData(geo_data) = GeoSpatialDataBuilder::new(name)
             .timestamp(timestamps)
             .lat(latitude)
             .lon(longitude)
-            .altitude(altitude)
+            .altitude_from_gnss(altitude.clone())
             .speed(speed)
             .heading(heading)
-            .build()
+            .build()?
             .unwrap()
-            .unwrap();
-        assert_eq!(geo_data.points[0].altitude, Some(altitude[0]));
+        else {
+            panic!();
+        };
+        assert_eq!(
+            geo_data.points[0].altitude,
+            Some(GeoAltitude::Gnss(altitude[0]))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_merge_preserves_primary_frequency() -> TestResult {
+        // Primary dataset at 1 Hz
+        let primary_times = vec![1.0e9, 2.0e9, 3.0e9];
+        let lat = vec![55.0, 55.1, 55.2];
+        let lon = vec![12.0, 12.1, 12.2];
+
+        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+            GeoSpatialDataBuilder::new("Primary".to_string())
+                .timestamp(&primary_times)
+                .lat(&lat)
+                .lon(&lon)
+                .build()?
+                .unwrap()
+        else {
+            panic!();
+        };
+
+        // Auxiliary dataset at ~3 Hz (higher frequency)
+        let aux_times = vec![1.0e9, 1.33e9, 1.66e9, 2.0e9, 2.33e9, 2.66e9, 3.0e9];
+        let aux_altitude = vec![100.0, 105.0, 110.0, 115.0, 120.0, 125.0, 130.0];
+
+        let aux = AuxiliaryGeoSpatialData {
+            name: "Altimeter".to_string(),
+            timestamps: aux_times,
+            altitudes: Some(RawGeoAltitudes::Gnss(aux_altitude.into())),
+            speeds: None,
+            headings: None,
+            color: Color32::RED,
+        };
+
+        primary.merge_auxiliary(&aux, 5.0e9).unwrap();
+
+        // Result should still be 3 points (primary frequency preserved)
+        assert_eq!(primary.points.len(), 3);
+
+        // Check that nearest values were selected (not interpolated)
+        assert_eq!(primary.points[0].altitude.map(|v| v.val()), Some(100.0)); // Exact match
+        assert_eq!(primary.points[1].altitude.map(|v| v.val()), Some(115.0)); // Exact match
+        assert_eq!(primary.points[2].altitude.map(|v| v.val()), Some(130.0)); // Exact match
+        Ok(())
+    }
+
+    #[test]
+    fn test_exact_matches() -> TestResult {
+        let primary_times = vec![1.0e9, 2.0e9, 3.0e9];
+        let lat = vec![55.0, 55.1, 55.2];
+        let lon = vec![12.0, 12.1, 12.2];
+
+        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+            GeoSpatialDataBuilder::new("Test".to_string())
+                .timestamp(&primary_times)
+                .lat(&lat)
+                .lon(&lon)
+                .build()?
+                .unwrap()
+        else {
+            panic!()
+        };
+
+        let aux_times = vec![1.0e9, 2.0e9, 3.0e9];
+        let aux_altitude = vec![100.0, 200.0, 300.0];
+
+        let aux = AuxiliaryGeoSpatialData {
+            name: "Aux".to_string(),
+            timestamps: aux_times,
+            altitudes: Some(RawGeoAltitudes::Laser(aux_altitude.into())),
+            speeds: None,
+            headings: None,
+            color: Color32::RED,
+        };
+
+        primary.merge_auxiliary(&aux, 1.0e8).unwrap();
+
+        assert_eq!(primary.points[0].altitude.map(|v| v.val()), Some(100.0));
+        assert_eq!(primary.points[1].altitude.map(|v| v.val()), Some(200.0));
+        assert_eq!(primary.points[2].altitude.map(|v| v.val()), Some(300.0));
+        Ok(())
+    }
+
+    #[test]
+    fn test_primary_lower_frequency() -> TestResult {
+        // Primary at 1 Hz
+        let primary_times = vec![1.0e9, 2.0e9, 3.0e9];
+        let lat = vec![55.0, 55.1, 55.2];
+        let lon = vec![12.0, 12.1, 12.2];
+
+        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+            GeoSpatialDataBuilder::new("Test".to_string())
+                .timestamp(&primary_times)
+                .lat(&lat)
+                .lon(&lon)
+                .build()?
+                .unwrap()
+        else {
+            panic!()
+        };
+
+        // Aux at higher frequency
+        let aux_times = vec![1.0e9, 1.4e9, 1.8e9, 2.0e9, 2.6e9, 3.0e9];
+        let aux_altitude =
+            RawGeoAltitudes::Laser(vec![100.0, 110.0, 120.0, 200.0, 250.0, 300.0].into());
+
+        let aux = AuxiliaryGeoSpatialData {
+            name: "Aux".to_string(),
+            timestamps: aux_times,
+            altitudes: Some(aux_altitude),
+            speeds: None,
+            headings: None,
+            color: Color32::RED,
+        };
+
+        primary.merge_auxiliary(&aux, 1.0e8).unwrap();
+
+        // Should pick nearest neighbors
+        assert_eq!(primary.points[0].altitude.map(|v| v.val()), Some(100.0)); // Exact: 1.0e9
+        assert_eq!(primary.points[1].altitude.map(|v| v.val()), Some(200.0)); // Exact: 2.0e9
+        assert_eq!(primary.points[2].altitude.map(|v| v.val()), Some(300.0)); // Exact: 3.0e9
+        Ok(())
+    }
+
+    #[test]
+    fn test_primary_higher_frequency() -> TestResult {
+        // Primary at higher frequency - 2Hz
+        let primary_times = vec![1.0e9, 1.5e9, 2.0e9, 2.5e9, 3.0e9];
+        let lat = vec![55.0, 55.05, 55.1, 55.15, 55.2];
+        let lon = vec![12.0, 12.05, 12.1, 12.15, 12.2];
+
+        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+            GeoSpatialDataBuilder::new("Test".to_string())
+                .timestamp(&primary_times)
+                .lat(&lat)
+                .lon(&lon)
+                .build()?
+                .unwrap()
+        else {
+            panic!()
+        };
+
+        // Aux at 1 Hz
+        let aux_times = vec![1.0e9, 2.0e9, 3.0e9];
+        let aux_altitude = RawGeoAltitudes::Gnss(vec![100.0, 200.0, 300.0].into());
+
+        let aux = AuxiliaryGeoSpatialData {
+            name: "Aux".to_string(),
+            timestamps: aux_times,
+            altitudes: Some(aux_altitude),
+            speeds: None,
+            headings: None,
+            color: Color32::RED,
+        };
+
+        primary.merge_auxiliary(&aux, 1.0e8).unwrap();
+
+        assert_eq!(primary.points[0].altitude, Some(GeoAltitude::Gnss(100.0))); // 1.0 closest to 1.0
+        assert_eq!(primary.points[1].altitude, Some(GeoAltitude::Gnss(100.0))); // 1.5 closest to 1.0
+        assert_eq!(primary.points[2].altitude, Some(GeoAltitude::Gnss(200.0))); // 2.0 closest to 2.0
+        assert_eq!(primary.points[3].altitude, Some(GeoAltitude::Gnss(300.0))); // 2.5 closest to 3.0
+        assert_eq!(primary.points[4].altitude, Some(GeoAltitude::Gnss(300.0))); // 3.0 closest to 3.0
+        Ok(())
+    }
+
+    #[test]
+    fn test_boundary_conditions() -> TestResult {
+        let primary_times = vec![0.5e9, 1.5e9, 3.5e9];
+        let lat = vec![55.0, 55.1, 55.2];
+        let lon = vec![12.0, 12.1, 12.2];
+
+        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+            GeoSpatialDataBuilder::new("Test".to_string())
+                .timestamp(&primary_times)
+                .lat(&lat)
+                .lon(&lon)
+                .build()?
+                .unwrap()
+        else {
+            panic!()
+        };
+
+        let aux_times = vec![1.0e9, 2.0e9, 3.0e9];
+        let aux_altitude = RawGeoAltitudes::Laser(vec![100.0, 200.0, 300.0].into());
+
+        let aux = AuxiliaryGeoSpatialData {
+            name: "Aux".to_string(),
+            timestamps: aux_times,
+            altitudes: Some(aux_altitude),
+            speeds: None,
+            headings: None,
+            color: Color32::RED,
+        };
+
+        primary.merge_auxiliary(&aux, 1.0e9).unwrap();
+
+        // Before range: picks first
+        assert_eq!(primary.points[0].altitude, Some(GeoAltitude::Laser(100.0)));
+        // Middle: picks closest
+        assert_eq!(primary.points[1].altitude, Some(GeoAltitude::Laser(100.0))); // 1.5 closer to 1.0 than 2.0
+        // After range: picks last
+        assert_eq!(primary.points[2].altitude, Some(GeoAltitude::Laser(300.0)));
+
+        Ok(())
     }
 }

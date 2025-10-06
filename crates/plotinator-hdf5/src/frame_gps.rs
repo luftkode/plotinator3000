@@ -6,10 +6,7 @@ use hdf5::types::FixedAscii;
 use ndarray::Array2;
 use plotinator_log_if::{
     hdf5::SkytemHdf5,
-    prelude::{
-        ExpectedPlotRange, GeoSpatialData, GeoSpatialDataBuilder, PlotLabels, Plotable,
-        RawPlotCommon,
-    },
+    prelude::{ExpectedPlotRange, GeoSpatialDataBuilder, PlotLabels, Plotable, RawPlotCommon},
     rawplot::RawPlot,
 };
 use serde::{Deserialize, Serialize};
@@ -295,14 +292,13 @@ impl FrameGpsDatasets {
             };
         }
 
-        let geo_data: Option<GeoSpatialData> =
-            GeoSpatialDataBuilder::new(format!("{LEGEND_NAME}{id}"))
-                .timestamp(&timestamps)
-                .lat(&lat)
-                .lon(&lon)
-                .altitude(&alt)
-                .speed(&speed)
-                .build()?;
+        let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(format!("{LEGEND_NAME}{id}"))
+            .timestamp(&timestamps)
+            .lat(&lat)
+            .lon(&lon)
+            .altitude_from_gnss(alt)
+            .speed(&speed)
+            .build_into_rawplot()?;
 
         let raw_plots = vec![
             RawPlotCommon::new(
@@ -349,7 +345,7 @@ impl FrameGpsDatasets {
 
         let mut plots = vec![];
         if let Some(geo_data) = geo_data {
-            plots.push(geo_data.into());
+            plots.push(geo_data);
         }
         for rp in raw_plots {
             if rp.points().is_empty() {

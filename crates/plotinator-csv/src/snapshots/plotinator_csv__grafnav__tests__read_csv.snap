@@ -211,6 +211,7 @@ GrafNavPPP {
         GeoSpatial {
             geo_data: GeoSpatialData {
                 name: "GrafNav-PPP",
+                merged_with: None,
                 points: [
                     GeoPoint {
                         timestamp: 1.757435842e18,
@@ -219,7 +220,9 @@ GrafNavPPP {
                             0.0,
                         ),
                         altitude: Some(
-                            73.394,
+                            Gnss(
+                                73.394,
+                            ),
                         ),
                         speed: Some(
                             0.106,
@@ -232,7 +235,9 @@ GrafNavPPP {
                             0.0,
                         ),
                         altitude: Some(
-                            73.388,
+                            Gnss(
+                                73.388,
+                            ),
                         ),
                         speed: Some(
                             0.074,

@@ -36,16 +36,26 @@ impl GeneratorLog {
 
 impl Parseable for GeneratorLog {
     const DESCRIPTIVE_NAME: &str = "Legacy Generator Log";
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut bufreader = BufReader::new(buf);
         let mut line = String::new();
-        if bufreader.read_line(&mut line).is_err() {
-            return false;
+        if let Err(e) = bufreader.read_line(&mut line) {
+            return Err(format!(
+                "Buffer is not a {}: failed to read a line: {e} ",
+                Self::DESCRIPTIVE_NAME
+            ));
         }
-        GeneratorLogEntry::is_line_valid_generator_log_entry(&line)
+        if GeneratorLogEntry::is_line_valid_generator_log_entry(&line) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Buffer is not a {}: line format mismatch",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut entries = Vec::new();
         let mut total_bytes_read = 0;
 
@@ -476,7 +486,7 @@ mod tests {
         let valid_line_as_bytes = b"20230124_134745 Vout: 74.3 Vbat: 0.1 Iout: 0.0 RPM: 6075 Load: 10.2 PWM: 10.2 Temp1 6.9 Temp2 8.4 IIn: 8.8 Irotor: 0.7 Rrotor: 11.2
 20230124_134746 Vout: 59.3 Vbat: 0.1 Iout: 0.0 RPM: 5438 Load: 81.2 PWM: 18.0 Temp1 6.9 Temp2 8.6 IIn: 35.5 Irotor: 0.9 Rrotor: 11.5";
 
-        assert!(GeneratorLog::is_buf_valid(valid_line_as_bytes));
+        assert_eq!(GeneratorLog::is_buf_valid(valid_line_as_bytes), Ok(()));
     }
 
     #[test]
@@ -484,7 +494,7 @@ mod tests {
         let invalid_bytes = b"20230124_134745 Vo 74. 0.1 Iout: 0.0 RPM: 6075 Load: 10.2 PWM:  8.4 IIn: 8.8 Irotor: 0.7 Rrotor: 11.2
 20230124_134746 Vout: 59.3 Vbat: 0.1 Iout: 0.0 RPM: 5438 Load: 81.2 PWM: 18.0 Temp1 6.9 Temp2 8.6 IIn: 35.5 Irotor: 0.9 Rrotor: 11.5";
 
-        assert!(!GeneratorLog::is_buf_valid(invalid_bytes));
+        assert!(GeneratorLog::is_buf_valid(invalid_bytes).is_err());
     }
 
     #[test]
