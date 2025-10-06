@@ -1,4 +1,4 @@
-use plotinator_log_if::prelude::GeoSpatialData;
+use plotinator_log_if::rawplot::path_data::GeoSpatialDataset;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender, channel};
 
@@ -52,8 +52,8 @@ impl MapUiCommander {
         }
     }
 
-    pub fn add_geo_data(&mut self, geo_data: GeoSpatialData) {
-        log::debug!("Sending geo data to map: {}", geo_data.name);
+    pub fn add_geo_data(&mut self, geo_data: GeoSpatialDataset) {
+        log::debug!("Sending geo data to map: {}", geo_data.name());
         self.any_data_received = true;
         self.send_cmd(MapCommand::AddGeoData(geo_data));
     }

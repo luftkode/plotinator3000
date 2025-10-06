@@ -5,7 +5,10 @@ use egui::{
 use egui_phosphor::regular::{
     CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL, SQUARE,
 };
-use plotinator_log_if::prelude::{GeoAltitude, GeoSpatialData};
+use plotinator_log_if::{
+    prelude::{GeoAltitude, PrimaryGeoSpatialData},
+    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset},
+};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::Map;
@@ -19,7 +22,7 @@ use crate::{
 /// Messages sent from main app to map viewport
 #[derive(strum_macros::Display)]
 pub enum MapCommand {
-    AddGeoData(GeoSpatialData),
+    AddGeoData(GeoSpatialDataset),
     /// Cursor position on the time axis
     CursorPos(f64),
     FitToAllPaths,
@@ -35,6 +38,7 @@ mod map_state;
 pub struct MapViewPort {
     pub open: bool,
     pub geo_data: Vec<PathEntry>,
+    pub unmerged_aux_data: Vec<AuxiliaryGeoSpatialData>,
     map_state: MapState,
     #[serde(skip)]
     cmd_recv: Option<Receiver<MapCommand>>,
@@ -80,19 +84,55 @@ impl MapViewPort {
         {
             match cmd {
                 MapCommand::AddGeoData(geo_data) => {
-                    if let Some(first_point) = geo_data.points.first() {
-                        let has_speed = first_point.speed.is_some();
-                        let has_altitude = first_point.altitude.is_some();
-                        let has_heading = first_point.heading.is_some();
-                        log::info!(
-                            "Received geo data {}, points include speed={has_speed}, altitude={has_altitude}, heading={has_heading}",
-                            geo_data.name
-                        );
-                    } else {
-                        log::info!("Received basic geo data {}", geo_data.name);
+                    match geo_data {
+                        GeoSpatialDataset::PrimaryGeoSpatialData(mut primary_data) => {
+                            if let Some(first_point) = primary_data.points.first() {
+                                let has_speed = first_point.speed.is_some();
+                                let has_altitude = first_point.altitude.is_some();
+                                let has_heading = first_point.heading.is_some();
+                                log::info!(
+                                    "Received geo data {}, points include speed={has_speed}, altitude={has_altitude}, heading={has_heading}",
+                                    primary_data.name
+                                );
+                            } else {
+                                log::info!("Received basic geo data {}", primary_data.name);
+                            }
+                            let tmp_unmerged_aux: Vec<AuxiliaryGeoSpatialData> =
+                                self.unmerged_aux_data.drain(..).collect();
+
+                            for unmerged_aux in tmp_unmerged_aux {
+                                if unmerged_aux.is_compatible_with(&primary_data, 5e6) {
+                                    if let Err(e) = primary_data.merge_auxiliary(&unmerged_aux, 5e6)
+                                    {
+                                        log::error!(
+                                            "Failed to merge '{}' with '{}': {e}",
+                                            primary_data.name,
+                                            unmerged_aux.name
+                                        );
+                                        self.unmerged_aux_data.push(unmerged_aux);
+                                    }
+                                } else {
+                                    self.unmerged_aux_data.push(unmerged_aux);
+                                }
+                            }
+
+                            self.add_geo_data(primary_data);
+                        }
+                        GeoSpatialDataset::AuxGeoSpatialData(aux_data) => {
+                            for path in &mut self.geo_data {
+                                if aux_data.is_compatible_with(&path.data, 5e6) {
+                                    if let Err(e) = path.data.merge_auxiliary(&aux_data, 5e6) {
+                                        log::error!(
+                                            "Failed to merge '{}' with '{}': {e}",
+                                            path.data.name,
+                                            aux_data.name
+                                        );
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    self.add_geo_data(geo_data);
                     self.zoom_to_fit();
                 }
                 MapCommand::CursorPos(time_pos) => {
@@ -114,7 +154,7 @@ impl MapViewPort {
         self.map_state.zoom_to_fit(&self.geo_data);
     }
 
-    pub fn add_geo_data(&mut self, geo_data: GeoSpatialData) {
+    pub fn add_geo_data(&mut self, geo_data: PrimaryGeoSpatialData) {
         debug_assert!(
             geo_data.points.iter().all(|p| !p.timestamp.is_nan()
                 && !p.position.x().is_nan()
@@ -387,6 +427,6 @@ impl Default for PathEntrySettings {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct PathEntry {
-    pub data: GeoSpatialData,
+    pub data: PrimaryGeoSpatialData,
     pub settings: PathEntrySettings,
 }

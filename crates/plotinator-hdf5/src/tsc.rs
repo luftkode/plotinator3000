@@ -89,7 +89,7 @@ impl SkytemHdf5 for Tsc {
         );
 
         plots.retain(|p| match p {
-            RawPlot::GeoSpatial { .. } | RawPlot::AuxGeoSpatial { .. } => true,
+            RawPlot::GeoSpatialDataset(_) => true,
             RawPlot::Generic { common } | RawPlot::Boolean { common } => {
                 if common.points().len() < 2 {
                     log::warn!("Discarding plot with less than 2 points: {}", common.name());

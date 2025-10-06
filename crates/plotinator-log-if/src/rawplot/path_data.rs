@@ -20,8 +20,8 @@ pub enum RawGeoAltitudes {
 impl RawGeoAltitudes {
     fn len(&self) -> usize {
         match self {
-            RawGeoAltitudes::Gnss(a) => a.len(),
-            RawGeoAltitudes::Laser(a) => a.len(),
+            Self::Gnss(a) => a.len(),
+            Self::Laser(a) => a.len(),
         }
     }
 }
@@ -172,7 +172,7 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
     }
 
     /// Attempt to turn the builder into [`GeoSpatialDataBuildOutput`]
-    pub fn build(self) -> anyhow::Result<Option<GeoSpatialDataBuildOutput>> {
+    pub fn build(self) -> anyhow::Result<Option<GeoSpatialDataset>> {
         let Self {
             name,
             timestamp,
@@ -231,8 +231,8 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
                 points.push(point);
             }
 
-            Ok(Some(GeoSpatialDataBuildOutput::GeoSpatialData(
-                GeoSpatialData::new(name, points),
+            Ok(Some(GeoSpatialDataset::PrimaryGeoSpatialData(
+                PrimaryGeoSpatialData::new(name, points),
             )))
         } else if heading.is_some() || altitude.is_some() || speed.is_some() {
             let mut aux_geo_data = AuxiliaryGeoSpatialData::new(name, ts.to_owned());
@@ -248,9 +248,7 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
                 debug_assert_eq!(spd.len(), ts.len());
                 aux_geo_data = aux_geo_data.with_speed(spd.to_owned());
             }
-            Ok(Some(GeoSpatialDataBuildOutput::AuxGeoSpatialData(
-                aux_geo_data,
-            )))
+            Ok(Some(GeoSpatialDataset::AuxGeoSpatialData(aux_geo_data)))
         } else {
             bail!(
                 "Cannot build Geo Spatial dataset '{name}' with neither longitude and lattitude, or either of heading, speed, or altitude"
@@ -262,16 +260,40 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
 /// Build output of the [`GeoSpatialDataBuilder`]
 ///
 /// The contents of the builder determines the output
-pub enum GeoSpatialDataBuildOutput {
-    /// Primary geo spatial data has cooridnates
-    GeoSpatialData(GeoSpatialData),
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub enum GeoSpatialDataset {
+    /// Primary geo spatial data has coordinates
+    PrimaryGeoSpatialData(PrimaryGeoSpatialData),
     /// Auxiliary geo spatial data has either heading, altitude, or velocity
     AuxGeoSpatialData(AuxiliaryGeoSpatialData),
 }
 
+impl GeoSpatialDataset {
+    pub fn len(&self) -> usize {
+        match self {
+            GeoSpatialDataset::PrimaryGeoSpatialData(prim) => prim.points.len(),
+            GeoSpatialDataset::AuxGeoSpatialData(aux) => aux.timestamps.len(),
+        }
+    }
+
+    pub fn raw_plots_common(&self) -> Vec<RawPlotCommon> {
+        match self {
+            GeoSpatialDataset::PrimaryGeoSpatialData(prim) => prim.raw_plots_common(),
+            GeoSpatialDataset::AuxGeoSpatialData(aux) => aux.raw_plots_common(),
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            GeoSpatialDataset::PrimaryGeoSpatialData(prim) => prim.name.as_str(),
+            GeoSpatialDataset::AuxGeoSpatialData(aux) => aux.name.as_str(),
+        }
+    }
+}
+
 /// Represents a path through space and time
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GeoSpatialData {
+pub struct PrimaryGeoSpatialData {
     pub name: String,
     /// Name of the [`AuxiliaryGeoSpatialData`] that was merged into this instance (if any)
     pub merged_with: Option<String>,
@@ -280,7 +302,7 @@ pub struct GeoSpatialData {
     cached: CachedValues,
 }
 
-impl GeoSpatialData {
+impl PrimaryGeoSpatialData {
     pub fn new(name: String, points: Vec<GeoPoint>) -> Self {
         let color = auto_color();
         let cached = CachedValues::compute(&points);
@@ -579,7 +601,7 @@ impl AuxiliaryGeoSpatialData {
 
     /// Check if this auxiliary data is compatible with a primary dataset
     /// Returns true if start/end timestamps align within tolerance_ns (nanoseconds)
-    pub fn is_compatible_with(&self, primary: &GeoSpatialData, tolerance_ns: f64) -> bool {
+    pub fn is_compatible_with(&self, primary: &PrimaryGeoSpatialData, tolerance_ns: f64) -> bool {
         if self.timestamps.is_empty() || primary.points.is_empty() {
             return false;
         }
@@ -602,7 +624,7 @@ impl AuxiliaryGeoSpatialData {
     }
 }
 
-impl GeoSpatialData {
+impl PrimaryGeoSpatialData {
     /// Merge auxiliary data into this primary dataset
     /// Only merges fields that don't already exist in the primary data
     /// Uses nearest-neighbor matching (NO interpolation) to preserve data integrity
@@ -769,7 +791,7 @@ mod tests {
         let speed = &[2., 2.5, 3.];
         let heading = &[20., 19., 21.];
 
-        let GeoSpatialDataBuildOutput::GeoSpatialData(geo_data) = GeoSpatialDataBuilder::new(name)
+        let GeoSpatialDataset::PrimaryGeoSpatialData(geo_data) = GeoSpatialDataBuilder::new(name)
             .timestamp(timestamps)
             .lat(latitude)
             .lon(longitude)
@@ -795,7 +817,7 @@ mod tests {
         let lat = vec![55.0, 55.1, 55.2];
         let lon = vec![12.0, 12.1, 12.2];
 
-        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+        let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
             GeoSpatialDataBuilder::new("Primary".to_string())
                 .timestamp(&primary_times)
                 .lat(&lat)
@@ -837,7 +859,7 @@ mod tests {
         let lat = vec![55.0, 55.1, 55.2];
         let lon = vec![12.0, 12.1, 12.2];
 
-        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+        let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
             GeoSpatialDataBuilder::new("Test".to_string())
                 .timestamp(&primary_times)
                 .lat(&lat)
@@ -875,7 +897,7 @@ mod tests {
         let lat = vec![55.0, 55.1, 55.2];
         let lon = vec![12.0, 12.1, 12.2];
 
-        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+        let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
             GeoSpatialDataBuilder::new("Test".to_string())
                 .timestamp(&primary_times)
                 .lat(&lat)
@@ -916,7 +938,7 @@ mod tests {
         let lat = vec![55.0, 55.05, 55.1, 55.15, 55.2];
         let lon = vec![12.0, 12.05, 12.1, 12.15, 12.2];
 
-        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+        let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
             GeoSpatialDataBuilder::new("Test".to_string())
                 .timestamp(&primary_times)
                 .lat(&lat)
@@ -956,7 +978,7 @@ mod tests {
         let lat = vec![55.0, 55.1, 55.2];
         let lon = vec![12.0, 12.1, 12.2];
 
-        let GeoSpatialDataBuildOutput::GeoSpatialData(mut primary) =
+        let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
             GeoSpatialDataBuilder::new("Test".to_string())
                 .timestamp(&primary_times)
                 .lat(&lat)

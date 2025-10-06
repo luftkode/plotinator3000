@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     prelude::ExpectedPlotRange,
-    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialData, GeoSpatialDataBuildOutput},
+    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset, PrimaryGeoSpatialData},
 };
 
 pub mod path_data;
@@ -13,14 +13,9 @@ pub enum RawPlot {
     Generic {
         common: RawPlotCommon,
     },
-    /// Data with at least time and coordinates lat/lon, might also include heading and altitude
-    GeoSpatial {
-        geo_data: GeoSpatialData,
-    },
-    /// Data with at least time and either heading, altitude, or velocity
-    AuxGeoSpatial {
-        aux_data: AuxiliaryGeoSpatialData,
-    },
+    /// Either Primary geo spatial data with at least coordinates lat/lon, with optional heading and altitude or
+    /// auxiliary geo spatial data with one or more of: Altitude, velocity, and heading
+    GeoSpatialDataset(GeoSpatialDataset),
     /// Flags that can either be 0 or 1
     Boolean {
         common: RawPlotCommon,
@@ -33,24 +28,21 @@ impl From<RawPlotCommon> for RawPlot {
     }
 }
 
-impl From<GeoSpatialData> for RawPlot {
-    fn from(geo_data: GeoSpatialData) -> Self {
-        Self::GeoSpatial { geo_data }
+impl From<PrimaryGeoSpatialData> for RawPlot {
+    fn from(geo_data: PrimaryGeoSpatialData) -> Self {
+        Self::GeoSpatialDataset(GeoSpatialDataset::PrimaryGeoSpatialData(geo_data))
     }
 }
 
 impl From<AuxiliaryGeoSpatialData> for RawPlot {
     fn from(aux_data: AuxiliaryGeoSpatialData) -> Self {
-        Self::AuxGeoSpatial { aux_data }
+        Self::GeoSpatialDataset(GeoSpatialDataset::AuxGeoSpatialData(aux_data))
     }
 }
 
-impl From<GeoSpatialDataBuildOutput> for RawPlot {
-    fn from(geo_data_build_output: GeoSpatialDataBuildOutput) -> Self {
-        match geo_data_build_output {
-            GeoSpatialDataBuildOutput::GeoSpatialData(geo_spatial_data) => geo_spatial_data.into(),
-            GeoSpatialDataBuildOutput::AuxGeoSpatialData(aux_geo_data) => aux_geo_data.into(),
-        }
+impl From<GeoSpatialDataset> for RawPlot {
+    fn from(geo_data: GeoSpatialDataset) -> Self {
+        Self::GeoSpatialDataset(geo_data)
     }
 }
 

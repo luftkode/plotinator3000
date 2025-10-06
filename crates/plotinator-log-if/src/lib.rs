@@ -12,7 +12,7 @@ pub mod prelude {
     pub use crate::parseable::Parseable;
     pub use crate::plotable::{ExpectedPlotRange, PlotLabels, Plotable};
     pub use crate::rawplot::path_data::{
-        GeoAltitude, GeoPoint, GeoSpatialData, GeoSpatialDataBuilder,
+        GeoAltitude, GeoPoint, GeoSpatialDataBuilder, PrimaryGeoSpatialData,
     };
     pub use crate::rawplot::{RawPlot, RawPlotCommon};
     pub use crate::util::*;

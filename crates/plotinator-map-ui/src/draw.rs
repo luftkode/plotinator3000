@@ -1,5 +1,5 @@
 use egui::{Color32, FontId, Painter, Pos2, Stroke, Vec2, vec2};
-use plotinator_log_if::prelude::{GeoPoint, GeoSpatialData};
+use plotinator_log_if::prelude::{GeoPoint, PrimaryGeoSpatialData};
 use walkers::Projector;
 
 use crate::PathEntry;
@@ -18,7 +18,7 @@ pub struct TelemetryLabelSettings {
 pub(crate) fn draw_path(
     ui: &egui::Ui,
     projector: &Projector,
-    path: &GeoSpatialData,
+    path: &PrimaryGeoSpatialData,
     settings: &DrawSettings,
 ) {
     if path.points.len() < 2 {
@@ -393,7 +393,7 @@ pub(crate) fn draw_cursor_highlights(
 pub(crate) fn highlight_whole_path(
     painter: &Painter,
     projector: &Projector,
-    path: &GeoSpatialData,
+    path: &PrimaryGeoSpatialData,
 ) {
     let screen_points: Vec<Pos2> = path
         .points
