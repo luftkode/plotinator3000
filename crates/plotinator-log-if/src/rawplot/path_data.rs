@@ -20,8 +20,7 @@ pub enum RawGeoAltitudes {
 impl RawGeoAltitudes {
     fn len(&self) -> usize {
         match self {
-            Self::Gnss(a) => a.len(),
-            Self::Laser(a) => a.len(),
+            Self::Gnss(a) | Self::Laser(a) => a.len(),
         }
     }
 }
@@ -41,14 +40,14 @@ pub enum GeoAltitude {
 impl GeoAltitude {
     pub fn val(&self) -> f64 {
         match self {
-            GeoAltitude::Gnss(val) | GeoAltitude::Laser(val) => *val,
+            Self::Gnss(val) | Self::Laser(val) => *val,
         }
     }
 
     pub fn source(&self) -> &str {
         match self {
-            GeoAltitude::Gnss(_) => "GNSS Receiver",
-            GeoAltitude::Laser(_) => "Laser",
+            Self::Gnss(_) => "GNSS Receiver",
+            Self::Laser(_) => "Laser",
         }
     }
 }
@@ -57,7 +56,7 @@ impl fmt::Display for GeoAltitude {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GeoAltitude::Gnss(v) | GeoAltitude::Laser(v) => write!(f, "{v:.0} m"),
+            Self::Gnss(v) | Self::Laser(v) => write!(f, "{v:.0} m"),
         }
     }
 }
@@ -215,10 +214,10 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
                 {
                     match alt {
                         RawGeoAltitudes::Gnss(alts) => {
-                            point = point.with_altitude(GeoAltitude::Gnss(alts[i]))
+                            point = point.with_altitude(GeoAltitude::Gnss(alts[i]));
                         }
                         RawGeoAltitudes::Laser(alts) => {
-                            point = point.with_altitude(GeoAltitude::Laser(alts[i]))
+                            point = point.with_altitude(GeoAltitude::Laser(alts[i]));
                         }
                     }
                 }
@@ -271,22 +270,29 @@ pub enum GeoSpatialDataset {
 impl GeoSpatialDataset {
     pub fn len(&self) -> usize {
         match self {
-            GeoSpatialDataset::PrimaryGeoSpatialData(prim) => prim.points.len(),
-            GeoSpatialDataset::AuxGeoSpatialData(aux) => aux.timestamps.len(),
+            Self::PrimaryGeoSpatialData(prim) => prim.points.len(),
+            Self::AuxGeoSpatialData(aux) => aux.timestamps.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::PrimaryGeoSpatialData(prim) => prim.points.is_empty(),
+            Self::AuxGeoSpatialData(aux) => aux.timestamps.is_empty(),
         }
     }
 
     pub fn raw_plots_common(&self) -> Vec<RawPlotCommon> {
         match self {
-            GeoSpatialDataset::PrimaryGeoSpatialData(prim) => prim.raw_plots_common(),
-            GeoSpatialDataset::AuxGeoSpatialData(aux) => aux.raw_plots_common(),
+            Self::PrimaryGeoSpatialData(prim) => prim.raw_plots_common(),
+            Self::AuxGeoSpatialData(aux) => aux.raw_plots_common(),
         }
     }
 
     pub fn name(&self) -> &str {
         match self {
-            GeoSpatialDataset::PrimaryGeoSpatialData(prim) => prim.name.as_str(),
-            GeoSpatialDataset::AuxGeoSpatialData(aux) => aux.name.as_str(),
+            Self::PrimaryGeoSpatialData(prim) => prim.name.as_str(),
+            Self::AuxGeoSpatialData(aux) => aux.name.as_str(),
         }
     }
 }
@@ -504,7 +510,7 @@ impl CachedValues {
     }
 }
 
-/// Auxiliary time-series data that can be merged with a primary GeoSpatialData
+/// Auxiliary time-series data that can be merged with a primary [`PrimaryGeoSpatialData`]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AuxiliaryGeoSpatialData {
     pub name: String,
@@ -600,7 +606,7 @@ impl AuxiliaryGeoSpatialData {
     }
 
     /// Check if this auxiliary data is compatible with a primary dataset
-    /// Returns true if start/end timestamps align within tolerance_ns (nanoseconds)
+    /// Returns true if start/end timestamps align within `tolerance_ns` (nanoseconds)
     pub fn is_compatible_with(&self, primary: &PrimaryGeoSpatialData, tolerance_ns: f64) -> bool {
         if self.timestamps.is_empty() || primary.points.is_empty() {
             return false;
@@ -761,13 +767,13 @@ pub enum MergeError {
 impl std::fmt::Display for MergeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MergeError::IncompatibleTimeRange => {
+            Self::IncompatibleTimeRange => {
                 write!(
                     f,
                     "Auxiliary data time range doesn't align with primary dataset"
                 )
             }
-            MergeError::FieldAlreadyExists => {
+            Self::FieldAlreadyExists => {
                 write!(f, "Field already exists in primary dataset")
             }
         }
@@ -818,7 +824,7 @@ mod tests {
         let lon = vec![12.0, 12.1, 12.2];
 
         let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
-            GeoSpatialDataBuilder::new("Primary".to_string())
+            GeoSpatialDataBuilder::new("Primary")
                 .timestamp(&primary_times)
                 .lat(&lat)
                 .lon(&lon)
@@ -833,7 +839,7 @@ mod tests {
         let aux_altitude = vec![100.0, 105.0, 110.0, 115.0, 120.0, 125.0, 130.0];
 
         let aux = AuxiliaryGeoSpatialData {
-            name: "Altimeter".to_string(),
+            name: "Altimeter".into(),
             timestamps: aux_times,
             altitudes: Some(RawGeoAltitudes::Gnss(aux_altitude.into())),
             speeds: None,
@@ -860,7 +866,7 @@ mod tests {
         let lon = vec![12.0, 12.1, 12.2];
 
         let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
-            GeoSpatialDataBuilder::new("Test".to_string())
+            GeoSpatialDataBuilder::new("Test")
                 .timestamp(&primary_times)
                 .lat(&lat)
                 .lon(&lon)
@@ -874,7 +880,7 @@ mod tests {
         let aux_altitude = vec![100.0, 200.0, 300.0];
 
         let aux = AuxiliaryGeoSpatialData {
-            name: "Aux".to_string(),
+            name: "Aux".to_owned(),
             timestamps: aux_times,
             altitudes: Some(RawGeoAltitudes::Laser(aux_altitude.into())),
             speeds: None,
@@ -898,7 +904,7 @@ mod tests {
         let lon = vec![12.0, 12.1, 12.2];
 
         let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
-            GeoSpatialDataBuilder::new("Test".to_string())
+            GeoSpatialDataBuilder::new("Test")
                 .timestamp(&primary_times)
                 .lat(&lat)
                 .lon(&lon)
@@ -914,7 +920,7 @@ mod tests {
             RawGeoAltitudes::Laser(vec![100.0, 110.0, 120.0, 200.0, 250.0, 300.0].into());
 
         let aux = AuxiliaryGeoSpatialData {
-            name: "Aux".to_string(),
+            name: "Aux".to_owned(),
             timestamps: aux_times,
             altitudes: Some(aux_altitude),
             speeds: None,
@@ -939,7 +945,7 @@ mod tests {
         let lon = vec![12.0, 12.05, 12.1, 12.15, 12.2];
 
         let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
-            GeoSpatialDataBuilder::new("Test".to_string())
+            GeoSpatialDataBuilder::new("Test")
                 .timestamp(&primary_times)
                 .lat(&lat)
                 .lon(&lon)
@@ -954,7 +960,7 @@ mod tests {
         let aux_altitude = RawGeoAltitudes::Gnss(vec![100.0, 200.0, 300.0].into());
 
         let aux = AuxiliaryGeoSpatialData {
-            name: "Aux".to_string(),
+            name: "Aux".to_owned(),
             timestamps: aux_times,
             altitudes: Some(aux_altitude),
             speeds: None,
@@ -979,7 +985,7 @@ mod tests {
         let lon = vec![12.0, 12.1, 12.2];
 
         let GeoSpatialDataset::PrimaryGeoSpatialData(mut primary) =
-            GeoSpatialDataBuilder::new("Test".to_string())
+            GeoSpatialDataBuilder::new("Test")
                 .timestamp(&primary_times)
                 .lat(&lat)
                 .lon(&lon)
@@ -993,7 +999,7 @@ mod tests {
         let aux_altitude = RawGeoAltitudes::Laser(vec![100.0, 200.0, 300.0].into());
 
         let aux = AuxiliaryGeoSpatialData {
-            name: "Aux".to_string(),
+            name: "Aux".to_owned(),
             timestamps: aux_times,
             altitudes: Some(aux_altitude),
             speeds: None,
