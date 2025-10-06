@@ -631,8 +631,10 @@ impl AuxiliaryGeoSpatialData {
 }
 
 impl PrimaryGeoSpatialData {
-    /// Merge auxiliary data into this primary dataset
+    /// Merge auxiliary data into this primary dataset.
+    ///
     /// Only merges fields that don't already exist in the primary data
+    ///
     /// Uses nearest-neighbor matching (NO interpolation) to preserve data integrity
     pub fn merge_auxiliary(
         &mut self,
@@ -643,19 +645,25 @@ impl PrimaryGeoSpatialData {
             return Err(MergeError::IncompatibleTimeRange);
         }
 
-        // Check if we already have the data fields
-        let has_altitude = self.points.first().is_some_and(|p| p.altitude.is_some());
-        let has_speed = self.points.first().is_some_and(|p| p.speed.is_some());
-        let has_heading = self.points.first().is_some_and(|p| p.heading.is_some());
-
-        // Merge altitude if we don't have it
+        // Merge altitude if we don't have it or we have it and it's GNSS and the `aux` one is laser
         if let Some(aux_alt) = &aux.altitudes
-            && !has_altitude
+            && self.points.first().is_none_or(|p| {
+                p.altitude.is_none_or(|p| match p {
+                    GeoAltitude::Gnss(_) => match aux_alt {
+                        RawGeoAltitudes::Gnss(_) => false,
+                        // Replace existing altitude if it is from GNNS and the new one is from laser
+                        RawGeoAltitudes::Laser(_) => true,
+                    },
+                    GeoAltitude::Laser(_) => false,
+                })
+            })
         {
             self.merge_altitude_nearest(&aux.timestamps, aux_alt);
         }
 
-        // Similar for speed and heading...
+        // Check if we already have the data fields
+        let has_speed = self.points.first().is_some_and(|p| p.speed.is_some());
+        let has_heading = self.points.first().is_some_and(|p| p.heading.is_some());
         if let Some(aux_spd) = &aux.speeds
             && !has_speed
         {
