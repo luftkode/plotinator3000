@@ -57,7 +57,7 @@ impl MqttDataReceiver {
 
     pub fn poll(&mut self, mqtt_plot_data: &mut MqttPlotData) {
         while let Ok(mqtt_msg) = self.recv.try_recv() {
-            log::debug!("Got MQTT Message: {mqtt_msg:?}");
+            log::trace!("Got MQTT Message: {mqtt_msg:?}");
             match mqtt_msg {
                 MqttMessage::ConnectionState(connection_state) => self.state = connection_state,
                 MqttMessage::Data(mqtt_data) => mqtt_plot_data.insert_data(mqtt_data),

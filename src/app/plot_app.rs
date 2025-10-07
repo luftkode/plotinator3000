@@ -160,6 +160,15 @@ impl eframe::App for PlotApp {
                     self.map_commander.add_geo_data(geo_data);
                 }
             }
+            if let Some(mqtt_geo_points) = self
+                .mqtt
+                .mqtt_plot_data
+                .as_mut()
+                .map(|d| d.take_geo_points())
+                .flatten()
+            {
+                self.map_commander.add_mqtt_geo_data(mqtt_geo_points);
+            }
 
             if self.plot.plot_count() == 0 {
                 supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown

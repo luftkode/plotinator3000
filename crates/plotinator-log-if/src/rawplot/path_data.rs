@@ -62,7 +62,7 @@ impl fmt::Display for GeoAltitude {
 }
 
 /// A single point in space and time
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct GeoPoint {
     pub timestamp: f64,
     /// Lat/lon
@@ -76,6 +76,7 @@ pub struct GeoPoint {
 }
 
 impl GeoPoint {
+    #[inline]
     pub fn new(timestamp: f64, (lat, lon): (f64, f64)) -> Self {
         Self {
             timestamp,
@@ -86,16 +87,19 @@ impl GeoPoint {
         }
     }
 
+    #[inline]
     pub fn with_heading(mut self, heading: f64) -> Self {
         self.heading = Some(heading);
         self
     }
 
+    #[inline]
     pub fn with_altitude(mut self, altitude: GeoAltitude) -> Self {
         self.altitude = Some(altitude);
         self
     }
 
+    #[inline]
     pub fn with_speed(mut self, speed: f64) -> Self {
         self.speed = Some(speed);
         self
@@ -321,19 +325,19 @@ impl PrimaryGeoSpatialData {
         }
     }
 
-    /// Get the latitude bounds (min, max) if available
+    /// Get the latitude bounds (min, max)
     pub fn lat_bounds(&self) -> (f64, f64) {
-        self.cached.lat_min_max
+        self.cached.lat_bounds()
     }
 
     /// Get the longitude bounds (min, max) if available
     pub fn lon_bounds(&self) -> (f64, f64) {
-        self.cached.lon_min_max
+        self.cached.lon_bounds()
     }
 
     /// Get the speed bounds (min, max) if available
     pub fn speed_bounds(&self) -> (f64, f64) {
-        self.cached.speed_min_max
+        self.cached.speed_bounds()
     }
 
     /// Builds and returns all the [`RawPlotCommon`] that can be extracted from the underlying data
@@ -433,8 +437,8 @@ impl PrimaryGeoSpatialData {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-struct CachedValues {
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct CachedValues {
     lat_min_max: (f64, f64),
     lon_min_max: (f64, f64),
     speed_min_max: (f64, f64),
@@ -442,7 +446,11 @@ struct CachedValues {
 }
 
 impl CachedValues {
-    fn compute(points: &[GeoPoint]) -> Self {
+    fn valid_altitude(altitude: f64) -> bool {
+        altitude.is_sign_positive() && altitude < 3000.
+    }
+
+    pub fn compute(points: &[GeoPoint]) -> Self {
         if points.is_empty() {
             return Self::default();
         }
@@ -474,8 +482,7 @@ impl CachedValues {
                 speed_max = speed_max.max(speed);
             }
             if let Some(altitude) = point.altitude.map(|a| a.val())
-                && altitude.is_sign_positive()
-                && altitude < 3000.
+                && Self::valid_altitude(altitude)
             {
                 altitude_min = altitude_min.min(altitude);
                 altitude_max = altitude_max.max(altitude);
@@ -507,6 +514,72 @@ impl CachedValues {
             speed_min_max,
             altitude_min_max,
         }
+    }
+
+    /// Get the latitude bounds (min, max)
+    pub fn lat_bounds(&self) -> (f64, f64) {
+        self.lat_min_max
+    }
+
+    /// Get the longitude bounds (min, max) if available
+    pub fn lon_bounds(&self) -> (f64, f64) {
+        self.lon_min_max
+    }
+
+    /// Get the speed bounds (min, max) if available
+    pub fn speed_bounds(&self) -> (f64, f64) {
+        self.speed_min_max
+    }
+
+    /// Update latitude bounds with a new latitude value
+    pub fn update_lat(&mut self, lat: f64) {
+        self.lat_min_max.0 = self.lat_min_max.0.min(lat);
+        self.lat_min_max.1 = self.lat_min_max.1.max(lat);
+    }
+
+    /// Update longitude bounds with a new longitude value
+    pub fn update_lon(&mut self, lon: f64) {
+        self.lon_min_max.0 = self.lon_min_max.0.min(lon);
+        self.lon_min_max.1 = self.lon_min_max.1.max(lon);
+    }
+
+    /// Update speed bounds with a new speed value (if present)
+    pub fn update_speed(&mut self, speed: Option<f64>) {
+        if let Some(speed) = speed {
+            // Handle the case where cache is still default (0.0, 0.0)
+            if self.speed_min_max == (0.0, 0.0) {
+                self.speed_min_max = (speed, speed);
+            } else {
+                self.speed_min_max.0 = self.speed_min_max.0.min(speed);
+                self.speed_min_max.1 = self.speed_min_max.1.max(speed);
+            }
+        }
+    }
+
+    /// Update altitude bounds with a new altitude value (if present and valid)
+    pub fn update_altitude(&mut self, altitude: Option<f64>) {
+        if let Some(alt) = altitude {
+            if Self::valid_altitude(alt) {
+                // Handle the case where cache is still default (0.0, 0.0)
+                if self.altitude_min_max == (0.0, 0.0) {
+                    self.altitude_min_max = (alt, alt);
+                } else {
+                    self.altitude_min_max.0 = self.altitude_min_max.0.min(alt);
+                    self.altitude_min_max.1 = self.altitude_min_max.1.max(alt);
+                }
+            }
+        }
+    }
+
+    /// Convenience method to update all bounds from a single GeoPoint
+    pub fn update_from_point(&mut self, point: &GeoPoint) {
+        let lat = point.position.y();
+        let lon = point.position.x();
+
+        self.update_lat(lat);
+        self.update_lon(lon);
+        self.update_speed(point.speed);
+        self.update_altitude(point.altitude.map(|a| a.val()));
     }
 }
 

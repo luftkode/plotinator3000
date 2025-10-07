@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use walkers::{HttpTiles, MapMemory, Position, Tiles};
 
-use crate::PathEntry;
+use crate::{MqttGeoPath, PathEntry};
 
 /// Persisted state of the map, meaning tiles cache, geospatial data, centering etc.
 #[derive(Default, Deserialize, Serialize)]
@@ -58,8 +58,8 @@ impl MapState {
         &self.data
     }
 
-    pub fn zoom_to_fit(&mut self, geo_data: &[PathEntry]) {
-        let Some(bounds) = calculate_bounding_box(geo_data) else {
+    pub fn zoom_to_fit(&mut self, geo_data: &[PathEntry], mqtt_geo_data: &[MqttGeoPath]) {
+        let Some(bounds) = calculate_bounding_box(geo_data, mqtt_geo_data) else {
             return;
         };
 
@@ -174,10 +174,17 @@ impl BoundingBox {
     }
 }
 
-fn calculate_bounding_box(geo_data: &[PathEntry]) -> Option<BoundingBox> {
+fn calculate_bounding_box(
+    geo_data: &[PathEntry],
+    mqtt_geo_data: &[MqttGeoPath],
+) -> Option<BoundingBox> {
     let visible_paths: Vec<&PathEntry> = geo_data.iter().filter(|p| p.settings.visible).collect();
+    let visible_mqtt_paths: Vec<&MqttGeoPath> = mqtt_geo_data
+        .iter()
+        .filter(|p| p.settings.visible)
+        .collect();
 
-    if visible_paths.is_empty() {
+    if visible_paths.is_empty() && visible_mqtt_paths.is_empty() {
         return None;
     }
 
@@ -193,6 +200,24 @@ fn calculate_bounding_box(geo_data: &[PathEntry]) -> Option<BoundingBox> {
 
         log::debug!("{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]", gd.name);
         log::debug!("{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]", gd.name);
+
+        min_lat = min_lat.min(tmp_min_lat);
+        max_lat = max_lat.max(tmp_max_lat);
+        min_lon = min_lon.min(tmp_min_lon);
+        max_lon = max_lon.max(tmp_max_lon);
+    }
+    for mqtt_path in visible_mqtt_paths {
+        let (tmp_min_lat, tmp_max_lat) = mqtt_path.lat_bounds();
+        let (tmp_min_lon, tmp_max_lon) = mqtt_path.lon_bounds();
+
+        log::debug!(
+            "{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]",
+            mqtt_path.topic
+        );
+        log::debug!(
+            "{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]",
+            mqtt_path.topic
+        );
 
         min_lat = min_lat.min(tmp_min_lat);
         max_lat = max_lat.max(tmp_max_lat);

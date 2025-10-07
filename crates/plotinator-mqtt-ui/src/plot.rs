@@ -1,3 +1,5 @@
+use std::mem;
+
 use chrono::DateTime;
 use egui::Color32;
 use egui_plot::PlotPoint;
@@ -6,8 +8,10 @@ use plotinator_log_if::{
     rawplot::RawPlot,
 };
 use plotinator_mqtt::data::listener::{
-    MqttData, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
+    MqttData, MqttGeoPoint, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
 };
+use plotinator_ui_util::auto_color;
+use smallvec::SmallVec;
 
 use crate::serializable::{SerializableMqttPlotData, SerializableMqttPlotPoints};
 
@@ -16,10 +20,13 @@ use crate::serializable::{SerializableMqttPlotData, SerializableMqttPlotPoints};
 /// This is the basis for all line plots from MQTT data
 #[derive(Default, Clone)]
 pub struct MqttPlotData {
-    pub(crate) mqtt_plot_data: Vec<(MqttPlotPoints, Color32)>,
+    // We typically won't listen to a huge amount of topics
+    pub(crate) mqtt_plot_data: SmallVec<[(MqttPlotPoints, Color32); 10]>,
+    pub(crate) geo_data: SmallVec<[MqttGeoPoint; 10]>,
 }
 
 impl MqttPlotData {
+    #[inline]
     pub(crate) fn insert_inner_data(&mut self, data: MqttTopicData) {
         if let Some((mp, _)) = self
             .mqtt_plot_data
@@ -27,21 +34,42 @@ impl MqttPlotData {
             .find(|(mp, _)| mp.topic == data.topic())
         {
             match data.payload {
+                TopicPayload::Points(plot_points) => {
+                    for p in plot_points {
+                        mp.data.push(p);
+                    }
+                }
                 TopicPayload::Point(plot_point) => mp.data.push(plot_point),
-                TopicPayload::Points(mut plot_points) => mp.data.append(&mut plot_points),
+                TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint {
+                    topic: data.topic,
+                    point,
+                }),
             }
         } else {
-            self.mqtt_plot_data
-                .push((data.into(), plotinator_ui_util::auto_color()));
+            let MqttTopicData { topic, payload } = data;
+            match payload {
+                TopicPayload::Point(p) => self.mqtt_plot_data.push((
+                    MqttPlotPoints {
+                        topic,
+                        data: vec![p],
+                    },
+                    auto_color(),
+                )),
+                TopicPayload::Points(data) => self
+                    .mqtt_plot_data
+                    .push((MqttPlotPoints { topic, data }, auto_color())),
+                TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint { topic, point }),
+            };
         }
     }
 
+    #[inline]
     pub(crate) fn insert_data(&mut self, data: MqttData) {
         match data.inner {
             MqttTopicDataWrapper::Topic(mqtt_topic_data) => self.insert_inner_data(mqtt_topic_data),
-            MqttTopicDataWrapper::Topics(mqtt_topic_data_vec) => {
-                for mtd in mqtt_topic_data_vec {
-                    self.insert_inner_data(mtd);
+            MqttTopicDataWrapper::Topics(data) => {
+                for d in data {
+                    self.insert_inner_data(d);
                 }
             }
         }
@@ -49,6 +77,15 @@ impl MqttPlotData {
 
     pub fn plots(&self) -> &[(MqttPlotPoints, Color32)] {
         &self.mqtt_plot_data
+    }
+
+    /// Take all available [MQTT Geo Points](MqttGeoPoint)
+    pub fn take_geo_points(&mut self) -> Option<SmallVec<[MqttGeoPoint; 10]>> {
+        if self.geo_data.is_empty() {
+            None
+        } else {
+            Some(mem::take(&mut self.geo_data))
+        }
     }
 }
 
@@ -60,17 +97,6 @@ impl MqttPlotData {
 pub struct MqttPlotPoints {
     pub topic: String,
     pub data: Vec<PlotPoint>,
-}
-
-impl From<MqttTopicData> for MqttPlotPoints {
-    fn from(mqtt_topic_data: MqttTopicData) -> Self {
-        let MqttTopicData { topic, payload } = mqtt_topic_data;
-        let data = match payload {
-            TopicPayload::Point(plot_point) => vec![plot_point],
-            TopicPayload::Points(plot_points) => plot_points,
-        };
-        Self { topic, data }
-    }
 }
 
 impl TryFrom<MqttPlotPoints> for RawPlotCommon {
@@ -105,7 +131,10 @@ impl TryFrom<MqttPlotPoints> for RawPlotCommon {
 
 impl From<MqttPlotData> for SerializableMqttPlotData {
     fn from(original: MqttPlotData) -> Self {
-        let MqttPlotData { mqtt_plot_data } = original;
+        let MqttPlotData {
+            mqtt_plot_data,
+            geo_data: _, // We don't store geo points as they are duplicate data that are just sent to the map view
+        } = original;
         let mut first_timestamp = None;
         for (p, _) in &mqtt_plot_data {
             if p.data.len() < 2 {

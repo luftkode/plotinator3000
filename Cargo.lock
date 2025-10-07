@@ -3952,8 +3952,11 @@ dependencies = [
  "egui_extras",
  "log",
  "plotinator-log-if",
+ "plotinator-mqtt",
  "plotinator-proc-macros",
+ "plotinator-ui-util",
  "serde",
+ "smallvec",
  "strum 0.27.2",
  "strum_macros 0.27.2",
  "walkers",
@@ -3975,6 +3978,7 @@ dependencies = [
  "rumqttc",
  "serde",
  "serde_json",
+ "smallvec",
  "strum 0.27.2",
  "strum_macros 0.27.2",
  "testresult",
@@ -3996,6 +4000,7 @@ dependencies = [
  "plotinator-ui-util",
  "serde",
  "serde_json",
+ "smallvec",
 ]
 
 [[package]]
@@ -5128,6 +5133,9 @@ name = "smallvec"
 version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "smithay-client-toolkit"

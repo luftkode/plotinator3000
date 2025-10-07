@@ -1,5 +1,7 @@
 use plotinator_log_if::rawplot::path_data::GeoSpatialDataset;
+use plotinator_mqtt::data::listener::MqttGeoPoint;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 use crate::MapCommand;
@@ -10,7 +12,8 @@ pub struct MapUiCommander {
     ///
     /// should be in sync with the [`MapViewPort`]
     open: bool,
-    // Have we received geospatial data at any time?
+    // Have we received geospatial data at any time? We use this to open the map the first time
+    // geo spatial data is received, but we don't wanna keep opening it up if the user chose to close it
     pub any_data_received: bool,
     /// Set by a click on the map button, toggles visibility of the map viewport
     pub map_button_clicked: bool,
@@ -56,6 +59,11 @@ impl MapUiCommander {
         log::debug!("Sending geo data to map: {}", geo_data.name());
         self.any_data_received = true;
         self.send_cmd(MapCommand::AddGeoData(geo_data));
+    }
+
+    pub fn add_mqtt_geo_data(&mut self, mqtt_points: SmallVec<[MqttGeoPoint; 10]>) {
+        self.any_data_received = true;
+        self.send_cmd(MapCommand::MQTTGeoData(Box::new(mqtt_points)));
     }
 
     /// Send the current cursor position on the time axis to the [`MapViewPort`]

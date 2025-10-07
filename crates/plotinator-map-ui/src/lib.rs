@@ -3,13 +3,17 @@ use egui::{
     ViewportBuilder, ViewportId, Window,
 };
 use egui_phosphor::regular::{
-    CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL, SQUARE,
+    AIRPLANE, CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL,
+    SQUARE,
 };
 use plotinator_log_if::{
-    prelude::{GeoAltitude, PrimaryGeoSpatialData},
-    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset},
+    prelude::{GeoAltitude, GeoPoint, PrimaryGeoSpatialData},
+    rawplot::path_data::{AuxiliaryGeoSpatialData, CachedValues, GeoSpatialDataset},
 };
+use plotinator_mqtt::data::listener::MqttGeoPoint;
+use plotinator_ui_util::auto_color;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::Map;
 
@@ -22,7 +26,10 @@ use crate::{
 /// Messages sent from main app to map viewport
 #[derive(strum_macros::Display)]
 pub enum MapCommand {
+    /// Geo spatial data from a loaded dataset
     AddGeoData(GeoSpatialDataset),
+    /// Geo spatial data received over MQTT continuously
+    MQTTGeoData(Box<SmallVec<[MqttGeoPoint; 10]>>),
     /// Cursor position on the time axis
     CursorPos(f64),
     FitToAllPaths,
@@ -38,6 +45,7 @@ mod map_state;
 pub struct MapViewPort {
     pub open: bool,
     pub geo_data: Vec<PathEntry>,
+    mqtt_geo_data: SmallVec<[MqttGeoPath; 3]>,
     pub unmerged_aux_data: Vec<AuxiliaryGeoSpatialData>,
     map_state: MapState,
     #[serde(skip)]
@@ -47,6 +55,9 @@ pub struct MapViewPort {
     plot_time_cursor_pos: Option<f64>,
     #[serde(skip)]
     hovered_path: Option<usize>, // index of hovered path
+    #[serde(skip)]
+    hovered_mqtt_path: Option<usize>,
+    mqtt_follow_mode: bool,
 }
 
 impl MapViewPort {
@@ -116,6 +127,42 @@ impl MapViewPort {
 
                     self.zoom_to_fit();
                 }
+                MapCommand::MQTTGeoData(geo_points) => {
+                    let maybe_first_data = self.mqtt_geo_data.is_empty();
+
+                    // Iterate through incoming MQTT points (typically 1-2, max ~10)
+                    for mqtt_point in geo_points.into_iter() {
+                        log::info!("Checking for match for {}", mqtt_point.topic);
+                        let mut match_found = false;
+                        for mqtt_geo_path in &mut self.mqtt_geo_data {
+                            if mqtt_point.topic == mqtt_geo_path.topic {
+                                match_found = true;
+                                // Check if last point has matching timestamp (within microsecond precision)
+                                if let Some(last_point) = mqtt_geo_path.points.last_mut()
+                                    && (last_point.timestamp - mqtt_point.point.timestamp).abs()
+                                        < 1e6
+                                {
+                                    let timestamp_delta =
+                                        (last_point.timestamp - mqtt_point.point.timestamp).abs();
+                                    log::warn!("timestamp_delta={timestamp_delta}");
+                                    log::info!("{mqtt_point:?}");
+                                    *last_point = mqtt_point.point;
+                                } else {
+                                    mqtt_geo_path.push(mqtt_point.point);
+                                }
+                                break;
+                            }
+                        }
+                        log::info!("match={match_found}");
+                        if !match_found {
+                            self.mqtt_geo_data.push(mqtt_point.into());
+                        }
+                    }
+
+                    if maybe_first_data && !self.mqtt_geo_data.is_empty() {
+                        self.zoom_to_fit();
+                    }
+                }
                 MapCommand::CursorPos(time_pos) => {
                     log::trace!("Got cursor time: {time_pos:.}");
                     cursor_pos = Some(time_pos);
@@ -132,7 +179,8 @@ impl MapViewPort {
     }
 
     fn zoom_to_fit(&mut self) {
-        self.map_state.zoom_to_fit(&self.geo_data);
+        self.map_state
+            .zoom_to_fit(&self.geo_data, &self.mqtt_geo_data);
     }
 
     pub fn add_geo_data(&mut self, geo_data: PrimaryGeoSpatialData) {
@@ -222,6 +270,12 @@ impl MapViewPort {
             {
                 self.zoom_to_fit();
             }
+
+            ui.toggle_value(
+                &mut self.mqtt_follow_mode,
+                RichText::new(format!("{AIRPLANE} Follow (MQTT)")),
+            )
+            .on_hover_text("Moves the map to center the latest coordinate received on MQTT. Only applies to the first received MQTT path");
         });
     }
 
@@ -243,6 +297,11 @@ impl MapViewPort {
         .double_click_to_zoom(true);
 
         map.show(ui, |ui, projector, _map_rect| {
+            const ZOOM_THRESHOLD_FOR_HEADING: f64 = 18.0;
+            const ZOOM_THRESHOLD_FOR_TELEMETRY_LABEL: f64 = 19.4;
+            let draw_heading = zoom_level > ZOOM_THRESHOLD_FOR_HEADING;
+            let draw_telemetry_label = zoom_level > ZOOM_THRESHOLD_FOR_TELEMETRY_LABEL;
+
             for (i, path) in self.geo_data.iter().enumerate() {
                 if !path.settings.visible {
                     continue;
@@ -251,9 +310,9 @@ impl MapViewPort {
                 let is_hovered = self.hovered_path == Some(i);
 
                 let draw_settings = DrawSettings {
-                    draw_heading_arrows: zoom_level > 18.0 && path.settings.show_heading,
+                    draw_heading_arrows: draw_heading && path.settings.show_heading,
                     telemetry_label: TelemetryLabelSettings {
-                        draw: zoom_level > 19.4,
+                        draw: draw_telemetry_label,
                         with_speed: path.settings.show_speed,
                         with_altitude: path.settings.show_altitude,
                     },
@@ -263,6 +322,30 @@ impl MapViewPort {
 
                 if is_hovered {
                     draw::highlight_whole_path(ui.painter(), projector, &path.data);
+                }
+            }
+
+            // Same but for MQTT
+            for (i, path) in self.mqtt_geo_data.iter().enumerate() {
+                if !path.settings.visible {
+                    continue;
+                }
+
+                let is_hovered = self.hovered_mqtt_path == Some(i);
+
+                let draw_settings = DrawSettings {
+                    draw_heading_arrows: draw_heading && path.settings.show_heading,
+                    telemetry_label: TelemetryLabelSettings {
+                        draw: draw_telemetry_label,
+                        with_speed: path.settings.show_speed,
+                        with_altitude: path.settings.show_altitude,
+                    },
+                };
+
+                draw::draw_mqtt_path(ui, projector, &path, &draw_settings);
+
+                if is_hovered {
+                    draw::highlight_whole_mqtt_path(ui.painter(), projector, path);
                 }
             }
 
@@ -282,7 +365,7 @@ impl MapViewPort {
             .default_pos(egui::pos2(0.0, 32.0))
             .default_size([200.0, 150.0])
             .show(ctx, |ui| {
-                if self.geo_data.is_empty() {
+                if self.geo_data.is_empty() && self.mqtt_geo_data.is_empty() {
                     ui.label("No paths loaded");
                 } else {
                     self.show_legend_grid(ui);
@@ -291,6 +374,7 @@ impl MapViewPort {
                 // Reset hovered state if the mouse leaves the legend window
                 if !ui.ui_contains_pointer() {
                     self.hovered_path = None;
+                    self.hovered_mqtt_path = None;
                 }
             });
     }
@@ -363,6 +447,65 @@ impl MapViewPort {
                     self.hovered_path = Some(i);
                 }
             }
+            // Same but for MQTT paths
+            for (i, mqtt_path) in self.mqtt_geo_data.iter_mut().enumerate() {
+                log::info!("Drawing MQTT path legend: {mqtt_path:?}");
+                let mut path_ui_hovered = false;
+                ui.horizontal(|ui| {
+                    // Visibility toggle
+                    let indicator = if mqtt_path.settings.visible {
+                        RichText::new(CHECK_SQUARE).color(mqtt_path.color).weak()
+                    } else {
+                        RichText::new(SQUARE).color(mqtt_path.color).strong()
+                    };
+                    if ui.button(indicator).clicked() {
+                        mqtt_path.settings.visible = !mqtt_path.settings.visible;
+                    }
+                    ui.label(RichText::new(&mqtt_path.topic).strong());
+
+                    if ui.ui_contains_pointer() {
+                        path_ui_hovered = true;
+                    }
+                });
+
+                let first_point = mqtt_path.points.first();
+                let mut attr_indicator_label = |has_attr: bool, show_attr: &mut bool| {
+                    let has_attr_text = if has_attr {
+                        if *show_attr {
+                            RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
+                        } else {
+                            RichText::new(CIRCLE).color(Color32::GREEN).weak()
+                        }
+                    } else {
+                        RichText::new(CIRCLE).weak()
+                    };
+                    let resp = ui.button(has_attr_text);
+                    if resp.clicked() {
+                        *show_attr = !*show_attr;
+                    }
+                    if resp.hovered() {
+                        path_ui_hovered = true;
+                    }
+                };
+
+                // Velocity column
+                let has_speed = first_point.and_then(|p| p.speed).is_some();
+                attr_indicator_label(has_speed, &mut mqtt_path.settings.show_speed);
+
+                // Altitude column
+                let has_alt = first_point.and_then(|p| p.altitude).is_some();
+                attr_indicator_label(has_alt, &mut mqtt_path.settings.show_altitude);
+
+                // Heading column
+                let has_heading = first_point.and_then(|p| p.heading).is_some();
+                attr_indicator_label(has_heading, &mut mqtt_path.settings.show_heading);
+                ui.end_row();
+
+                // Hover highlighting
+                if path_ui_hovered {
+                    self.hovered_mqtt_path = Some(i);
+                }
+            }
         });
     }
 
@@ -387,15 +530,21 @@ impl MapViewPort {
     }
 }
 
-#[derive(Clone, Copy, Deserialize, Serialize)]
-pub struct PathEntrySettings {
+#[derive(Clone, Deserialize, Serialize)]
+pub struct PathEntry {
+    pub data: PrimaryGeoSpatialData,
+    pub settings: GeoPathSettings,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct GeoPathSettings {
     pub visible: bool,
     pub show_heading: bool,  // if applicable
     pub show_altitude: bool, // if applicable
     pub show_speed: bool,    // if applicable
 }
 
-impl Default for PathEntrySettings {
+impl Default for GeoPathSettings {
     fn default() -> Self {
         Self {
             visible: true,
@@ -406,8 +555,48 @@ impl Default for PathEntrySettings {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-pub struct PathEntry {
-    pub data: PrimaryGeoSpatialData,
-    pub settings: PathEntrySettings,
+#[derive(Debug, Default, Deserialize, Serialize)]
+struct MqttGeoPath {
+    topic: String,
+    points: Vec<GeoPoint>,
+    settings: GeoPathSettings,
+    pub boundary_values: CachedValues,
+    pub color: Color32,
+}
+
+impl From<MqttGeoPoint> for MqttGeoPath {
+    fn from(mqtt_point: MqttGeoPoint) -> Self {
+        let MqttGeoPoint { topic, point } = mqtt_point;
+        let boundary_values = CachedValues::compute(&[point]);
+        Self {
+            topic,
+            points: vec![point],
+            settings: GeoPathSettings::default(),
+            boundary_values,
+            color: auto_color(),
+        }
+    }
+}
+
+impl MqttGeoPath {
+    pub fn push(&mut self, point: GeoPoint) {
+        log::debug!("push MQTT point: {point:?}");
+        self.boundary_values.update_from_point(&point);
+        self.points.push(point);
+    }
+
+    /// Get the latitude bounds (min, max)
+    pub fn lat_bounds(&self) -> (f64, f64) {
+        self.boundary_values.lat_bounds()
+    }
+
+    /// Get the longitude bounds (min, max) if available
+    pub fn lon_bounds(&self) -> (f64, f64) {
+        self.boundary_values.lon_bounds()
+    }
+
+    /// Get the speed bounds (min, max) if available
+    pub fn speed_bounds(&self) -> (f64, f64) {
+        self.boundary_values.speed_bounds()
+    }
 }

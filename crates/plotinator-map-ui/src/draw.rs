@@ -2,7 +2,7 @@ use egui::{Color32, FontId, Painter, Pos2, Stroke, Vec2, vec2};
 use plotinator_log_if::prelude::{GeoPoint, PrimaryGeoSpatialData};
 use walkers::Projector;
 
-use crate::PathEntry;
+use crate::{MqttGeoPath, PathEntry};
 
 pub struct DrawSettings {
     pub(crate) draw_heading_arrows: bool,
@@ -25,15 +25,64 @@ pub(crate) fn draw_path(
         return;
     }
 
-    let painter = ui.painter();
     let path_color = path.color;
 
     // We need the full GeoPoint data at each screen position to access speed and heading.
-    let screen_points: Vec<(Pos2, &GeoPoint)> = path
+    let path_points_iter = path
         .points
         .iter()
-        .map(|p| (projector.project(p.position).to_pos2(), p))
-        .collect();
+        .map(|p| (projector.project(p.position).to_pos2(), p));
+    draw_path_inner(
+        ui,
+        path_points_iter,
+        path_color,
+        path.speed_bounds(),
+        settings,
+    );
+}
+
+pub(crate) fn draw_mqtt_path(
+    ui: &egui::Ui,
+    projector: &Projector,
+    path: &MqttGeoPath,
+    settings: &DrawSettings,
+) {
+    if path.points.len() < 2 {
+        return;
+    }
+
+    let path_color = path.color;
+
+    // We need the full GeoPoint data at each screen position to access speed and heading.
+    let path_points_iter = path
+        .points
+        .iter()
+        .map(|p| (projector.project(p.position).to_pos2(), p));
+    draw_path_inner(
+        ui,
+        path_points_iter,
+        path_color,
+        path.speed_bounds(),
+        settings,
+    );
+}
+
+pub(crate) fn draw_path_inner<'p>(
+    ui: &egui::Ui,
+    path: impl Iterator<Item = (Pos2, &'p GeoPoint)>,
+    path_color: Color32,
+    speed_range: (f64, f64),
+    settings: &DrawSettings,
+) {
+    let painter = ui.painter();
+
+    // We need the full GeoPoint data at each screen position to access speed and heading.
+    // let mqtt_points_iter = mqtt_path.iter().flat_map(|m| {
+    //     m.points
+    //         .iter()
+    //         .map(|p| (projector.project(p.position).to_pos2(), p))
+    // });
+    let screen_points: Vec<(Pos2, &GeoPoint)> = path.collect();
 
     // Draw the path as a colored line with altitude-based opacity
     const MAX_ALTITUDE: f64 = 1000.0;
@@ -55,9 +104,6 @@ pub(crate) fn draw_path(
         let stroke = Stroke::new(3.0, segment_color);
         painter.line_segment([window[0].0, window[1].0], stroke);
     }
-
-    // Get the speed range for the entire path to normalize arrow lengths.
-    let speed_range = path.speed_bounds();
 
     // Draw circles at each point
     for (point_pos, _geo_point) in &screen_points {
@@ -401,20 +447,37 @@ pub(crate) fn highlight_whole_path(
         .map(|p| projector.project(p.position).to_pos2())
         .collect();
 
+    highlight_all_points(painter, &screen_points, path.color);
+}
+
+pub(crate) fn highlight_whole_mqtt_path(
+    painter: &Painter,
+    projector: &Projector,
+    path: &MqttGeoPath,
+) {
+    let screen_points: Vec<Pos2> = path
+        .points
+        .iter()
+        .map(|p| projector.project(p.position).to_pos2())
+        .collect();
+
+    highlight_all_points(painter, &screen_points, path.color);
+}
+
+pub(crate) fn highlight_all_points(painter: &Painter, screen_points: &[Pos2], color: Color32) {
     if screen_points.len() < 2 {
         return;
     }
 
     // Draw a thicker halo around the path
-    let highlight_color =
-        Color32::from_rgba_unmultiplied(path.color.r(), path.color.g(), path.color.b(), 120);
+    let highlight_color = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 120);
 
     for window in screen_points.windows(2) {
         painter.line_segment([window[0], window[1]], Stroke::new(6.0, highlight_color));
     }
 
     // highlight each point
-    for point in &screen_points {
+    for point in screen_points {
         painter.circle_stroke(*point, 6.0, Stroke::new(2.0, highlight_color));
     }
 }
