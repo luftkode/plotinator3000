@@ -5,7 +5,6 @@ use click_delta::ClickDelta;
 use egui::Color32;
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
-use plotinator_map_ui::commander::MapUiCommander;
 use plotinator_plot_util::{CookedPlot, Plots, plots::MaxPlotBounds};
 use plotinator_supported_formats::SupportedFormat;
 use plotinator_ui_util::{box_selection::BoxSelection, format_large_number};
@@ -81,7 +80,8 @@ impl LogPlotUi {
         first_frame: &mut bool,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
-        map_cmd: &mut MapUiCommander,
+        #[cfg(not(target_arch = "wasm32"))]
+        map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
     ) -> Response {
@@ -173,6 +173,7 @@ impl LogPlotUi {
                 link_group.expect("uninitialized link group id"),
                 click_delta,
                 box_selection,
+                #[cfg(not(target_arch = "wasm32"))]
                 map_cmd,
                 mode,
             );

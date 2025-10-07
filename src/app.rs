@@ -1,24 +1,27 @@
 pub(crate) mod plot_app;
 
-use plotinator_map_ui::MapViewPort;
-
 /// Orchestrates Plotinator3000 GUI, both the primary plotting viewport and the map viewport
 pub struct GlobalApp {
     // The first time geo spatial data is loaded, we pop up the map window, but not on subsequent loads
+    #[cfg(not(target_arch = "wasm32"))]
     has_map_opened: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    map_view: plotinator_map_ui::MapViewPort,
     app: crate::PlotApp,
-    map_view: MapViewPort,
 }
 
 impl GlobalApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         Self {
+            #[cfg(not(target_arch = "wasm32"))]
             has_map_opened: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            map_view: plotinator_map_ui::MapViewPort::default(),
             app: crate::PlotApp::new(cc),
-            map_view: MapViewPort::default(),
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn open_map_viewport(&mut self, ctx: &egui::Context) {
         if self.map_view.open {
             return;
@@ -32,21 +35,25 @@ impl GlobalApp {
 
 impl eframe::App for GlobalApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        #[cfg(not(target_arch = "wasm32"))]
         self.map_view.show(ctx);
         self.app.update(ctx, frame);
 
-        if !self.has_map_opened && self.app.map_commander.any_data_received {
-            self.has_map_opened = true;
-            self.open_map_viewport(ctx);
-        }
-        if self.app.map_commander.map_button_clicked {
-            self.app.map_commander.map_button_clicked = false;
-            if self.map_view.open {
-                self.map_view.close();
-            } else {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if !self.has_map_opened && self.app.map_commander.any_data_received {
+                self.has_map_opened = true;
                 self.open_map_viewport(ctx);
             }
+            if self.app.map_commander.map_button_clicked {
+                self.app.map_commander.map_button_clicked = false;
+                if self.map_view.open {
+                    self.map_view.close();
+                } else {
+                    self.open_map_viewport(ctx);
+                }
+            }
+            self.app.map_commander.sync_open(self.map_view.open);
         }
-        self.app.map_commander.sync_open(self.map_view.open);
     }
 }

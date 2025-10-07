@@ -3,7 +3,6 @@ use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN};
-use plotinator_map_ui::commander::MapUiCommander;
 use plotinator_plot_ui::LogPlotUi;
 
 use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
@@ -23,7 +22,8 @@ pub struct PlotApp {
     first_frame: bool,
     #[serde(skip)]
     toasts: Toasts,
-    pub(crate) map_commander: MapUiCommander,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) map_commander: plotinator_map_ui::commander::MapUiCommander,
 
     loaded_files: LoadedFiles,
     plot: LogPlotUi,
@@ -68,7 +68,8 @@ impl Default for PlotApp {
             font_size_init: false,
             error_message: None,
 
-            map_commander: MapUiCommander::default(),
+            #[cfg(not(target_arch = "wasm32"))]
+            map_commander: plotinator_map_ui::commander::MapUiCommander::default(),
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
             mqtt: plotinator_mqtt_ui::connection::MqttConnection::default(),
@@ -149,27 +150,29 @@ impl eframe::App for PlotApp {
                 &mut self.first_frame,
                 &new_loaded_files,
                 &mut self.toasts,
+                #[cfg(not(target_arch = "wasm32"))]
                 &mut self.map_commander,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.mqtt,
             );
-            for file in new_loaded_files {
-                log::info!("Received dataset {}", file.descriptive_name());
-                use plotinator_log_if::plotable::Plotable as _;
-                for geo_data in file.geo_spatial_data() {
-                    self.map_commander.add_geo_data(geo_data);
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                for file in new_loaded_files {
+                    log::info!("Received dataset {}", file.descriptive_name());
+                    use plotinator_log_if::plotable::Plotable as _;
+                    for geo_data in file.geo_spatial_data() {
+                        self.map_commander.add_geo_data(geo_data);
+                    }
+                }
+                if let Some(mqtt_geo_points) = self
+                    .mqtt
+                    .mqtt_plot_data
+                    .as_mut()
+                    .and_then(|d| d.take_geo_points())
+                {
+                    self.map_commander.add_mqtt_geo_data(mqtt_geo_points);
                 }
             }
-            if let Some(mqtt_geo_points) = self
-                .mqtt
-                .mqtt_plot_data
-                .as_mut()
-                .map(|d| d.take_geo_points())
-                .flatten()
-            {
-                self.map_commander.add_mqtt_geo_data(mqtt_geo_points);
-            }
-
             if self.plot.plot_count() == 0 {
                 supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown
             }

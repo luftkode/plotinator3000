@@ -113,7 +113,6 @@ plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-file-io.workspace = true
-plotinator-map-ui.workspace = true
 walkers.workspace = true
 egui.workspace = true
 eframe.workspace = true
@@ -149,6 +148,7 @@ egui_kittest = { version = "0.32.1", features = [
 plotinator-updater = { workspace = true, optional = true }
 plotinator-mqtt = { workspace = true, optional = true }
 plotinator-mqtt-ui = { workspace = true, optional = true }
+plotinator-map-ui = { workspace = true, optional = true }
 plotinator-download.workspace = true
 env_logger = "0.11"
 puffin = { workspace = true, optional = true }
@@ -164,9 +164,10 @@ wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"
 
 [features]
-default = ["selfupdater", "mqtt", "hdf5"]
+default = ["selfupdater", "map", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5", "plotinator-file-io/hdf5"]
 selfupdater = ["dep:plotinator-updater"]
+map = ["dep:plotinator-map-ui", "mqtt"]
 mqtt = [
     "dep:plotinator-mqtt",
     "dep:plotinator-mqtt-ui",

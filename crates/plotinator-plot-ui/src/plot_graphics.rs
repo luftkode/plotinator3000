@@ -1,6 +1,5 @@
 use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
-use plotinator_map_ui::commander::MapUiCommander;
 use plotinator_plot_util::{PlotData, Plots};
 use plotinator_ui_util::{PlotType, box_selection::BoxSelection};
 
@@ -22,7 +21,7 @@ pub fn paint_plots(
     link_group: egui::Id,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
-    map_cmd: &mut MapUiCommander,
+    #[cfg(not(target_arch = "wasm32"))] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
     mode: PlotMode<'_>,
 ) {
     plotinator_macros::profile_function!();
@@ -87,6 +86,7 @@ pub fn paint_plots(
                 plot_settings,
                 click_delta,
                 box_selection,
+                #[cfg(not(target_arch = "wasm32"))]
                 map_cmd,
             );
         }
@@ -130,7 +130,7 @@ fn fill_log_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
-    map_cmd: &mut MapUiCommander,
+    #[cfg(not(target_arch = "wasm32"))] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
 ) {
     plotinator_macros::profile_function!();
 
@@ -143,6 +143,7 @@ fn fill_log_plots(
             if area_hovered {
                 box_selection.record_key_and_pointer_events(plot_ui, ptype);
 
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
                     map_cmd.cursor_time_pos(pointer_coord.x);
                 }

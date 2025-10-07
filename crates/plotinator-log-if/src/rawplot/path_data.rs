@@ -558,20 +558,20 @@ impl CachedValues {
 
     /// Update altitude bounds with a new altitude value (if present and valid)
     pub fn update_altitude(&mut self, altitude: Option<f64>) {
-        if let Some(alt) = altitude {
-            if Self::valid_altitude(alt) {
-                // Handle the case where cache is still default (0.0, 0.0)
-                if self.altitude_min_max == (0.0, 0.0) {
-                    self.altitude_min_max = (alt, alt);
-                } else {
-                    self.altitude_min_max.0 = self.altitude_min_max.0.min(alt);
-                    self.altitude_min_max.1 = self.altitude_min_max.1.max(alt);
-                }
+        if let Some(alt) = altitude
+            && Self::valid_altitude(alt)
+        {
+            // Handle the case where cache is still default (0.0, 0.0)
+            if self.altitude_min_max == (0.0, 0.0) {
+                self.altitude_min_max = (alt, alt);
+            } else {
+                self.altitude_min_max.0 = self.altitude_min_max.0.min(alt);
+                self.altitude_min_max.1 = self.altitude_min_max.1.max(alt);
             }
         }
     }
 
-    /// Convenience method to update all bounds from a single GeoPoint
+    /// Convenience method to update all bounds from a single [`GeoPoint`]
     pub fn update_from_point(&mut self, point: &GeoPoint) {
         let lat = point.position.y();
         let lon = point.position.x();

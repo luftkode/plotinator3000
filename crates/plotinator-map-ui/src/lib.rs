@@ -1,3 +1,4 @@
+#![cfg(not(target_arch = "wasm32"))]
 use egui::{
     Align2, CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui,
     ViewportBuilder, ViewportId, Window,
@@ -15,7 +16,7 @@ use plotinator_ui_util::auto_color;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender};
-use walkers::Map;
+use walkers::{Map, Position};
 
 use crate::{
     commander::MapUiCommander,
@@ -57,7 +58,8 @@ pub struct MapViewPort {
     hovered_path: Option<usize>, // index of hovered path
     #[serde(skip)]
     hovered_mqtt_path: Option<usize>,
-    mqtt_follow_mode: bool,
+    #[serde(skip)]
+    mqtt_latest_position: Option<Position>,
 }
 
 impl MapViewPort {
@@ -132,7 +134,6 @@ impl MapViewPort {
 
                     // Iterate through incoming MQTT points (typically 1-2, max ~10)
                     for mqtt_point in geo_points.into_iter() {
-                        log::info!("Checking for match for {}", mqtt_point.topic);
                         let mut match_found = false;
                         for mqtt_geo_path in &mut self.mqtt_geo_data {
                             if mqtt_point.topic == mqtt_geo_path.topic {
@@ -142,10 +143,6 @@ impl MapViewPort {
                                     && (last_point.timestamp - mqtt_point.point.timestamp).abs()
                                         < 1e6
                                 {
-                                    let timestamp_delta =
-                                        (last_point.timestamp - mqtt_point.point.timestamp).abs();
-                                    log::warn!("timestamp_delta={timestamp_delta}");
-                                    log::info!("{mqtt_point:?}");
                                     *last_point = mqtt_point.point;
                                 } else {
                                     mqtt_geo_path.push(mqtt_point.point);
@@ -161,6 +158,19 @@ impl MapViewPort {
 
                     if maybe_first_data && !self.mqtt_geo_data.is_empty() {
                         self.zoom_to_fit();
+                        // After the initial zoom, start following the position automatically.
+                        if let Some(tile_state) = self.map_state.tile_state_as_mut() {
+                            tile_state.map_memory.follow_my_position();
+                        }
+                    }
+
+                    // Update position for the map widget to follow.
+                    if let Some(latest_point) = self
+                        .mqtt_geo_data
+                        .first()
+                        .and_then(|path| path.points.last())
+                    {
+                        self.mqtt_latest_position = Some(latest_point.position);
                     }
                 }
                 MapCommand::CursorPos(time_pos) => {
@@ -246,12 +256,17 @@ impl MapViewPort {
     /// Renders the menu bar at the top of the viewport.
     fn show_menu_bar(&mut self, ui: &mut Ui) {
         MenuBar::new().ui(ui, |ui| {
-            let map_state = self
-                .map_state
-                .tile_state_as_mut()
-                .expect("map_tile_state is required but not initialized");
+            let (is_satellite, is_detached) = {
+                let map_state = self
+                    .map_state
+                    .tile_state_as_mut()
+                    .expect("map_tile_state is required but not initialized");
+                (
+                    map_state.is_satellite,
+                    map_state.map_memory.detached().is_some(),
+                )
+            };
 
-            let is_satellite = map_state.is_satellite;
             let icon = if is_satellite {
                 GLOBE_HEMISPHERE_WEST
             } else {
@@ -271,28 +286,39 @@ impl MapViewPort {
                 self.zoom_to_fit();
             }
 
-            ui.toggle_value(
-                &mut self.mqtt_follow_mode,
-                RichText::new(format!("{AIRPLANE} Follow (MQTT)")),
-            )
-            .on_hover_text("Moves the map to center the latest coordinate received on MQTT. Only applies to the first received MQTT path");
+            // The button is only enabled when the map is in a "detached" state, i.e., the user
+            // has dragged it away from the followed position.
+            let follow_button = egui::Button::new(RichText::new(format!("{AIRPLANE} Follow Position")));
+
+            if ui.add_enabled(is_detached, follow_button)
+                .on_hover_text("Follow the live position, locking the map's center to the latest coordinate received on MQTT. Only applies to the latest received MQTT point")
+                .clicked()
+            {
+                self.map_state
+                    .tile_state_as_mut()
+                    .expect("map_tile_state is required but not initialized")
+                    .map_memory
+                    .follow_my_position();
+            }
+
         });
     }
 
     /// Renders the main map panel and all geographical data on it.
     fn show_map_panel(&mut self, ui: &mut Ui) {
-        let map_center_position = self.map_state.data().center_position;
+        let fallback_position = self.map_state.data().center_position;
+        let my_position = self.mqtt_latest_position.unwrap_or(fallback_position);
+
         let tile_state = self
             .map_state
             .tile_state_as_mut()
             .expect("map_tile_state is required but not initialized");
 
         let zoom_level = tile_state.zoom_level();
-
         let map = Map::new(
             Some(tile_state.tiles.as_mut()),
             &mut tile_state.map_memory,
-            map_center_position,
+            my_position,
         )
         .double_click_to_zoom(true);
 
@@ -342,7 +368,7 @@ impl MapViewPort {
                     },
                 };
 
-                draw::draw_mqtt_path(ui, projector, &path, &draw_settings);
+                draw::draw_mqtt_path(ui, projector, path, &draw_settings);
 
                 if is_hovered {
                     draw::highlight_whole_mqtt_path(ui.painter(), projector, path);
@@ -379,6 +405,10 @@ impl MapViewPort {
             });
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "it's only the legend grid, it's fine"
+    )]
     fn show_legend_grid(&mut self, ui: &mut Ui) {
         Grid::new("legend_grid").striped(true).show(ui, |ui| {
             // Column headers
@@ -388,12 +418,31 @@ impl MapViewPort {
             ui.label("hdg");
             ui.end_row();
 
+            // Helper for attribute indicator buttons
+            let attr_button = |ui: &mut Ui, has_attr: bool, show_attr: &mut bool| -> bool {
+                let text = if has_attr {
+                    if *show_attr {
+                        RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
+                    } else {
+                        RichText::new(CIRCLE).color(Color32::GREEN).weak()
+                    }
+                } else {
+                    RichText::new(CIRCLE).weak()
+                };
+                let resp = ui.button(text);
+                if resp.clicked() {
+                    *show_attr = !*show_attr;
+                }
+                resp.hovered()
+            };
+
+            // Regular paths
             for (i, path_entry) in self.geo_data.iter_mut().enumerate() {
                 let path = &path_entry.data;
+                let first_point = path.points.first();
+                let mut hovered = false;
 
-                let mut path_ui_hovered = false;
                 ui.horizontal(|ui| {
-                    // Visibility toggle
                     let indicator = if path_entry.settings.visible {
                         RichText::new(CHECK_SQUARE).color(path.color).weak()
                     } else {
@@ -403,56 +452,40 @@ impl MapViewPort {
                         path_entry.settings.visible = !path_entry.settings.visible;
                     }
                     ui.label(RichText::new(&path.name).strong());
-
                     if ui.ui_contains_pointer() {
-                        path_ui_hovered = true;
+                        hovered = true;
                     }
                 });
 
-                let first_point = path.points.first();
-                let mut attr_indicator_label = |has_attr: bool, show_attr: &mut bool| {
-                    let has_attr_text = if has_attr {
-                        if *show_attr {
-                            RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
-                        } else {
-                            RichText::new(CIRCLE).color(Color32::GREEN).weak()
-                        }
-                    } else {
-                        RichText::new(CIRCLE).weak()
-                    };
-                    let resp = ui.button(has_attr_text);
-                    if resp.clicked() {
-                        *show_attr = !*show_attr;
-                    }
-                    if resp.hovered() {
-                        path_ui_hovered = true;
-                    }
-                };
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.speed).is_some(),
+                    &mut path_entry.settings.show_speed,
+                );
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.altitude).is_some(),
+                    &mut path_entry.settings.show_altitude,
+                );
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.heading).is_some(),
+                    &mut path_entry.settings.show_heading,
+                );
 
-                // Velocity column
-                let has_speed = first_point.and_then(|p| p.speed).is_some();
-                attr_indicator_label(has_speed, &mut path_entry.settings.show_speed);
-
-                // Altitude column
-                let has_alt = first_point.and_then(|p| p.altitude).is_some();
-                attr_indicator_label(has_alt, &mut path_entry.settings.show_altitude);
-
-                // Heading column
-                let has_heading = first_point.and_then(|p| p.heading).is_some();
-                attr_indicator_label(has_heading, &mut path_entry.settings.show_heading);
                 ui.end_row();
-
-                // Hover highlighting
-                if path_ui_hovered {
+                if hovered {
                     self.hovered_path = Some(i);
                 }
             }
-            // Same but for MQTT paths
+
+            // MQTT paths
             for (i, mqtt_path) in self.mqtt_geo_data.iter_mut().enumerate() {
                 log::info!("Drawing MQTT path legend: {mqtt_path:?}");
-                let mut path_ui_hovered = false;
+                let first_point = mqtt_path.points.first();
+                let mut hovered = false;
+
                 ui.horizontal(|ui| {
-                    // Visibility toggle
                     let indicator = if mqtt_path.settings.visible {
                         RichText::new(CHECK_SQUARE).color(mqtt_path.color).weak()
                     } else {
@@ -462,47 +495,29 @@ impl MapViewPort {
                         mqtt_path.settings.visible = !mqtt_path.settings.visible;
                     }
                     ui.label(RichText::new(&mqtt_path.topic).strong());
-
                     if ui.ui_contains_pointer() {
-                        path_ui_hovered = true;
+                        hovered = true;
                     }
                 });
 
-                let first_point = mqtt_path.points.first();
-                let mut attr_indicator_label = |has_attr: bool, show_attr: &mut bool| {
-                    let has_attr_text = if has_attr {
-                        if *show_attr {
-                            RichText::new(CHECK_CIRCLE).color(Color32::GREEN)
-                        } else {
-                            RichText::new(CIRCLE).color(Color32::GREEN).weak()
-                        }
-                    } else {
-                        RichText::new(CIRCLE).weak()
-                    };
-                    let resp = ui.button(has_attr_text);
-                    if resp.clicked() {
-                        *show_attr = !*show_attr;
-                    }
-                    if resp.hovered() {
-                        path_ui_hovered = true;
-                    }
-                };
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.speed).is_some(),
+                    &mut mqtt_path.settings.show_speed,
+                );
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.altitude).is_some(),
+                    &mut mqtt_path.settings.show_altitude,
+                );
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.heading).is_some(),
+                    &mut mqtt_path.settings.show_heading,
+                );
 
-                // Velocity column
-                let has_speed = first_point.and_then(|p| p.speed).is_some();
-                attr_indicator_label(has_speed, &mut mqtt_path.settings.show_speed);
-
-                // Altitude column
-                let has_alt = first_point.and_then(|p| p.altitude).is_some();
-                attr_indicator_label(has_alt, &mut mqtt_path.settings.show_altitude);
-
-                // Heading column
-                let has_heading = first_point.and_then(|p| p.heading).is_some();
-                attr_indicator_label(has_heading, &mut mqtt_path.settings.show_heading);
                 ui.end_row();
-
-                // Hover highlighting
-                if path_ui_hovered {
+                if hovered {
                     self.hovered_mqtt_path = Some(i);
                 }
             }
