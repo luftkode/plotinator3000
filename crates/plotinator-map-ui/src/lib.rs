@@ -150,7 +150,6 @@ impl MapViewPort {
                                 break;
                             }
                         }
-                        log::info!("match={match_found}");
                         if !match_found {
                             self.mqtt_geo_data.push(mqtt_point.into());
                         }
@@ -481,7 +480,6 @@ impl MapViewPort {
 
             // MQTT paths
             for (i, mqtt_path) in self.mqtt_geo_data.iter_mut().enumerate() {
-                log::info!("Drawing MQTT path legend: {mqtt_path:?}");
                 let first_point = mqtt_path.points.first();
                 let mut hovered = false;
 
@@ -595,7 +593,6 @@ impl From<MqttGeoPoint> for MqttGeoPath {
 
 impl MqttGeoPath {
     pub fn push(&mut self, point: GeoPoint) {
-        log::debug!("push MQTT point: {point:?}");
         self.boundary_values.update_from_point(&point);
         self.points.push(point);
     }
