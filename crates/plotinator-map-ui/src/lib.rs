@@ -4,8 +4,8 @@ use egui::{
     ViewportBuilder, ViewportId, Window,
 };
 use egui_phosphor::regular::{
-    AIRPLANE, CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GLOBE, GLOBE_HEMISPHERE_WEST, SELECTION_ALL,
-    SQUARE,
+    AIRPLANE, CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GEAR, GLOBE, GLOBE_HEMISPHERE_WEST,
+    SELECTION_ALL, SQUARE,
 };
 use plotinator_log_if::{
     prelude::{GeoAltitude, PrimaryGeoSpatialData},
@@ -50,6 +50,10 @@ pub struct MapViewPort {
     mqtt_geo_data: SmallVec<[MqttGeoPath; 3]>,
     pub unmerged_aux_data: Vec<AuxiliaryGeoSpatialData>,
     map_state: MapState,
+
+    pub heading_arrow_threshold: f64,
+    pub telemetry_label_threshold: f64,
+
     #[serde(skip)]
     cmd_recv: Option<Receiver<MapCommand>>,
     /// The time corresponding to the cursor position in the plot area
@@ -259,6 +263,22 @@ impl MapViewPort {
     /// Renders the menu bar at the top of the viewport.
     fn show_menu_bar(&mut self, ui: &mut Ui) {
         MenuBar::new().ui(ui, |ui| {
+
+
+            ui.menu_button(format!("{GEAR} Display Settings"), |ui| {
+            ui.label("Zoom thresholds");
+            ui.add(
+                egui::Slider::new(&mut self.heading_arrow_threshold, 10.0..=20.0)
+                    .text("Heading arrows")
+                    .suffix("x zoom"),
+            );
+            ui.add(
+                egui::Slider::new(&mut self.telemetry_label_threshold, 10.0..=20.0)
+                    .text("Telemetry labels")
+                    .suffix("x zoom"),
+                );
+            });
+
             let (is_satellite, is_detached) = {
                 let map_state = self
                     .map_state
@@ -326,11 +346,8 @@ impl MapViewPort {
         .double_click_to_zoom(true);
 
         map.show(ui, |ui, projector, _map_rect| {
-            log::info!("zoom_level={zoom_level:.2}");
-            const ZOOM_THRESHOLD_FOR_HEADING: f64 = 17.0;
-            const ZOOM_THRESHOLD_FOR_TELEMETRY_LABEL: f64 = 16.4;
-            let draw_heading = zoom_level > ZOOM_THRESHOLD_FOR_HEADING;
-            let draw_telemetry_label = zoom_level > ZOOM_THRESHOLD_FOR_TELEMETRY_LABEL;
+            let draw_heading = zoom_level > self.heading_arrow_threshold;
+            let draw_telemetry_label = zoom_level > self.telemetry_label_threshold;
 
             for (i, path) in self.geo_data.iter().enumerate() {
                 if !path.settings.visible {

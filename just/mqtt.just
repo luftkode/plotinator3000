@@ -91,7 +91,7 @@ pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100
         LAT_INT=$((LAT_INT + {{LAT_ADD}}))    # roughly 0.00001 degrees per second
         # Small random drift for longitude
         LON_INT=$((LON_INT + RANDOM % 10 - 5))
-        SPEED_INT=$((SPEED_INT + RANDOM % 5 - 2))
+        SPEED_INT=$((SPEED_INT + RANDOM % 5 + 2))
         # Convert back to float strings with dot
         LAT=$(printf "%d.%06d" $((LAT_INT / 1000000)) $((LAT_INT % 1000000)))
         LON=$(printf "%d.%06d" $((LON_INT / 1000000)) $((LON_INT % 1000000)))

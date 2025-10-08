@@ -60,17 +60,20 @@ impl MapState {
 
     pub fn zoom_to_fit(&mut self, geo_data: &[PathEntry], mqtt_geo_data: &[MqttGeoPath]) {
         let Some(bounds) = calculate_bounding_box(geo_data, mqtt_geo_data) else {
+            log::warn!("Failed to calculate bounding box");
             return;
         };
 
         let center = Position::new(bounds.center_lon(), bounds.center_lat());
         let zoom = bounds.zoom_level_to_fit_all();
+        log::info!("Zoom to fit level: {zoom:.1}");
 
         debug_assert!(
             self.tile_state.is_some(),
             "Attempted to zoom to fit with uninitialized map memory"
         );
         let Some(tile_state) = &mut self.tile_state else {
+            log::error!("Attempt to zoom to fit with uninitialized tiles");
             return;
         };
         tile_state.map_memory.center_at(center);
@@ -169,7 +172,7 @@ impl BoundingBox {
             let zoom = (360.0 / padded_span).log2();
             zoom.clamp(2.0, 18.0)
         } else {
-            10.0
+            16.0
         }
     }
 }

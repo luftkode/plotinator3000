@@ -12,6 +12,10 @@ use super::{ClickDelta, axis_config::AxisConfig, plot_settings::PlotSettings, x_
     clippy::too_many_arguments,
     reason = "They are needed. Maybe a refactor could group some of them."
 )]
+#[allow(
+    clippy::too_many_lines,
+    reason = "it's small, but there's a lot of arguments..."
+)]
 pub fn paint_plots(
     ui: &mut egui::Ui,
     reset_plot_bounds: bool,
