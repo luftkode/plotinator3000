@@ -3,9 +3,10 @@ use hdf5::H5Type;
 use ndarray::{ArrayBase, Dim, OwnedRepr};
 use plotinator_log_if::{
     leap_seconds::{GpsWeek, TowMs, TowSubMs, gps_to_unix_ns},
-    prelude::{ExpectedPlotRange, RawPlotCommon},
+    prelude::RawPlotCommon,
     rawplot::RawPlot,
 };
+use plotinator_ui_util::ExpectedPlotRange;
 
 type GpsMarks = ArrayBase<OwnedRepr<GpsMarkRecord>, Dim<[usize; 1]>>;
 
@@ -99,7 +100,7 @@ impl GpsMarkRecords {
                 RawPlotCommon::new(
                     "Accuracy estimate [ns]".to_owned(),
                     acc_est,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 )
                 .into(),
                 RawPlotCommon::new("Count".to_owned(), count, ExpectedPlotRange::Thousands).into(),
@@ -150,7 +151,7 @@ impl GpsMarkRecords {
                 RawPlotCommon::new(
                     "Timestamp Δt [s]".to_owned(),
                     delta_computer.take_plot_points(),
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 )
                 .into(),
             ],

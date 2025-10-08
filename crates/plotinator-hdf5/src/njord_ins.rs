@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -443,13 +444,13 @@ fn process_orientation_and_position(
         RawPlotCommon::new(
             format!("Roll° ({LEGEND_NAME})"),
             rolls,
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
             format!("Pitch° ({LEGEND_NAME})"),
             pitches,
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
     ];
@@ -567,7 +568,7 @@ impl NjordIns {
             RawPlotCommon::new(
                 format!("Δt GPS/System [ms] {RAW_PLOT_NAME_SUFFIX}"),
                 time_offset,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
         ))
     }

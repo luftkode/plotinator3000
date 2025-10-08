@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::rawplot::RawPlot;
@@ -26,15 +27,6 @@ where
     fn from(value: T) -> Self {
         Box::new(value)
     }
-}
-
-/// Where does the plot values typically fit within, e.g. RPM measurements will probably be in the thousands, while a duty cycle will be in percentage.
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone, Copy)]
-pub enum ExpectedPlotRange {
-    /// For plots where the value is 0.0-1.0 and corresponds to percentage 0-100%
-    Percentage,
-    OneToOneHundred,
-    Thousands,
 }
 
 /// [`PlotLabels`] represents some text label that should be displayed in the plot

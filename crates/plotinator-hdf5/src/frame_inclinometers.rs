@@ -4,6 +4,7 @@ use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -74,17 +75,17 @@ impl SkytemHdf5 for FrameInclinometers {
             let pitch1_rawplot = RawPlotCommon::new(
                 format!("Pitch° ({LEGEND_NAME}1)"),
                 pitch1_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             );
             let roll1_rawplot = RawPlotCommon::new(
                 format!("Roll° ({LEGEND_NAME}1)"),
                 roll1_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             );
             let old_roll1_rawplot = RawPlotCommon::new(
                 format!("Roll° (Old) ({LEGEND_NAME}1)"),
                 old_roll1_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             );
             raw_plots.push(pitch1_rawplot.into());
             raw_plots.push(roll1_rawplot.into());
@@ -122,18 +123,18 @@ impl SkytemHdf5 for FrameInclinometers {
             let pitch2_rawplot = RawPlotCommon::new(
                 format!("Pitch° ({LEGEND_NAME}2)"),
                 pitch2_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             );
 
             let roll2_rawplot = RawPlotCommon::new(
                 format!("Roll° ({LEGEND_NAME}2)"),
                 roll2_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             );
             let old_roll2_rawplot = RawPlotCommon::new(
                 format!("Roll° (Old) ({LEGEND_NAME}2)"),
                 old_roll2_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             );
 
             raw_plots.push(pitch2_rawplot.into());

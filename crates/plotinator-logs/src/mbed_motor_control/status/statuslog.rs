@@ -1,6 +1,7 @@
 use anyhow::bail;
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
 
@@ -151,7 +152,7 @@ impl StatusLog {
             raw_plots.push(RawPlotCommon::new(
                 format!("Engine Temp °C ({LEGEND})"),
                 engine_temp,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !fan_on.is_empty() {
@@ -165,7 +166,7 @@ impl StatusLog {
             raw_plots.push(RawPlotCommon::new(
                 format!("Vbat [V] ({LEGEND})"),
                 vbat,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !setpoint.is_empty() {
@@ -180,14 +181,14 @@ impl StatusLog {
             raw_plots.push(RawPlotCommon::new(
                 format!("Motor State ({LEGEND})"),
                 motor_state,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !runtime_h.is_empty() {
             raw_plots.push(RawPlotCommon::new(
                 format!("Runtime [h] ({LEGEND})"),
                 runtime_h,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         raw_plots
@@ -262,7 +263,7 @@ impl Parseable for StatusLog {
             parse_timestamps_with_state_changes(&vec_of_entries, startup_timestamp_ns);
         let labels = vec![PlotLabels::new(
             timestamps_with_state_changes,
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )];
 
         let all_plots_raw = Self::build_raw_plots(startup_timestamp_ns, &vec_of_entries);

@@ -1,9 +1,9 @@
 use egui::Color32;
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    prelude::ExpectedPlotRange,
-    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset, PrimaryGeoSpatialData},
+use crate::rawplot::path_data::{
+    AuxiliaryGeoSpatialData, GeoSpatialDataset, PrimaryGeoSpatialData,
 };
 
 pub mod path_data;

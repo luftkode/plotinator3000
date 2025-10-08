@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
 use plotinator_log_if::prelude::RawPlotCommon;
-use plotinator_ui_util::auto_color;
+use plotinator_ui_util::auto_color_plot_area;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -161,6 +161,11 @@ impl CookedPlot {
         mipmap_min_pp.join(&mipmap_max_pp);
         let max_bounds = Self::calc_max_bounds(&raw_points, mipmap_min_pp.get_max_level());
 
+        let color = match raw_plot.color() {
+            Some(c) => c,
+            None => auto_color_plot_area(raw_plot.expected_range()),
+        };
+
         Self {
             raw_points,
             raw_plot_points,
@@ -170,7 +175,7 @@ impl CookedPlot {
             log_id,
             label,
             associated_descriptive_name,
-            color: raw_plot.color().unwrap_or(auto_color()),
+            color,
             highlight: false,
         }
     }

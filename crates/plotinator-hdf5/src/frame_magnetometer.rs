@@ -3,6 +3,7 @@ use std::{io, path::Path};
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::{Dataset, H5Type};
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{

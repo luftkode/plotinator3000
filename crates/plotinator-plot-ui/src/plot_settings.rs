@@ -13,7 +13,7 @@ use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
 use plotinator_plot_util::{CookedPlot, MipMapConfiguration, Plots};
-use plotinator_ui_util::{PlotType, theme_color};
+use plotinator_ui_util::{ExpectedPlotRange, theme_color};
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
@@ -436,11 +436,11 @@ impl PlotSettings {
         self.series_plot_settings
     }
 
-    pub(crate) fn highlight(&self, ptype: PlotType) -> bool {
+    pub(crate) fn highlight(&self, ptype: ExpectedPlotRange) -> bool {
         match ptype {
-            PlotType::Percentage => self.visibility.hovered_display_percentage(),
-            PlotType::Hundreds => self.visibility.hovered_display_to_hundreds(),
-            PlotType::Thousands => self.visibility.hovered_display_thousands(),
+            ExpectedPlotRange::Percentage => self.visibility.hovered_display_percentage(),
+            ExpectedPlotRange::Hundreds => self.visibility.hovered_display_to_hundreds(),
+            ExpectedPlotRange::Thousands => self.visibility.hovered_display_thousands(),
         }
     }
 }

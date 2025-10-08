@@ -5,6 +5,7 @@ use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -89,7 +90,7 @@ impl SkytemHdf5 for FrameAltimeters {
             RawPlotCommon::new(
                 format!("Height [{height1_unit}] {RAW_PLOT_NAME_SUFFIX_1}"),
                 height1_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("Height Invalid Count {RAW_PLOT_NAME_SUFFIX_1}"),
@@ -99,7 +100,7 @@ impl SkytemHdf5 for FrameAltimeters {
             RawPlotCommon::new(
                 format!("Height [{height2_unit}] {RAW_PLOT_NAME_SUFFIX_2}"),
                 height2_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("Height Invalid Count {RAW_PLOT_NAME_SUFFIX_2}"),

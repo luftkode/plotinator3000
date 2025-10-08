@@ -1,6 +1,7 @@
 use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
 use plotinator_log_if::prelude::*;
+use plotinator_ui_util::ExpectedPlotRange;
 use std::io::{self, BufRead as _};
 
 const LEGEND_NAME: &str = "NjordInsPPP";
@@ -239,137 +240,137 @@ impl Parseable for NjordInsPPP {
             RawPlotCommon::new(
                 format!("Pitch° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pitch),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Roll° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.roll),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // Velocity
             RawPlotCommon::new(
                 format!("Velocity North [m/s] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_n),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Velocity East [m/s] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_e),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Velocity Down [m/s] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_d),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // Standard Deviations
             RawPlotCommon::new(
                 format!("Latitude SD [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.lat_sd),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Longitude SD [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.lon_sd),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Height SD [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.height_sd),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Roll SD° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.roll_sd),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Pitch SD° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pitch_sd),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Heading SD° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.heading_sd),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // Biases
             RawPlotCommon::new(
                 format!("Accelerometer Bias X ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_x),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Accelerometer Bias Y ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_y),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Accelerometer Bias Z ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_z),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Gyroscope Bias X ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_x),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Gyroscope Bias Y ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_y),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Gyroscope Bias Z ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_z),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // GNSS
             RawPlotCommon::new(
                 format!("Fix Type ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.fix_type),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("GPS Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gps_sats),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("GLONASS Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.glonass_sats),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("BeiDou Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.beidou_sats),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Galileo Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.galileo_sats),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
         ];

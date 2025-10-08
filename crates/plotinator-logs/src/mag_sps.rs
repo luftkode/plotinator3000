@@ -8,6 +8,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::entries::mag::MagSensor;

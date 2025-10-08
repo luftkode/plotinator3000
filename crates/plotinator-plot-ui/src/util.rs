@@ -2,6 +2,7 @@ use egui::{Modifiers, Vec2};
 use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{CookedPlot, Plots, StoredPlotLabels};
 use plotinator_supported_formats::SupportedFormat;
+use plotinator_ui_util::ExpectedPlotRange;
 use rayon::prelude::*;
 
 use super::plot_settings::{PlotSettings, date_settings::LoadedLogSettings};
@@ -86,7 +87,7 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
                 ExpectedPlotRange::Percentage => {
                     existing_plots_percentage.contains(&label.as_str())
                 }
-                ExpectedPlotRange::OneToOneHundred => {
+                ExpectedPlotRange::Hundreds => {
                     existing_plots_one_to_hundred.contains(&label.as_str())
                 }
                 ExpectedPlotRange::Thousands => existing_plots_thousands.contains(&label.as_str()),
@@ -107,7 +108,7 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
             ExpectedPlotRange::Percentage => {
                 plots.percentage_mut().plots_as_mut().push(new_plot);
             }
-            ExpectedPlotRange::OneToOneHundred => {
+            ExpectedPlotRange::Hundreds => {
                 plots.one_to_hundred_mut().plots_as_mut().push(new_plot);
             }
             ExpectedPlotRange::Thousands => {
@@ -134,7 +135,7 @@ fn add_plot_points_to_collections_seq(plots: &mut Plots, data: &SupportedFormat,
                             data.descriptive_name(),
                         );
                     }
-                    ExpectedPlotRange::OneToOneHundred => {
+                    ExpectedPlotRange::Hundreds => {
                         plots.one_to_hundred_mut().add_plot_if_not_exists(
                             common,
                             data_id,
@@ -160,7 +161,7 @@ fn add_plot_points_to_collections_seq(plots: &mut Plots, data: &SupportedFormat,
                                 data.descriptive_name(),
                             );
                         }
-                        ExpectedPlotRange::OneToOneHundred => {
+                        ExpectedPlotRange::Hundreds => {
                             plots.one_to_hundred_mut().add_plot_if_not_exists(
                                 &common,
                                 data_id,
@@ -189,7 +190,7 @@ fn add_plot_labels_to_collections(plots: &mut Plots, data: &SupportedFormat, dat
                 ExpectedPlotRange::Percentage => plots
                     .percentage_mut()
                     .add_plot_labels(StoredPlotLabels::new(owned_label_points, data_id)),
-                ExpectedPlotRange::OneToOneHundred => {
+                ExpectedPlotRange::Hundreds => {
                     plots
                         .one_to_hundred_mut()
                         .add_plot_labels(StoredPlotLabels::new(owned_label_points, data_id));

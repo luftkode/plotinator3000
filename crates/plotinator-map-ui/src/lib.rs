@@ -12,7 +12,7 @@ use plotinator_log_if::{
     rawplot::path_data::{AuxiliaryGeoSpatialData, CachedValues, GeoSpatialDataset},
 };
 use plotinator_mqtt::data::listener::MqttGeoPoint;
-use plotinator_ui_util::auto_color;
+use plotinator_ui_util::auto_terrain_safe_color;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender};
@@ -325,8 +325,9 @@ impl MapViewPort {
         .double_click_to_zoom(true);
 
         map.show(ui, |ui, projector, _map_rect| {
-            const ZOOM_THRESHOLD_FOR_HEADING: f64 = 18.0;
-            const ZOOM_THRESHOLD_FOR_TELEMETRY_LABEL: f64 = 19.4;
+            log::info!("zoom_level={zoom_level:.2}");
+            const ZOOM_THRESHOLD_FOR_HEADING: f64 = 17.0;
+            const ZOOM_THRESHOLD_FOR_TELEMETRY_LABEL: f64 = 16.4;
             let draw_heading = zoom_level > ZOOM_THRESHOLD_FOR_HEADING;
             let draw_telemetry_label = zoom_level > ZOOM_THRESHOLD_FOR_TELEMETRY_LABEL;
 
@@ -589,7 +590,7 @@ impl From<MqttGeoPoint> for MqttGeoPath {
             points: vec![point],
             settings: GeoPathSettings::default(),
             boundary_values,
-            color: auto_color(),
+            color: auto_terrain_safe_color(),
         }
     }
 }

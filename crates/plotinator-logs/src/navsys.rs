@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use entries::NavSysSpsEntry;
 use header::NavSysSpsHeader;
 use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::entries::gps::Gps;
@@ -99,7 +100,7 @@ impl GpsDataCollector {
                 RawPlotCommon::new(
                     format!("Satellites ({sensor_name})"),
                     self.satellites,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 )
                 .into(),
             );
@@ -109,7 +110,7 @@ impl GpsDataCollector {
                 RawPlotCommon::new(
                     format!("HDOP ({sensor_name})"),
                     self.hdop,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 )
                 .into(),
             );
@@ -119,7 +120,7 @@ impl GpsDataCollector {
                 RawPlotCommon::new(
                     format!("VDOP ({sensor_name})"),
                     self.vdop,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 )
                 .into(),
             );
@@ -129,7 +130,7 @@ impl GpsDataCollector {
                 RawPlotCommon::new(
                     format!("PDOP ({sensor_name})"),
                     self.pdop,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 )
                 .into(),
             );
@@ -158,9 +159,9 @@ impl HeightDataCollector {
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
         if !self.altitude.is_empty() {
             raw_plots.push(RawPlot::from(RawPlotCommon::new(
-                format!("Altitude [M] ({sensor_name})"),
+                format!("Altitude [m] ({sensor_name})"),
                 self.altitude,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )));
         }
         if !self.invalid.is_empty() {
@@ -191,14 +192,14 @@ impl TiltDataCollector {
             raw_plots.push(RawPlot::from(RawPlotCommon::new(
                 format!("Pitch° ({sensor_name})"),
                 self.pitch,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )));
         }
         if !self.roll.is_empty() {
             raw_plots.push(RawPlot::from(RawPlotCommon::new(
                 format!("Roll° ({sensor_name})"),
                 self.roll,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )));
         }
     }

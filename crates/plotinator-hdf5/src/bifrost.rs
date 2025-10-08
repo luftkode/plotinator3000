@@ -5,6 +5,7 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use hdf5::Dataset;
 use num_traits::ToPrimitive as _;
 use plotinator_log_if::prelude::*;
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
@@ -120,17 +121,17 @@ fn process_points_to_rawplots(
     let plot_polarity0 = RawPlotCommon::new(
         "+ Polarity [A]".to_owned(),
         polarity0_currents,
-        ExpectedPlotRange::OneToOneHundred,
+        ExpectedPlotRange::Hundreds,
     );
     let plot_polarity1 = RawPlotCommon::new(
         "- Polarity [A]".to_owned(),
         polarity1_currents,
-        ExpectedPlotRange::OneToOneHundred,
+        ExpectedPlotRange::Hundreds,
     );
     let plot_combined = RawPlotCommon::new(
         "Combined [A]".to_owned(),
         combined_currents,
-        ExpectedPlotRange::OneToOneHundred,
+        ExpectedPlotRange::Hundreds,
     );
     vec![
         plot_polarity0.into(),

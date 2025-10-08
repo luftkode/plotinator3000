@@ -69,7 +69,7 @@ pub-multi-random:
 
 
 [group("MQTT")]
-pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps":
+pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100":
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -77,7 +77,7 @@ pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps":
     LON_INT=10147778    # 10.147778 * 1e6
     ALT=66.62
     SPEED_INT=52        # 0.052 * 1000
-    GPS_NR=2
+    GPS_NR={{GPS_NUM}}
     MODE=3
     SATELLITES=10
 
@@ -88,14 +88,14 @@ pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps":
         GPS_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
 
         # Gradually increase latitude by a tiny fixed amount each second
-        LAT_INT=$((LAT_INT + 10))    # roughly 0.00001 degrees per second
+        LAT_INT=$((LAT_INT + {{LAT_ADD}}))    # roughly 0.00001 degrees per second
         # Small random drift for longitude
         LON_INT=$((LON_INT + RANDOM % 10 - 5))
         SPEED_INT=$((SPEED_INT + RANDOM % 5 - 2))
         # Convert back to float strings with dot
         LAT=$(printf "%d.%06d" $((LAT_INT / 1000000)) $((LAT_INT % 1000000)))
         LON=$(printf "%d.%06d" $((LON_INT / 1000000)) $((LON_INT % 1000000)))
-        SPEED=$(printf "0.%03d" $SPEED_INT)
+        SPEED=$(printf "30.%03d" $SPEED_INT)
 
         JSON="{\"gps_nr\": $GPS_NR, \"timestamp\": $TIMESTAMP, \"mode\": $MODE, \"gps_status\": {\"hdop\": 0.8, \"vdop\": 1.5, \"pdop\": 1.7, \"satellites\": $SATELLITES}, \"position\": {\"lat\": $LAT, \"lon\": $LON, \"alt\": $ALT}, \"speed\": $SPEED, \"gps_time\": \"$GPS_TIME\"}"
 

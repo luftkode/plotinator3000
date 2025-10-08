@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
 use ndarray::Array2;
 use plotinator_log_if::prelude::*;
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
@@ -37,7 +38,7 @@ impl SkytemHdf5 for Wasp200 {
             RawPlotCommon::new(
                 format!("Height [{height_unit}] {RAW_PLOT_NAME_SUFFIX}"),
                 height_with_ts,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
         ];

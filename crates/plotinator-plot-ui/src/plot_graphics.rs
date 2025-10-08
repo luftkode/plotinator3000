@@ -1,7 +1,7 @@
 use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plotinator_plot_util::{PlotData, Plots};
-use plotinator_ui_util::{PlotType, box_selection::BoxSelection};
+use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
 
 use crate::{PlotMode, util};
 
@@ -70,15 +70,27 @@ pub fn paint_plots(
             } = plots;
 
             if plot_settings.display_percentage() {
-                plot_components_list.push((percentage_plot, percentage, PlotType::Percentage));
+                plot_components_list.push((
+                    percentage_plot,
+                    percentage,
+                    ExpectedPlotRange::Percentage,
+                ));
             }
 
             if plot_settings.display_hundreds() {
-                plot_components_list.push((to_hundred_plot, one_to_hundred, PlotType::Hundreds));
+                plot_components_list.push((
+                    to_hundred_plot,
+                    one_to_hundred,
+                    ExpectedPlotRange::Hundreds,
+                ));
             }
 
             if plot_settings.display_thousands() {
-                plot_components_list.push((thousands_plot, thousands, PlotType::Thousands));
+                plot_components_list.push((
+                    thousands_plot,
+                    thousands,
+                    ExpectedPlotRange::Thousands,
+                ));
             }
             fill_log_plots(
                 ui,
@@ -121,13 +133,13 @@ pub fn paint_plots(
 ///
 /// * `gui` - The egui UI to paint on.
 /// * `reset_plot_bounds` - whether plot bounds should be reset.
-/// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`PlotType`].
+/// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`ExpectedPlotRange`].
 /// * `plot_settings` - Controls which plots to display.
 /// * `click_delta` - State relating to pointer clicks on plots
 fn fill_log_plots(
     gui: &mut egui::Ui,
     reset_plot_bounds: bool,
-    plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
+    plot_components: Vec<(Plot<'_>, &mut PlotData, ExpectedPlotRange)>,
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,

@@ -2,21 +2,21 @@ use std::ops::RangeInclusive;
 
 use egui::{Color32, RichText};
 use egui_plot::{Line, MarkerShape, PlotBounds, PlotPoint, PlotPoints, PlotUi, Points};
-use plotinator_ui_util::{PlotType, plot_theme_color};
+use plotinator_ui_util::{ExpectedPlotRange, plot_theme_color};
 use serde::{Deserialize, Serialize};
 
 /// Keeps track of clicks in plot areas to show the delta (x and y) of two different clicks.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Deserialize, Serialize)]
 pub struct ClickDelta {
     // Which plot type the click belongs to
-    plot_type: Option<PlotType>,
+    plot_type: Option<ExpectedPlotRange>,
     first_click: Option<[f64; 2]>,
     second_click: Option<[f64; 2]>,
     pixels_per_point: f64,
 }
 
 impl ClickDelta {
-    pub fn set_next_click(&mut self, click: PlotPoint, plot_type: PlotType) {
+    pub fn set_next_click(&mut self, click: PlotPoint, plot_type: ExpectedPlotRange) {
         if self.plot_type.is_some_and(|pt| pt == plot_type) {
             if self.second_click.is_some() {
                 self.replace_first_click([click.x, click.y]);
@@ -59,7 +59,7 @@ impl ClickDelta {
         (label_point, raw_text)
     }
 
-    pub fn plot_type(&self) -> Option<PlotType> {
+    pub fn plot_type(&self) -> Option<ExpectedPlotRange> {
         self.plot_type
     }
 
@@ -115,7 +115,7 @@ impl ClickDelta {
         }
     }
 
-    pub fn ui<'a>(&'a self, plot_ui: &mut PlotUi<'a>, plot_type: PlotType) {
+    pub fn ui<'a>(&'a self, plot_ui: &mut PlotUi<'a>, plot_type: ExpectedPlotRange) {
         // We only paint the click delta graphics on the plot type that matches the one that was clicked
         if self.plot_type().is_some_and(|pt| pt == plot_type)
             && let Some(p) = self.get_click_points()

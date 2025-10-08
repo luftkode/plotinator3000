@@ -2,9 +2,10 @@ use chrono::{DateTime, Utc};
 use hdf5::H5Type;
 use ndarray::Array1;
 use plotinator_log_if::{
-    prelude::{ExpectedPlotRange, GeoSpatialDataBuilder, RawPlotCommon},
+    prelude::{GeoSpatialDataBuilder, RawPlotCommon},
     rawplot::RawPlot,
 };
+use plotinator_ui_util::ExpectedPlotRange;
 
 use crate::tsc::TSC_LEGEND_NAME;
 
@@ -125,55 +126,55 @@ impl GpsPvtRecords {
             .expect("invalid builder");
 
         let mut plots = vec![
-            RawPlotCommon::new("Satellites", numsv, ExpectedPlotRange::OneToOneHundred).into(),
+            RawPlotCommon::new("Satellites", numsv, ExpectedPlotRange::Hundreds).into(),
             RawPlotCommon::new(
                 "Height [ellipsoid, m]",
                 h_elips,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
-            RawPlotCommon::new("Height [MSL, m]", h_msl, ExpectedPlotRange::OneToOneHundred).into(),
+            RawPlotCommon::new("Height [MSL, m]", h_msl, ExpectedPlotRange::Hundreds).into(),
             RawPlotCommon::new(
                 "Horizontal accuracy [m]",
                 hacc,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 "Vertical accuracy [m]",
                 vacc,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 "Speed accuracy [m/s]",
                 sacc,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
-            RawPlotCommon::new("Position DOP", pdop, ExpectedPlotRange::OneToOneHundred).into(),
+            RawPlotCommon::new("Position DOP", pdop, ExpectedPlotRange::Hundreds).into(),
             RawPlotCommon::new(
                 "Velocity North [m/s]",
                 vel_n,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 "Velocity East [m/s]",
                 vel_e,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 "Velocity Down [m/s]",
                 vel_d,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 "Magnetic Declination [deg]",
                 mag_dec,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // Valid flags

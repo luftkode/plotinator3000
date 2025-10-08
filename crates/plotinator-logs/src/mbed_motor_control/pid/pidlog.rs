@@ -2,6 +2,7 @@ use crate::mbed_motor_control::mbed_config::MbedConfig as _;
 use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader as _;
 use anyhow::bail;
 use plotinator_log_if::log::LogEntry as _;
+use plotinator_ui_util::ExpectedPlotRange;
 
 use crate::{mbed_motor_control::mbed_header::SIZEOF_UNIQ_DESC, parse_unique_description};
 use chrono::{DateTime, Utc};
@@ -120,14 +121,14 @@ impl PidLog {
             raw_plots.push(RawPlotCommon::new(
                 format!("RPM Error Count ({LEGEND})"),
                 rpm_error_count,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !first_valid_rpm_count.is_empty() {
             raw_plots.push(RawPlotCommon::new(
                 format!("First Valid RPM Count ({LEGEND})"),
                 first_valid_rpm_count,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !fan_on.is_empty() {
@@ -141,7 +142,7 @@ impl PidLog {
             raw_plots.push(RawPlotCommon::new(
                 format!("Vbat [V] ({LEGEND})"),
                 vbat,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         raw_plots

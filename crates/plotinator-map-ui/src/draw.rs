@@ -309,11 +309,6 @@ fn draw_telemetry_label(
     {
         lines.push(format!("{speed:.1} km/h"));
     }
-    // A developer might want to sanity check the heading values, but other than
-    // that it is redundant as the arrow marker will show the heading
-    // if let Some(heading) = geo_point.heading {
-    //     lines.push(format!("{heading:.0}°"));
-    // }
 
     // If no data available, don't draw anything
     if lines.is_empty() {

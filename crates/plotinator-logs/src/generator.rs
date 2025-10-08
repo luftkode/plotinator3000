@@ -8,6 +8,7 @@ use std::{
 
 use chrono::NaiveDateTime;
 use plotinator_log_if::{log::LogEntry, parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 const LEGEND: &str = "Gen";
@@ -155,7 +156,7 @@ fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
         RawPlotCommon::new(
             format!("Rotor [R] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.r_rotor.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
@@ -191,43 +192,43 @@ fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
         RawPlotCommon::new(
             format!("Rotor [I] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_rotor.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
             format!("Temp1 °C ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp1.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
             format!("Temp2 °C ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp2.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
             format!("I_in ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_in.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
             format!("Iout ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_out.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
             format!("Vbat [V] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vbat.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
         RawPlotCommon::new(
             format!("Vout [V] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vout.into()),
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )
         .into(),
     ]

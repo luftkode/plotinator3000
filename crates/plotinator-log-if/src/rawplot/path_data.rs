@@ -2,14 +2,11 @@ use std::fmt;
 
 use anyhow::bail;
 use egui::Color32;
-use plotinator_ui_util::auto_color;
+use plotinator_ui_util::{ExpectedPlotRange, auto_color_plot_area, auto_terrain_safe_color};
 use serde::{Deserialize, Serialize};
 use walkers::{Position, lat_lon};
 
-use crate::{
-    prelude::ExpectedPlotRange,
-    rawplot::{RawPlot, RawPlotCommon},
-};
+use crate::rawplot::{RawPlot, RawPlotCommon};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RawGeoAltitudes {
@@ -314,7 +311,7 @@ pub struct PrimaryGeoSpatialData {
 
 impl PrimaryGeoSpatialData {
     pub fn new(name: String, points: Vec<GeoPoint>) -> Self {
-        let color = auto_color();
+        let color = auto_terrain_safe_color();
         let cached = CachedValues::compute(&points);
         Self {
             name,
@@ -382,13 +379,13 @@ impl PrimaryGeoSpatialData {
             RawPlotCommon::with_color(
                 format!("Latitude° ({})", self.name),
                 latitude,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
                 color,
             ),
             RawPlotCommon::with_color(
                 format!("Longitude° ({})", self.name),
                 longitude,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
                 color,
             ),
         ];
@@ -396,7 +393,7 @@ impl PrimaryGeoSpatialData {
             plots.push(RawPlotCommon::with_color(
                 format!("Altitude [m] ({})", self.name),
                 altitude,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
                 color,
             ));
         }
@@ -404,7 +401,7 @@ impl PrimaryGeoSpatialData {
             plots.push(RawPlotCommon::with_color(
                 format!("Heading° ({})", self.name),
                 heading,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
                 color,
             ));
         }
@@ -412,7 +409,7 @@ impl PrimaryGeoSpatialData {
             plots.push(RawPlotCommon::with_color(
                 format!("Speed [km/h] ({})", self.name),
                 speed,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
                 color,
             ));
         }
@@ -596,7 +593,7 @@ pub struct AuxiliaryGeoSpatialData {
 
 impl AuxiliaryGeoSpatialData {
     pub fn new(name: impl Into<String>, timestamps: Vec<f64>) -> Self {
-        let color = auto_color();
+        let color = auto_color_plot_area(ExpectedPlotRange::Hundreds);
         Self {
             name: name.into(),
             timestamps,
@@ -638,7 +635,7 @@ impl AuxiliaryGeoSpatialData {
                 plots.push(RawPlotCommon::with_color(
                     format!("Heading° ({})", self.name),
                     heading,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                     color,
                 ));
             }
@@ -652,7 +649,7 @@ impl AuxiliaryGeoSpatialData {
                 plots.push(RawPlotCommon::with_color(
                     format!("Speed [km/h] ({})", self.name),
                     speed,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                     color,
                 ));
             }
@@ -670,7 +667,7 @@ impl AuxiliaryGeoSpatialData {
                 plots.push(RawPlotCommon::with_color(
                     format!("Altitude [m] ({})", self.name),
                     altitude,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                     color,
                 ));
             }

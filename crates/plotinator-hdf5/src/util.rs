@@ -4,7 +4,8 @@ use hdf5::{
     Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
-use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlotCommon};
+use plotinator_log_if::prelude::RawPlotCommon;
+use plotinator_ui_util::ExpectedPlotRange;
 
 /// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
@@ -195,7 +196,7 @@ fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, rawplot_name_suffix: &str) -> 
     RawPlotCommon::new(
         format!("Δt sample [ms] {rawplot_name_suffix}"),
         points,
-        ExpectedPlotRange::OneToOneHundred,
+        ExpectedPlotRange::Hundreds,
     )
 }
 

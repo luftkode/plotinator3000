@@ -6,9 +6,10 @@ use hdf5::types::FixedAscii;
 use ndarray::Array2;
 use plotinator_log_if::{
     hdf5::SkytemHdf5,
-    prelude::{ExpectedPlotRange, GeoSpatialDataBuilder, PlotLabels, Plotable, RawPlotCommon},
+    prelude::{GeoSpatialDataBuilder, PlotLabels, Plotable, RawPlotCommon},
     rawplot::RawPlot,
 };
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -304,32 +305,32 @@ impl FrameGpsDatasets {
             RawPlotCommon::new(
                 format!("HDOP ({LEGEND_NAME}{id})"),
                 hdop,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("PDOP ({LEGEND_NAME}{id})"),
                 pdop,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("VDOP ({LEGEND_NAME}{id})"),
                 vdop,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("Time Offset [ms] ({LEGEND_NAME}{id})"),
                 gps_time_offset,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("Mode ({LEGEND_NAME}{id})"),
                 mode,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("Altitude-NaN-cnt ({LEGEND_NAME}{id})"),
                 alt_nan_count,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
             RawPlotCommon::new(
                 format!("Altitude-NaN ({LEGEND_NAME}{id})"),
@@ -339,7 +340,7 @@ impl FrameGpsDatasets {
             RawPlotCommon::new(
                 format!("Satellites ({LEGEND_NAME}{id})"),
                 sats,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
         ];
 

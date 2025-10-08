@@ -3,14 +3,11 @@ use std::mem;
 use chrono::DateTime;
 use egui::Color32;
 use egui_plot::PlotPoint;
-use plotinator_log_if::{
-    prelude::{ExpectedPlotRange, RawPlotCommon},
-    rawplot::RawPlot,
-};
+use plotinator_log_if::{prelude::RawPlotCommon, rawplot::RawPlot};
 use plotinator_mqtt::data::listener::{
     MqttData, MqttGeoPoint, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
 };
-use plotinator_ui_util::auto_color;
+use plotinator_ui_util::{ExpectedPlotRange, auto_color_plot_area};
 use smallvec::SmallVec;
 
 use crate::serializable::{SerializableMqttPlotData, SerializableMqttPlotPoints};
@@ -53,11 +50,12 @@ impl MqttPlotData {
                         topic,
                         data: vec![p],
                     },
-                    auto_color(),
+                    auto_color_plot_area(ExpectedPlotRange::Hundreds),
                 )),
-                TopicPayload::Points(data) => self
-                    .mqtt_plot_data
-                    .push((MqttPlotPoints { topic, data }, auto_color())),
+                TopicPayload::Points(data) => self.mqtt_plot_data.push((
+                    MqttPlotPoints { topic, data },
+                    auto_color_plot_area(ExpectedPlotRange::Hundreds),
+                )),
                 TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint { topic, point }),
             };
         }
@@ -121,7 +119,7 @@ impl TryFrom<MqttPlotPoints> for RawPlotCommon {
         let expected_range = if is_boolean {
             ExpectedPlotRange::Percentage
         } else if max < 300. && min > -300. {
-            ExpectedPlotRange::OneToOneHundred
+            ExpectedPlotRange::Hundreds
         } else {
             ExpectedPlotRange::Thousands
         };

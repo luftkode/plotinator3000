@@ -1,6 +1,7 @@
 use anyhow::bail;
 use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone as _, Utc};
 use plotinator_log_if::prelude::*;
+use plotinator_ui_util::ExpectedPlotRange;
 use std::io::{self, BufRead as _};
 
 const LEGEND_NAME: &str = "GrafNav-PPP";
@@ -238,13 +239,13 @@ impl Parseable for GrafNavPPP {
             RawPlotCommon::new(
                 format!("Height MSL [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_msl),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Height Ellipsoid [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_ell),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // UTM Coordinates
@@ -264,32 +265,32 @@ impl Parseable for GrafNavPPP {
             RawPlotCommon::new(
                 format!("Velocity East [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_east),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Velocity North [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_north),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Velocity Up [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_up),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // Quality indicators
             RawPlotCommon::new(
                 format!("Quality Factor ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.quality as f64),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("PDOP ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pdop),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
@@ -299,20 +300,20 @@ impl Parseable for GrafNavPPP {
                     |e| e.timestamp_ns(),
                     |e| e.num_satellites as f64,
                 ),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             // Other
             RawPlotCommon::new(
                 format!("Undulation [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.undulation),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
             RawPlotCommon::new(
                 format!("Sequence Number ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.seq_num as f64),
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             )
             .into(),
         ];

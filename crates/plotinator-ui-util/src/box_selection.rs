@@ -1,12 +1,12 @@
 use egui_plot::{PlotBounds, PlotPoint, PlotUi};
 
-use crate::PlotType;
+use crate::ExpectedPlotRange;
 
 /// Holds the state for a drag-to-select box operation on a plot.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BoxSelection {
     // Which plot type the box selection belongs to
-    plot_type: Option<PlotType>,
+    plot_type: Option<ExpectedPlotRange>,
     selected: Option<PlotBounds>,
     start: Option<PlotPoint>,
     is_selecting: bool,
@@ -14,7 +14,11 @@ pub struct BoxSelection {
 }
 
 impl BoxSelection {
-    pub fn record_key_and_pointer_events(&mut self, plot_ui: &mut PlotUi, plot_type: PlotType) {
+    pub fn record_key_and_pointer_events(
+        &mut self,
+        plot_ui: &mut PlotUi,
+        plot_type: ExpectedPlotRange,
+    ) {
         let x_key_down = plot_ui.ctx().input(|i| i.key_down(egui::Key::X));
         let pointer_coord = plot_ui.pointer_coordinate();
 
@@ -72,7 +76,7 @@ impl BoxSelection {
         self.start = None;
     }
 
-    fn start_selection(&mut self, pointer_coord: Option<PlotPoint>, plot_type: PlotType) {
+    fn start_selection(&mut self, pointer_coord: Option<PlotPoint>, plot_type: ExpectedPlotRange) {
         if let Some(coord) = pointer_coord {
             log::debug!("Starting selection plot type: {plot_type} at {coord:?}");
             self.plot_type = Some(plot_type);

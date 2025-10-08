@@ -3828,6 +3828,7 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-plot-util",
  "plotinator-test-util",
+ "plotinator-ui-util",
  "serde",
 ]
 
@@ -3890,6 +3891,7 @@ dependencies = [
  "plotinator-plot-util",
  "plotinator-proc-macros",
  "plotinator-test-util",
+ "plotinator-ui-util",
  "rayon",
  "serde",
  "serde-big-array",
@@ -3927,6 +3929,7 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-plot-util",
  "plotinator-test-util",
+ "plotinator-ui-util",
  "pretty_assertions",
  "serde",
  "serde-big-array",

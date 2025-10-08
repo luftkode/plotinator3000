@@ -8,6 +8,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::{
@@ -141,7 +142,7 @@ impl Parseable for InclinometerSps {
                 raw_plots.push(RawPlotCommon::new(
                     format!("Pitch°  {LEGEND}{sensor_id}°"),
                     pitch_points,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 ));
             }
 
@@ -150,7 +151,7 @@ impl Parseable for InclinometerSps {
                 raw_plots.push(RawPlotCommon::new(
                     format!("Roll° {LEGEND}{sensor_id}"),
                     roll_points,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 ));
             }
         }
