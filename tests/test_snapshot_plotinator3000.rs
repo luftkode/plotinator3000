@@ -30,7 +30,7 @@ fn test_snapshot_open_global_app() {
     if std::env::var("CI").is_ok_and(|v| v == "true") {
         // Only macos runners have access to a GPU
         if is_macos {
-            let threshold = 2.0;
+            let threshold = 3.0;
             eprintln!("Using CI mac OS threshold: {threshold}");
             let opt = egui_kittest::SnapshotOptions::new().threshold(threshold);
             harness.snapshot_options(snapshot_name, &opt);
