@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.0.0]
+
+### Added
+
+- Map window that pops up if any loaded data (including from MQTT) contains geo spatial data with at least coordinates.
+Plot data is correlated with the map, so hovering over plot data will show where on the map the data was collected.
+
+### Fixed
+
+- TSC zero position plots now uses the correct last gate in on-time (it was off by one)
+
 ## [1.36.0]
 
 ### Added
