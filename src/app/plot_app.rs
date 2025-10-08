@@ -22,7 +22,7 @@ pub struct PlotApp {
     first_frame: bool,
     #[serde(skip)]
     toasts: Toasts,
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     pub(crate) map_commander: plotinator_map_ui::commander::MapUiCommander,
 
     loaded_files: LoadedFiles,
@@ -68,7 +68,7 @@ impl Default for PlotApp {
             font_size_init: false,
             error_message: None,
 
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
             map_commander: plotinator_map_ui::commander::MapUiCommander::default(),
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
@@ -150,12 +150,13 @@ impl eframe::App for PlotApp {
                 &mut self.first_frame,
                 &new_loaded_files,
                 &mut self.toasts,
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
                 &mut self.map_commander,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.mqtt,
             );
-            #[cfg(not(target_arch = "wasm32"))]
+
+            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
             {
                 for file in new_loaded_files {
                     log::info!("Received dataset {}", file.descriptive_name());
@@ -173,6 +174,7 @@ impl eframe::App for PlotApp {
                     self.map_commander.add_mqtt_geo_data(mqtt_geo_points);
                 }
             }
+
             if self.plot.plot_count() == 0 {
                 supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown
             }
@@ -282,7 +284,7 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
             #[cfg(not(target_arch = "wasm32"))]
             misc::not_wasm_show_download_button(ui, app);
 
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
             {
                 use egui_phosphor::regular::GLOBE_HEMISPHERE_WEST;
                 let mut txt = RichText::new(format!("{GLOBE_HEMISPHERE_WEST} Map"));

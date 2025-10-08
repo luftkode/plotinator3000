@@ -21,7 +21,8 @@ pub fn paint_plots(
     link_group: egui::Id,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
-    #[cfg(not(target_arch = "wasm32"))] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
     mode: PlotMode<'_>,
 ) {
     plotinator_macros::profile_function!();
@@ -86,7 +87,7 @@ pub fn paint_plots(
                 plot_settings,
                 click_delta,
                 box_selection,
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
                 map_cmd,
             );
         }
@@ -130,7 +131,8 @@ fn fill_log_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
-    #[cfg(not(target_arch = "wasm32"))] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
 ) {
     plotinator_macros::profile_function!();
 
@@ -143,7 +145,7 @@ fn fill_log_plots(
             if area_hovered {
                 box_selection.record_key_and_pointer_events(plot_ui, ptype);
 
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
                 if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
                     map_cmd.cursor_time_pos(pointer_coord.x);
                 }

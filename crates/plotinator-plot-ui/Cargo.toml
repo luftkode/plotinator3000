@@ -16,7 +16,6 @@ plotinator-plot-util.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-log-if.workspace = true
-plotinator-map-ui.workspace = true
 puffin = { workspace = true, optional = true }
 egui.workspace = true
 egui_plot.workspace = true
@@ -34,9 +33,11 @@ rayon.workspace = true
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 plotinator-mqtt = { workspace = true, optional = true }
 plotinator-mqtt-ui = { workspace = true, optional = true }
+plotinator-map-ui = { workspace = true, optional = true }
 
 [features]
 default = []
+map = ["dep:plotinator-map-ui"]
 mqtt = ["dep:plotinator-mqtt", "dep:plotinator-mqtt-ui"]
 log_time = ["plotinator-proc-macros/log_time"]
 profiling = ["plotinator-proc-macros/profiling", "dep:puffin"]

@@ -167,7 +167,7 @@ web-sys = "0.3.70"
 default = ["selfupdater", "map", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5", "plotinator-file-io/hdf5"]
 selfupdater = ["dep:plotinator-updater"]
-map = ["dep:plotinator-map-ui", "mqtt"]
+map = ["dep:plotinator-map-ui", "plotinator-plot-ui/map", "mqtt"]
 mqtt = [
     "dep:plotinator-mqtt",
     "dep:plotinator-mqtt-ui",

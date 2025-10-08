@@ -80,7 +80,7 @@ impl LogPlotUi {
         first_frame: &mut bool,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
         map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
@@ -173,7 +173,7 @@ impl LogPlotUi {
                 link_group.expect("uninitialized link group id"),
                 click_delta,
                 box_selection,
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
                 map_cmd,
                 mode,
             );

@@ -3,9 +3,9 @@ pub(crate) mod plot_app;
 /// Orchestrates Plotinator3000 GUI, both the primary plotting viewport and the map viewport
 pub struct GlobalApp {
     // The first time geo spatial data is loaded, we pop up the map window, but not on subsequent loads
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     has_map_opened: bool,
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     map_view: plotinator_map_ui::MapViewPort,
     app: crate::PlotApp,
 }
@@ -13,15 +13,15 @@ pub struct GlobalApp {
 impl GlobalApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         Self {
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
             has_map_opened: false,
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
             map_view: plotinator_map_ui::MapViewPort::default(),
             app: crate::PlotApp::new(cc),
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     fn open_map_viewport(&mut self, ctx: &egui::Context) {
         if self.map_view.open {
             return;
@@ -35,11 +35,11 @@ impl GlobalApp {
 
 impl eframe::App for GlobalApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
         self.map_view.show(ctx);
         self.app.update(ctx, frame);
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
         {
             if !self.has_map_opened && self.app.map_commander.any_data_received {
                 self.has_map_opened = true;
