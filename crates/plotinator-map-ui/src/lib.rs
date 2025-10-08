@@ -179,7 +179,10 @@ impl MapViewPort {
                 MapCommand::FitToAllPaths => {
                     self.zoom_to_fit();
                 }
-                MapCommand::Reset => self.geo_data.clear(),
+                MapCommand::Reset => {
+                    self.geo_data.clear();
+                    self.mqtt_geo_data.clear();
+                }
             }
         }
         if let Some(pos) = cursor_pos {
@@ -192,9 +195,9 @@ impl MapViewPort {
             .zoom_to_fit(&self.geo_data, &self.mqtt_geo_data);
     }
 
-    pub fn add_geo_data(&mut self, geo_data: PrimaryGeoSpatialData) {
+    pub fn add_geo_data(&mut self, data: PrimaryGeoSpatialData) {
         debug_assert!(
-            geo_data.points.iter().all(|p| !p.timestamp.is_nan()
+            data.points.iter().all(|p| !p.timestamp.is_nan()
                 && !p.position.x().is_nan()
                 && !p.position.y().is_nan()
                 && !p.altitude.is_some_and(|a| match a {
@@ -203,10 +206,10 @@ impl MapViewPort {
                 && !p.speed.is_some_and(|s| s.is_nan())
                 && !p.heading.is_some_and(|h| h.is_nan())),
             "GeoSpatialData with NaN values: {}",
-            geo_data.name
+            data.name
         );
         self.geo_data.push(PathEntry {
-            data: geo_data,
+            data,
             settings: Default::default(),
         });
     }
