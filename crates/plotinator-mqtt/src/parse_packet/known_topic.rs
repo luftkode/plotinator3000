@@ -2,6 +2,7 @@ use anyhow::bail;
 use chrono::{TimeZone as _, Utc};
 use egui_plot::PlotPoint;
 use pilot_display::{PilotDisplayCoordinates, PilotDisplayRemainingDistance};
+use plotinator_log_if::prelude::GeoPoint;
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
@@ -170,9 +171,14 @@ impl KnownTopic {
             }
             Self::PilotDisplayCoordinates => {
                 let p: PilotDisplayCoordinates = serde_json::from_str(p)?;
+
                 let lat = MqttTopicData::single(self.subtopic_str("lat"), p.lat());
                 let lon = MqttTopicData::single(self.subtopic_str("lon"), p.lon());
-                let data = MqttData::multiple(vec![lat, lon]);
+
+                let geo_point = GeoPoint::new(util::now_timestamp(), (p.lat(), p.lon()));
+                let geo_data = MqttTopicData::single_geopoint(self.to_string(), geo_point);
+
+                let data = MqttData::multiple(vec![lat, lon, geo_data]);
                 Ok(Some(data))
             }
             Self::PilotDisplayRemainingDistance => {
