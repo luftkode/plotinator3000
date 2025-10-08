@@ -760,6 +760,16 @@ impl PrimaryGeoSpatialData {
 
         if any_merged {
             self.cached = CachedValues::compute(&self.points);
+            let aux_name = aux.name.clone();
+            if let Some(merged_with) = &mut self.merged_with {
+                log::warn!(
+                    "Merged '{aux_name}' into '{}', overwriting existing merged: '{merged_with}'",
+                    self.name
+                );
+            } else {
+                log::info!("Merged '{aux_name }' into '{}'", self.name);
+            }
+            self.merged_with = Some(aux_name);
         } else {
             log::debug!("Nothing to merge from '{}' into '{}'", aux.name, self.name);
         }
