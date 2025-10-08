@@ -359,7 +359,7 @@ impl<'h5> HmData<'h5> {
         ];
 
         let (AllZCoilZeroPositions(zero_positions_nested), AllZCoilBField(bfield_samples_nested)) =
-            self.calculate_b_field(1, 1, root_metadata.last_gate_on_count())?;
+            self.calculate_b_field(1, 1, root_metadata.last_gate_on_index())?;
 
         let mut final_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
         let mut final_zero_points = Vec::with_capacity(zero_positions_nested.len());
@@ -459,7 +459,7 @@ mod tests {
         let box_idx = 1;
 
         let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
-            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
 
         let first_zvec = zero_positions.first().unwrap();
         assert_eq!(first_zvec.len(), 413);
@@ -482,7 +482,7 @@ mod tests {
         let box_idx = 1;
 
         let (_zero_positions, AllZCoilBField(b_field_points)) =
-            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
 
         // Assert that the function produced a result
         assert!(
@@ -510,7 +510,7 @@ mod tests {
         let box_idx = 1;
 
         let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
-            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
 
         assert_eq!(zero_positions.len(), 0); // It's a stub file
         Ok(())
