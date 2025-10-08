@@ -234,15 +234,14 @@ fn calculate_bounding_box(
 }
 
 const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
-const MAPBOX_API_TOKEN_FALLBACK: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
+const MAPBOX_API_TOKEN_RUNTIME_LOCAL: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
+// Get a local runtime API token or fallback to the compile-time included public token
 fn get_mapbox_api_token() -> String {
-    option_env!("PLOTINATOR3000_MAPBOX_API").map_or_else(
-        || {
-            log::error!("No mapbox api token in {MAPBOX_API_TOKEN_COMPILE_TIME_NAME} at compile time, falling back to {MAPBOX_API_TOKEN_FALLBACK}");
-            std::env::var(MAPBOX_API_TOKEN_FALLBACK).expect("need mapbox API token")
-        },
-        |s| s.to_owned(),
-    )
+    std::env::var(MAPBOX_API_TOKEN_RUNTIME_LOCAL).ok().map_or_else(|| {
+        log::info!("No local mapbox API token in {MAPBOX_API_TOKEN_RUNTIME_LOCAL}, falling back to compile-time token {MAPBOX_API_TOKEN_COMPILE_TIME_NAME}");
+        option_env!("PLOTINATOR3000_MAPBOX_API").expect("no compile-time mapbox API token").to_owned()
+
+    }, |s| s.to_owned())
 }
 
 #[cfg(test)]
