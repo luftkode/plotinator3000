@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "1.36.0"
+version = "2.0.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -46,6 +46,7 @@ plotinator-download.path = "crates/plotinator-download"
 plotinator-strfmt.path = "crates/plotinator-strfmt"
 plotinator-file-io.path = "crates/plotinator-file-io"
 plotinator-csv.path = "crates/plotinator-csv"
+plotinator-map-ui.path = "crates/plotinator-map-ui"
 egui = { version = "0.32", features = ["rayon", "callstack"] }
 egui-notify = "0.20.0"
 eframe = { version = "0.32", default-features = false, features = [
@@ -56,7 +57,9 @@ eframe = { version = "0.32", default-features = false, features = [
     "x11",
 ] }
 egui_plot = { version = "0.33", features = ["serde"] }
+egui_extras = "0.32.3"
 egui-phosphor = "0.10.0"
+walkers = { version = "0.45.0", features = ["serde"] }
 rayon = "1.11.0"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
@@ -80,10 +83,10 @@ memmap2 = "0.9.8"
 tokio = "1.47.1"
 reqwest = { version = "0.12.23", default-features = false }
 dirs = "6.0.0"
-smallvec = "1.15.1"
+smallvec = { version = "1.15.1", features = ["serde"]}
 tempfile = "3.23.0"
 rfd = "0.15"
-zip = "5.0.0"
+zip = "5.0"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
@@ -95,7 +98,7 @@ puffin_http = "0.16"
 # Dev dependencies
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
-insta = "1.43.1"
+insta = { version = "1.43.2", features = ["filters"] }
 
 [dependencies]
 plotinator-logs.workspace = true
@@ -110,11 +113,13 @@ plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-file-io.workspace = true
+walkers.workspace = true
 egui.workspace = true
 eframe.workspace = true
 egui_plot.workspace = true
 egui-phosphor.workspace = true
 egui-notify.workspace = true
+egui_extras.workspace = true
 log.workspace = true
 serde.workspace = true
 chrono.workspace = true
@@ -143,6 +148,7 @@ egui_kittest = { version = "0.32.1", features = [
 plotinator-updater = { workspace = true, optional = true }
 plotinator-mqtt = { workspace = true, optional = true }
 plotinator-mqtt-ui = { workspace = true, optional = true }
+plotinator-map-ui = { workspace = true, optional = true }
 plotinator-download.workspace = true
 env_logger = "0.11"
 puffin = { workspace = true, optional = true }
@@ -158,9 +164,10 @@ wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"
 
 [features]
-default = ["selfupdater", "mqtt", "hdf5"]
+default = ["selfupdater", "map", "mqtt", "hdf5"]
 hdf5 = ["plotinator-supported-formats/hdf5", "plotinator-file-io/hdf5"]
 selfupdater = ["dep:plotinator-updater"]
+map = ["dep:plotinator-map-ui", "plotinator-plot-ui/map", "mqtt"]
 mqtt = [
     "dep:plotinator-mqtt",
     "dep:plotinator-mqtt-ui",

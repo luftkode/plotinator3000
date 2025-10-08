@@ -31,7 +31,11 @@ impl RootMetadata {
             metadata,
         })
     }
-
+    /// 0-based
+    pub(crate) fn last_gate_on_index(&self) -> usize {
+        self.last_gate_on_count() - 1
+    }
+    /// 1-based (count)
     pub(crate) fn last_gate_on_count(&self) -> usize {
         let k_ramp_up = gates_pr_decade_to_k(self.gates_pr_decade_on);
         let k_ontime = gates_pr_decade_to_k(self.gates_pr_decade_on);

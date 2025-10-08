@@ -66,3 +66,39 @@ pub-multi-random:
     just pub-random "debug/sensors/pressure" "980" "1030" "100" "1" &
     just pub-random-multiple-values "debug/sensors/gps" "20" "30" "1000" "0.05" &
     just pub-random-buffered-values "debug/sensors/mag" "2950" "3030" "5000" "0.01" &
+
+
+[group("MQTT")]
+pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    LAT_INT=56217778    # 56.217778 * 1e6
+    LON_INT=10147778    # 10.147778 * 1e6
+    ALT=66.62
+    SPEED_INT=52        # 0.052 * 1000
+    GPS_NR={{GPS_NUM}}
+    MODE=3
+    SATELLITES=10
+
+    END=$(( $(date +%s) + {{MINUTES}}*60 ))
+
+    while [ $(date +%s) -lt $END ]; do
+        TIMESTAMP=$(date +%s%N)
+        GPS_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+
+        # Gradually increase latitude by a tiny fixed amount each second
+        LAT_INT=$((LAT_INT + {{LAT_ADD}}))    # roughly 0.00001 degrees per second
+        # Small random drift for longitude
+        LON_INT=$((LON_INT + RANDOM % 10 - 5))
+        SPEED_INT=$((SPEED_INT + RANDOM % 5 + 2))
+        # Convert back to float strings with dot
+        LAT=$(printf "%d.%06d" $((LAT_INT / 1000000)) $((LAT_INT % 1000000)))
+        LON=$(printf "%d.%06d" $((LON_INT / 1000000)) $((LON_INT % 1000000)))
+        SPEED=$(printf "30.%03d" $SPEED_INT)
+
+        JSON="{\"gps_nr\": $GPS_NR, \"timestamp\": $TIMESTAMP, \"mode\": $MODE, \"gps_status\": {\"hdop\": 0.8, \"vdop\": 1.5, \"pdop\": 1.7, \"satellites\": $SATELLITES}, \"position\": {\"lat\": $LAT, \"lon\": $LON, \"alt\": $ALT}, \"speed\": $SPEED, \"gps_time\": \"$GPS_TIME\"}"
+
+        mosquitto_pub -h localhost -t "{{TOPIC}}" -m "$JSON"
+        sleep 1
+    done

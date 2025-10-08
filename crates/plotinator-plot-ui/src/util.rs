@@ -2,6 +2,7 @@ use egui::{Modifiers, Vec2};
 use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{CookedPlot, Plots, StoredPlotLabels};
 use plotinator_supported_formats::SupportedFormat;
+use plotinator_ui_util::ExpectedPlotRange;
 use rayon::prelude::*;
 
 use super::plot_settings::{PlotSettings, date_settings::LoadedLogSettings};
@@ -25,7 +26,10 @@ pub fn add_plot_data_to_plot_collections(
 
     const PARALLEL_THRESHOLD: usize = 200_000;
     // We just check the first one, usually formats will have the same number of points for all the data series
-    let first_plot_points_count: usize = data.raw_plots().first().map_or(0, |p| p.points().len());
+    let first_plot_points_count: usize = data.raw_plots().first().map_or(0, |p| match p {
+        RawPlot::Generic { common } | RawPlot::Boolean { common } => common.points().len(),
+        RawPlot::GeoSpatialDataset(geo) => geo.len(),
+    });
 
     if first_plot_points_count > PARALLEL_THRESHOLD {
         log::info!(
@@ -37,7 +41,17 @@ pub fn add_plot_data_to_plot_collections(
     }
 
     for raw_plot in data.raw_plots() {
-        plot_settings.add_plot_name_if_not_exists(raw_plot.name(), data.descriptive_name());
+        match raw_plot {
+            RawPlot::GeoSpatialDataset(geo_data) => {
+                for common in geo_data.raw_plots_common() {
+                    plot_settings
+                        .add_plot_name_if_not_exists(common.name(), data.descriptive_name());
+                }
+            }
+            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
+                plot_settings.add_plot_name_if_not_exists(common.name(), data.descriptive_name());
+            }
+        }
     }
 
     add_plot_labels_to_collections(plots, data, data_id);
@@ -49,16 +63,31 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
         plots.one_to_hundred().plot_labels_iter().collect();
     let existing_plots_thousands: Vec<&str> = plots.thousands().plot_labels_iter().collect();
 
-    let new_cooked_plots: Vec<(ExpectedPlotRange, CookedPlot)> = data
+    // Extract all GeoSpatial plots into owned Vec
+    let geo_plots: Vec<RawPlotCommon> = data
         .raw_plots()
+        .iter()
+        .filter_map(|rp| match rp {
+            RawPlot::GeoSpatialDataset(geo_data) => Some(geo_data.raw_plots_common()),
+            _ => None,
+        })
+        .flatten()
+        .collect();
+
+    // Process all plots in parallel: owned geo plots + borrowed other plots
+    let new_cooked_plots: Vec<(ExpectedPlotRange, CookedPlot)> = geo_plots
         .par_iter()
-        .filter_map(|raw_plot| {
-            let label = raw_plot.label_from_id(data_id);
-            let already_exists = match raw_plot.expected_range() {
+        .chain(data.raw_plots().par_iter().filter_map(|rp| match rp {
+            RawPlot::Generic { common } | RawPlot::Boolean { common } => Some(common),
+            RawPlot::GeoSpatialDataset(_) => None,
+        }))
+        .filter_map(|rpc| {
+            let label = rpc.label_from_id(data_id);
+            let already_exists = match rpc.expected_range() {
                 ExpectedPlotRange::Percentage => {
                     existing_plots_percentage.contains(&label.as_str())
                 }
-                ExpectedPlotRange::OneToOneHundred => {
+                ExpectedPlotRange::Hundreds => {
                     existing_plots_one_to_hundred.contains(&label.as_str())
                 }
                 ExpectedPlotRange::Thousands => existing_plots_thousands.contains(&label.as_str()),
@@ -67,9 +96,8 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
             if already_exists {
                 None
             } else {
-                let cooked_plot =
-                    CookedPlot::new(raw_plot, data_id, data.descriptive_name().to_owned());
-                Some((raw_plot.expected_range(), cooked_plot))
+                let cooked_plot = CookedPlot::new(rpc, data_id, data.descriptive_name().to_owned());
+                Some((rpc.expected_range(), cooked_plot))
             }
         })
         .collect();
@@ -78,19 +106,13 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
     for (range, new_plot) in new_cooked_plots {
         match range {
             ExpectedPlotRange::Percentage => {
-                let collection = plots.percentage_mut();
-                let colored_plot = new_plot.color(collection.auto_color());
-                collection.plots_as_mut().push(colored_plot);
+                plots.percentage_mut().plots_as_mut().push(new_plot);
             }
-            ExpectedPlotRange::OneToOneHundred => {
-                let collection = plots.one_to_hundred_mut();
-                let colored_plot = new_plot.color(collection.auto_color());
-                collection.plots_as_mut().push(colored_plot);
+            ExpectedPlotRange::Hundreds => {
+                plots.one_to_hundred_mut().plots_as_mut().push(new_plot);
             }
             ExpectedPlotRange::Thousands => {
-                let collection = plots.thousands_mut();
-                let colored_plot = new_plot.color(collection.auto_color());
-                collection.plots_as_mut().push(colored_plot);
+                plots.thousands_mut().plots_as_mut().push(new_plot);
             }
         }
     }
@@ -103,27 +125,58 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
 
 fn add_plot_points_to_collections_seq(plots: &mut Plots, data: &SupportedFormat, data_id: u16) {
     for raw_plot in data.raw_plots() {
-        match raw_plot.expected_range() {
-            ExpectedPlotRange::Percentage => {
-                plots.percentage_mut().add_plot_if_not_exists(
-                    raw_plot,
-                    data_id,
-                    data.descriptive_name(),
-                );
+        match raw_plot {
+            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
+                match common.expected_range() {
+                    ExpectedPlotRange::Percentage => {
+                        plots.percentage_mut().add_plot_if_not_exists(
+                            common,
+                            data_id,
+                            data.descriptive_name(),
+                        );
+                    }
+                    ExpectedPlotRange::Hundreds => {
+                        plots.one_to_hundred_mut().add_plot_if_not_exists(
+                            common,
+                            data_id,
+                            data.descriptive_name(),
+                        );
+                    }
+                    ExpectedPlotRange::Thousands => {
+                        plots.thousands_mut().add_plot_if_not_exists(
+                            common,
+                            data_id,
+                            data.descriptive_name(),
+                        );
+                    }
+                }
             }
-            ExpectedPlotRange::OneToOneHundred => {
-                plots.one_to_hundred_mut().add_plot_if_not_exists(
-                    raw_plot,
-                    data_id,
-                    data.descriptive_name(),
-                );
-            }
-            ExpectedPlotRange::Thousands => {
-                plots.thousands_mut().add_plot_if_not_exists(
-                    raw_plot,
-                    data_id,
-                    data.descriptive_name(),
-                );
+            RawPlot::GeoSpatialDataset(geo_data) => {
+                for common in geo_data.raw_plots_common() {
+                    match common.expected_range() {
+                        ExpectedPlotRange::Percentage => {
+                            plots.percentage_mut().add_plot_if_not_exists(
+                                &common,
+                                data_id,
+                                data.descriptive_name(),
+                            );
+                        }
+                        ExpectedPlotRange::Hundreds => {
+                            plots.one_to_hundred_mut().add_plot_if_not_exists(
+                                &common,
+                                data_id,
+                                data.descriptive_name(),
+                            );
+                        }
+                        ExpectedPlotRange::Thousands => {
+                            plots.thousands_mut().add_plot_if_not_exists(
+                                &common,
+                                data_id,
+                                data.descriptive_name(),
+                            );
+                        }
+                    }
+                }
             }
         }
     }
@@ -137,7 +190,7 @@ fn add_plot_labels_to_collections(plots: &mut Plots, data: &SupportedFormat, dat
                 ExpectedPlotRange::Percentage => plots
                     .percentage_mut()
                     .add_plot_labels(StoredPlotLabels::new(owned_label_points, data_id)),
-                ExpectedPlotRange::OneToOneHundred => {
+                ExpectedPlotRange::Hundreds => {
                     plots
                         .one_to_hundred_mut()
                         .add_plot_labels(StoredPlotLabels::new(owned_label_points, data_id));

@@ -1,13 +1,14 @@
 use crate::mbed_motor_control::mbed_config::MbedConfig as _;
 use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader as _;
+use anyhow::bail;
 use plotinator_log_if::log::LogEntry as _;
-use std::io::Read as _;
+use plotinator_ui_util::ExpectedPlotRange;
 
 use crate::{mbed_motor_control::mbed_header::SIZEOF_UNIQ_DESC, parse_unique_description};
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::{fmt, fs, io, path::Path};
+use std::{fmt, io};
 
 use super::{
     entry::{
@@ -16,6 +17,8 @@ use super::{
     },
     header::PidLogHeader,
 };
+
+const LEGEND: &str = "MBED PID";
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PidLog {
@@ -27,21 +30,8 @@ pub struct PidLog {
 }
 
 impl PidLog {
-    /// Checks if the file at the given path is a valid [`PidLog`] file
-    pub fn file_is_valid(path: &Path) -> bool {
-        let Ok(mut file) = fs::File::open(path) else {
-            return false;
-        };
-
-        let mut buffer = vec![0u8; SIZEOF_UNIQ_DESC + 2];
-        match file.read_exact(&mut buffer) {
-            Ok(_) => Self::is_buf_valid(&buffer),
-            Err(_) => false, // Return false if we can't read enough bytes
-        }
-    }
-
     // helper function build all the plots that can be made from a pidlog
-    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlot> {
+    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlotCommon> {
         let entry_count = entries.len();
         let mut rpm_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut pid_output_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -104,55 +94,55 @@ impl PidLog {
         first_valid_rpm_count: Vec<[f64; 2]>,
         fan_on: Vec<[f64; 2]>,
         vbat: Vec<[f64; 2]>,
-    ) -> Vec<RawPlot> {
+    ) -> Vec<RawPlotCommon> {
         let mut raw_plots = vec![];
         if !rpm.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "RPM".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("RPM ({LEGEND})"),
                 rpm,
                 ExpectedPlotRange::Thousands,
             ));
         }
         if !pid_output.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "PID Output".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("PID Output ({LEGEND})"),
                 pid_output,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !servo_duty_cycle.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Servo Duty Cycle".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Servo Duty Cycle ({LEGEND})"),
                 servo_duty_cycle,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !rpm_error_count.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "RPM Error Count".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("RPM Error Count ({LEGEND})"),
                 rpm_error_count,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !first_valid_rpm_count.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "First Valid RPM Count".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("First Valid RPM Count ({LEGEND})"),
                 first_valid_rpm_count,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !fan_on.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Fan On".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Fan On ({LEGEND})"),
                 fan_on,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !vbat.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Vbat [V]".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Vbat [V] ({LEGEND})"),
                 vbat,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         raw_plots
@@ -163,16 +153,27 @@ impl Parseable for PidLog {
     const DESCRIPTIVE_NAME: &str = "Mbed PID log";
 
     /// Probes the buffer and check if it starts with [`super::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
-    fn is_buf_valid(content: &[u8]) -> bool {
-        if content.len() < SIZEOF_UNIQ_DESC + 2 {
-            return false;
+    fn is_buf_valid(content: &[u8]) -> Result<(), String> {
+        let content_len = content.len();
+        if content_len < SIZEOF_UNIQ_DESC + 2 {
+            return Err(format!(
+                "Not a '{}': Content len={content_len} is too small",
+                Self::DESCRIPTIVE_NAME,
+            ));
         }
 
         let unique_description = &content[..SIZEOF_UNIQ_DESC];
-        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
+        if parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a '{}' Unique description bytes did not match",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut total_bytes_read: usize = 0;
         let (header, bytes_read) = PidLogHeader::from_reader(reader)?;
         total_bytes_read += bytes_read;
@@ -190,12 +191,7 @@ impl Parseable for PidLog {
                 let (v3_vec, entry_bytes_read) = parse_to_vec::<PidLogEntryV3>(reader);
                 (convert_v3_to_pid_log_entry(v3_vec), entry_bytes_read)
             }
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    format!("Unsupported header version: {}", header.version()),
-                ));
-            }
+            _ => bail!("Unsupported header version: {}", header.version()),
         };
 
         total_bytes_read += entry_bytes_read;
@@ -221,18 +217,20 @@ impl Parseable for PidLog {
 
         let all_plots_raw = Self::build_raw_plots(startup_timestamp_ns, &vec_of_entries);
         // Iterate through the plots and make sure all the first timestamps match
-        if let Some(first_plot) = all_plots_raw.first() {
-            if let Some([first_timestamp, ..]) = first_plot.points().first() {
-                for p in &all_plots_raw {
-                    if let Some([current_first_timestamp, ..]) = p.points().first() {
-                        debug_assert_eq!(
-                            current_first_timestamp, first_timestamp,
-                            "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
-                        );
-                    }
+        if let Some(first_plot) = all_plots_raw.first()
+            && let Some([first_timestamp, ..]) = first_plot.points().first()
+        {
+            for p in &all_plots_raw {
+                if let Some([current_first_timestamp, ..]) = p.points().first() {
+                    debug_assert_eq!(
+                        current_first_timestamp, first_timestamp,
+                        "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
+                    );
                 }
             }
         }
+
+        let all_plots_raw = all_plots_raw.into_iter().map(Into::into).collect();
 
         Ok((
             Self {

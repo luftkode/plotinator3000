@@ -1,6 +1,7 @@
 use anyhow::{Context as _, ensure};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
-use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use plotinator_log_if::{prelude::RawPlotCommon, rawplot::RawPlot};
+use plotinator_ui_util::ExpectedPlotRange;
 use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
 
 use crate::tsc::metadata::RootMetadata;
@@ -356,7 +357,7 @@ impl<'h5> HmData<'h5> {
         ];
 
         let (AllZCoilZeroPositions(zero_positions_nested), AllZCoilBField(bfield_samples_nested)) =
-            self.calculate_b_field(1, 1, root_metadata.last_gate_on_count())?;
+            self.calculate_b_field(1, 1, root_metadata.last_gate_on_index())?;
 
         let mut final_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
         let mut final_zero_points = Vec::with_capacity(zero_positions_nested.len());
@@ -381,16 +382,18 @@ impl<'h5> HmData<'h5> {
 
         Ok((
             vec![
-                RawPlot::new(
+                RawPlotCommon::new(
                     "0-position (Z) [nT]".to_owned(),
                     final_zero_points,
                     ExpectedPlotRange::Thousands,
-                ),
-                RawPlot::new(
+                )
+                .into(),
+                RawPlotCommon::new(
                     "B-field (Z) [nT]".to_owned(),
                     final_bfield_points,
                     ExpectedPlotRange::Thousands,
-                ),
+                )
+                .into(),
             ],
             metadata,
         ))
@@ -454,7 +457,7 @@ mod tests {
         let box_idx = 1;
 
         let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
-            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
 
         let first_zvec = zero_positions.first().unwrap();
         assert_eq!(first_zvec.len(), 413);
@@ -477,7 +480,7 @@ mod tests {
         let box_idx = 1;
 
         let (_zero_positions, AllZCoilBField(b_field_points)) =
-            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
 
         // Assert that the function produced a result
         assert!(
@@ -505,7 +508,7 @@ mod tests {
         let box_idx = 1;
 
         let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
-            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_count())?;
+            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
 
         assert_eq!(zero_positions.len(), 0); // It's a stub file
         Ok(())

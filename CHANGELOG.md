@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.0.0]
+
+### Added
+
+- Map window: Automatically opens when loaded data (including MQTT streams) contains geospatial coordinates.
+    - Displays data points on a map with selectable layers (OpenStreetMap or Mapbox satellite).
+    - Hovering over plot data highlights the corresponding location on the map.
+    - Supports real-time plotting of geospatial data from an MQTT broker.
+    - Option to keep the most recent data centered (e.g., tracking moving objects).
+    - Displays additional point metadata such as heading and altitude.
+
+### Fixed
+
+- TSC zero position plots: Now correctly use the last gate in on-time (previously off by one).
+
 ## [1.36.0]
 
 ### Added

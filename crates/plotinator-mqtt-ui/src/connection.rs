@@ -93,14 +93,15 @@ impl MqttConnection {
         }
     }
 
+    /// Show the MQTT connect window and push an [`MqttDataReceiver`] to the list of MQTT receivers
+    /// if one was instantiated by clicked "connect" in the window
     pub fn show_connect_window(&mut self, ui: &mut egui::Ui) {
-        if let Some(mqtt_config_window) = &mut self.mqtt_config_window {
-            if mqtt_config_window.is_open || self.mqtt_data_receiver.is_empty() {
-                if let Some(data_receiver) = mqtt_config_window.ui(ui) {
-                    self.mqtt_data_receiver.push(data_receiver);
-                    self.set_auto_bounds = true;
-                }
-            }
+        if let Some(mqtt_config_window) = &mut self.mqtt_config_window
+            && (mqtt_config_window.is_open || self.mqtt_data_receiver.is_empty())
+            && let Some(data_receiver) = mqtt_config_window.ui(ui)
+        {
+            self.mqtt_data_receiver.push(data_receiver);
+            self.set_auto_bounds = true;
         }
     }
 

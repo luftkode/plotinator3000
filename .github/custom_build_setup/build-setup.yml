@@ -5,3 +5,6 @@
   if: runner.os == 'Windows'
   shell: bash
   run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib" >> "$GITHUB_ENV"
+
+- name: Set MAPBOX API token (public token)
+  run: echo "PLOTINATOR3000_MAPBOX_API=${{ secrets.PLOTINATOR3000_MAPBOX_API }}" >> $GITHUB_ENV

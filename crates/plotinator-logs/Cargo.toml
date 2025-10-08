@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 plotinator-plot-util.workspace = true
 plotinator-log-if.workspace = true
+plotinator-ui-util.workspace = true
 egui_plot.workspace = true
 serde.workspace = true
 serde-big-array.workspace = true
@@ -25,6 +26,7 @@ getset.workspace = true
 derive_more.workspace = true
 log.workspace = true
 thiserror.workspace = true
+anyhow.workspace = true
 
 [dev-dependencies]
 plotinator-test-util.workspace = true

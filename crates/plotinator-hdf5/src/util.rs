@@ -4,7 +4,8 @@ use hdf5::{
     Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
-use plotinator_log_if::prelude::{ExpectedPlotRange, RawPlot};
+use plotinator_log_if::prelude::RawPlotCommon;
+use plotinator_ui_util::ExpectedPlotRange;
 
 /// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
@@ -58,16 +59,8 @@ pub(crate) fn read_string_attribute(attr: &Attribute) -> hdf5::Result<String> {
             let value: VarLenUnicode = attr.read_scalar()?;
             Ok(value.as_str().to_owned())
         }
-        // Handle fixed-length ASCII string
-        TypeDescriptor::FixedAscii(_) => {
-            let buf = attr.read_raw()?;
-            let string = String::from_utf8_lossy(&buf)
-                .trim_end_matches('\0')
-                .to_owned();
-            Ok(string)
-        }
-        // Handle fixed-length UTF-8 string
-        TypeDescriptor::FixedUnicode(_) => {
+        // Handle fixed-length ASCII or UTF-8 string
+        TypeDescriptor::FixedAscii(_) | TypeDescriptor::FixedUnicode(_) => {
             let buf = attr.read_raw()?;
             let string = String::from_utf8_lossy(&buf)
                 .trim_end_matches('\0')
@@ -94,16 +87,8 @@ pub(crate) fn read_any_attribute_to_string(attr: &Attribute) -> hdf5::Result<Str
             let value: VarLenUnicode = attr.read_scalar()?;
             Ok(value.as_str().to_owned())
         }
-        // Handle fixed-length ASCII string
-        TypeDescriptor::FixedAscii(_) => {
-            let buf = attr.read_raw()?;
-            let string = String::from_utf8_lossy(&buf)
-                .trim_end_matches('\0')
-                .to_owned();
-            Ok(string)
-        }
-        // Handle fixed-length UTF-8 string
-        TypeDescriptor::FixedUnicode(_) => {
+        // Handle fixed-length ASCII or UTF-8 string
+        TypeDescriptor::FixedAscii(_) | TypeDescriptor::FixedUnicode(_) => {
             let buf = attr.read_raw()?;
             let string = String::from_utf8_lossy(&buf)
                 .trim_end_matches('\0')
@@ -194,7 +179,7 @@ pub(crate) fn open_dataset(
 pub(crate) fn gen_time_between_samples_rawplot(
     timestamps: &[i64],
     rawplot_name_suffix: &str,
-) -> Option<RawPlot> {
+) -> Option<RawPlotCommon> {
     calc_time_between_samples(timestamps)
         .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
 }
@@ -202,16 +187,16 @@ pub(crate) fn gen_time_between_samples_rawplot(
 pub(crate) fn gen_time_between_samples_rawplot_2d(
     timestamps: &ndarray::Array2<i64>,
     rawplot_name_suffix: &str,
-) -> Option<RawPlot> {
+) -> Option<RawPlotCommon> {
     calc_time_between_samples_2d(timestamps)
         .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
 }
 
-fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, rawplot_name_suffix: &str) -> RawPlot {
-    RawPlot::new(
+fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, rawplot_name_suffix: &str) -> RawPlotCommon {
+    RawPlotCommon::new(
         format!("Δt sample [ms] {rawplot_name_suffix}"),
         points,
-        ExpectedPlotRange::OneToOneHundred,
+        ExpectedPlotRange::Hundreds,
     )
 }
 

@@ -17,6 +17,7 @@ plotinator-proc-macros.workspace = true
 plotinator-test-util.workspace = true
 plotinator-plot-util.workspace = true
 plotinator-log-if.workspace = true
+plotinator-ui-util.workspace = true
 egui_plot.workspace = true
 serde.workspace = true
 serde-big-array.workspace = true

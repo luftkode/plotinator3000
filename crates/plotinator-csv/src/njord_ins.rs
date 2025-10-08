@@ -1,6 +1,10 @@
+use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
 use plotinator_log_if::prelude::*;
+use plotinator_ui_util::ExpectedPlotRange;
 use std::io::{self, BufRead as _};
+
+const LEGEND_NAME: &str = "NjordInsPPP";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NjordInsPPP {
@@ -47,6 +51,13 @@ struct NjordInsPPPRow {
     glonass_sats: f64,
     beidou_sats: f64,
     galileo_sats: f64,
+}
+
+impl NjordInsPPPRow {
+    /// Returns the horizontal speed (ignoring vertical component) in km/h
+    fn horizontal_speed_kmh(&self) -> f64 {
+        self.vel_n.hypot(self.vel_e) * 3.6
+    }
 }
 
 /// A small helper to manage stateful parsing of fields from a single CSV row.
@@ -181,14 +192,14 @@ impl Parseable for NjordInsPPP {
         clippy::too_many_lines,
         reason = "As simple as can be. There's just a lot of columns"
     )]
-    fn from_reader(reader: &mut impl std::io::BufRead) -> std::io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl std::io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut header = String::new();
         let header_bytes_read = reader.read_line(&mut header)?;
         if header.trim() != EXPECTED_HEADER {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("CSV header mismatch, expected: {EXPECTED_HEADER}"),
-            ));
+            bail!(
+                "Not a '{}' CSV header mismatch, expected: {EXPECTED_HEADER}",
+                Self::DESCRIPTIVE_NAME
+            );
         }
 
         let (entries, entries_bytes_read) = parse_to_vec::<NjordInsPPPRow>(reader);
@@ -198,144 +209,174 @@ impl Parseable for NjordInsPPP {
             io::Error::new(io::ErrorKind::InvalidData, "No data rows found in log")
         })?;
 
-        let raw_plots = vec![
+        let mut timestamps = Vec::with_capacity(entries.len());
+        let mut latitude = Vec::with_capacity(entries.len());
+        let mut longitude = Vec::with_capacity(entries.len());
+        let mut altitude = Vec::with_capacity(entries.len());
+        let mut speed = Vec::with_capacity(entries.len());
+        let mut heading = Vec::with_capacity(entries.len());
+
+        for e in &entries {
+            timestamps.push(e.timestamp_ns());
+            latitude.push(e.latitude);
+            longitude.push(e.longitude);
+            altitude.push(e.height);
+            speed.push(e.horizontal_speed_kmh());
+            heading.push(e.heading);
+        }
+
+        let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+            .timestamp(&timestamps)
+            .lon(&longitude)
+            .lat(&latitude)
+            .altitude_from_gnss(altitude)
+            .speed(&speed)
+            .heading(&heading)
+            .build_into_rawplot()
+            .expect("invalid builder");
+
+        let mut raw_plots = vec![
             // Attitude
-            RawPlot::new(
-                "Pitch °".into(),
+            RawPlotCommon::new(
+                format!("Pitch° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pitch),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Roll °".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Roll° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.roll),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Heading °".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.heading),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            // Position
-            RawPlot::new(
-                "Latitude °".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.latitude),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Longitude °".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.longitude),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Height [m]".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.height),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
             // Velocity
-            RawPlot::new(
-                "Velocity North [m/s]".into(),
+            RawPlotCommon::new(
+                format!("Velocity North [m/s] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_n),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Velocity East [m/s]".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Velocity East [m/s] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_e),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Velocity Down [m/s]".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Velocity Down [m/s] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_d),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
             // Standard Deviations
-            RawPlot::new(
-                "Latitude SD [m]".into(),
+            RawPlotCommon::new(
+                format!("Latitude SD [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.lat_sd),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Longitude SD [m]".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Longitude SD [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.lon_sd),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Height SD [m]".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Height SD [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.height_sd),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Roll SD °".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Roll SD° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.roll_sd),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Pitch SD °".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Pitch SD° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pitch_sd),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Heading SD °".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Heading SD° ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.heading_sd),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
             // Biases
-            RawPlot::new(
-                "Accelerometer Bias X".into(),
+            RawPlotCommon::new(
+                format!("Accelerometer Bias X ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_x),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Accelerometer Bias Y".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Accelerometer Bias Y ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_y),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Accelerometer Bias Z".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Accelerometer Bias Z ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_z),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Gyroscope Bias X".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Gyroscope Bias X ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_x),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Gyroscope Bias Y".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Gyroscope Bias Y ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_y),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Gyroscope Bias Z".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Gyroscope Bias Z ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_z),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
             // GNSS
-            RawPlot::new(
-                "Fix Type".into(),
+            RawPlotCommon::new(
+                format!("Fix Type ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.fix_type),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GPS Satellites".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("GPS Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gps_sats),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "GLONASS Satellites".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("GLONASS Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.glonass_sats),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "BeiDou Satellites".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("BeiDou Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.beidou_sats),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Galileo Satellites".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Galileo Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.galileo_sats),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
         ];
+        if let Some(geo_data) = geo_data {
+            raw_plots.push(geo_data);
+        }
 
         let total_bytes_read = header_bytes_read + entries_bytes_read;
 
@@ -349,13 +390,24 @@ impl Parseable for NjordInsPPP {
         ))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = io::BufReader::new(buf);
         let mut header = String::new();
-        if reader.read_line(&mut header).is_ok() {
-            header.trim() == EXPECTED_HEADER
+        if let Err(e) = reader.read_line(&mut header) {
+            return Err(format!(
+                "Not a valid '{}', failed to read line: {e}",
+                Self::DESCRIPTIVE_NAME
+            ));
+        }
+
+        let trimmed_header = header.trim();
+        if trimmed_header == EXPECTED_HEADER {
+            Ok(())
         } else {
-            false
+            Err(format!(
+                "Not a valid '{}' header mismatch, expected '{EXPECTED_HEADER}', got '{trimmed_header}'",
+                Self::DESCRIPTIVE_NAME
+            ))
         }
     }
 }
@@ -395,7 +447,11 @@ Tue Sep 09 18:37:32 CEST 2025,1757435852,80242,0,56.16089115927095,10.0377703794
         let mut reader = BufReader::new(TEST_2_ROWS.as_bytes());
         let (njord_ins, read_bytes) = NjordInsPPP::from_reader(&mut reader).unwrap();
 
-        insta::assert_debug_snapshot!(njord_ins);
+        insta::with_settings!({filters => vec![
+            (r"color: #\w+,", "color: [RANDOMIZED COLOR]"),
+        ]}, {
+            insta::assert_debug_snapshot!(njord_ins);
+        });
         insta::assert_debug_snapshot!(read_bytes);
     }
 

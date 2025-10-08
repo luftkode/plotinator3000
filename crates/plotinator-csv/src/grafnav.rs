@@ -1,6 +1,10 @@
+use anyhow::bail;
 use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone as _, Utc};
 use plotinator_log_if::prelude::*;
+use plotinator_ui_util::ExpectedPlotRange;
 use std::io::{self, BufRead as _};
+
+const LEGEND_NAME: &str = "GrafNav-PPP";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct GrafNavPPP {
@@ -23,7 +27,7 @@ struct GrafNavPPPRow {
     pdop: f64,
     h_ell: f64,
     num_satellites: i32,
-    cog: f64,
+    cog: f64, // course over ground (heading)
     v_east: f64,
     v_north: f64,
     v_up: f64,
@@ -151,7 +155,7 @@ impl Parseable for GrafNavPPP {
     const DESCRIPTIVE_NAME: &str = "GrafNav PPP";
 
     #[allow(clippy::too_many_lines, reason = "Long but simple")]
-    fn from_reader(reader: &mut impl std::io::BufRead) -> std::io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl std::io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut total_bytes_read = 0;
         let mut metadata = Vec::new();
         let mut line = String::new();
@@ -163,10 +167,10 @@ impl Parseable for GrafNavPPP {
             total_bytes_read += bytes_read;
 
             if bytes_read == 0 {
-                return Err(io::Error::new(
-                    io::ErrorKind::UnexpectedEof,
-                    "Unexpected end of file while reading metadata",
-                ));
+                bail!(
+                    "Not a valid '{}': Unexpected end of file while reading metadata",
+                    Self::DESCRIPTIVE_NAME
+                );
             }
 
             let trimmed = line.trim();
@@ -204,97 +208,119 @@ impl Parseable for GrafNavPPP {
 
         metadata.push(("Dataset length".into(), row_len.to_string()));
 
-        let raw_plots = vec![
+        let mut timestamps = Vec::with_capacity(entries.len());
+        let mut latitude = Vec::with_capacity(entries.len());
+        let mut longitude = Vec::with_capacity(entries.len());
+        let mut altitude = Vec::with_capacity(entries.len());
+        let mut speed = Vec::with_capacity(entries.len());
+        let mut heading = Vec::with_capacity(entries.len());
+
+        for e in &entries {
+            timestamps.push(e.timestamp_ns());
+            latitude.push(e.latitude);
+            longitude.push(e.longitude);
+            altitude.push(e.h_ell);
+            speed.push(e.hz_speed);
+            heading.push(e.cog);
+        }
+
+        let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(LEGEND_NAME)
+            .timestamp(&timestamps)
+            .lon(&longitude)
+            .lat(&latitude)
+            .altitude_from_gnss(altitude)
+            .speed(&speed)
+            .heading(&heading)
+            .build_into_rawplot()
+            .expect("invalid builder");
+
+        let mut raw_plots = vec![
             // Position
-            RawPlot::new(
-                "Latitude °".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.latitude),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Longitude °".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.longitude),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Height MSL [m]".into(),
+            RawPlotCommon::new(
+                format!("Height MSL [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_msl),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Height Ellipsoid [m]".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Height Ellipsoid [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_ell),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
             // UTM Coordinates
-            RawPlot::new(
-                "Northing [m]".into(),
+            RawPlotCommon::new(
+                format!("Northing [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.northing),
                 ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "Easting [m]".into(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Easting [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.easting),
                 ExpectedPlotRange::Thousands,
-            ),
+            )
+            .into(),
             // Velocity
-            RawPlot::new(
-                "Velocity East [km/h]".into(),
+            RawPlotCommon::new(
+                format!("Velocity East [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_east),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Velocity North [km/h]".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Velocity North [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_north),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Velocity Up [km/h]".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Velocity Up [km/h] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_up),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Horizontal Speed [km/h]".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.hz_speed),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
             // Quality indicators
-            RawPlot::new(
-                "Quality Factor".into(),
+            RawPlotCommon::new(
+                format!("Quality Factor ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.quality as f64),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "PDOP".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("PDOP ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pdop),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Number of Satellites".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Number of Satellites ({LEGEND_NAME})"),
                 plot_points_from_log_entry(
                     &entries,
                     |e| e.timestamp_ns(),
                     |e| e.num_satellites as f64,
                 ),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
             // Other
-            RawPlot::new(
-                "Course Over Ground [°]".into(),
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.cog),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Undulation [m]".into(),
+            RawPlotCommon::new(
+                format!("Undulation [m] ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.undulation),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
-            RawPlot::new(
-                "Sequence Number".into(),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Sequence Number ({LEGEND_NAME})"),
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.seq_num as f64),
-                ExpectedPlotRange::OneToOneHundred,
-            ),
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
         ];
+
+        if let Some(geo_data) = geo_data {
+            raw_plots.push(geo_data);
+        }
 
         Ok((
             Self {
@@ -305,15 +331,18 @@ impl Parseable for GrafNavPPP {
             total_bytes_read,
         ))
     }
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = io::BufReader::new(buf);
         let mut line = String::new();
 
         // Skip empty lines at the beginning
         loop {
             line.clear();
-            if reader.read_line(&mut line).is_err() {
-                return false;
+            if let Err(e) = reader.read_line(&mut line) {
+                return Err(format!(
+                    "Not a valid '{}', failed to read line while skipping empty lines: {e}",
+                    Self::DESCRIPTIVE_NAME
+                ));
             }
 
             let trimmed = line.trim();
@@ -324,17 +353,30 @@ impl Parseable for GrafNavPPP {
 
         // First non-empty line should start with "Project:"
         if !line.trim().starts_with("Project:") {
-            return false;
+            return Err(format!(
+                "Not a valid '{}', First non-empty line should start with \"Project:\"",
+                Self::DESCRIPTIVE_NAME
+            ));
         }
 
         // Second line should start with "Program:" and contain "GrafNav Version"
         line.clear();
-        if reader.read_line(&mut line).is_err() {
-            return false;
+        if let Err(e) = reader.read_line(&mut line) {
+            return Err(format!(
+                "Not a valid '{}', failed to read line while reading second non-empty line: {e}",
+                Self::DESCRIPTIVE_NAME
+            ));
         }
 
         let trimmed = line.trim();
-        trimmed.starts_with("Program:") && trimmed.contains("GrafNav Version")
+        if trimmed.starts_with("Program:") && trimmed.contains("GrafNav Version") {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a valid '{}', First non-empty line should start with \"Project:\" and contain \"GrafNav Version\", got: {trimmed}",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 }
 
@@ -404,7 +446,11 @@ mod tests {
     fn test_read_csv() {
         let mut reader = BufReader::new(TEST_2_ROWS.as_bytes());
         let (grafnavppp, read_bytes) = GrafNavPPP::from_reader(&mut reader).unwrap();
-        insta::assert_debug_snapshot!(grafnavppp);
+        insta::with_settings!({filters => vec![
+            (r"color: #\w+,", "color: [RANDOMIZED COLOR]"),
+        ]}, {
+            insta::assert_debug_snapshot!(grafnavppp);
+        });
         insta::assert_debug_snapshot!(read_bytes);
     }
 

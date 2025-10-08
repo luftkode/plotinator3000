@@ -80,7 +80,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Test ${{ matrix.os }}
-        run: cargo nextest run --workspace --profile ci --run-ignored=all
+        run: cargo nextest run --workspace --profile ci --run-ignored=all --no-fail-fast
+        env:
+          PLOTINATOR3000_MAPBOX_API: ${{ secrets.PLOTINATOR3000_MAPBOX_API }}
 
       # So that we can inspect why it failed
       - name: Upload snapshots (including diffs)
@@ -151,10 +153,6 @@ jobs:
             cross: true
 
           - os: ubuntu-latest
-            TARGET: armv7-unknown-linux-gnueabihf
-            cross: true
-
-          - os: ubuntu-latest
             TARGET: x86_64-unknown-linux-gnu
 
           - os: windows-latest
@@ -192,6 +190,8 @@ jobs:
       - if: ${{ !matrix.cross }}
         name: Cargo Build
         run: cargo build --release --target=${{ matrix.TARGET }}
+        env:
+          PLOTINATOR3000_MAPBOX_API: ${{ secrets.PLOTINATOR3000_MAPBOX_API }}
 
       - if: matrix.cross
         name: Cross Build

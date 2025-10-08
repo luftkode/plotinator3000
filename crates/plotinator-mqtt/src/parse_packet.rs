@@ -5,6 +5,7 @@ use known_topic::KnownTopic;
 
 pub mod known_topic;
 
+#[inline]
 pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttData> {
     if let Ok(known) = KnownTopic::from_str(topic) {
         match known.parse_packet(payload) {
@@ -21,6 +22,7 @@ pub(crate) fn parse_packet(topic: &str, payload: &str) -> Option<MqttData> {
     }
 }
 
+#[inline]
 fn parse_unknown_topic(topic: &str, payload: &str) -> Option<MqttData> {
     match payload.parse::<f64>() {
         Ok(num) => {

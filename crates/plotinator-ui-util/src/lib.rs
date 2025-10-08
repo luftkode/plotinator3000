@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
@@ -5,8 +7,10 @@ pub mod box_selection;
 pub mod date_editor;
 pub mod number_editor;
 
+/// Where does the plot values typically fit within, e.g. RPM measurements will probably be in the thousands, while a duty cycle will be in percentage.
 #[derive(Debug, strum_macros::Display, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub enum PlotType {
+pub enum ExpectedPlotRange {
+    /// For plots where the value is 0.0-1.0 and corresponds to percentage 0-100%
     Percentage,
     Hundreds,
     Thousands,
@@ -50,16 +54,6 @@ pub fn highlight_plot_rect(ui: &egui_plot::PlotUi) {
     );
 }
 
-pub fn auto_color(auto_color_idx: &mut usize) -> Color32 {
-    // source: https://docs.rs/egui_plot/0.29.0/src/egui_plot/plot_ui.rs.html#21
-    // should be replaced/updated if they improve their implementation or provide a public API for this
-    let i = *auto_color_idx;
-    *auto_color_idx += 1;
-    let golden_ratio = (5.0_f32.sqrt() - 1.0) / 2.0; // 0.61803398875
-    let h = i as f32 * golden_ratio;
-    egui::epaint::Hsva::new(h, 0.85, 0.5, 1.0).into() // TODO(emilk): OkLab or some other perspective color space
-}
-
 /// Formats a large number into a more human-readable string.
 /// - Numbers under 1 million will be formatted with comma separators (e.g., 950,123).
 /// - Numbers 1 million and over will be formatted with two decimal places (e.g., 1.21 M).
@@ -88,4 +82,54 @@ pub fn format_large_number(num: u32) -> String {
         let millions = num as f64 / 1_000_000.0;
         format!("{millions:.2} M")
     }
+}
+
+pub fn auto_color_plot_area(range: ExpectedPlotRange) -> Color32 {
+    let i = match range {
+        ExpectedPlotRange::Percentage => {
+            static COLOR_COUNTER_PERCENTAGE: AtomicUsize = AtomicUsize::new(0);
+            COLOR_COUNTER_PERCENTAGE.fetch_add(1, Ordering::Relaxed)
+        }
+        ExpectedPlotRange::Hundreds => {
+            static COLOR_COUNTER_HUNDREDS: AtomicUsize = AtomicUsize::new(0);
+            COLOR_COUNTER_HUNDREDS.fetch_add(1, Ordering::Relaxed)
+        }
+        ExpectedPlotRange::Thousands => {
+            static COLOR_COUNTER_THOUSANDS: AtomicUsize = AtomicUsize::new(0);
+            COLOR_COUNTER_THOUSANDS.fetch_add(1, Ordering::Relaxed)
+        }
+    };
+    get_color(i)
+}
+
+fn hue_from_golden_ratio(i: usize) -> f32 {
+    let golden_ratio = (5.0_f32.sqrt() - 1.0) / 2.0; // 0.61803398875
+    i as f32 * golden_ratio
+}
+
+fn get_color(i: usize) -> Color32 {
+    let h = hue_from_golden_ratio(i);
+    egui::epaint::Hsva::new(h, 0.85, 0.5, 1.0).into()
+}
+
+/// Color for drawing on a map
+pub fn auto_terrain_safe_color() -> Color32 {
+    static COLOR_COUNTER: AtomicUsize = AtomicUsize::new(0);
+    let i = COLOR_COUNTER.fetch_add(1, Ordering::Relaxed);
+    get_terrain_safe_color(i)
+}
+
+fn get_terrain_safe_color(i: usize) -> Color32 {
+    let mut h = hue_from_golden_ratio(i) % 1.;
+
+    // Skip terrain-like hues (green/yellow range: ~80°–150°)
+    if (0.22..=0.42).contains(&h) {
+        h = (h + 0.25) % 1.0;
+    }
+
+    // High contrast values for natural backgrounds
+    let s = 0.9;
+    let v = 0.95;
+
+    egui::epaint::Hsva::new(h, s, v, 1.0).into()
 }

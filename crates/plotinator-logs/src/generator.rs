@@ -8,7 +8,10 @@ use std::{
 
 use chrono::NaiveDateTime;
 use plotinator_log_if::{log::LogEntry, parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
+
+const LEGEND: &str = "Gen";
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GeneratorLog {
@@ -34,16 +37,26 @@ impl GeneratorLog {
 
 impl Parseable for GeneratorLog {
     const DESCRIPTIVE_NAME: &str = "Legacy Generator Log";
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut bufreader = BufReader::new(buf);
         let mut line = String::new();
-        if bufreader.read_line(&mut line).is_err() {
-            return false;
+        if let Err(e) = bufreader.read_line(&mut line) {
+            return Err(format!(
+                "Buffer is not a {}: failed to read a line: {e} ",
+                Self::DESCRIPTIVE_NAME
+            ));
         }
-        GeneratorLogEntry::is_line_valid_generator_log_entry(&line)
+        if GeneratorLogEntry::is_line_valid_generator_log_entry(&line) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Buffer is not a {}: line format mismatch",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut entries = Vec::new();
         let mut total_bytes_read = 0;
 
@@ -140,72 +153,84 @@ impl GitMetadata for GeneratorLog {
 // Helper function to keep all the boiler plate of building each plot
 fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
     vec![
-        RawPlot::new(
-            "Rotor [R]".into(),
+        RawPlotCommon::new(
+            format!("Rotor [R] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.r_rotor.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "RPM".into(),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("RPM ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.rpm.into()),
             ExpectedPlotRange::Thousands,
-        ),
-        RawPlot::new(
-            "Power [W]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Power [W] ({LEGEND})"),
             plot_points_from_log_entry(
                 entries,
                 |e| e.timestamp_ns(),
                 |e| f64::from(e.vout) * f64::from(e.i_in),
             ),
             ExpectedPlotRange::Thousands,
-        ),
-        RawPlot::new(
-            "PWM [%]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("PWM [%] ({LEGEND})"),
             // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.pwm / 100.0).into()),
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Load [%]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Load [%] ({LEGEND})"),
             // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.load / 100.0).into()),
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Rotor [I]".into(),
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Rotor [I] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_rotor.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Temp1 °C".into(),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Temp1 °C ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp1.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Temp2 °C".into(),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Temp2 °C ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp2.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "I_in".into(),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("I_in ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_in.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Iout".into(),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Iout ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_out.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Vbat [V]".into(),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Vbat [V] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vbat.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            "Vout [V]".into(),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Vout [V] ({LEGEND})"),
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vout.into()),
-            ExpectedPlotRange::OneToOneHundred,
-        ),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
     ]
 }
 
@@ -462,7 +487,7 @@ mod tests {
         let valid_line_as_bytes = b"20230124_134745 Vout: 74.3 Vbat: 0.1 Iout: 0.0 RPM: 6075 Load: 10.2 PWM: 10.2 Temp1 6.9 Temp2 8.4 IIn: 8.8 Irotor: 0.7 Rrotor: 11.2
 20230124_134746 Vout: 59.3 Vbat: 0.1 Iout: 0.0 RPM: 5438 Load: 81.2 PWM: 18.0 Temp1 6.9 Temp2 8.6 IIn: 35.5 Irotor: 0.9 Rrotor: 11.5";
 
-        assert!(GeneratorLog::is_buf_valid(valid_line_as_bytes));
+        assert_eq!(GeneratorLog::is_buf_valid(valid_line_as_bytes), Ok(()));
     }
 
     #[test]
@@ -470,7 +495,7 @@ mod tests {
         let invalid_bytes = b"20230124_134745 Vo 74. 0.1 Iout: 0.0 RPM: 6075 Load: 10.2 PWM:  8.4 IIn: 8.8 Irotor: 0.7 Rrotor: 11.2
 20230124_134746 Vout: 59.3 Vbat: 0.1 Iout: 0.0 RPM: 5438 Load: 81.2 PWM: 18.0 Temp1 6.9 Temp2 8.6 IIn: 35.5 Irotor: 0.9 Rrotor: 11.5";
 
-        assert!(!GeneratorLog::is_buf_valid(invalid_bytes));
+        assert!(GeneratorLog::is_buf_valid(invalid_bytes).is_err());
     }
 
     #[test]

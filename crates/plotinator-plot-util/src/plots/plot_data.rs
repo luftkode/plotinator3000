@@ -3,7 +3,8 @@ use std::ops::RangeInclusive;
 use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
-use plotinator_log_if::prelude::RawPlot;
+use plotinator_log_if::prelude::RawPlotCommon;
+use plotinator_ui_util::auto_color_plot_area;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -64,7 +65,7 @@ impl PlotData {
     #[plotinator_proc_macros::log_time]
     pub fn add_plot_if_not_exists(
         &mut self,
-        raw_plot: &RawPlot,
+        raw_plot: &RawPlotCommon,
         log_id: u16,
         descriptive_name: &str,
     ) {
@@ -85,15 +86,10 @@ impl PlotData {
         }
     }
 
-    pub fn add_plot(&mut self, raw_plot: &RawPlot, log_id: u16, descriptive_name: &str) {
-        let new_plot =
-            CookedPlot::new(raw_plot, log_id, descriptive_name.to_owned()).color(self.auto_color());
+    pub fn add_plot(&mut self, raw_plot: &RawPlotCommon, log_id: u16, descriptive_name: &str) {
+        let new_plot = CookedPlot::new(raw_plot, log_id, descriptive_name.to_owned());
         self.plots.push(new_plot);
         self.calc_max_bounds();
-    }
-
-    pub fn auto_color(&mut self) -> Color32 {
-        plotinator_ui_util::auto_color(&mut self.next_auto_color_idx)
     }
 
     pub fn calc_max_bounds(&mut self) {
@@ -145,7 +141,7 @@ impl CookedPlot {
     const MIPMAP_MIN_ELEMENTS: usize = 512;
 
     #[plotinator_proc_macros::log_time]
-    pub fn new(raw_plot: &RawPlot, log_id: u16, associated_descriptive_name: String) -> Self {
+    pub fn new(raw_plot: &RawPlotCommon, log_id: u16, associated_descriptive_name: String) -> Self {
         plotinator_macros::profile_function!();
         let label = raw_plot.label_from_id(log_id);
         let raw_plot_points = Some(raw_plot.points().iter().map(|p| (*p).into()).collect());
@@ -165,6 +161,11 @@ impl CookedPlot {
         mipmap_min_pp.join(&mipmap_max_pp);
         let max_bounds = Self::calc_max_bounds(&raw_points, mipmap_min_pp.get_max_level());
 
+        let color = match raw_plot.color() {
+            Some(c) => c,
+            None => auto_color_plot_area(raw_plot.expected_range()),
+        };
+
         Self {
             raw_points,
             raw_plot_points,
@@ -174,17 +175,9 @@ impl CookedPlot {
             log_id,
             label,
             associated_descriptive_name,
-            // Color32::TRANSPARENT means we auto assign one
-            color: Color32::TRANSPARENT,
+            color,
             highlight: false,
         }
-    }
-
-    /// Stroke color. Default is `Color32::TRANSPARENT` which means a color will be auto-assigned.
-    #[inline]
-    pub fn color(mut self, color: impl Into<Color32>) -> Self {
-        self.color = color.into();
-        self
     }
 
     /// Stroke color.
@@ -193,7 +186,7 @@ impl CookedPlot {
         self.color
     }
 
-    pub fn get_raw(&self) -> PointList {
+    pub fn get_raw(&self) -> PointList<'_> {
         &self.raw_points
     }
 

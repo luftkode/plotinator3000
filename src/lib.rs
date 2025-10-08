@@ -2,7 +2,8 @@
 
 use std::sync::OnceLock;
 
-pub use app::App;
+pub use app::GlobalApp;
+pub use app::plot_app::PlotApp;
 use semver::Version;
 mod app;
 

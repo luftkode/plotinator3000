@@ -1,8 +1,9 @@
+use anyhow::bail;
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
-use std::io::Read as _;
-use std::{fmt, fs, io, path::Path};
+use std::{fmt, io};
 
 use crate::{
     mbed_motor_control::{
@@ -21,6 +22,8 @@ use super::{
     header::StatusLogHeader,
 };
 
+const LEGEND: &str = "MBED Status";
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct StatusLog {
     header: StatusLogHeader,
@@ -32,21 +35,11 @@ pub struct StatusLog {
 }
 
 impl StatusLog {
-    /// Checks if the file at the given path is a valid [`PidLog`] file
-    pub fn file_is_valid(path: &Path) -> bool {
-        let Ok(mut file) = fs::File::open(path) else {
-            return false;
-        };
-
-        let mut buffer = vec![0u8; SIZEOF_UNIQ_DESC + 2];
-        match file.read_exact(&mut buffer) {
-            Ok(_) => Self::is_buf_valid(&buffer),
-            Err(_) => false, // Return false if we can't read enough bytes
-        }
-    }
-
     // helper function build all the plots that can be made from a statuslog
-    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
+    fn build_raw_plots(
+        startup_timestamp_ns: f64,
+        entries: &[StatusLogEntry],
+    ) -> Vec<RawPlotCommon> {
         let entry_count = entries.len();
         let mut engine_temp_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut fan_on_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -153,49 +146,49 @@ impl StatusLog {
         setpoint: Vec<[f64; 2]>,
         motor_state: Vec<[f64; 2]>,
         runtime_h: Vec<[f64; 2]>,
-    ) -> Vec<RawPlot> {
+    ) -> Vec<RawPlotCommon> {
         let mut raw_plots = vec![];
         if !engine_temp.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Engine Temp °C".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Engine Temp °C ({LEGEND})"),
                 engine_temp,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !fan_on.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Fan On".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Fan On ({LEGEND})"),
                 fan_on,
                 ExpectedPlotRange::Percentage,
             ));
         }
         if !vbat.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Vbat [V]".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Vbat [V] ({LEGEND})"),
                 vbat,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !setpoint.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Setpoint".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Setpoint ({LEGEND})"),
                 setpoint,
                 ExpectedPlotRange::Thousands,
             ));
         }
 
         if !motor_state.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Motor State".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Motor State ({LEGEND})"),
                 motor_state,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         if !runtime_h.is_empty() {
-            raw_plots.push(RawPlot::new(
-                "Runtime [h]".into(),
+            raw_plots.push(RawPlotCommon::new(
+                format!("Runtime [h] ({LEGEND})"),
                 runtime_h,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ));
         }
         raw_plots
@@ -206,16 +199,27 @@ impl Parseable for StatusLog {
     const DESCRIPTIVE_NAME: &str = "Mbed Status Log";
 
     /// Probes the buffer and check if it starts with [`Self::UNIQUE_DESCRIPTION`] and therefor contains a valid [`PidLog`]
-    fn is_buf_valid(content: &[u8]) -> bool {
-        if content.len() < SIZEOF_UNIQ_DESC + 2 {
-            return false;
+    fn is_buf_valid(content: &[u8]) -> Result<(), String> {
+        let content_len = content.len();
+        if content_len < SIZEOF_UNIQ_DESC + 2 {
+            return Err(format!(
+                "Not a '{}': Content len={content_len} is too small",
+                Self::DESCRIPTIVE_NAME,
+            ));
         }
 
         let unique_description = &content[..SIZEOF_UNIQ_DESC];
-        parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION
+        if parse_unique_description(unique_description) == super::UNIQUE_DESCRIPTION {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a '{}' Unique description bytes did not match",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut total_bytes_read: usize = 0;
         let (header, bytes_read) = StatusLogHeader::from_reader(reader)?;
         total_bytes_read += bytes_read;
@@ -234,10 +238,7 @@ impl Parseable for StatusLog {
                 let (v4_vec, entry_bytes_read) = parse_to_vec::<StatusLogEntryV4>(reader);
                 (convert_v4_to_status_log_entry(v4_vec), entry_bytes_read)
             } else {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    format!("Unsupported header version: {}", header.version()),
-                ));
+                bail!("Unsupported header version: {}", header.version());
             };
         total_bytes_read += entry_bytes_read;
         let startup_timestamp = match header {
@@ -262,23 +263,24 @@ impl Parseable for StatusLog {
             parse_timestamps_with_state_changes(&vec_of_entries, startup_timestamp_ns);
         let labels = vec![PlotLabels::new(
             timestamps_with_state_changes,
-            ExpectedPlotRange::OneToOneHundred,
+            ExpectedPlotRange::Hundreds,
         )];
 
         let all_plots_raw = Self::build_raw_plots(startup_timestamp_ns, &vec_of_entries);
         // Iterate through the plots and make sure all the first timestamps match
-        if let Some(first_plot) = all_plots_raw.first() {
-            if let Some([first_timestamp, ..]) = first_plot.points().first() {
-                for p in &all_plots_raw {
-                    if let Some([current_first_timestamp, ..]) = p.points().first() {
-                        debug_assert_eq!(
-                            current_first_timestamp, first_timestamp,
-                            "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
-                        );
-                    }
+        if let Some(first_plot) = all_plots_raw.first()
+            && let Some([first_timestamp, ..]) = first_plot.points().first()
+        {
+            for p in &all_plots_raw {
+                if let Some([current_first_timestamp, ..]) = p.points().first() {
+                    debug_assert_eq!(
+                        current_first_timestamp, first_timestamp,
+                        "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
+                    );
                 }
             }
         }
+        let all_plots_raw = all_plots_raw.into_iter().map(Into::into).collect();
 
         Ok((
             Self {

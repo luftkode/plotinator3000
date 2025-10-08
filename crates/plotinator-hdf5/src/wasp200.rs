@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
 use ndarray::Array2;
 use plotinator_log_if::prelude::*;
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
@@ -33,14 +34,17 @@ impl SkytemHdf5 for Wasp200 {
             height_with_ts.push([ts, *height as f64]);
         }
 
-        let mut raw_plots = vec![RawPlot::new(
-            format!("Height [{height_unit}] {RAW_PLOT_NAME_SUFFIX}"),
-            height_with_ts,
-            ExpectedPlotRange::OneToOneHundred,
-        )];
+        let mut raw_plots = vec![
+            RawPlotCommon::new(
+                format!("Height [{height_unit}] {RAW_PLOT_NAME_SUFFIX}"),
+                height_with_ts,
+                ExpectedPlotRange::Hundreds,
+            )
+            .into(),
+        ];
 
         if let Some(delta_t_samples) = delta_t_samples_opt {
-            raw_plots.push(delta_t_samples);
+            raw_plots.push(delta_t_samples.into());
         }
 
         let metadata = Self::extract_metadata(&height_dataset, &timestamp_dataset)?;
@@ -136,7 +140,7 @@ impl Wasp200 {
 
     fn extract_timestamps(
         timestamp_dataset: &hdf5::Dataset,
-    ) -> anyhow::Result<(Vec<f64>, DateTime<Utc>, Option<RawPlot>)> {
+    ) -> anyhow::Result<(Vec<f64>, DateTime<Utc>, Option<RawPlotCommon>)> {
         let timestamps_raw: Vec<i64> = read_timestamps(timestamp_dataset)?;
         let first_timestamp: DateTime<Utc> = chrono::Utc
             .timestamp_nanos(*timestamps_raw.first().expect("Empty timestamps"))
@@ -180,7 +184,10 @@ mod tests {
     fn test_read_wasp200_height() -> TestResult {
         let wasp200 = Wasp200::from_path(wasp200())?;
 
-        assert_eq!(wasp200.raw_plots[0].points().len(), 70971);
+        match &wasp200.raw_plots[0] {
+            RawPlot::Generic { common } => assert_eq!(common.points().len(), 70971),
+            _ => unreachable!(),
+        }
 
         Ok(())
     }

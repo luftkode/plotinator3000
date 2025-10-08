@@ -108,10 +108,10 @@ impl WebFileDialog {
             .save_file();
 
         execute(async move {
-            if let Some(file_handle) = task.await {
-                if let Err(e) = file_handle.write(&contents_bytes).await {
-                    log::error!("Failed to write to file: {e}");
-                }
+            if let Some(file_handle) = task.await
+                && let Err(e) = file_handle.write(&contents_bytes).await
+            {
+                log::error!("Failed to write to file: {e}");
             }
         });
     }

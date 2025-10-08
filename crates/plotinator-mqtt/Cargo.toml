@@ -21,6 +21,7 @@ serde_json.workspace = true
 strum_macros.workspace = true
 strum.workspace = true
 anyhow.workspace = true
+smallvec.workspace = true
 
 [dev-dependencies]
 plotinator-test-util.workspace = true

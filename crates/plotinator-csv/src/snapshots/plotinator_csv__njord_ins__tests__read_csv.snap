@@ -4,370 +4,439 @@ expression: njord_ins
 ---
 NjordInsPPP {
     raw_plots: [
-        RawPlot {
-            name: "Pitch °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    1.0883468942416055,
+        Generic {
+            common: RawPlotCommon {
+                name: "Pitch° (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        1.0883468942416055,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        1.0897117108317118,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    1.0897117108317118,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Roll °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    -22.546345193354732,
+        Generic {
+            common: RawPlotCommon {
+                name: "Roll° (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        -22.546345193354732,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        -22.546600143317384,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    -22.546600143317384,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Heading °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    293.7360522244404,
+        Generic {
+            common: RawPlotCommon {
+                name: "Velocity North [m/s] (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        -0.01181018737237851,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        -0.01215548184143171,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    293.7357925781802,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Latitude °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    56.16089116138246,
+        Generic {
+            common: RawPlotCommon {
+                name: "Velocity East [m/s] (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        -0.007867264187908507,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        -0.007924811390479958,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    56.16089115927095,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Longitude °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    10.037770381937543,
+        Generic {
+            common: RawPlotCommon {
+                name: "Velocity Down [m/s] (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.004649026723151484,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0047504851703400255,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    10.037770379401547,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Height [m]",
-            points: [
-                [
-                    1.757435852060122e18,
-                    73.88893217076051,
+        Generic {
+            common: RawPlotCommon {
+                name: "Latitude SD [m] (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.0038976466174703915,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0035813104392463085,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    73.88883762837278,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Velocity North [m/s]",
-            points: [
-                [
-                    1.757435852060122e18,
-                    -0.01181018737237851,
+        Generic {
+            common: RawPlotCommon {
+                name: "Longitude SD [m] (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.0029626628693197985,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0026806454183981787,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    -0.01215548184143171,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Velocity East [m/s]",
-            points: [
-                [
-                    1.757435852060122e18,
-                    -0.007867264187908507,
+        Generic {
+            common: RawPlotCommon {
+                name: "Height SD [m] (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.006090692312154209,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.005751248197028137,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    -0.007924811390479958,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Velocity Down [m/s]",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.004649026723151484,
+        Generic {
+            common: RawPlotCommon {
+                name: "Roll SD° (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.17802519672798603,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.17797662417238783,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.0047504851703400255,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Latitude SD [m]",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.0038976466174703915,
+        Generic {
+            common: RawPlotCommon {
+                name: "Pitch SD° (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.1813104963224544,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.1812639579877422,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.0035813104392463085,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Longitude SD [m]",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.0029626628693197985,
+        Generic {
+            common: RawPlotCommon {
+                name: "Heading SD° (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.7797202141260063,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.7796308562295896,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.0026806454183981787,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Height SD [m]",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.006090692312154209,
+        Generic {
+            common: RawPlotCommon {
+                name: "Accelerometer Bias X (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.05232010939934284,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.05232006941995765,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.005751248197028137,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Roll SD °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.17802519672798603,
+        Generic {
+            common: RawPlotCommon {
+                name: "Accelerometer Bias Y (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.04152445705865526,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.04152442694905534,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.17797662417238783,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Pitch SD °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.1813104963224544,
+        Generic {
+            common: RawPlotCommon {
+                name: "Accelerometer Bias Z (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        -0.050844753052972036,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        -0.05084477765025472,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.1812639579877422,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Heading SD °",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.7797202141260063,
+        Generic {
+            common: RawPlotCommon {
+                name: "Gyroscope Bias X (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.20439258839962995,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.20439249894879927,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.7796308562295896,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Accelerometer Bias X",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.05232010939934284,
+        Generic {
+            common: RawPlotCommon {
+                name: "Gyroscope Bias Y (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.09112531794196868,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.09112522988877947,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.05232006941995765,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Accelerometer Bias Y",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.04152445705865526,
+        Generic {
+            common: RawPlotCommon {
+                name: "Gyroscope Bias Z (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        -0.025753284272798296,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        -0.02575287812937469,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.04152442694905534,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Accelerometer Bias Z",
-            points: [
-                [
-                    1.757435852060122e18,
-                    -0.050844753052972036,
+        Generic {
+            common: RawPlotCommon {
+                name: "Fix Type (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.0,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    -0.05084477765025472,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Gyroscope Bias X",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.20439258839962995,
+        Generic {
+            common: RawPlotCommon {
+                name: "GPS Satellites (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.0,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.20439249894879927,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Gyroscope Bias Y",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.09112531794196868,
+        Generic {
+            common: RawPlotCommon {
+                name: "GLONASS Satellites (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.0,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.09112522988877947,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Gyroscope Bias Z",
-            points: [
-                [
-                    1.757435852060122e18,
-                    -0.025753284272798296,
+        Generic {
+            common: RawPlotCommon {
+                name: "BeiDou Satellites (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.0,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    -0.02575287812937469,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "Fix Type",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.0,
+        Generic {
+            common: RawPlotCommon {
+                name: "Galileo Satellites (NjordInsPPP)",
+                points: [
+                    [
+                        1.757435852060122e18,
+                        0.0,
+                    ],
+                    [
+                        1.757435852080242e18,
+                        0.0,
+                    ],
                 ],
-                [
-                    1.757435852080242e18,
-                    0.0,
-                ],
-            ],
-            expected_range: OneToOneHundred,
+                expected_range: Hundreds,
+                color: None,
+            },
         },
-        RawPlot {
-            name: "GPS Satellites",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.0,
-                ],
-                [
-                    1.757435852080242e18,
-                    0.0,
-                ],
-            ],
-            expected_range: OneToOneHundred,
-        },
-        RawPlot {
-            name: "GLONASS Satellites",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.0,
-                ],
-                [
-                    1.757435852080242e18,
-                    0.0,
-                ],
-            ],
-            expected_range: OneToOneHundred,
-        },
-        RawPlot {
-            name: "BeiDou Satellites",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.0,
-                ],
-                [
-                    1.757435852080242e18,
-                    0.0,
-                ],
-            ],
-            expected_range: OneToOneHundred,
-        },
-        RawPlot {
-            name: "Galileo Satellites",
-            points: [
-                [
-                    1.757435852060122e18,
-                    0.0,
-                ],
-                [
-                    1.757435852080242e18,
-                    0.0,
-                ],
-            ],
-            expected_range: OneToOneHundred,
-        },
+        GeoSpatialDataset(
+            PrimaryGeoSpatialData(
+                PrimaryGeoSpatialData {
+                    name: "NjordInsPPP",
+                    merged_with: None,
+                    points: [
+                        GeoPoint {
+                            timestamp: 1.757435852060122e18,
+                            position: POINT(10.037770381937543 56.16089116138246),
+                            heading: Some(
+                                293.7360522244404,
+                            ),
+                            altitude: Some(
+                                Gnss(
+                                    73.88893217076051,
+                                ),
+                            ),
+                            speed: Some(
+                                0.05108631769453102,
+                            ),
+                        },
+                        GeoPoint {
+                            timestamp: 1.757435852080242e18,
+                            position: POINT(10.037770379401547 56.16089115927095),
+                            heading: Some(
+                                293.7357925781802,
+                            ),
+                            altitude: Some(
+                                Gnss(
+                                    73.88883762837278,
+                                ),
+                            ),
+                            speed: Some(
+                                0.05223826693011415,
+                            ),
+                        },
+                    ],
+                    color: [RANDOMIZED COLOR]
+                    cached: CachedValues {
+                        lat_min_max: (
+                            56.16089115927095,
+                            56.16089116138246,
+                        ),
+                        lon_min_max: (
+                            10.037770379401547,
+                            10.037770381937543,
+                        ),
+                        speed_min_max: (
+                            0.05108631769453102,
+                            0.05223826693011415,
+                        ),
+                        altitude_min_max: (
+                            73.88883762837278,
+                            73.88893217076051,
+                        ),
+                    },
+                },
+            ),
+        ),
     ],
     first_timestamp: 2025-09-09T16:37:32.060122Z,
     metadata: [

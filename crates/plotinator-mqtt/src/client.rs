@@ -144,6 +144,7 @@ impl Drop for MqttClient {
     }
 }
 
+#[inline]
 pub(crate) fn handle_event_packet(packet: &Publish) -> Option<MqttData> {
     let topic = String::from_utf8_lossy(&packet.topic);
     let payload = String::from_utf8_lossy(&packet.payload);

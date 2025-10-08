@@ -2,7 +2,7 @@ use egui::{Color32, Vec2};
 use egui_plot::{Plot, PlotBounds};
 use plotinator_mqtt_ui::plot::MqttPlotPoints;
 use plotinator_plot_util::draw_series::SeriesDrawMode;
-use plotinator_ui_util::{PlotType, box_selection::BoxSelection};
+use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
 
 use crate::util;
 
@@ -28,12 +28,10 @@ pub fn fill_mqtt_plots(
     mqtt_plot_area.show(gui, |plot_ui| {
         let area_hovered = plot_ui.response().hovered();
         if area_hovered {
-            box_selection.record_key_and_pointer_events(plot_ui, PlotType::Hundreds);
+            box_selection.record_key_and_pointer_events(plot_ui, ExpectedPlotRange::Hundreds);
         }
-        if area_hovered {
-            if let Some(final_zoom_factor) = final_zoom_factor {
-                plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
-            }
+        if area_hovered && let Some(final_zoom_factor) = final_zoom_factor {
+            plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
         }
         let resp = plot_ui.response();
         if plot_ui.response().double_clicked() || reset_plot_bounds {
@@ -44,7 +42,7 @@ pub fn fill_mqtt_plots(
         } else if resp.clicked() {
             if plot_ui.ctx().input(|i| i.modifiers.shift) {
                 if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
-                    click_delta.set_next_click(pointer_coordinate, PlotType::Hundreds);
+                    click_delta.set_next_click(pointer_coordinate, ExpectedPlotRange::Hundreds);
                 }
             } else {
                 click_delta.reset();
@@ -54,7 +52,7 @@ pub fn fill_mqtt_plots(
             *set_auto_bounds = false;
         }
 
-        click_delta.ui(plot_ui, PlotType::Hundreds);
+        click_delta.ui(plot_ui, ExpectedPlotRange::Hundreds);
         let x_bounds = plot_ui.plot_bounds().range_x();
         for (mp, color) in mqtt_plots {
             if mp.data.len() < 2 {

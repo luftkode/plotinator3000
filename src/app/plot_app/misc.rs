@@ -1,4 +1,4 @@
-use egui_phosphor::regular;
+use egui_phosphor::regular::{self, TRASH};
 use plotinator_file_io::loaded_files::LoadedFiles;
 use plotinator_log_if::prelude::Plotable as _;
 use plotinator_plot_ui::WARN_ON_UNPARSED_BYTES_THRESHOLD;
@@ -9,7 +9,7 @@ use egui_notify::Toasts;
 use plotinator_strfmt::format_data_size;
 use plotinator_supported_formats::SupportedFormat;
 
-use crate::App;
+use crate::PlotApp;
 
 pub(super) fn show_theme_toggle_buttons(ui: &mut egui::Ui) {
     let mut theme_preference = ui.ctx().options(|opt| opt.theme_preference);
@@ -92,7 +92,7 @@ pub(super) fn show_homepage_link(ui: &mut egui::Ui) {
     ));
 }
 
-pub(super) fn show_font_size_drag_value(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App) {
+pub(super) fn show_font_size_drag_value(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut PlotApp) {
     ui.label(RichText::new(regular::TEXT_T));
     if ui
         .add(
@@ -108,7 +108,7 @@ pub(super) fn show_font_size_drag_value(ui: &mut egui::Ui, ctx: &egui::Context, 
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn not_wasm_show_download_button(ui: &mut egui::Ui, app: &mut App) {
+pub(super) fn not_wasm_show_download_button(ui: &mut egui::Ui, app: &mut PlotApp) {
     if ui
         .button(RichText::new(format!(
             "{icon} Download",
@@ -120,14 +120,8 @@ pub(super) fn not_wasm_show_download_button(ui: &mut egui::Ui, app: &mut App) {
     }
 }
 
-pub(super) fn show_app_reset_button(ui: &mut egui::Ui, app: &mut App) {
-    if ui
-        .button(RichText::new(format!(
-            "{icon} Reset",
-            icon = egui_phosphor::regular::TRASH
-        )))
-        .clicked()
-    {
+pub(super) fn show_app_reset_button(ui: &mut egui::Ui, app: &mut PlotApp) {
+    if ui.button(RichText::new(format!("{TRASH} Reset"))).clicked() {
         if app.plot.plot_count() == 0 {
             app.toasts
                 .warning("No loaded plots...")
@@ -141,11 +135,14 @@ pub(super) fn show_app_reset_button(ui: &mut egui::Ui, app: &mut App) {
         app.plot = plotinator_plot_ui::LogPlotUi::default();
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        app.mqtt.reset();
+        {
+            app.mqtt.reset();
+            app.map_commander.reset_map_data();
+        }
     }
 }
 
-pub(super) fn show_error(ui: &egui::Ui, app: &mut App) {
+pub(super) fn show_error(ui: &egui::Ui, app: &mut PlotApp) {
     if let Some(error) = app.error_message.clone() {
         egui::Window::new(RichText::new("⚠").size(40.0).color(Color32::RED))
             .auto_sized()

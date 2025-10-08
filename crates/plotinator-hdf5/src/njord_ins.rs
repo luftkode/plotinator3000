@@ -2,7 +2,9 @@ use std::{io, path::Path};
 
 use chrono::{DateTime, Utc};
 use hdf5::Dataset;
+use ndarray::Array2;
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -13,6 +15,7 @@ use crate::{
     },
 };
 
+const LEGEND_NAME: &str = "Njord-INS";
 const RAW_PLOT_NAME_SUFFIX: &str = "(Njord-INS)";
 
 impl SkytemHdf5 for NjordIns {
@@ -58,8 +61,6 @@ impl SkytemHdf5 for NjordIns {
 
         let system_status: ndarray::Array2<f32> = system_status_dataset.read()?;
         let filter_status: ndarray::Array2<f32> = filter_status_dataset.read()?;
-        let orientation: ndarray::Array2<f64> = orientation_dataset.read()?;
-        let position: ndarray::Array2<f64> = position_dataset.read()?;
         let dataset_len = system_status.len(); // all datasets are the same length
 
         log::info!(
@@ -69,8 +70,7 @@ impl SkytemHdf5 for NjordIns {
 
         let mut system_status_plots: Option<Vec<RawPlot>> = None;
         let mut filter_status_plots: Option<Vec<RawPlot>> = None;
-        let mut orientation_plots: Option<Vec<RawPlot>> = None;
-        let mut position_plots: Option<Vec<RawPlot>> = None;
+        let mut orientation_position_plots: Option<Vec<RawPlot>> = None;
 
         // Use scoped threads to parallelize the major processing steps
         rayon::scope(|s| {
@@ -92,15 +92,18 @@ impl SkytemHdf5 for NjordIns {
                 ));
             });
 
-            // Orientation processing in another thread
             s.spawn(|_| {
-                orientation_plots =
-                    Some(process_orientation(&orientation, &timestamps, dataset_len));
-            });
-
-            // Position processing in another thread
-            s.spawn(|_| {
-                position_plots = Some(process_position(&position, &timestamps, dataset_len));
+                match process_orientation_and_position(
+                    &orientation_dataset,
+                    &position_dataset,
+                    &timestamps,
+                    dataset_len,
+                ) {
+                    Ok(p) => orientation_position_plots = Some(p),
+                    Err(e) => {
+                        log::error!("Failed to process Njord INS orientation and position: {e}");
+                    }
+                }
             });
         });
 
@@ -111,21 +114,16 @@ impl SkytemHdf5 for NjordIns {
             &orientation_dataset,
         )?;
 
-        let mut raw_plots = Vec::with_capacity(
-            33 + rawplot_offset_opt.is_some() as usize + delta_t_samples_opt.is_some() as usize,
-        );
+        let mut raw_plots: Vec<RawPlot> = vec![];
 
         if let Some(delta_t_samples) = delta_t_samples_opt {
-            raw_plots.push(delta_t_samples);
+            raw_plots.push(delta_t_samples.into());
         }
 
         if let Some(offset_plot) = rawplot_offset_opt {
-            raw_plots.push(offset_plot);
+            raw_plots.push(offset_plot.into());
         }
-        if let Some(plots) = position_plots {
-            raw_plots.extend(plots);
-        }
-        if let Some(plots) = orientation_plots {
+        if let Some(plots) = orientation_position_plots {
             raw_plots.extend(plots);
         }
         if let Some(plots) = system_status_plots {
@@ -204,86 +202,101 @@ fn process_system_status(
     }
 
     vec![
-        RawPlot::new(
+        RawPlotCommon::new(
             "System Failures [bool]".to_owned(),
             system_failures,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Accelerometer Sensor Failures [bool]".to_owned(),
             accelerometer_sensor_failures,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Gyroscope Sensor Failures [bool]".to_owned(),
             gyroscope_sensor_failures,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Magnetometer Sensor Failures [bool]".to_owned(),
             magnetometer_sensor_failures,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Pressure Sensor Failures [bool]".to_owned(),
             pressure_sensor_failures,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "GNSS Failures [bool]".to_owned(),
             gnss_failures,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Accelerometer Over Range [bool]".to_owned(),
             accelerometer_over_range,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Gyroscope Over Range [bool]".to_owned(),
             gyroscope_over_range,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Magnetometer Over Range [bool]".to_owned(),
             magnetometer_over_range,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Pressure Over Range [bool]".to_owned(),
             pressure_over_range,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Minimum Temperature Alarm [bool]".to_owned(),
             minimum_temperature_alarm,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Maximum Temperature Alarm [bool]".to_owned(),
             maximum_temperature_alarm,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "High Voltage Alarm [bool]".to_owned(),
             high_voltage_alarm,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "GNSS Antenna Connection [bool]".to_owned(),
             gnss_antenna_connection,
             ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
+        )
+        .into(),
+        RawPlotCommon::new(
             "Data Output Overflow Alarm [bool]".to_owned(),
             data_output_overflow_alarm,
             ExpectedPlotRange::Percentage,
-        ),
+        )
+        .into(),
     ]
 }
 
 fn process_filter_status(
-    filter_status: &ndarray::Array2<f32>,
+    filter_status: &Array2<f32>,
     timestamps: &[f64],
     dataset_len: usize,
 ) -> Vec<RawPlot> {
@@ -353,78 +366,61 @@ fn process_filter_status(
         external_heading_active.push([*ts, row[12] as f64]);
     }
 
+    fn make_rawplot(name: &str, data: Vec<[f64; 2]>) -> RawPlot {
+        RawPlotCommon::new(name.to_owned(), data, ExpectedPlotRange::Percentage).into()
+    }
+
     vec![
-        RawPlot::new(
-            "Orientation Filter Initialized [bool]".to_owned(),
+        make_rawplot(
+            "Orientation Filter Initialized [bool]",
             orientation_filter_initialized,
-            ExpectedPlotRange::Percentage,
         ),
-        RawPlot::new(
-            "Navigation Filter Initialized [bool]".to_owned(),
+        make_rawplot(
+            "Navigation Filter Initialized [bool]",
             navigation_filter_initialized,
-            ExpectedPlotRange::Percentage,
         ),
-        RawPlot::new(
-            "Heading Initialized [bool]".to_owned(),
-            heading_initialized,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "UTC Time Initialized [bool]".to_owned(),
-            utc_time_initialized,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Event 1 Occurred [bool]".to_owned(),
-            event_1_occurred,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Event 2 Occurred [bool]".to_owned(),
-            event_2_occurred,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Internal GNSS Enabled [bool]".to_owned(),
-            internal_gnss_enabled,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Velocity Heading Enabled [bool]".to_owned(),
-            velocity_heading_enabled,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "Atmospheric Altitude Enabled [bool]".to_owned(),
+        make_rawplot("Heading Initialized [bool]", heading_initialized),
+        make_rawplot("UTC Time Initialized [bool]", utc_time_initialized),
+        make_rawplot("Event 1 Occurred [bool]", event_1_occurred),
+        make_rawplot("Event 2 Occurred [bool]", event_2_occurred),
+        make_rawplot("Internal GNSS Enabled [bool]", internal_gnss_enabled),
+        make_rawplot("Velocity Heading Enabled [bool]", velocity_heading_enabled),
+        make_rawplot(
+            "Atmospheric Altitude Enabled [bool]",
             atmospheric_altitude_enabled,
-            ExpectedPlotRange::Percentage,
         ),
-        RawPlot::new(
-            "External Position Active [bool]".to_owned(),
-            external_position_active,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "External Velocity Active [bool]".to_owned(),
-            external_velocity_active,
-            ExpectedPlotRange::Percentage,
-        ),
-        RawPlot::new(
-            "External Heading Active [bool]".to_owned(),
-            external_heading_active,
-            ExpectedPlotRange::Percentage,
-        ),
+        make_rawplot("External Position Active [bool]", external_position_active),
+        make_rawplot("External Velocity Active [bool]", external_velocity_active),
+        make_rawplot("External Heading Active [bool]", external_heading_active),
     ]
 }
 
-fn process_orientation(
-    orientation: &ndarray::Array2<f64>,
+fn process_orientation_and_position(
+    orientation_dataset: &Dataset,
+    position_dataset: &Dataset,
     timestamps: &[f64],
     dataset_len: usize,
-) -> Vec<RawPlot> {
+) -> anyhow::Result<Vec<RawPlot>> {
+    let orientation: Array2<f64> = orientation_dataset.read()?;
+    let position: Array2<f64> = position_dataset.read()?;
+
     let mut rolls = Vec::with_capacity(dataset_len);
     let mut pitches = Vec::with_capacity(dataset_len);
     let mut headings = Vec::with_capacity(dataset_len);
+
+    let mut latitudes = Vec::with_capacity(dataset_len);
+    let mut longitudes = Vec::with_capacity(dataset_len);
+    let mut heights = Vec::with_capacity(dataset_len);
+
+    for row in position.rows() {
+        let latitude = row[0];
+        let longitude = row[1];
+        let height = row[2] / 100.; // Convert from cm to M
+
+        latitudes.push(latitude);
+        longitudes.push(longitude);
+        heights.push(height);
+    }
 
     for (row, ts) in orientation.rows().into_iter().zip(timestamps) {
         let roll = row[0];
@@ -433,70 +429,39 @@ fn process_orientation(
 
         rolls.push([*ts, roll]);
         pitches.push([*ts, pitch]);
-        headings.push([*ts, heading]);
+        headings.push(heading);
     }
 
-    vec![
-        RawPlot::new(
-            format!("Roll {RAW_PLOT_NAME_SUFFIX}"),
+    let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(LEGEND_NAME.to_owned())
+        .timestamp(timestamps)
+        .lat(&latitudes)
+        .lon(&longitudes)
+        .heading(&headings)
+        .altitude_from_gnss(heights)
+        .build_into_rawplot()?;
+
+    let mut plots = vec![
+        RawPlotCommon::new(
+            format!("Roll° ({LEGEND_NAME})"),
             rolls,
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            format!("Pitch {RAW_PLOT_NAME_SUFFIX}"),
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+        RawPlotCommon::new(
+            format!("Pitch° ({LEGEND_NAME})"),
             pitches,
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            format!("Heading {RAW_PLOT_NAME_SUFFIX}"),
-            headings,
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-    ]
-}
-
-fn process_position(
-    position: &ndarray::Array2<f64>,
-    timestamps: &[f64],
-    dataset_len: usize,
-) -> Vec<RawPlot> {
-    let mut latitudes = Vec::with_capacity(dataset_len);
-    let mut longitudes = Vec::with_capacity(dataset_len);
-    let mut heights = Vec::with_capacity(dataset_len);
-
-    for (row, ts) in position.rows().into_iter().zip(timestamps) {
-        let latitude = row[0];
-        let longitude = row[1];
-        let height = row[2] / 100.; // Convert from cm to M
-
-        latitudes.push([*ts, latitude]);
-        longitudes.push([*ts, longitude]);
-        heights.push([*ts, height]);
+            ExpectedPlotRange::Hundreds,
+        )
+        .into(),
+    ];
+    if let Some(geo_data) = geo_data {
+        plots.push(geo_data);
     }
 
-    vec![
-        RawPlot::new(
-            format!("Latitude {RAW_PLOT_NAME_SUFFIX}"),
-            latitudes,
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            format!("Longitude {RAW_PLOT_NAME_SUFFIX}"),
-            longitudes,
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-        RawPlot::new(
-            format!("Height [m] {RAW_PLOT_NAME_SUFFIX}"),
-            heights,
-            ExpectedPlotRange::OneToOneHundred,
-        ),
-    ]
+    Ok(plots)
 }
 
-fn combine_timestamps(
-    unix_time: &ndarray::Array2<i64>,
-    microseconds: &ndarray::Array2<i64>,
-) -> Vec<i64> {
+fn combine_timestamps(unix_time: &Array2<i64>, microseconds: &Array2<i64>) -> Vec<i64> {
     unix_time
         .iter()
         .zip(microseconds.iter())
@@ -550,7 +515,7 @@ impl NjordIns {
 
     fn poc_read_dataset_time(
         hdf5_file: &hdf5::File,
-    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>)> {
+    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlotCommon>)> {
         let unix_time_dataset =
             open_dataset(hdf5_file, Self::UNIX_TIME_DATASET, Self::EXPECT_DIMENSION)?;
         let microseconds_dataset = open_dataset(
@@ -559,8 +524,8 @@ impl NjordIns {
             Self::EXPECT_DIMENSION,
         )?;
 
-        let unix_time: ndarray::Array2<i64> = unix_time_dataset.read()?;
-        let microseconds: ndarray::Array2<i64> = microseconds_dataset.read()?;
+        let unix_time: Array2<i64> = unix_time_dataset.read()?;
+        let microseconds: Array2<i64> = microseconds_dataset.read()?;
         let timestamps: Vec<i64> = combine_timestamps(&unix_time, &microseconds);
         let first_timestamp = *timestamps.first().expect("No timestamps in dataset");
         let time_between_samples =
@@ -572,7 +537,7 @@ impl NjordIns {
 
     fn with_sys_time_read_dataset_time(
         hdf5_file: &hdf5::File,
-    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>, RawPlot)> {
+    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlotCommon>, RawPlotCommon)> {
         let sys_time = open_dataset(hdf5_file, Self::SYSTEM_TIMESTAMP, Self::EXPECT_DIMENSION)?;
         let sys_time: Vec<i64> = sys_time.read_raw()?;
         let first_timestamp = *sys_time.first().expect("No timestamps in dataset");
@@ -585,7 +550,7 @@ impl NjordIns {
             Self::EXPECT_DIMENSION,
         )?;
 
-        let gps_unix_time: ndarray::Array2<i64> = gps_unix_time.read()?;
+        let gps_unix_time: Array2<i64> = gps_unix_time.read()?;
 
         let mut time_offset = Vec::with_capacity(sys_time.len());
 
@@ -600,10 +565,10 @@ impl NjordIns {
             first_timestamp,
             plot_timestamps,
             time_between_samples,
-            RawPlot::new(
+            RawPlotCommon::new(
                 format!("Δt GPS/System [ms] {RAW_PLOT_NAME_SUFFIX}"),
                 time_offset,
-                ExpectedPlotRange::OneToOneHundred,
+                ExpectedPlotRange::Hundreds,
             ),
         ))
     }
@@ -615,7 +580,7 @@ impl NjordIns {
     )]
     fn read_dataset_time(
         hdf5_file: &hdf5::File,
-    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlot>, Option<RawPlot>)> {
+    ) -> anyhow::Result<(i64, Vec<f64>, Option<RawPlotCommon>, Option<RawPlotCommon>)> {
         if let Ok((first_timestamp, plot_timestamps, delta_t_samples)) =
             Self::poc_read_dataset_time(hdf5_file)
         {
@@ -663,8 +628,11 @@ mod tests {
     fn test_read_njord_ins() -> TestResult {
         let njord_ins = NjordIns::from_path(njord_ins())?;
         assert_eq!(njord_ins.metadata.len(), 44);
-        assert_eq!(njord_ins.raw_plots.len(), 34);
-        assert_eq!(njord_ins.raw_plots[1].points().len(), 4840);
+        assert_eq!(njord_ins.raw_plots.len(), 31);
+        match &njord_ins.raw_plots[1] {
+            RawPlot::Generic { common } => assert_eq!(common.points().len(), 4840),
+            _ => unreachable!(),
+        };
 
         Ok(())
     }

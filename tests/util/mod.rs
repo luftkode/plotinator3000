@@ -10,8 +10,12 @@ pub use egui_kittest::{
 };
 pub use std::path::PathBuf;
 
-pub fn get_harness() -> Harness<'static, plotinator3000::App> {
-    Harness::new_eframe(|cc| plotinator3000::App::new(cc))
+pub fn get_plot_app_harness() -> Harness<'static, plotinator3000::PlotApp> {
+    Harness::new_eframe(|cc| plotinator3000::PlotApp::new(cc))
+}
+
+pub fn get_global_app_harness() -> Harness<'static, plotinator3000::GlobalApp> {
+    Harness::new_eframe(|cc| plotinator3000::GlobalApp::new(cc))
 }
 
 const DEFAULT_CI_DIFF_THRESHOLD: f32 = 1.5;
@@ -28,16 +32,16 @@ impl Default for CiThreshold {
     }
 }
 
-pub struct HarnessWrapper {
+pub struct PlotAppHarnessWrapper {
     name: String,
-    harness: Harness<'static, plotinator3000::App>,
+    harness: Harness<'static, plotinator3000::PlotApp>,
 }
 
-impl HarnessWrapper {
+impl PlotAppHarnessWrapper {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            harness: get_harness(),
+            harness: get_plot_app_harness(),
         }
     }
 
@@ -78,15 +82,15 @@ impl HarnessWrapper {
     /// access to a GPU. Typically a threshold of 1-2 is enough to not get false positives,
     /// but for a snapshot that includes a plot with lots of narrow lines (like plotting Mbed PID log)
     /// the threshold will need to be higher.
-    pub fn save_snapshot_with_threshold(&mut self, threshold: CiThreshold) {
+    pub fn save_snapshot_with_threshold(&mut self, CiThreshold(threshold): CiThreshold) {
         let is_macos = cfg!(target_os = "macos");
         self.harness.fit_contents();
 
         if std::env::var("CI").is_ok_and(|v| v == "true") {
             // Only macos runners have access to a GPU
             if is_macos {
-                eprintln!("Using CI mac OS threshold: {}", threshold.0);
-                let opt = egui_kittest::SnapshotOptions::new().threshold(threshold.0);
+                eprintln!("Using CI mac OS threshold: {threshold}");
+                let opt = egui_kittest::SnapshotOptions::new().threshold(threshold);
                 self.harness.snapshot_options(&self.name, &opt);
             }
         } else {

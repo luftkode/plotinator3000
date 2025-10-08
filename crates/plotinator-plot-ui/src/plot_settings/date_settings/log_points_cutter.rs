@@ -93,37 +93,32 @@ impl LogPointsCutter {
                     self.max_val.show(ui);
                 });
 
-                if ui.button("Remove points in time range").clicked() {
-                    if let (Some(start), Some(end)) =
+                if ui.button("Remove points in time range").clicked()
+                    && let (Some(start), Some(end)) =
                         (self.start_date.current(), self.end_date.current())
-                    {
-                        log::info!(
-                            "Removing points in range: {} - {}",
-                            start.format("%Y-%m-%d %H%M%S"),
-                            end.format("%Y-%m-%d %H%M%S")
-                        );
+                {
+                    log::info!(
+                        "Removing points in range: {} - {}",
+                        start.format("%Y-%m-%d %H%M%S"),
+                        end.format("%Y-%m-%d %H%M%S")
+                    );
 
-                        self.set_cut_points_x_range(start, end);
-                    }
+                    self.set_cut_points_x_range(start, end);
                 }
                 if ui
                     .button("Remove points outside min/max in the time range")
                     .clicked()
+                    && let (Some(min), Some(max)) = (self.min_val.current(), self.max_val.current())
+                    && let (Some(start), Some(end)) =
+                        (self.start_date.current(), self.end_date.current())
                 {
-                    if let (Some(min), Some(max)) = (self.min_val.current(), self.max_val.current())
-                    {
-                        if let (Some(start), Some(end)) =
-                            (self.start_date.current(), self.end_date.current())
-                        {
-                            log::info!(
-                                "Removing points in range: {} - {}, but outside {min} - {max}",
-                                start.format("%Y-%m-%d %H%M%S"),
-                                end.format("%Y-%m-%d %H%M%S")
-                            );
-                            self.cut_points_outside_minmax =
-                                Some(CutOutsideMinMaxRange::new(start, end, (min, max)));
-                        }
-                    }
+                    log::info!(
+                        "Removing points in range: {} - {}, but outside {min} - {max}",
+                        start.format("%Y-%m-%d %H%M%S"),
+                        end.format("%Y-%m-%d %H%M%S")
+                    );
+                    self.cut_points_outside_minmax =
+                        Some(CutOutsideMinMaxRange::new(start, end, (min, max)));
                 }
             })
         });

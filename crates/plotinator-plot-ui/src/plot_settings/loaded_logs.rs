@@ -107,13 +107,12 @@ fn log_settings_window(
                             date_txt_input_resp.request_focus();
                         }
 
-                        if let Some(new_date) = settings.start_date_editor.current() {
-                            if ui.button("Apply").clicked()
-                                || ui.input(|i| i.key_pressed(Key::Enter))
-                            {
-                                settings.new_start_date(new_date);
-                                log::info!("New date: {}", settings.start_date());
-                            }
+                        if let Some(new_date) = settings.start_date_editor.current()
+                            && (ui.button("Apply").clicked()
+                                || ui.input(|i| i.key_pressed(Key::Enter)))
+                        {
+                            settings.new_start_date(new_date);
+                            log::info!("New date: {}", settings.start_date());
                         }
                         if ui.button("Cancel").clicked() {
                             *settings.clicked_mut() = false;

@@ -1,0 +1,122 @@
+use plotinator_log_if::rawplot::path_data::GeoSpatialDataset;
+use plotinator_mqtt::data::listener::MqttGeoPoint;
+use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
+use std::sync::mpsc::{Receiver, Sender, channel};
+
+use crate::MapCommand;
+
+#[derive(Serialize, Deserialize)]
+pub struct MapUiCommander {
+    /// Whether or not the Map is open for commands
+    ///
+    /// should be in sync with the [`MapViewPort`]
+    open: bool,
+    // Have we received geospatial data at any time? We use this to open the map the first time
+    // geo spatial data is received, but we don't wanna keep opening it up if the user chose to close it
+    pub any_data_received: bool,
+    /// Set by a click on the map button, toggles visibility of the map viewport
+    pub map_button_clicked: bool,
+    #[serde(skip)]
+    tx: Option<Sender<MapCommand>>,
+    // Used when the app was created with restored state, until the first time the
+    // map is opened, where all the pending commands are then sent
+    #[serde(skip)]
+    tmp_queue: Option<Vec<MapCommand>>,
+}
+
+impl Default for MapUiCommander {
+    fn default() -> Self {
+        Self {
+            open: false,
+            any_data_received: false,
+            map_button_clicked: false,
+            tx: None,
+            tmp_queue: Some(vec![]),
+        }
+    }
+}
+
+impl MapUiCommander {
+    /// Retrieve channels between [`MapUiCommander`] and the [`MapViewPort`]
+    pub fn channels() -> (Sender<MapCommand>, Receiver<MapCommand>) {
+        channel()
+    }
+
+    pub fn init(&mut self, tx: Sender<MapCommand>) {
+        log::debug!("Initializing MapUiCommander");
+        debug_assert!(self.tmp_queue.is_some());
+        debug_assert!(self.tx.is_none());
+        self.tx = Some(tx);
+        if let Some(queue) = self.tmp_queue.take() {
+            for pending_cmd in queue.into_iter().rev() {
+                self.send_cmd(pending_cmd);
+            }
+        }
+    }
+
+    pub fn add_geo_data(&mut self, geo_data: GeoSpatialDataset) {
+        log::debug!("Sending geo data to map: {}", geo_data.name());
+        self.any_data_received = true;
+        self.send_cmd(MapCommand::AddGeoData(geo_data));
+    }
+
+    pub fn add_mqtt_geo_data(&mut self, mqtt_points: SmallVec<[MqttGeoPoint; 10]>) {
+        self.any_data_received = true;
+        self.send_cmd(MapCommand::MQTTGeoData(Box::new(mqtt_points)));
+    }
+
+    /// Send the current cursor position on the time axis to the [`MapViewPort`]
+    ///
+    /// used for highlighting a path point on the map if the time is close enough
+    pub fn cursor_time_pos(&mut self, pos: f64) {
+        if self.open {
+            self.send_cmd(MapCommand::CursorPos(pos));
+        }
+    }
+
+    /// Fit the Map to include all the loaded paths
+    pub fn fit_to_all_paths(&mut self) {
+        self.send_cmd(MapCommand::FitToAllPaths);
+    }
+
+    /// Reset/remove all the [`GeoSpatialData`] from the map
+    pub fn reset_map_data(&mut self) {
+        self.send_cmd(MapCommand::Reset);
+    }
+
+    fn send_cmd(&mut self, cmd: MapCommand) {
+        debug_assert!(
+            (self.tx.is_some() && self.tmp_queue.is_none())
+                || (self.tx.is_none() && self.tmp_queue.is_some())
+        );
+        if let Some(tx) = self.tx.as_ref() {
+            log::log!(log::Level::Trace, "Sending map command: {cmd}");
+            if let Err(e) = tx.send(cmd) {
+                log::error!("Failed sending Map command, map is closed: {e}");
+                debug_assert!(false);
+            }
+        } else if let Some(queue) = &mut self.tmp_queue {
+            queue.push(cmd);
+        }
+    }
+
+    /// Close the command channel, should be in sync with whether or not the [`MapViewPort`] is open
+    pub fn close(&mut self) {
+        self.open = false;
+    }
+
+    /// Open the command channel, should be in sync with whether or not the [`MapViewPort`] is open
+    pub fn open(&mut self) {
+        self.open = true;
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.open
+    }
+
+    /// Sync the open state with map
+    pub fn sync_open(&mut self, is_map_open: bool) {
+        self.open = is_map_open;
+    }
+}

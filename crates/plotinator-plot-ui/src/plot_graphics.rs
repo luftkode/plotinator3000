@@ -1,28 +1,20 @@
 use egui::{Vec2, Vec2b};
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plotinator_plot_util::{PlotData, Plots};
-use plotinator_ui_util::{PlotType, box_selection::BoxSelection};
+use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
 
 use crate::{PlotMode, util};
 
 use super::{ClickDelta, axis_config::AxisConfig, plot_settings::PlotSettings, x_axis_formatter};
 
 /// Paints multiple plots based on the provided settings and configurations.
-///
-/// # Arguments
-///
-/// * `ui` - The egui UI to paint on.
-/// * `reset_plot_bounds` - whether plot bounds should be reset.
-/// * `plots` - The [`Plots`] struct containing plot data.
-/// * `plot_settings` - Controls plot display.
-/// * `legend_cfg` - Legend configuration.
-/// * `axis_cfg` - For axis customization.
-/// * `link_group` - An [`egui::Id`] for linking plots.
-/// * `line_width` - The width of plot lines.
-/// * `click_delta` - State relating to pointer clicks on plots
 #[allow(
     clippy::too_many_arguments,
     reason = "They are needed. Maybe a refactor could group some of them."
+)]
+#[allow(
+    clippy::too_many_lines,
+    reason = "it's small, but there's a lot of arguments..."
 )]
 pub fn paint_plots(
     ui: &mut egui::Ui,
@@ -33,6 +25,8 @@ pub fn paint_plots(
     link_group: egui::Id,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
     mode: PlotMode<'_>,
 ) {
     plotinator_macros::profile_function!();
@@ -80,15 +74,27 @@ pub fn paint_plots(
             } = plots;
 
             if plot_settings.display_percentage() {
-                plot_components_list.push((percentage_plot, percentage, PlotType::Percentage));
+                plot_components_list.push((
+                    percentage_plot,
+                    percentage,
+                    ExpectedPlotRange::Percentage,
+                ));
             }
 
             if plot_settings.display_hundreds() {
-                plot_components_list.push((to_hundred_plot, one_to_hundred, PlotType::Hundreds));
+                plot_components_list.push((
+                    to_hundred_plot,
+                    one_to_hundred,
+                    ExpectedPlotRange::Hundreds,
+                ));
             }
 
             if plot_settings.display_thousands() {
-                plot_components_list.push((thousands_plot, thousands, PlotType::Thousands));
+                plot_components_list.push((
+                    thousands_plot,
+                    thousands,
+                    ExpectedPlotRange::Thousands,
+                ));
             }
             fill_log_plots(
                 ui,
@@ -97,6 +103,8 @@ pub fn paint_plots(
                 plot_settings,
                 click_delta,
                 box_selection,
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                map_cmd,
             );
         }
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
@@ -129,16 +137,18 @@ pub fn paint_plots(
 ///
 /// * `gui` - The egui UI to paint on.
 /// * `reset_plot_bounds` - whether plot bounds should be reset.
-/// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`PlotType`].
+/// * `plot_components` - A vector of tuples containing [`Plot`], [`PlotData`], and [`ExpectedPlotRange`].
 /// * `plot_settings` - Controls which plots to display.
 /// * `click_delta` - State relating to pointer clicks on plots
 fn fill_log_plots(
     gui: &mut egui::Ui,
     reset_plot_bounds: bool,
-    plot_components: Vec<(Plot<'_>, &mut PlotData, PlotType)>,
+    plot_components: Vec<(Plot<'_>, &mut PlotData, ExpectedPlotRange)>,
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
 ) {
     plotinator_macros::profile_function!();
 
@@ -150,15 +160,18 @@ fn fill_log_plots(
             let area_hovered = plot_ui.response().hovered();
             if area_hovered {
                 box_selection.record_key_and_pointer_events(plot_ui, ptype);
+
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
+                    map_cmd.cursor_time_pos(pointer_coord.x);
+                }
             }
 
             if plot_settings.highlight(ptype) {
                 plotinator_ui_util::highlight_plot_rect(plot_ui);
             }
-            if area_hovered {
-                if let Some(final_zoom_factor) = final_zoom_factor {
-                    plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
-                }
+            if area_hovered && let Some(final_zoom_factor) = final_zoom_factor {
+                plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
             }
 
             if plot_ui.response().double_clicked() || reset_plot_bounds {

@@ -48,7 +48,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         &format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")),
         native_options,
-        Box::new(|cc| Ok(Box::new(plotinator3000::App::new(cc)))),
+        Box::new(|cc| Ok(Box::new(plotinator3000::GlobalApp::new(cc)))),
     )
 }
 
@@ -77,7 +77,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(plotinator3000::App::new(cc)))),
+                Box::new(|cc| Ok(Box::new(plotinator3000::PlotApp::new(cc)))),
             )
             .await;
 

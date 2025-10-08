@@ -12,7 +12,13 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
+plotinator-ui-util.workspace = true
+walkers.workspace = true
+egui.workspace = true
 serde.workspace = true
 chrono.workspace = true
 log.workspace = true
 anyhow.workspace = true
+
+[dev-dependencies]
+testresult.workspace = true

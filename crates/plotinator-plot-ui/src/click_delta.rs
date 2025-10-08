@@ -2,21 +2,21 @@ use std::ops::RangeInclusive;
 
 use egui::{Color32, RichText};
 use egui_plot::{Line, MarkerShape, PlotBounds, PlotPoint, PlotPoints, PlotUi, Points};
-use plotinator_ui_util::{PlotType, plot_theme_color};
+use plotinator_ui_util::{ExpectedPlotRange, plot_theme_color};
 use serde::{Deserialize, Serialize};
 
 /// Keeps track of clicks in plot areas to show the delta (x and y) of two different clicks.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Deserialize, Serialize)]
 pub struct ClickDelta {
     // Which plot type the click belongs to
-    plot_type: Option<PlotType>,
+    plot_type: Option<ExpectedPlotRange>,
     first_click: Option<[f64; 2]>,
     second_click: Option<[f64; 2]>,
     pixels_per_point: f64,
 }
 
 impl ClickDelta {
-    pub fn set_next_click(&mut self, click: PlotPoint, plot_type: PlotType) {
+    pub fn set_next_click(&mut self, click: PlotPoint, plot_type: ExpectedPlotRange) {
         if self.plot_type.is_some_and(|pt| pt == plot_type) {
             if self.second_click.is_some() {
                 self.replace_first_click([click.x, click.y]);
@@ -59,7 +59,7 @@ impl ClickDelta {
         (label_point, raw_text)
     }
 
-    pub fn plot_type(&self) -> Option<PlotType> {
+    pub fn plot_type(&self) -> Option<ExpectedPlotRange> {
         self.plot_type
     }
 
@@ -115,34 +115,33 @@ impl ClickDelta {
         }
     }
 
-    pub fn ui<'a>(&'a self, plot_ui: &mut PlotUi<'a>, plot_type: PlotType) {
+    pub fn ui<'a>(&'a self, plot_ui: &mut PlotUi<'a>, plot_type: ExpectedPlotRange) {
         // We only paint the click delta graphics on the plot type that matches the one that was clicked
-        if self.plot_type().is_some_and(|pt| pt == plot_type) {
-            if let Some(p) = self.get_click_points() {
-                let delta_color = Self::delta_color(plot_ui.ctx());
-                Self::ui_click_markers(plot_ui, p, delta_color);
+        if self.plot_type().is_some_and(|pt| pt == plot_type)
+            && let Some(p) = self.get_click_points()
+        {
+            let delta_color = Self::delta_color(plot_ui.ctx());
+            Self::ui_click_markers(plot_ui, p, delta_color);
 
-                match self.get_click_coords() {
-                    (None, None) => (),
-                    (None, Some(_)) => unreachable!("Second click populated when first is empty"),
-                    (Some(fpoint), None) => {
-                        if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
-                            let pcoord = [pointer_coord.x, pointer_coord.y];
-                            let delta_line =
-                                Line::new("", PlotPoints::new([fpoint, pcoord].into()))
-                                    .color(delta_color);
+            match self.get_click_coords() {
+                (None, None) => (),
+                (None, Some(_)) => unreachable!("Second click populated when first is empty"),
+                (Some(fpoint), None) => {
+                    if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
+                        let pcoord = [pointer_coord.x, pointer_coord.y];
+                        let delta_line = Line::new("", PlotPoints::new([fpoint, pcoord].into()))
+                            .color(delta_color);
 
-                            Self::ui_delta_line(plot_ui, delta_line, fpoint, pcoord);
-                        }
+                        Self::ui_delta_line(plot_ui, delta_line, fpoint, pcoord);
                     }
-                    (Some(fpoint), Some(spoint)) => {
-                        let delta_line = Line::new("", PlotPoints::new([fpoint, spoint].into()))
-                            .color(delta_color)
-                            .name("Δ Click")
-                            .style(egui_plot::LineStyle::Dashed { length: 10.0 });
+                }
+                (Some(fpoint), Some(spoint)) => {
+                    let delta_line = Line::new("", PlotPoints::new([fpoint, spoint].into()))
+                        .color(delta_color)
+                        .name("Δ Click")
+                        .style(egui_plot::LineStyle::Dashed { length: 10.0 });
 
-                        Self::ui_delta_line(plot_ui, delta_line, fpoint, spoint);
-                    }
+                    Self::ui_delta_line(plot_ui, delta_line, fpoint, spoint);
                 }
             }
         }

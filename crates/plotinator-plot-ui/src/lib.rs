@@ -80,6 +80,8 @@ impl LogPlotUi {
         first_frame: &mut bool,
         loaded_files: &[SupportedFormat],
         toasts: &mut Toasts,
+        #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+        map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
     ) -> Response {
@@ -111,9 +113,9 @@ impl LogPlotUi {
             box_selection.selected(),
         );
 
-        for log in loaded_files {
-            util::add_plot_data_to_plot_collections(plots, log, plot_settings);
-            stored_plot_files.push(log.clone());
+        for file in loaded_files {
+            util::add_plot_data_to_plot_collections(plots, file, plot_settings);
+            stored_plot_files.push(file.clone());
         }
 
         if !loaded_files.is_empty() {
@@ -171,6 +173,8 @@ impl LogPlotUi {
                 link_group.expect("uninitialized link group id"),
                 click_delta,
                 box_selection,
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                map_cmd,
                 mode,
             );
         })

@@ -8,6 +8,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::entries::mag::MagSensor;
@@ -32,9 +33,13 @@ impl MagSps {
 
     fn is_reader_valid(reader: &mut impl io::BufRead) -> bool {
         // If 3 lines can be read successfully then it's valid
-        MagSensor::from_reader(reader).is_ok()
-            && MagSensor::from_reader(reader).is_ok()
-            && MagSensor::from_reader(reader).is_ok()
+        for _ in 0..=3 {
+            if let Err(e) = MagSensor::from_reader(reader) {
+                log::debug!("Not a valid NavSys MA line: {e}");
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -94,7 +99,7 @@ impl GitMetadata for MagSps {
 impl Parseable for MagSps {
     const DESCRIPTIVE_NAME: &str = "MagSps";
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let (entries, bytes_read): (Vec<MagSensor>, usize) = parse_to_vec(reader);
 
         // Group entries by sensor ID
@@ -110,7 +115,7 @@ impl Parseable for MagSps {
         let mut raw_plots = Vec::new();
         for (sensor_id, mag_points) in sensor_groups {
             if !mag_points.is_empty() {
-                raw_plots.push(RawPlot::new(
+                raw_plots.push(RawPlotCommon::new(
                     format!("Sensor {sensor_id} B-field [nT]"),
                     mag_points,
                     ExpectedPlotRange::Thousands,
@@ -127,13 +132,21 @@ impl Parseable for MagSps {
                 true
             }
         });
+        let raw_plots: Vec<RawPlot> = raw_plots.into_iter().map(Into::into).collect();
 
         Ok((Self { entries, raw_plots }, bytes_read))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = BufReader::new(buf);
-        Self::is_reader_valid(&mut reader)
+        if Self::is_reader_valid(&mut reader) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a valid '{}': line format mismatch",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 }
 
@@ -180,8 +193,7 @@ mod tests {
 
     #[test]
     fn test_mag_sps_buf_is_valid() {
-        let is_valid = MagSps::is_buf_valid(FRAME_MAGNETOMETER_SPS_BYTES);
-        assert!(is_valid);
+        assert_eq!(MagSps::is_buf_valid(FRAME_MAGNETOMETER_SPS_BYTES), Ok(()));
     }
 
     #[test]

@@ -1,10 +1,11 @@
 use std::{
-    fmt, fs,
+    fs,
     io::{self, BufReader},
     path::Path,
     str::FromStr as _,
 };
 
+use anyhow::bail;
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,7 @@ use crate::navsys::entries::he::AltimeterEntry;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Wasp200Sps {
-    entries: Vec<AltimeterEntry>,
+    first_timestamp: DateTime<Utc>,
     raw_plots: Vec<RawPlot>,
 }
 
@@ -26,13 +27,12 @@ impl Wasp200Sps {
             return false;
         };
         let mut reader = BufReader::new(file);
-        AltimeterEntry::from_reader(&mut reader).is_ok()
-    }
-}
-
-impl fmt::Display for Wasp200Sps {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.entries)
+        if let Err(e) = AltimeterEntry::from_reader(&mut reader) {
+            log::debug!("Not a valid NavSys HE line: {e}");
+            false
+        } else {
+            true
+        }
     }
 }
 
@@ -86,37 +86,48 @@ impl GitMetadata for Wasp200Sps {
 impl Parseable for Wasp200Sps {
     const DESCRIPTIVE_NAME: &str = "Wasp200Sps";
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let (entries, bytes_read): (Vec<AltimeterEntry>, usize) = parse_to_vec(reader);
 
-        let mut raw_points_altitude: Vec<[f64; 2]> = Vec::new();
+        let mut timestamps = Vec::with_capacity(entries.len());
+        let mut altitudes = Vec::with_capacity(entries.len());
+        let Some(first_timestamp) = entries.first().map(|e| e.timestamp()) else {
+            bail!("Empty '{}' dataset", Self::DESCRIPTIVE_NAME);
+        };
 
-        for e in &entries {
+        for e in entries {
             if let Some(altitude) = e.altitude_m() {
-                raw_points_altitude.push([e.timestamp_ns(), altitude]);
+                timestamps.push(e.timestamp_ns());
+                altitudes.push(altitude);
             }
         }
+        let Some(rawplot) = GeoSpatialDataBuilder::new("Wasp200")
+            .timestamp(&timestamps)
+            .altitude_from_laser(altitudes)
+            .build_into_rawplot()?
+        else {
+            bail!(
+                "Failed to build a rawplot from {} data",
+                Self::DESCRIPTIVE_NAME
+            )
+        };
 
-        let mut raw_plots = vec![RawPlot::new(
-            "Wasp200 Altitude [M]".into(),
-            raw_points_altitude,
-            ExpectedPlotRange::OneToOneHundred,
-        )];
-        raw_plots.retain(|rp| {
-            if rp.points().is_empty() {
-                log::warn!("{} has no data", rp.name());
-                false
-            } else {
-                true
-            }
-        });
-
-        Ok((Self { entries, raw_plots }, bytes_read))
+        Ok((
+            Self {
+                first_timestamp,
+                raw_plots: vec![rawplot],
+            },
+            bytes_read,
+        ))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = BufReader::new(buf);
-        AltimeterEntry::from_reader(&mut reader).is_ok()
+        if let Err(e) = AltimeterEntry::from_reader(&mut reader) {
+            Err(format!("Not a valid '{}': {e}", Self::DESCRIPTIVE_NAME))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -126,10 +137,7 @@ impl Plotable for Wasp200Sps {
     }
 
     fn first_timestamp(&self) -> DateTime<Utc> {
-        self.entries
-            .first()
-            .expect("No entries in Wasp200Sps, unable to get first timestamp")
-            .timestamp()
+        self.first_timestamp
     }
 
     fn descriptive_name(&self) -> &str {

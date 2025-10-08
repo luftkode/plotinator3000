@@ -3,12 +3,15 @@ use std::{io, path::Path};
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::{Dataset, H5Type};
 use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     stream_descriptor::StreamDescriptor,
     util::{self, assert_description_in_attrs, log_all_attributes, read_string_attribute},
 };
+
+const LEGEND_NAME: &str = "frame-mag";
 
 // Define the Magdata struct matching the HDF5 compound type
 #[derive(Clone, Copy, Debug, H5Type)]
@@ -108,21 +111,24 @@ impl SkytemHdf5 for FrameMagnetometer {
         }
 
         let raw_plots = vec![
-            RawPlot::new(
-                "Mag [nT]".to_owned(),
+            RawPlotCommon::new(
+                format!("Mag [nT] ({LEGEND_NAME})"),
                 mag_vals,
                 ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "Mag Clk Δ [ms]".to_owned(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("Mag Clk Δ [ms] ({LEGEND_NAME})"),
                 mag_clk_delta,
                 ExpectedPlotRange::Thousands,
-            ),
-            RawPlot::new(
-                "GPS Time Δ [ms]".to_owned(),
+            )
+            .into(),
+            RawPlotCommon::new(
+                format!("GPS Time Δ [ms] ({LEGEND_NAME})"),
                 gps_sys_delta,
                 ExpectedPlotRange::Thousands,
-            ),
+            )
+            .into(),
         ];
 
         let metadata = Self::extract_metadata(&magdata_ds, &gps_timestamps_ds)?;
@@ -218,9 +224,18 @@ mod tests {
         let frame_magnetometer = FrameMagnetometer::from_path(frame_magnetometer())?;
         assert_eq!(frame_magnetometer.metadata.len(), 22);
         assert_eq!(frame_magnetometer.raw_plots.len(), 3);
-        assert_eq!(frame_magnetometer.raw_plots[0].points().len(), 46515);
-        assert_eq!(frame_magnetometer.raw_plots[1].points().len(), 46515);
-        assert_eq!(frame_magnetometer.raw_plots[2].points().len(), 930);
+        match &frame_magnetometer.raw_plots[0] {
+            RawPlot::Generic { common } => assert_eq!(common.points().len(), 46515),
+            _ => unreachable!(),
+        };
+        match &frame_magnetometer.raw_plots[1] {
+            RawPlot::Generic { common } => assert_eq!(common.points().len(), 46515),
+            _ => unreachable!(),
+        };
+        match &frame_magnetometer.raw_plots[2] {
+            RawPlot::Generic { common } => assert_eq!(common.points().len(), 930),
+            _ => unreachable!(),
+        };
 
         Ok(())
     }

@@ -2,6 +2,7 @@ use anyhow::bail;
 use chrono::{TimeZone as _, Utc};
 use egui_plot::PlotPoint;
 use pilot_display::{PilotDisplayCoordinates, PilotDisplayRemainingDistance};
+use plotinator_log_if::prelude::GeoPoint;
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
@@ -20,7 +21,9 @@ pub(crate) mod pilot_display;
 pub(crate) enum KnownTopic {
     /// Timestamped packets from `frame-gps`
     #[strum(serialize = "dt/tc/frame-gps/x/gps")]
-    FrameGps,
+    TcFrameGps,
+    #[strum(serialize = "dt/njord/frame-gps/x/gps")]
+    NjordFrameGps,
     #[strum(serialize = "dt/blackbird/sky-ubx/x/coordinates")]
     PilotDisplayCoordinates,
     #[strum(serialize = "dt/blackbird/pd-backend/remaining-distance")]
@@ -70,9 +73,10 @@ impl KnownTopic {
         clippy::too_many_lines,
         reason = "This kind of match statement will just be long when each topic needs a branch"
     )]
+    #[inline]
     pub(crate) fn parse_packet(self, p: &str) -> anyhow::Result<Option<MqttData>> {
         match self {
-            Self::FrameGps => {
+            Self::TcFrameGps | Self::NjordFrameGps => {
                 let p: FrameGpsPacket = match serde_json::from_str(p) {
                     Ok(p) => p,
                     Err(e) => {
@@ -88,7 +92,7 @@ impl KnownTopic {
 
                 let id = p.gps_nr;
 
-                let mut topic_data = Vec::with_capacity(10);
+                let mut topic_data: Vec<MqttTopicData> = Vec::with_capacity(11);
 
                 if let Some(lat) = p.position.lat {
                     topic_data.push(MqttTopicData::single_with_ts(
@@ -157,13 +161,24 @@ impl KnownTopic {
                     offset,
                     timestamp,
                 ));
+                if let Some(geo_point) = p.maybe_get_geopoint() {
+                    topic_data.push(MqttTopicData::single_geopoint(
+                        self.subtopic_str(&id.to_string()),
+                        geo_point,
+                    ));
+                }
                 Ok(Some(MqttData::multiple(topic_data)))
             }
             Self::PilotDisplayCoordinates => {
                 let p: PilotDisplayCoordinates = serde_json::from_str(p)?;
+
                 let lat = MqttTopicData::single(self.subtopic_str("lat"), p.lat());
                 let lon = MqttTopicData::single(self.subtopic_str("lon"), p.lon());
-                let data = MqttData::multiple(vec![lat, lon]);
+
+                let geo_point = GeoPoint::new(util::now_timestamp(), (p.lat(), p.lon()));
+                let geo_data = MqttTopicData::single_geopoint(self.to_string(), geo_point);
+
+                let data = MqttData::multiple(vec![lat, lon, geo_data]);
                 Ok(Some(data))
             }
             Self::PilotDisplayRemainingDistance => {
@@ -213,6 +228,7 @@ impl KnownTopic {
 
     // Converts a value to a simple MqttData with just a single topic and point
     // this is appropriate for very simple topics with just a single point per message
+    #[inline]
     fn into_single_mqtt_data(self, value: f64) -> MqttData {
         let topic_data = MqttTopicData::single(self.to_string(), value);
         MqttData::single(topic_data)
@@ -224,6 +240,7 @@ impl KnownTopic {
     // for topics that essentially have subtopics, meaning they receive payload
     //  with multiple different kind of values, e.g. a gps
     // that publishes both longitude and latitude
+    #[inline]
     fn subtopic_str(&self, subtopic_name: &str) -> String {
         let mut topic_with_subvalue = self.to_string();
         // yes this could be a single line of format!("[{subtopic_name}]")

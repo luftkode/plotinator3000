@@ -2,4 +2,4 @@
 source: crates/plotinator-csv/src/njord_ins.rs
 expression: njord_ins.raw_plots.len()
 ---
-26
+23

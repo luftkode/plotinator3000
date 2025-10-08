@@ -8,12 +8,15 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::{
     entries::tl::InclinometerEntry,
     header::{CalibrationData, TiltSensorID},
 };
+
+const LEGEND: &str = "TL";
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct InclinometerSps {
@@ -103,7 +106,7 @@ impl GitMetadata for InclinometerSps {
 impl Parseable for InclinometerSps {
     const DESCRIPTIVE_NAME: &str = "InclinometerSps";
 
-    fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)> {
+    fn from_reader(reader: &mut impl io::BufRead) -> anyhow::Result<(Self, usize)> {
         let mut bytes_read = 0;
         // Parse tilt sensor ID
         let (tilt_sensor_id, bytes_tl_id) = TiltSensorID::from_reader(reader)?;
@@ -136,19 +139,19 @@ impl Parseable for InclinometerSps {
         for (sensor_id, (pitch_points, roll_points)) in sensor_groups {
             // Create pitch plot for this sensor
             if !pitch_points.is_empty() {
-                raw_plots.push(RawPlot::new(
-                    format!("TL{sensor_id} Pitch °"),
+                raw_plots.push(RawPlotCommon::new(
+                    format!("Pitch°  {LEGEND}{sensor_id}°"),
                     pitch_points,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 ));
             }
 
             // Create roll plot for this sensor
             if !roll_points.is_empty() {
-                raw_plots.push(RawPlot::new(
-                    format!("TL{sensor_id} Roll °"),
+                raw_plots.push(RawPlotCommon::new(
+                    format!("Roll° {LEGEND}{sensor_id}"),
                     roll_points,
-                    ExpectedPlotRange::OneToOneHundred,
+                    ExpectedPlotRange::Hundreds,
                 ));
             }
         }
@@ -169,15 +172,22 @@ impl Parseable for InclinometerSps {
                 calibration_data_1,
                 calibration_data_2,
                 entries,
-                raw_plots,
+                raw_plots: raw_plots.into_iter().map(Into::into).collect(),
             },
             bytes_read,
         ))
     }
 
-    fn is_buf_valid(buf: &[u8]) -> bool {
+    fn is_buf_valid(buf: &[u8]) -> Result<(), String> {
         let mut reader = BufReader::new(buf);
-        Self::is_reader_valid(&mut reader)
+        if Self::is_reader_valid(&mut reader) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Not a valid {}: line format mismatch",
+                Self::DESCRIPTIVE_NAME
+            ))
+        }
     }
 }
 
@@ -237,8 +247,10 @@ mod tests {
 
     #[test]
     fn test_inclinometer_sps_buf_is_valid() {
-        let is_valid = InclinometerSps::is_buf_valid(FRAME_INCLINOMETERS_SPS_BYTES);
-        assert!(is_valid);
+        assert_eq!(
+            InclinometerSps::is_buf_valid(FRAME_INCLINOMETERS_SPS_BYTES),
+            Ok(())
+        );
     }
 
     #[test]
