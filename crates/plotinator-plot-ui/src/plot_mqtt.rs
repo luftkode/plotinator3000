@@ -19,6 +19,8 @@ pub fn fill_mqtt_plots(
     mqtt_plots: &[(MqttPlotPoints, Color32)],
     set_auto_bounds: &mut bool,
     box_selection: &mut BoxSelection,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
 ) {
     plotinator_macros::profile_function!();
 
@@ -29,10 +31,29 @@ pub fn fill_mqtt_plots(
         let area_hovered = plot_ui.response().hovered();
         if area_hovered {
             box_selection.record_key_and_pointer_events(plot_ui, ExpectedPlotRange::Hundreds);
+
+            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
+                map_cmd.pointer_time_pos(pointer_coord.x);
+            }
+        } else {
+            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            {
+                map_cmd.poll_msg();
+                if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {
+                    let line = egui_plot::VLine::new("", ts)
+                        .highlight(true)
+                        .id("map_pos_vline")
+                        .color(color);
+                    plot_ui.vline(line);
+                }
+            }
         }
+
         if area_hovered && let Some(final_zoom_factor) = final_zoom_factor {
             plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
         }
+
         let resp = plot_ui.response();
         if plot_ui.response().double_clicked() || reset_plot_bounds {
             *set_auto_bounds = true;

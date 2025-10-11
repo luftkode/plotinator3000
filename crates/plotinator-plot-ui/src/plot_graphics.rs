@@ -1,5 +1,5 @@
 use egui::{Vec2, Vec2b};
-use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds, VLine};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plotinator_plot_util::{PlotData, Plots};
 use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
 
@@ -126,6 +126,8 @@ pub fn paint_plots(
                 mqtt_plots,
                 set_auto_bounds,
                 box_selection,
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                map_cmd,
             );
         }
     }
@@ -170,7 +172,7 @@ fn fill_log_plots(
                 {
                     map_cmd.poll_msg();
                     if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {
-                        let line = VLine::new("", ts)
+                        let line = egui_plot::VLine::new("", ts)
                             .highlight(true)
                             .id("map_pos_vline")
                             .color(color);
