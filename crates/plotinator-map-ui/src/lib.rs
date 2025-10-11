@@ -11,32 +11,17 @@ use plotinator_log_if::{
     prelude::{GeoAltitude, PrimaryGeoSpatialData},
     rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset},
 };
-use plotinator_mqtt::data::listener::MqttGeoPoint;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{Map, Position};
 
 use crate::{
-    commander::MapUiCommander,
+    commander::{MapCommand, MapUiCommander},
     draw::{DrawSettings, TelemetryLabelSettings},
     geo_path::{MqttGeoPath, PathEntry},
     map_state::MapState,
 };
-
-/// Messages sent from main app to map viewport
-#[derive(strum_macros::Display)]
-pub enum MapCommand {
-    /// Geo spatial data from a loaded dataset
-    AddGeoData(GeoSpatialDataset),
-    /// Geo spatial data received over MQTT continuously
-    MQTTGeoData(Box<SmallVec<[MqttGeoPoint; 10]>>),
-    /// Cursor position on the time axis
-    CursorPos(f64),
-    FitToAllPaths,
-    /// Remove all [`GeoSpatialData`]
-    Reset,
-}
 
 pub mod commander;
 mod draw;

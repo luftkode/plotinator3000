@@ -1,7 +1,7 @@
 use egui::Color32;
 use plotinator_log_if::{
     prelude::{GeoPoint, PrimaryGeoSpatialData},
-    rawplot::path_data::CachedValues,
+    rawplot::path_data::caching::CachedValues,
 };
 use plotinator_mqtt::data::listener::MqttGeoPoint;
 use plotinator_ui_util::auto_terrain_safe_color;
@@ -11,6 +11,28 @@ use serde::{Deserialize, Serialize};
 pub struct PathEntry {
     pub data: PrimaryGeoSpatialData,
     pub settings: GeoPathSettings,
+}
+
+impl PathEntry {
+    /// Name of the Primary Geospatial dataset
+    pub fn name(&self) -> &str {
+        &self.data.name
+    }
+
+    /// Get the latitude bounds (min, max)
+    pub fn lat_bounds(&self) -> (f64, f64) {
+        self.data.lat_bounds()
+    }
+
+    /// Get the longitude bounds (min, max) if available
+    pub fn lon_bounds(&self) -> (f64, f64) {
+        self.data.lon_bounds()
+    }
+
+    /// Get the speed bounds (min, max) if available
+    pub fn speed_bounds(&self) -> (f64, f64) {
+        self.data.speed_bounds()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
