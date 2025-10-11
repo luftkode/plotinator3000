@@ -1,6 +1,6 @@
 use egui::{Color32, Pos2, Rect, vec2};
 use plotinator_log_if::{
-    prelude::{GeoPoint, PrimaryGeoSpatialData},
+    prelude::{GeoAltitude, GeoPoint, PrimaryGeoSpatialData},
     rawplot::path_data::caching::CachedValues,
 };
 use plotinator_mqtt::data::listener::MqttGeoPoint;
@@ -27,6 +27,9 @@ pub trait GeoPath {
 
     /// Get the speed bounds (min, max) if available
     fn speed_bounds(&self) -> (f64, f64);
+
+    /// Get the [`GeoPathSettings`]
+    fn path_settings(&self) -> &GeoPathSettings;
 }
 
 impl GeoPath for MqttGeoPath {
@@ -52,6 +55,10 @@ impl GeoPath for MqttGeoPath {
 
     fn speed_bounds(&self) -> (f64, f64) {
         self.boundary_values.speed_bounds()
+    }
+
+    fn path_settings(&self) -> &GeoPathSettings {
+        &self.settings
     }
 }
 
@@ -81,6 +88,10 @@ impl GeoPath for PathEntry {
     fn speed_bounds(&self) -> (f64, f64) {
         self.data.speed_bounds()
     }
+
+    fn path_settings(&self) -> &GeoPathSettings {
+        &self.settings
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -90,6 +101,25 @@ pub struct PathEntry {
 }
 
 impl PathEntry {
+    pub fn new(data: PrimaryGeoSpatialData) -> Self {
+        debug_assert!(
+            data.points.iter().all(|p| !p.timestamp.is_nan()
+                && !p.position.x().is_nan()
+                && !p.position.y().is_nan()
+                && !p.altitude.is_some_and(|a| match a {
+                    GeoAltitude::Gnss(a) | GeoAltitude::Laser(a) => a.is_nan(),
+                })
+                && !p.speed.is_some_and(|s| s.is_nan())
+                && !p.heading.is_some_and(|h| h.is_nan())),
+            "GeoSpatialData with NaN values: {}",
+            data.name
+        );
+        Self {
+            data,
+            settings: Default::default(),
+        }
+    }
+
     /// Name of the Primary Geospatial dataset
     pub fn name(&self) -> &str {
         &self.data.name
@@ -152,8 +182,29 @@ pub struct ClosestPoint {
     pub path_color: Color32,
 }
 
+pub fn find_closest_point_to_cursor(
+    geo_paths: &[PathEntry],
+    mqtt_paths: &[MqttGeoPath],
+    pointer_pos: Pos2,
+    projector: &Projector,
+) -> Option<ClosestPoint> {
+    let closest_point = find_closest_point(geo_paths, pointer_pos, projector);
+    let mqtt_closest_point = find_closest_point(mqtt_paths, pointer_pos, projector);
+    match (closest_point, mqtt_closest_point) {
+        (None, None) => None,
+        (Some(p), None) | (None, Some(p)) => Some(p),
+        (Some(p1), Some(p2)) => {
+            if p1.distance_to_pointer < p2.distance_to_pointer {
+                Some(p1)
+            } else {
+                Some(p2)
+            }
+        }
+    }
+}
+
 /// Finds the timestamp of the closest `GeoPoint` to a cursor position across multiple paths.
-pub fn find_closest_point<'a>(
+fn find_closest_point<'a>(
     paths: impl IntoIterator<Item = &'a (impl GeoPath + 'a)>,
     pointer_pos: Pos2,
     projector: &Projector,

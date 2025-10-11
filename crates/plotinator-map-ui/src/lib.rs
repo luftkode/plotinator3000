@@ -8,7 +8,7 @@ use egui_phosphor::regular::{
     SELECTION_ALL, SQUARE,
 };
 use plotinator_log_if::{
-    prelude::{GeoAltitude, PrimaryGeoSpatialData},
+    prelude::PrimaryGeoSpatialData,
     rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset},
 };
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ use walkers::{Map, Position};
 use crate::{
     commander::{MapCommand, MapUiChannels, MapUiCommander, PlotMessage},
     draw::{DrawSettings, TelemetryLabelSettings},
-    geo_path::{ClosestPoint, MqttGeoPath, PathEntry},
+    geo_path::{ClosestPoint, GeoPath, MqttGeoPath, PathEntry, find_closest_point_to_cursor},
     map_state::MapState,
 };
 
@@ -204,22 +204,7 @@ impl MapViewPort {
     }
 
     pub fn add_geo_data(&mut self, data: PrimaryGeoSpatialData) {
-        debug_assert!(
-            data.points.iter().all(|p| !p.timestamp.is_nan()
-                && !p.position.x().is_nan()
-                && !p.position.y().is_nan()
-                && !p.altitude.is_some_and(|a| match a {
-                    GeoAltitude::Gnss(a) | GeoAltitude::Laser(a) => a.is_nan(),
-                })
-                && !p.speed.is_some_and(|s| s.is_nan())
-                && !p.heading.is_some_and(|h| h.is_nan())),
-            "GeoSpatialData with NaN values: {}",
-            data.name
-        );
-        self.geo_data.push(PathEntry {
-            data,
-            settings: Default::default(),
-        });
+        self.geo_data.push(PathEntry::new(data));
     }
 
     /// Shows the map viewport and handles its UI.
@@ -377,50 +362,38 @@ impl MapViewPort {
             let draw_heading = zoom_level > self.heading_arrow_threshold;
             let draw_telemetry_label = zoom_level > self.telemetry_label_threshold;
 
+            let draw_settings_fn = |path: &dyn GeoPath| DrawSettings {
+                draw_heading_arrows: draw_heading && path.path_settings().show_heading,
+                telemetry_label: TelemetryLabelSettings {
+                    draw: draw_telemetry_label,
+                    with_speed: path.path_settings().show_speed,
+                    with_altitude: path.path_settings().show_altitude,
+                },
+            };
+
+            // Draw regular paths
             for (i, path) in self.geo_data.iter().enumerate() {
-                if !path.settings.visible {
+                if !path.is_visible() {
                     continue;
                 }
-
                 let is_hovered = self.hovered_path == Some(i);
 
-                let draw_settings = DrawSettings {
-                    draw_heading_arrows: draw_heading && path.settings.show_heading,
-                    telemetry_label: TelemetryLabelSettings {
-                        draw: draw_telemetry_label,
-                        with_speed: path.settings.show_speed,
-                        with_altitude: path.settings.show_altitude,
-                    },
-                };
-
-                draw::draw_path(ui, projector, &path.data, &draw_settings);
-
+                draw::draw_path(ui, projector, path, &draw_settings_fn(path));
                 if is_hovered {
-                    draw::highlight_whole_path(ui.painter(), projector, &path.data);
+                    draw::highlight_whole_path(ui.painter(), projector, path);
                 }
             }
 
-            // Same but for MQTT
+            // Draw MQTT paths
             for (i, path) in self.mqtt_geo_data.iter().enumerate() {
-                if !path.settings.visible {
+                if !path.is_visible() {
                     continue;
                 }
-
                 let is_hovered = self.hovered_mqtt_path == Some(i);
 
-                let draw_settings = DrawSettings {
-                    draw_heading_arrows: draw_heading && path.settings.show_heading,
-                    telemetry_label: TelemetryLabelSettings {
-                        draw: draw_telemetry_label,
-                        with_speed: path.settings.show_speed,
-                        with_altitude: path.settings.show_altitude,
-                    },
-                };
-
-                draw::draw_mqtt_path(ui, projector, path, &draw_settings);
-
+                draw::draw_path(ui, projector, path, &draw_settings_fn(path));
                 if is_hovered {
-                    draw::highlight_whole_mqtt_path(ui.painter(), projector, path);
+                    draw::highlight_whole_path(ui.painter(), projector, path);
                 }
             }
 
@@ -442,23 +415,13 @@ impl MapViewPort {
             }
 
             if let Some(pointer_pos) = pointer_pos {
-                let closest_entry =
-                    geo_path::find_closest_point(&self.geo_data, pointer_pos, projector);
-                let closest_mqtt =
-                    geo_path::find_closest_point(&self.mqtt_geo_data, pointer_pos, projector);
+                let hovered_point = find_closest_point_to_cursor(
+                    &self.geo_data,
+                    &self.mqtt_geo_data,
+                    pointer_pos,
+                    projector,
+                );
 
-                // Compare the results to find the overall closest point.
-                let hovered_point: Option<ClosestPoint> = match (closest_entry, closest_mqtt) {
-                    (None, None) => None,
-                    (Some(p), None) | (None, Some(p)) => Some(p),
-                    (Some(p1), Some(p2)) => {
-                        if p1.distance_to_pointer < p2.distance_to_pointer {
-                            Some(p1)
-                        } else {
-                            Some(p2)
-                        }
-                    }
-                };
                 if let Some(plot_tx) = &mut self.plot_msg_tx {
                     if let Some(point) = &hovered_point {
                         plot_tx

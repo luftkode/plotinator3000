@@ -1,8 +1,9 @@
 use egui::{Color32, FontId, Painter, Pos2, Stroke, Vec2, vec2};
-use plotinator_log_if::prelude::{GeoPoint, PrimaryGeoSpatialData};
+use plotinator_log_if::prelude::GeoPoint;
+use plotinator_proc_macros::log_time;
 use walkers::Projector;
 
-use crate::{MqttGeoPath, PathEntry, geo_path::GeoPath as _};
+use crate::{PathEntry, geo_path::GeoPath};
 
 pub struct DrawSettings {
     pub(crate) draw_heading_arrows: bool,
@@ -15,49 +16,25 @@ pub struct TelemetryLabelSettings {
     pub(crate) with_altitude: bool,
 }
 
+#[log_time]
 pub(crate) fn draw_path(
     ui: &egui::Ui,
     projector: &Projector,
-    path: &PrimaryGeoSpatialData,
+    path: &impl GeoPath,
     settings: &DrawSettings,
 ) {
-    if path.points.len() < 2 {
+    if path.points().len() < 2 {
         return;
     }
 
-    let path_color = path.color;
+    let path_color = path.color();
 
     // We need the full GeoPoint data at each screen position to access speed and heading.
     let path_points_iter = path
-        .points
+        .points()
         .iter()
         .map(|p| (projector.project(p.position).to_pos2(), p));
-    draw_path_inner(
-        ui,
-        path_points_iter,
-        path_color,
-        path.speed_bounds(),
-        settings,
-    );
-}
 
-pub(crate) fn draw_mqtt_path(
-    ui: &egui::Ui,
-    projector: &Projector,
-    path: &MqttGeoPath,
-    settings: &DrawSettings,
-) {
-    if path.points.len() < 2 {
-        return;
-    }
-
-    let path_color = path.color;
-
-    // We need the full GeoPoint data at each screen position to access speed and heading.
-    let path_points_iter = path
-        .points
-        .iter()
-        .map(|p| (projector.project(p.position).to_pos2(), p));
     draw_path_inner(
         ui,
         path_points_iter,
@@ -79,7 +56,7 @@ pub(crate) fn draw_path_inner<'p>(
     let screen_points: Vec<(Pos2, &GeoPoint)> = path.collect();
 
     // Draw the path as a colored line with altitude-based opacity
-    const MAX_ALTITUDE: f64 = 1000.0;
+    const MAX_ALTITUDE: f64 = 400.0;
 
     for window in screen_points.windows(2) {
         // Use the altitude from the first point of the segment
@@ -425,32 +402,14 @@ pub(crate) fn draw_pointer_highlights(
     }
 }
 
-pub(crate) fn highlight_whole_path(
-    painter: &Painter,
-    projector: &Projector,
-    path: &PrimaryGeoSpatialData,
-) {
+pub(crate) fn highlight_whole_path(painter: &Painter, projector: &Projector, path: &impl GeoPath) {
     let screen_points: Vec<Pos2> = path
-        .points
+        .points()
         .iter()
         .map(|p| projector.project(p.position).to_pos2())
         .collect();
 
-    highlight_all_points(painter, &screen_points, path.color);
-}
-
-pub(crate) fn highlight_whole_mqtt_path(
-    painter: &Painter,
-    projector: &Projector,
-    path: &MqttGeoPath,
-) {
-    let screen_points: Vec<Pos2> = path
-        .points
-        .iter()
-        .map(|p| projector.project(p.position).to_pos2())
-        .collect();
-
-    highlight_all_points(painter, &screen_points, path.color);
+    highlight_all_points(painter, &screen_points, path.color());
 }
 
 pub(crate) fn highlight_all_points(painter: &Painter, screen_points: &[Pos2], color: Color32) {
