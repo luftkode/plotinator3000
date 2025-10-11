@@ -3,7 +3,7 @@ use plotinator_log_if::prelude::GeoPoint;
 use plotinator_proc_macros::log_time;
 use walkers::Projector;
 
-use crate::{PathEntry, geo_path::GeoPath};
+use crate::geo_path::GeoPath;
 
 pub struct DrawSettings {
     pub(crate) draw_heading_arrows: bool,
@@ -328,36 +328,34 @@ fn draw_telemetry_label(
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough
-pub(crate) fn draw_pointer_highlights(
+pub(crate) fn draw_pointer_highlights<'a>(
     painter: &Painter,
     projector: &Projector,
-    geo_data_series: &[PathEntry],
+    paths: impl IntoIterator<Item = &'a (impl GeoPath + 'a)>,
     cursor_time: f64,
 ) {
     const MAX_TIME_DELTA: f64 = 2_000_000_000.0; // Maximum 2 seconds in nanoseconds
     const HIGHLIGHT_RADIUS: f32 = 8.0;
 
-    for path in geo_data_series {
-        if !path.settings.visible {
+    for path in paths {
+        if !path.is_visible() {
             continue;
         }
-        let geo_data = &path.data;
+        let geo_data = &path.points();
         // Find the closest point within the time threshold
 
         // Binary search to find the insertion point for cursor_time
-        let candidate_idx = match geo_data
-            .points
-            .binary_search_by(|point| point.timestamp.total_cmp(&cursor_time))
-        {
-            Ok(exact_idx) => exact_idx,
-            Err(insert_idx) => insert_idx,
-        };
+        let candidate_idx =
+            match geo_data.binary_search_by(|point| point.timestamp.total_cmp(&cursor_time)) {
+                Ok(exact_idx) => exact_idx,
+                Err(insert_idx) => insert_idx,
+            };
 
         let mut closest_point: Option<(&GeoPoint, f64)> = None;
 
         // Check the point at candidate_idx and the one before it (if exists)
-        if candidate_idx < geo_data.points.len() {
-            let point = &geo_data.points[candidate_idx];
+        if candidate_idx < geo_data.len() {
+            let point = &geo_data[candidate_idx];
             let time_delta = point.timestamp - cursor_time;
             if time_delta <= MAX_TIME_DELTA {
                 closest_point = Some((point, time_delta));
@@ -366,7 +364,7 @@ pub(crate) fn draw_pointer_highlights(
 
         // Check the point before cursor_time
         if candidate_idx > 0 {
-            let point = &geo_data.points[candidate_idx - 1];
+            let point = &geo_data[candidate_idx - 1];
             let time_delta = cursor_time - point.timestamp;
             if time_delta <= MAX_TIME_DELTA {
                 match closest_point {
@@ -390,14 +388,10 @@ pub(crate) fn draw_pointer_highlights(
             );
 
             // Then, draw the colored ring on top
-            painter.circle_stroke(
-                screen_pos,
-                HIGHLIGHT_RADIUS,
-                Stroke::new(3.0, geo_data.color),
-            );
+            painter.circle_stroke(screen_pos, HIGHLIGHT_RADIUS, Stroke::new(3.0, path.color()));
 
             // Inner filled circle for visibility
-            painter.circle_filled(screen_pos, 4.0, geo_data.color);
+            painter.circle_filled(screen_pos, 4.0, path.color());
         }
     }
 }
