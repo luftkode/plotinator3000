@@ -1,8 +1,9 @@
 use egui::{Color32, FontId, Painter, Pos2, Stroke, Vec2, vec2};
-use plotinator_log_if::prelude::{GeoPoint, PrimaryGeoSpatialData};
+use plotinator_log_if::prelude::GeoPoint;
+use plotinator_proc_macros::log_time;
 use walkers::Projector;
 
-use crate::{MqttGeoPath, PathEntry};
+use crate::geo_path::GeoPath;
 
 pub struct DrawSettings {
     pub(crate) draw_heading_arrows: bool,
@@ -15,49 +16,25 @@ pub struct TelemetryLabelSettings {
     pub(crate) with_altitude: bool,
 }
 
+#[log_time]
 pub(crate) fn draw_path(
     ui: &egui::Ui,
     projector: &Projector,
-    path: &PrimaryGeoSpatialData,
+    path: &impl GeoPath,
     settings: &DrawSettings,
 ) {
-    if path.points.len() < 2 {
+    if path.points().len() < 2 {
         return;
     }
 
-    let path_color = path.color;
+    let path_color = path.color();
 
     // We need the full GeoPoint data at each screen position to access speed and heading.
     let path_points_iter = path
-        .points
+        .points()
         .iter()
         .map(|p| (projector.project(p.position).to_pos2(), p));
-    draw_path_inner(
-        ui,
-        path_points_iter,
-        path_color,
-        path.speed_bounds(),
-        settings,
-    );
-}
 
-pub(crate) fn draw_mqtt_path(
-    ui: &egui::Ui,
-    projector: &Projector,
-    path: &MqttGeoPath,
-    settings: &DrawSettings,
-) {
-    if path.points.len() < 2 {
-        return;
-    }
-
-    let path_color = path.color;
-
-    // We need the full GeoPoint data at each screen position to access speed and heading.
-    let path_points_iter = path
-        .points
-        .iter()
-        .map(|p| (projector.project(p.position).to_pos2(), p));
     draw_path_inner(
         ui,
         path_points_iter,
@@ -76,16 +53,10 @@ pub(crate) fn draw_path_inner<'p>(
 ) {
     let painter = ui.painter();
 
-    // We need the full GeoPoint data at each screen position to access speed and heading.
-    // let mqtt_points_iter = mqtt_path.iter().flat_map(|m| {
-    //     m.points
-    //         .iter()
-    //         .map(|p| (projector.project(p.position).to_pos2(), p))
-    // });
     let screen_points: Vec<(Pos2, &GeoPoint)> = path.collect();
 
     // Draw the path as a colored line with altitude-based opacity
-    const MAX_ALTITUDE: f64 = 1000.0;
+    const MAX_ALTITUDE: f64 = 400.0;
 
     for window in screen_points.windows(2) {
         // Use the altitude from the first point of the segment
@@ -357,36 +328,34 @@ fn draw_telemetry_label(
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough
-pub(crate) fn draw_cursor_highlights(
+pub(crate) fn draw_pointer_highlights(
     painter: &Painter,
     projector: &Projector,
-    geo_data_series: &[PathEntry],
+    paths: &[impl GeoPath],
     cursor_time: f64,
 ) {
     const MAX_TIME_DELTA: f64 = 2_000_000_000.0; // Maximum 2 seconds in nanoseconds
     const HIGHLIGHT_RADIUS: f32 = 8.0;
 
-    for path in geo_data_series {
-        if !path.settings.visible {
+    for path in paths {
+        if !path.is_visible() {
             continue;
         }
-        let geo_data = &path.data;
+        let geo_data = &path.points();
         // Find the closest point within the time threshold
 
         // Binary search to find the insertion point for cursor_time
-        let candidate_idx = match geo_data
-            .points
-            .binary_search_by(|point| point.timestamp.total_cmp(&cursor_time))
-        {
-            Ok(exact_idx) => exact_idx,
-            Err(insert_idx) => insert_idx,
-        };
+        let candidate_idx =
+            match geo_data.binary_search_by(|point| point.timestamp.total_cmp(&cursor_time)) {
+                Ok(exact_idx) => exact_idx,
+                Err(insert_idx) => insert_idx,
+            };
 
         let mut closest_point: Option<(&GeoPoint, f64)> = None;
 
         // Check the point at candidate_idx and the one before it (if exists)
-        if candidate_idx < geo_data.points.len() {
-            let point = &geo_data.points[candidate_idx];
+        if candidate_idx < geo_data.len() {
+            let point = &geo_data[candidate_idx];
             let time_delta = point.timestamp - cursor_time;
             if time_delta <= MAX_TIME_DELTA {
                 closest_point = Some((point, time_delta));
@@ -395,7 +364,7 @@ pub(crate) fn draw_cursor_highlights(
 
         // Check the point before cursor_time
         if candidate_idx > 0 {
-            let point = &geo_data.points[candidate_idx - 1];
+            let point = &geo_data[candidate_idx - 1];
             let time_delta = cursor_time - point.timestamp;
             if time_delta <= MAX_TIME_DELTA {
                 match closest_point {
@@ -419,44 +388,22 @@ pub(crate) fn draw_cursor_highlights(
             );
 
             // Then, draw the colored ring on top
-            painter.circle_stroke(
-                screen_pos,
-                HIGHLIGHT_RADIUS,
-                Stroke::new(3.0, geo_data.color),
-            );
+            painter.circle_stroke(screen_pos, HIGHLIGHT_RADIUS, Stroke::new(3.0, path.color()));
 
             // Inner filled circle for visibility
-            painter.circle_filled(screen_pos, 4.0, geo_data.color);
+            painter.circle_filled(screen_pos, 4.0, path.color());
         }
     }
 }
 
-pub(crate) fn highlight_whole_path(
-    painter: &Painter,
-    projector: &Projector,
-    path: &PrimaryGeoSpatialData,
-) {
+pub(crate) fn highlight_whole_path(painter: &Painter, projector: &Projector, path: &impl GeoPath) {
     let screen_points: Vec<Pos2> = path
-        .points
+        .points()
         .iter()
         .map(|p| projector.project(p.position).to_pos2())
         .collect();
 
-    highlight_all_points(painter, &screen_points, path.color);
-}
-
-pub(crate) fn highlight_whole_mqtt_path(
-    painter: &Painter,
-    projector: &Projector,
-    path: &MqttGeoPath,
-) {
-    let screen_points: Vec<Pos2> = path
-        .points
-        .iter()
-        .map(|p| projector.project(p.position).to_pos2())
-        .collect();
-
-    highlight_all_points(painter, &screen_points, path.color);
+    highlight_all_points(painter, &screen_points, path.color());
 }
 
 pub(crate) fn highlight_all_points(painter: &Painter, screen_points: &[Pos2], color: Color32) {
@@ -475,4 +422,10 @@ pub(crate) fn highlight_all_points(painter: &Painter, screen_points: &[Pos2], co
     for point in screen_points {
         painter.circle_stroke(*point, 6.0, Stroke::new(2.0, highlight_color));
     }
+}
+
+/// Highlights a single point, to show that the pointer hovering at the point is recognized
+pub(crate) fn draw_hover_point_highlight(painter: &Painter, p: Pos2, color: Color32) {
+    painter.circle_filled(p, 7.0, Color32::WHITE);
+    painter.circle_filled(p, 5.0, color);
 }

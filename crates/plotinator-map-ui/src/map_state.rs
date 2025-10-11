@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use walkers::{HttpTiles, MapMemory, Position, Tiles};
 
-use crate::{MqttGeoPath, PathEntry};
+use crate::{MqttGeoPath, PathEntry, geo_path::GeoPath as _};
 
 /// Persisted state of the map, meaning tiles cache, geospatial data, centering etc.
 #[derive(Default, Deserialize, Serialize)]
@@ -197,12 +197,17 @@ fn calculate_bounding_box(
     let mut max_lon = f64::NEG_INFINITY;
 
     for path in visible_paths {
-        let gd = &path.data;
-        let (tmp_min_lat, tmp_max_lat) = gd.lat_bounds();
-        let (tmp_min_lon, tmp_max_lon) = gd.lon_bounds();
+        let (tmp_min_lat, tmp_max_lat) = path.lat_bounds();
+        let (tmp_min_lon, tmp_max_lon) = path.lon_bounds();
 
-        log::debug!("{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]", gd.name);
-        log::debug!("{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]", gd.name);
+        log::debug!(
+            "{} - Lat bounds: [{tmp_min_lat}:{tmp_max_lat}]",
+            path.name()
+        );
+        log::debug!(
+            "{} - Lon bounds: [{tmp_min_lon}:{tmp_max_lon}]",
+            path.name()
+        );
 
         min_lat = min_lat.min(tmp_min_lat);
         max_lat = max_lat.max(tmp_max_lat);

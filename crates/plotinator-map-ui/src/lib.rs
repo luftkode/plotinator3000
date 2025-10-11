@@ -1,6 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 use egui::{
-    Align2, CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui,
+    Align2, CentralPanel, Color32, Frame, Grid, MenuBar, Pos2, RichText, TopBottomPanel, Ui,
     ViewportBuilder, ViewportId, Window,
 };
 use egui_phosphor::regular::{
@@ -8,35 +8,20 @@ use egui_phosphor::regular::{
     SELECTION_ALL, SQUARE,
 };
 use plotinator_log_if::{
-    prelude::{GeoAltitude, PrimaryGeoSpatialData},
+    prelude::PrimaryGeoSpatialData,
     rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset},
 };
-use plotinator_mqtt::data::listener::MqttGeoPoint;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{Map, Position};
 
 use crate::{
-    commander::MapUiCommander,
+    commander::{MapCommand, MapUiChannels, MapUiCommander, PlotMessage},
     draw::{DrawSettings, TelemetryLabelSettings},
-    geo_path::{MqttGeoPath, PathEntry},
+    geo_path::{ClosestPoint, GeoPath, MqttGeoPath, PathEntry, find_closest_point_to_cursor},
     map_state::MapState,
 };
-
-/// Messages sent from main app to map viewport
-#[derive(strum_macros::Display)]
-pub enum MapCommand {
-    /// Geo spatial data from a loaded dataset
-    AddGeoData(GeoSpatialDataset),
-    /// Geo spatial data received over MQTT continuously
-    MQTTGeoData(Box<SmallVec<[MqttGeoPoint; 10]>>),
-    /// Cursor position on the time axis
-    CursorPos(f64),
-    FitToAllPaths,
-    /// Remove all [`GeoSpatialData`]
-    Reset,
-}
 
 pub mod commander;
 mod draw;
@@ -55,16 +40,28 @@ pub struct MapViewPort {
     pub telemetry_label_threshold: f64,
 
     #[serde(skip)]
-    cmd_recv: Option<Receiver<MapCommand>>,
+    cmd_rx: Option<Receiver<MapCommand>>,
     /// The time corresponding to the cursor position in the plot area
     #[serde(skip)]
-    plot_time_cursor_pos: Option<f64>,
+    plot_time_pointer_pos: Option<f64>,
+    /// Point on the map that is currently hovered
+    #[serde(skip)]
+    map_hovered_point: Option<ClosestPoint>,
     #[serde(skip)]
     hovered_path: Option<usize>, // index of hovered path
     #[serde(skip)]
     hovered_mqtt_path: Option<usize>,
     #[serde(skip)]
     mqtt_latest_position: Option<Position>,
+
+    #[serde(skip)]
+    plot_msg_tx: Option<Sender<PlotMessage>>,
+    // What is the last position of the pointer that hovered on the map
+    #[serde(skip)]
+    pointer_hovered_pos: Option<Pos2>,
+    // Is the map currently hovered on?
+    #[serde(skip)]
+    map_hovered: bool,
 }
 
 impl MapViewPort {
@@ -72,20 +69,31 @@ impl MapViewPort {
     ///
     /// if it's the first time it's opened, it will start loading map tiles and
     /// return a [Sender<MapCommand>] for interacting with the Map from other contexts
-    pub fn open(&mut self, ctx: &egui::Context) -> Option<Sender<MapCommand>> {
+    pub fn open(
+        &mut self,
+        ctx: &egui::Context,
+    ) -> (Option<Sender<MapCommand>>, Option<Receiver<PlotMessage>>) {
         if self.map_state.tile_state.is_none() {
             egui_extras::install_image_loaders(ctx);
             self.map_state.init(ctx.clone());
         }
-        let mut maybe_map_send = None;
-        if self.cmd_recv.is_none() {
-            let (cmd_send, cmd_recv) = MapUiCommander::channels();
-            maybe_map_send = Some(cmd_send);
-            self.cmd_recv = Some(cmd_recv);
+        let mut maybe_map_tx = None;
+        let mut maybe_plot_rx = None;
+        if self.cmd_rx.is_none() {
+            let MapUiChannels {
+                map_cmd_tx,
+                map_cmd_rx,
+                plot_msg_tx,
+                plot_msg_rx,
+            } = MapUiCommander::channels();
+            maybe_map_tx = Some(map_cmd_tx);
+            maybe_plot_rx = Some(plot_msg_rx);
+            self.cmd_rx = Some(map_cmd_rx);
+            self.plot_msg_tx = Some(plot_msg_tx);
         }
         self.open = true;
 
-        maybe_map_send
+        (maybe_map_tx, maybe_plot_rx)
     }
 
     pub fn close(&mut self) {
@@ -93,13 +101,8 @@ impl MapViewPort {
     }
 
     pub fn poll_commands(&mut self) {
-        let mut cursor_pos: Option<f64> = None;
-        while let Ok(cmd) = self
-            .cmd_recv
-            .as_ref()
-            .expect("unsound condition")
-            .try_recv()
-        {
+        let mut pointer_pos: Option<f64> = None;
+        while let Ok(cmd) = self.cmd_rx.as_ref().expect("unsound condition").try_recv() {
             match cmd {
                 MapCommand::AddGeoData(geo_data) => {
                     match geo_data {
@@ -177,9 +180,9 @@ impl MapViewPort {
                         self.mqtt_latest_position = Some(latest_point.position);
                     }
                 }
-                MapCommand::CursorPos(time_pos) => {
-                    log::trace!("Got cursor time: {time_pos:.}");
-                    cursor_pos = Some(time_pos);
+                MapCommand::PointerPos(time_pos) => {
+                    log::trace!("Got pointer time: {time_pos:.}");
+                    pointer_pos = Some(time_pos);
                 }
                 MapCommand::FitToAllPaths => {
                     self.zoom_to_fit();
@@ -190,8 +193,8 @@ impl MapViewPort {
                 }
             }
         }
-        if let Some(pos) = cursor_pos {
-            self.plot_time_cursor_pos = Some(pos);
+        if let Some(pos) = pointer_pos {
+            self.plot_time_pointer_pos = Some(pos);
         }
     }
 
@@ -201,22 +204,7 @@ impl MapViewPort {
     }
 
     pub fn add_geo_data(&mut self, data: PrimaryGeoSpatialData) {
-        debug_assert!(
-            data.points.iter().all(|p| !p.timestamp.is_nan()
-                && !p.position.x().is_nan()
-                && !p.position.y().is_nan()
-                && !p.altitude.is_some_and(|a| match a {
-                    GeoAltitude::Gnss(a) | GeoAltitude::Laser(a) => a.is_nan(),
-                })
-                && !p.speed.is_some_and(|s| s.is_nan())
-                && !p.heading.is_some_and(|h| h.is_nan())),
-            "GeoSpatialData with NaN values: {}",
-            data.name
-        );
-        self.geo_data.push(PathEntry {
-            data,
-            settings: Default::default(),
-        });
+        self.geo_data.push(PathEntry::new(data));
     }
 
     /// Shows the map viewport and handles its UI.
@@ -247,6 +235,23 @@ impl MapViewPort {
                 });
 
                 CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
+                    self.pointer_hovered_pos = if ui.ui_contains_pointer() {
+                        ctx.pointer_hover_pos()
+                    } else {
+                        None
+                    };
+                    let new_is_map_hovered = self.pointer_hovered_pos.is_some();
+                    // Was hovered -> Not hovered any longer
+                    if self.map_hovered && !new_is_map_hovered {
+                        self.map_hovered_point = None;
+                        self.send_map_pointer_pos(None);
+                        self.map_hovered = false;
+                    }
+                    // Not hovered -> Now hovered
+                    else if !self.map_hovered && new_is_map_hovered {
+                        self.plot_time_pointer_pos = None;
+                        self.map_hovered = true;
+                    }
                     self.show_map_panel(ui);
                 });
 
@@ -257,6 +262,13 @@ impl MapViewPort {
         // If the user requested to close the window, update the state.
         if !is_still_open {
             self.close();
+        }
+    }
+
+    // Sending `None` clear the cached value of the receiver
+    fn send_map_pointer_pos(&mut self, pos: Option<(f64, Color32)>) {
+        if let Some(tx) = &mut self.plot_msg_tx {
+            tx.send(PlotMessage::PointerTimestamp(pos)).ok();
         }
     }
 
@@ -329,6 +341,7 @@ impl MapViewPort {
 
     /// Renders the main map panel and all geographical data on it.
     fn show_map_panel(&mut self, ui: &mut Ui) {
+        let pointer_pos = self.pointer_hovered_pos;
         let fallback_position = self.map_state.data().center_position;
         let my_position = self.mqtt_latest_position.unwrap_or(fallback_position);
 
@@ -349,55 +362,86 @@ impl MapViewPort {
             let draw_heading = zoom_level > self.heading_arrow_threshold;
             let draw_telemetry_label = zoom_level > self.telemetry_label_threshold;
 
+            let draw_settings_fn = |path: &dyn GeoPath| DrawSettings {
+                draw_heading_arrows: draw_heading && path.path_settings().show_heading,
+                telemetry_label: TelemetryLabelSettings {
+                    draw: draw_telemetry_label,
+                    with_speed: path.path_settings().show_speed,
+                    with_altitude: path.path_settings().show_altitude,
+                },
+            };
+
+            // Draw regular paths
             for (i, path) in self.geo_data.iter().enumerate() {
-                if !path.settings.visible {
+                if !path.is_visible() {
                     continue;
                 }
-
                 let is_hovered = self.hovered_path == Some(i);
 
-                let draw_settings = DrawSettings {
-                    draw_heading_arrows: draw_heading && path.settings.show_heading,
-                    telemetry_label: TelemetryLabelSettings {
-                        draw: draw_telemetry_label,
-                        with_speed: path.settings.show_speed,
-                        with_altitude: path.settings.show_altitude,
-                    },
-                };
-
-                draw::draw_path(ui, projector, &path.data, &draw_settings);
-
+                draw::draw_path(ui, projector, path, &draw_settings_fn(path));
                 if is_hovered {
-                    draw::highlight_whole_path(ui.painter(), projector, &path.data);
+                    draw::highlight_whole_path(ui.painter(), projector, path);
                 }
             }
 
-            // Same but for MQTT
+            // Draw MQTT paths
             for (i, path) in self.mqtt_geo_data.iter().enumerate() {
-                if !path.settings.visible {
+                if !path.is_visible() {
                     continue;
                 }
-
                 let is_hovered = self.hovered_mqtt_path == Some(i);
 
-                let draw_settings = DrawSettings {
-                    draw_heading_arrows: draw_heading && path.settings.show_heading,
-                    telemetry_label: TelemetryLabelSettings {
-                        draw: draw_telemetry_label,
-                        with_speed: path.settings.show_speed,
-                        with_altitude: path.settings.show_altitude,
-                    },
-                };
-
-                draw::draw_mqtt_path(ui, projector, path, &draw_settings);
-
+                draw::draw_path(ui, projector, path, &draw_settings_fn(path));
                 if is_hovered {
-                    draw::highlight_whole_mqtt_path(ui.painter(), projector, path);
+                    draw::highlight_whole_path(ui.painter(), projector, path);
                 }
             }
 
-            if let Some(cursor_time) = self.plot_time_cursor_pos {
-                draw::draw_cursor_highlights(ui.painter(), projector, &self.geo_data, cursor_time);
+            if let Some(pointer_time) = self.plot_time_pointer_pos {
+                draw::draw_pointer_highlights(
+                    ui.painter(),
+                    projector,
+                    &self.geo_data,
+                    pointer_time,
+                );
+                draw::draw_pointer_highlights(
+                    ui.painter(),
+                    projector,
+                    &self.mqtt_geo_data,
+                    pointer_time,
+                );
+            }
+
+            if let Some(hovered_point) = &self.map_hovered_point {
+                draw::draw_hover_point_highlight(
+                    ui.painter(),
+                    hovered_point.screen_pos,
+                    hovered_point.path_color,
+                );
+            }
+
+            if let Some(pointer_pos) = pointer_pos {
+                let hovered_point = find_closest_point_to_cursor(
+                    &self.geo_data,
+                    &self.mqtt_geo_data,
+                    pointer_pos,
+                    projector,
+                );
+
+                if let Some(plot_tx) = &mut self.plot_msg_tx {
+                    if let Some(point) = &hovered_point {
+                        plot_tx
+                            .send(PlotMessage::PointerTimestamp(Some((
+                                point.timestamp,
+                                point.path_color,
+                            ))))
+                            .ok();
+                    } else if self.map_hovered_point.is_some() {
+                        self.map_hovered_point = None;
+                        plot_tx.send(PlotMessage::PointerTimestamp(None)).ok();
+                    }
+                }
+                self.map_hovered_point = hovered_point;
             }
         });
 

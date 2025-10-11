@@ -27,8 +27,8 @@ impl GlobalApp {
             return;
         }
 
-        if let Some(cmd_send) = self.map_view.open(ctx) {
-            self.app.map_commander.init(cmd_send);
+        if let (Some(cmd_send), Some(plot_msg_recv)) = self.map_view.open(ctx) {
+            self.app.map_commander.init(cmd_send, plot_msg_recv);
         }
     }
 }

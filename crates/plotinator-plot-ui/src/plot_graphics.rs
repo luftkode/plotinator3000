@@ -112,7 +112,7 @@ pub fn paint_plots(
             let mqtt_plot = build_plot_ui(
                 "mqtt",
                 ui.available_height(),
-                legend_cfg.clone(),
+                Legend::default().position(egui_plot::Corner::LeftTop),
                 axis_cfg,
                 x_axes,
                 link_group,
@@ -126,6 +126,8 @@ pub fn paint_plots(
                 mqtt_plots,
                 set_auto_bounds,
                 box_selection,
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                map_cmd,
             );
         }
     }
@@ -163,7 +165,19 @@ fn fill_log_plots(
 
                 #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
                 if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
-                    map_cmd.cursor_time_pos(pointer_coord.x);
+                    map_cmd.pointer_time_pos(pointer_coord.x);
+                }
+            } else {
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                {
+                    map_cmd.poll_msg();
+                    if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {
+                        let line = egui_plot::VLine::new("", ts)
+                            .highlight(true)
+                            .id("map_pos_vline")
+                            .color(color);
+                        plot_ui.vline(line);
+                    }
                 }
             }
 
