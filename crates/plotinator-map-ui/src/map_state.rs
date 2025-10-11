@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use walkers::{HttpTiles, MapMemory, Position, Tiles};
 
-use crate::{MqttGeoPath, PathEntry};
+use crate::{MqttGeoPath, PathEntry, geo_path::GeoPath as _};
 
 /// Persisted state of the map, meaning tiles cache, geospatial data, centering etc.
 #[derive(Default, Deserialize, Serialize)]

@@ -2,7 +2,7 @@ use egui::{Color32, FontId, Painter, Pos2, Stroke, Vec2, vec2};
 use plotinator_log_if::prelude::{GeoPoint, PrimaryGeoSpatialData};
 use walkers::Projector;
 
-use crate::{MqttGeoPath, PathEntry};
+use crate::{MqttGeoPath, PathEntry, geo_path::GeoPath as _};
 
 pub struct DrawSettings {
     pub(crate) draw_heading_arrows: bool,
@@ -76,12 +76,6 @@ pub(crate) fn draw_path_inner<'p>(
 ) {
     let painter = ui.painter();
 
-    // We need the full GeoPoint data at each screen position to access speed and heading.
-    // let mqtt_points_iter = mqtt_path.iter().flat_map(|m| {
-    //     m.points
-    //         .iter()
-    //         .map(|p| (projector.project(p.position).to_pos2(), p))
-    // });
     let screen_points: Vec<(Pos2, &GeoPoint)> = path.collect();
 
     // Draw the path as a colored line with altitude-based opacity
@@ -357,7 +351,7 @@ fn draw_telemetry_label(
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough
-pub(crate) fn draw_cursor_highlights(
+pub(crate) fn draw_pointer_highlights(
     painter: &Painter,
     projector: &Projector,
     geo_data_series: &[PathEntry],
@@ -475,4 +469,10 @@ pub(crate) fn highlight_all_points(painter: &Painter, screen_points: &[Pos2], co
     for point in screen_points {
         painter.circle_stroke(*point, 6.0, Stroke::new(2.0, highlight_color));
     }
+}
+
+/// Highlights a single point, to show that the pointer hovering at the point is recognized
+pub(crate) fn draw_hover_point_highlight(painter: &Painter, p: Pos2, color: Color32) {
+    painter.circle_filled(p, 7.0, Color32::WHITE);
+    painter.circle_filled(p, 5.0, color);
 }

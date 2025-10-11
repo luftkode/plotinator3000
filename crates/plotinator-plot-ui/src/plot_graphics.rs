@@ -166,14 +166,16 @@ fn fill_log_plots(
                     map_cmd.pointer_time_pos(pointer_coord.x);
                 }
             } else {
-                // check if there's a message from the map that should highlight the time that is hovered on the map
-                map_cmd.poll_msg();
-                if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {
-                    let line = VLine::new("", ts)
-                        .highlight(true)
-                        .id("map_pos_vline")
-                        .color(color);
-                    plot_ui.vline(line);
+                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                {
+                    map_cmd.poll_msg();
+                    if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {
+                        let line = VLine::new("", ts)
+                            .highlight(true)
+                            .id("map_pos_vline")
+                            .color(color);
+                        plot_ui.vline(line);
+                    }
                 }
             }
 

@@ -1,3 +1,4 @@
+use egui::Color32;
 use plotinator_log_if::rawplot::path_data::GeoSpatialDataset;
 use plotinator_mqtt::data::listener::MqttGeoPoint;
 use serde::{Deserialize, Serialize};
@@ -11,11 +12,20 @@ pub enum MapCommand {
     AddGeoData(GeoSpatialDataset),
     /// Geo spatial data received over MQTT continuously
     MQTTGeoData(Box<SmallVec<[MqttGeoPoint; 10]>>),
-    /// Cursor position on the time axis
-    CursorPos(f64),
+    /// Pointer position on the time axis
+    PointerPos(f64),
     FitToAllPaths,
     /// Remove all [`GeoSpatialData`]
     Reset,
+}
+
+/// Messages sent to the main plot app
+#[derive(strum_macros::Display, Clone, Copy)]
+pub enum PlotMessage {
+    /// The timestamp of a [`GeoPoint`] near the pointer on the map
+    ///
+    /// if None, it clears the timestamp, to signify that the pointer is no longer hovering near a point on the map
+    PointerTimestamp(Option<(f64, Color32)>),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,10 +41,14 @@ pub struct MapUiCommander {
     pub map_button_clicked: bool,
     #[serde(skip)]
     tx: Option<Sender<MapCommand>>,
+    #[serde(skip)]
+    rx: Option<Receiver<PlotMessage>>,
     // Used when the app was created with restored state, until the first time the
     // map is opened, where all the pending commands are then sent
     #[serde(skip)]
     tmp_queue: Option<Vec<MapCommand>>,
+    #[serde(skip)]
+    map_pointer_timestamp_and_color: Option<(f64, Color32)>,
 }
 
 impl Default for MapUiCommander {
@@ -44,21 +58,45 @@ impl Default for MapUiCommander {
             any_data_received: false,
             map_button_clicked: false,
             tx: None,
+            rx: None,
             tmp_queue: Some(vec![]),
+            map_pointer_timestamp_and_color: None,
+        }
+    }
+}
+
+pub struct MapUiChannels {
+    pub map_cmd_tx: Sender<MapCommand>,
+    pub map_cmd_rx: Receiver<MapCommand>,
+    pub plot_msg_tx: Sender<PlotMessage>,
+    pub plot_msg_rx: Receiver<PlotMessage>,
+}
+
+impl Default for MapUiChannels {
+    fn default() -> Self {
+        let (map_cmd_tx, map_cmd_rx) = channel();
+        let (plot_msg_tx, plot_msg_rx) = channel();
+
+        Self {
+            map_cmd_tx,
+            map_cmd_rx,
+            plot_msg_tx,
+            plot_msg_rx,
         }
     }
 }
 
 impl MapUiCommander {
     /// Retrieve channels between [`MapUiCommander`] and the [`MapViewPort`]
-    pub fn channels() -> (Sender<MapCommand>, Receiver<MapCommand>) {
-        channel()
+    pub fn channels() -> MapUiChannels {
+        MapUiChannels::default()
     }
 
-    pub fn init(&mut self, tx: Sender<MapCommand>) {
+    pub fn init(&mut self, tx: Sender<MapCommand>, rx: Receiver<PlotMessage>) {
         log::debug!("Initializing MapUiCommander");
         debug_assert!(self.tmp_queue.is_some());
         debug_assert!(self.tx.is_none());
+        self.rx = Some(rx);
         self.tx = Some(tx);
         if let Some(queue) = self.tmp_queue.take() {
             for pending_cmd in queue.into_iter().rev() {
@@ -78,12 +116,12 @@ impl MapUiCommander {
         self.send_cmd(MapCommand::MQTTGeoData(Box::new(mqtt_points)));
     }
 
-    /// Send the current cursor position on the time axis to the [`MapViewPort`]
+    /// Send the current pointer position on the time axis to the [`MapViewPort`]
     ///
     /// used for highlighting a path point on the map if the time is close enough
-    pub fn cursor_time_pos(&mut self, pos: f64) {
+    pub fn pointer_time_pos(&mut self, pos: f64) {
         if self.open {
-            self.send_cmd(MapCommand::CursorPos(pos));
+            self.send_cmd(MapCommand::PointerPos(pos));
         }
     }
 
@@ -130,5 +168,22 @@ impl MapUiCommander {
     /// Sync the open state with map
     pub fn sync_open(&mut self, is_map_open: bool) {
         self.open = is_map_open;
+    }
+
+    pub fn poll_msg(&mut self) {
+        if let Some(rx) = &mut self.rx {
+            while let Ok(msg) = rx.try_recv() {
+                match msg {
+                    PlotMessage::PointerTimestamp(ts_and_color) => {
+                        self.map_pointer_timestamp_and_color = ts_and_color;
+                    }
+                }
+            }
+        }
+    }
+
+    /// The timestamp and color of the point on the map the pointer is hovering on, if any.
+    pub fn map_pointer_timestamp(&self) -> Option<(f64, Color32)> {
+        self.map_pointer_timestamp_and_color
     }
 }

@@ -1,6 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 use egui::{
-    Align2, CentralPanel, Color32, Frame, Grid, MenuBar, RichText, TopBottomPanel, Ui,
+    Align2, CentralPanel, Color32, Frame, Grid, MenuBar, Pos2, RichText, TopBottomPanel, Ui,
     ViewportBuilder, ViewportId, Window,
 };
 use egui_phosphor::regular::{
@@ -17,9 +17,9 @@ use std::sync::mpsc::{Receiver, Sender};
 use walkers::{Map, Position};
 
 use crate::{
-    commander::{MapCommand, MapUiCommander},
+    commander::{MapCommand, MapUiChannels, MapUiCommander, PlotMessage},
     draw::{DrawSettings, TelemetryLabelSettings},
-    geo_path::{MqttGeoPath, PathEntry},
+    geo_path::{ClosestPoint, MqttGeoPath, PathEntry},
     map_state::MapState,
 };
 
@@ -40,16 +40,28 @@ pub struct MapViewPort {
     pub telemetry_label_threshold: f64,
 
     #[serde(skip)]
-    cmd_recv: Option<Receiver<MapCommand>>,
+    cmd_rx: Option<Receiver<MapCommand>>,
     /// The time corresponding to the cursor position in the plot area
     #[serde(skip)]
-    plot_time_cursor_pos: Option<f64>,
+    plot_time_pointer_pos: Option<f64>,
+    /// Point on the map that is currently hovered
+    #[serde(skip)]
+    map_hovered_point: Option<ClosestPoint>,
     #[serde(skip)]
     hovered_path: Option<usize>, // index of hovered path
     #[serde(skip)]
     hovered_mqtt_path: Option<usize>,
     #[serde(skip)]
     mqtt_latest_position: Option<Position>,
+
+    #[serde(skip)]
+    plot_msg_tx: Option<Sender<PlotMessage>>,
+    // What is the last position of the pointer that hovered on the map
+    #[serde(skip)]
+    pointer_hovered_pos: Option<Pos2>,
+    // Is the map currently hovered on?
+    #[serde(skip)]
+    map_hovered: bool,
 }
 
 impl MapViewPort {
@@ -57,20 +69,31 @@ impl MapViewPort {
     ///
     /// if it's the first time it's opened, it will start loading map tiles and
     /// return a [Sender<MapCommand>] for interacting with the Map from other contexts
-    pub fn open(&mut self, ctx: &egui::Context) -> Option<Sender<MapCommand>> {
+    pub fn open(
+        &mut self,
+        ctx: &egui::Context,
+    ) -> (Option<Sender<MapCommand>>, Option<Receiver<PlotMessage>>) {
         if self.map_state.tile_state.is_none() {
             egui_extras::install_image_loaders(ctx);
             self.map_state.init(ctx.clone());
         }
-        let mut maybe_map_send = None;
-        if self.cmd_recv.is_none() {
-            let (cmd_send, cmd_recv) = MapUiCommander::channels();
-            maybe_map_send = Some(cmd_send);
-            self.cmd_recv = Some(cmd_recv);
+        let mut maybe_map_tx = None;
+        let mut maybe_plot_rx = None;
+        if self.cmd_rx.is_none() {
+            let MapUiChannels {
+                map_cmd_tx,
+                map_cmd_rx,
+                plot_msg_tx,
+                plot_msg_rx,
+            } = MapUiCommander::channels();
+            maybe_map_tx = Some(map_cmd_tx);
+            maybe_plot_rx = Some(plot_msg_rx);
+            self.cmd_rx = Some(map_cmd_rx);
+            self.plot_msg_tx = Some(plot_msg_tx);
         }
         self.open = true;
 
-        maybe_map_send
+        (maybe_map_tx, maybe_plot_rx)
     }
 
     pub fn close(&mut self) {
@@ -78,13 +101,8 @@ impl MapViewPort {
     }
 
     pub fn poll_commands(&mut self) {
-        let mut cursor_pos: Option<f64> = None;
-        while let Ok(cmd) = self
-            .cmd_recv
-            .as_ref()
-            .expect("unsound condition")
-            .try_recv()
-        {
+        let mut pointer_pos: Option<f64> = None;
+        while let Ok(cmd) = self.cmd_rx.as_ref().expect("unsound condition").try_recv() {
             match cmd {
                 MapCommand::AddGeoData(geo_data) => {
                     match geo_data {
@@ -162,9 +180,9 @@ impl MapViewPort {
                         self.mqtt_latest_position = Some(latest_point.position);
                     }
                 }
-                MapCommand::CursorPos(time_pos) => {
-                    log::trace!("Got cursor time: {time_pos:.}");
-                    cursor_pos = Some(time_pos);
+                MapCommand::PointerPos(time_pos) => {
+                    log::trace!("Got pointer time: {time_pos:.}");
+                    pointer_pos = Some(time_pos);
                 }
                 MapCommand::FitToAllPaths => {
                     self.zoom_to_fit();
@@ -175,8 +193,8 @@ impl MapViewPort {
                 }
             }
         }
-        if let Some(pos) = cursor_pos {
-            self.plot_time_cursor_pos = Some(pos);
+        if let Some(pos) = pointer_pos {
+            self.plot_time_pointer_pos = Some(pos);
         }
     }
 
@@ -232,6 +250,23 @@ impl MapViewPort {
                 });
 
                 CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
+                    self.pointer_hovered_pos = if ui.ui_contains_pointer() {
+                        ctx.pointer_hover_pos()
+                    } else {
+                        None
+                    };
+                    let new_is_map_hovered = self.pointer_hovered_pos.is_some();
+                    // Was hovered -> Not hovered any longer
+                    if self.map_hovered && !new_is_map_hovered {
+                        self.map_hovered_point = None;
+                        self.send_map_pointer_pos(None);
+                        self.map_hovered = false;
+                    }
+                    // Not hovered -> Now hovered
+                    else if !self.map_hovered && new_is_map_hovered {
+                        self.plot_time_pointer_pos = None;
+                        self.map_hovered = true;
+                    }
                     self.show_map_panel(ui);
                 });
 
@@ -242,6 +277,13 @@ impl MapViewPort {
         // If the user requested to close the window, update the state.
         if !is_still_open {
             self.close();
+        }
+    }
+
+    // Sending `None` clear the cached value of the receiver
+    fn send_map_pointer_pos(&mut self, pos: Option<(f64, Color32)>) {
+        if let Some(tx) = &mut self.plot_msg_tx {
+            tx.send(PlotMessage::PointerTimestamp(pos)).ok();
         }
     }
 
@@ -314,6 +356,7 @@ impl MapViewPort {
 
     /// Renders the main map panel and all geographical data on it.
     fn show_map_panel(&mut self, ui: &mut Ui) {
+        let pointer_pos = self.pointer_hovered_pos;
         let fallback_position = self.map_state.data().center_position;
         let my_position = self.mqtt_latest_position.unwrap_or(fallback_position);
 
@@ -381,8 +424,55 @@ impl MapViewPort {
                 }
             }
 
-            if let Some(cursor_time) = self.plot_time_cursor_pos {
-                draw::draw_cursor_highlights(ui.painter(), projector, &self.geo_data, cursor_time);
+            if let Some(pointer_time) = self.plot_time_pointer_pos {
+                draw::draw_pointer_highlights(
+                    ui.painter(),
+                    projector,
+                    &self.geo_data,
+                    pointer_time,
+                );
+            }
+
+            if let Some(hovered_point) = &self.map_hovered_point {
+                draw::draw_hover_point_highlight(
+                    ui.painter(),
+                    hovered_point.screen_pos,
+                    hovered_point.path_color,
+                );
+            }
+
+            if let Some(pointer_pos) = pointer_pos {
+                let closest_entry =
+                    geo_path::find_closest_point(&self.geo_data, pointer_pos, projector);
+                let closest_mqtt =
+                    geo_path::find_closest_point(&self.mqtt_geo_data, pointer_pos, projector);
+
+                // Compare the results to find the overall closest point.
+                let hovered_point: Option<ClosestPoint> = match (closest_entry, closest_mqtt) {
+                    (None, None) => None,
+                    (Some(p), None) | (None, Some(p)) => Some(p),
+                    (Some(p1), Some(p2)) => {
+                        if p1.distance_to_pointer < p2.distance_to_pointer {
+                            Some(p1)
+                        } else {
+                            Some(p2)
+                        }
+                    }
+                };
+                if let Some(plot_tx) = &mut self.plot_msg_tx {
+                    if let Some(point) = &hovered_point {
+                        plot_tx
+                            .send(PlotMessage::PointerTimestamp(Some((
+                                point.timestamp,
+                                point.path_color,
+                            ))))
+                            .ok();
+                    } else if self.map_hovered_point.is_some() {
+                        self.map_hovered_point = None;
+                        plot_tx.send(PlotMessage::PointerTimestamp(None)).ok();
+                    }
+                }
+                self.map_hovered_point = hovered_point;
             }
         });
 

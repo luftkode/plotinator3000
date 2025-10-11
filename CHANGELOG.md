@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.1.0]
+
+### Added
+
+- Hovering on a point on the map shows a vertical line in the plot area to indicate where the point is in time
+
+### Changed
+
+- In MQTT mode, the plot legend appears in the top left, to avoid obstructing the newest data points
+
 ## [2.0.0]
 
 ### Added
