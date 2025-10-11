@@ -404,6 +404,12 @@ impl MapViewPort {
                     &self.geo_data,
                     pointer_time,
                 );
+                draw::draw_pointer_highlights(
+                    ui.painter(),
+                    projector,
+                    &self.mqtt_geo_data,
+                    pointer_time,
+                );
             }
 
             if let Some(hovered_point) = &self.map_hovered_point {

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Hovering on a point on the map shows a vertical line in the plot area to indicate where the point is in time
+- Map hovering/highlighting from/to plot area also applies to MQTT data
 
 ### Changed
 

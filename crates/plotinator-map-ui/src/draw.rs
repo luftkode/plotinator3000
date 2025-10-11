@@ -328,10 +328,10 @@ fn draw_telemetry_label(
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough
-pub(crate) fn draw_pointer_highlights<'a>(
+pub(crate) fn draw_pointer_highlights(
     painter: &Painter,
     projector: &Projector,
-    paths: impl IntoIterator<Item = &'a (impl GeoPath + 'a)>,
+    paths: &[impl GeoPath],
     cursor_time: f64,
 ) {
     const MAX_TIME_DELTA: f64 = 2_000_000_000.0; // Maximum 2 seconds in nanoseconds
