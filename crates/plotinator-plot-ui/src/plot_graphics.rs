@@ -1,5 +1,5 @@
 use egui::{Vec2, Vec2b};
-use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
+use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds, VLine};
 use plotinator_plot_util::{PlotData, Plots};
 use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
 
@@ -112,7 +112,7 @@ pub fn paint_plots(
             let mqtt_plot = build_plot_ui(
                 "mqtt",
                 ui.available_height(),
-                legend_cfg.clone(),
+                Legend::default().position(egui_plot::Corner::LeftTop),
                 axis_cfg,
                 x_axes,
                 link_group,
@@ -163,7 +163,17 @@ fn fill_log_plots(
 
                 #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
                 if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
-                    map_cmd.cursor_time_pos(pointer_coord.x);
+                    map_cmd.pointer_time_pos(pointer_coord.x);
+                }
+            } else {
+                // check if there's a message from the map that should highlight the time that is hovered on the map
+                map_cmd.poll_msg();
+                if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {
+                    let line = VLine::new("", ts)
+                        .highlight(true)
+                        .id("map_pos_vline")
+                        .color(color);
+                    plot_ui.vline(line);
                 }
             }
 
