@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed
+
+- On `unix` use `MADV_SEQUENTIAL` to inform filesystem about memory access patterns when parsing input files
+
 ### Dependencies
 
 - `egui_kittest`: 0.32.3 → 0.33.0 ([#366](https://github.com/luftkode/plotinator3000/pull/366))
