@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `egui_kittest`: 0.32.3 → 0.33.0 ([#366](https://github.com/luftkode/plotinator3000/pull/366))
+- `toml`: 0.9.6 → 0.9.8 ([#366](https://github.com/luftkode/plotinator3000/pull/366))
+
 ## [2.1.0]
 
 ### Added
