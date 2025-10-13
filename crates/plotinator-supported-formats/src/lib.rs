@@ -36,6 +36,20 @@ pub enum SupportedFormat {
     MqttData(SerializableMqttPlotData),
 }
 
+fn mmap_file(file: &fs::File) -> io::Result<memmap2::Mmap> {
+    #[allow(
+        unsafe_code,
+        reason = "If the user manages to drop a file and then delete that file before we are done parsing it then they deserve it"
+    )]
+    // SAFETY: It's safe as long as the underlying file is not modified before this function returns
+    let mmap: memmap2::Mmap = unsafe { memmap2::Mmap::map(file)? };
+
+    #[cfg(not(any(target_os = "windows", target_arch = "wasm32")))]
+    mmap.advise(memmap2::Advice::Sequential)?;
+
+    Ok(mmap)
+}
+
 impl SupportedFormat {
     /// Attempts to parse a log from raw content.
     pub fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
@@ -67,20 +81,10 @@ impl SupportedFormat {
                         .file_name()
                         .is_some_and(|name| name.to_string_lossy().contains("PPP"))))
         {
-            #[allow(
-                unsafe_code,
-                reason = "If the user manages to drop a file and then delete that file before we are done parsing it then they deserve it"
-            )]
-            // SAFETY: It's safe as long as the underlying file is not modified before this function returns
-            let mmap: memmap2::Mmap = unsafe { memmap2::Mmap::map(&file)? };
+            let mmap = mmap_file(&file)?;
             Self::parse_csv_from_buf(&mmap[..])?
         } else {
-            #[allow(
-                unsafe_code,
-                reason = "If the user manages to drop a file and then delete that file before we are done parsing it then they deserve it"
-            )]
-            // SAFETY: It's safe as long as the underlying file is not modified before this function returns
-            let mmap: memmap2::Mmap = unsafe { memmap2::Mmap::map(&file)? };
+            let mmap = mmap_file(&file)?;
             Self::parse_from_buf(&mmap[..])?
         };
         log::debug!("Got: {}", log.descriptive_name());
