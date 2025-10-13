@@ -3,7 +3,9 @@ use plotinator_log_if::prelude::GeoPoint;
 use plotinator_proc_macros::log_time;
 use walkers::Projector;
 
-use crate::geo_path::GeoPath;
+use crate::{draw::labels::LabelPlacer, geo_path::GeoPath};
+
+pub(crate) mod labels;
 
 pub struct DrawSettings {
     pub(crate) draw_heading_arrows: bool,
@@ -44,6 +46,7 @@ pub(crate) fn draw_path(
     );
 }
 
+#[log_time]
 pub(crate) fn draw_path_inner<'p>(
     ui: &egui::Ui,
     path: impl Iterator<Item = (Pos2, &'p GeoPoint)>,
@@ -84,10 +87,6 @@ pub(crate) fn draw_path_inner<'p>(
     // Draw heading arrows with distance-based filtering
     if settings.draw_heading_arrows {
         draw_heading_arrows(painter, &screen_points, speed_range);
-    }
-
-    if settings.telemetry_label.draw {
-        draw_telemetry_labels(painter, &settings.telemetry_label, &screen_points);
     }
 
     // Draw start marker (filled black circle)
