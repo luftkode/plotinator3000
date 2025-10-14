@@ -27,7 +27,7 @@ impl FrameGpsPacket {
             geo = geo.with_altitude(geo_alt);
         }
         if let Some(spd) = self.speed {
-            geo = geo.with_speed(spd.into());
+            geo = geo.with_speed((spd * 1.852).into()); // knots → km/h
         }
 
         Some(geo)

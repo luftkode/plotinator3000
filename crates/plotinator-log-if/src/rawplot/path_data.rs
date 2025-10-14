@@ -10,9 +10,12 @@ use crate::rawplot::{RawPlot, RawPlotCommon, path_data::caching::CachedValues};
 
 pub mod caching;
 
+/// Altitude samples
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RawGeoAltitudes {
+    /// Altitude source is a GNSS receiver
     Gnss(Box<[f64]>),
+    /// Altitude source is a laser range finder
     Laser(Box<[f64]>),
 }
 
@@ -86,18 +89,21 @@ impl GeoPoint {
         }
     }
 
+    /// Heading in degrees (0 = North, 90 = East, etc.)
     #[inline]
     pub fn with_heading(mut self, heading: f64) -> Self {
         self.heading = Some(heading);
         self
     }
 
+    /// Meters
     #[inline]
     pub fn with_altitude(mut self, altitude: GeoAltitude) -> Self {
         self.altitude = Some(altitude);
         self
     }
 
+    /// km/h
     #[inline]
     pub fn with_speed(mut self, speed: f64) -> Self {
         self.speed = Some(speed);
@@ -129,6 +135,7 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
             speed: None,
         }
     }
+    /// Unix nanoseconds
     pub fn timestamp(mut self, t: &'a [f64]) -> Self {
         self.timestamp = Some(t);
         self
@@ -144,24 +151,29 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
         self
     }
 
+    /// Heading in degrees (0 = North, 90 = East, etc.)
     pub fn heading(mut self, heading: &'d [f64]) -> Self {
         self.heading = Some(heading);
         self
     }
 
+    /// Meters
     fn altitude(mut self, altitude: RawGeoAltitudes) -> Self {
         self.altitude = Some(altitude);
         self
     }
 
+    /// Meters
     pub fn altitude_from_gnss(self, altitude: Vec<f64>) -> Self {
         self.altitude(RawGeoAltitudes::Gnss(altitude.into_boxed_slice()))
     }
 
+    /// Meters
     pub fn altitude_from_laser(self, altitude: Vec<f64>) -> Self {
         self.altitude(RawGeoAltitudes::Laser(altitude.into_boxed_slice()))
     }
 
+    /// km/h
     pub fn speed(mut self, speed: &'f [f64]) -> Self {
         self.speed = Some(speed);
         self
@@ -460,18 +472,21 @@ impl AuxiliaryGeoSpatialData {
         }
     }
 
+    /// Heading in degrees (0 = North, 90 = East, etc.)
     pub fn with_heading(mut self, heading: Vec<f64>) -> Self {
         debug_assert_eq!(self.timestamps.len(), heading.len());
         self.headings = Some(heading);
         self
     }
 
+    /// Meters
     pub fn with_altitude(mut self, altitude: RawGeoAltitudes) -> Self {
         debug_assert_eq!(self.timestamps.len(), altitude.len());
         self.altitudes = Some(altitude);
         self
     }
 
+    /// km/h
     pub fn with_speed(mut self, speed: Vec<f64>) -> Self {
         debug_assert_eq!(self.timestamps.len(), speed.len());
         self.speeds = Some(speed);
