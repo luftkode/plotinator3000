@@ -1,27 +1,27 @@
-use egui::{Color32, FontId, Painter, Pos2, Stroke, Vec2, vec2};
+use egui::{Color32, Painter, Pos2, Stroke, Vec2, vec2};
 use plotinator_log_if::prelude::GeoPoint;
 use plotinator_proc_macros::log_time;
 use walkers::Projector;
 
-use crate::geo_path::GeoPath;
+use crate::{
+    draw::labels::{LabelPlacer, TelemetryLabelSettings},
+    geo_path::GeoPath,
+};
+
+pub(crate) mod labels;
 
 pub struct DrawSettings {
     pub(crate) draw_heading_arrows: bool,
     pub(crate) telemetry_label: TelemetryLabelSettings,
 }
 
-pub struct TelemetryLabelSettings {
-    pub(crate) draw: bool,
-    pub(crate) with_speed: bool,
-    pub(crate) with_altitude: bool,
-}
-
 #[log_time]
 pub(crate) fn draw_path(
-    ui: &egui::Ui,
+    painter: &Painter,
     projector: &Projector,
     path: &impl GeoPath,
     settings: &DrawSettings,
+    label_placer: &mut LabelPlacer,
 ) {
     if path.points().len() < 2 {
         return;
@@ -30,31 +30,38 @@ pub(crate) fn draw_path(
     let path_color = path.color();
 
     // We need the full GeoPoint data at each screen position to access speed and heading.
-    let path_points_iter = path
+    let screen_points: Vec<(Pos2, &GeoPoint)> = path
         .points()
         .iter()
-        .map(|p| (projector.project(p.position).to_pos2(), p));
+        .map(|p| (projector.project(p.position).to_pos2(), p))
+        .collect();
+
+    if settings.telemetry_label.draw {
+        label_placer.collect_label_candidates(
+            &screen_points,
+            40.0,
+            path_color,
+            &settings.telemetry_label,
+        );
+    }
 
     draw_path_inner(
-        ui,
-        path_points_iter,
+        painter,
+        &screen_points,
         path_color,
         path.speed_bounds(),
         settings,
     );
 }
 
-pub(crate) fn draw_path_inner<'p>(
-    ui: &egui::Ui,
-    path: impl Iterator<Item = (Pos2, &'p GeoPoint)>,
+#[log_time]
+pub(crate) fn draw_path_inner(
+    painter: &Painter,
+    screen_points: &[(Pos2, &GeoPoint)],
     path_color: Color32,
     speed_range: (f64, f64),
     settings: &DrawSettings,
 ) {
-    let painter = ui.painter();
-
-    let screen_points: Vec<(Pos2, &GeoPoint)> = path.collect();
-
     // Draw the path as a colored line with altitude-based opacity
     const MAX_ALTITUDE: f64 = 400.0;
 
@@ -77,17 +84,13 @@ pub(crate) fn draw_path_inner<'p>(
     }
 
     // Draw circles at each point
-    for (point_pos, _geo_point) in &screen_points {
+    for (point_pos, _geo_point) in screen_points {
         painter.circle_stroke(*point_pos, 2.0, Stroke::new(1.0, path_color));
     }
 
     // Draw heading arrows with distance-based filtering
     if settings.draw_heading_arrows {
-        draw_heading_arrows(painter, &screen_points, speed_range);
-    }
-
-    if settings.telemetry_label.draw {
-        draw_telemetry_labels(painter, &settings.telemetry_label, &screen_points);
+        draw_heading_arrows(painter, screen_points, speed_range);
     }
 
     // Draw start marker (filled black circle)
@@ -221,110 +224,6 @@ fn draw_end_marker(painter: &Painter, center: Pos2) {
     // Draw black cross
     painter.line_segment(line1(center), stroke);
     painter.line_segment(line2(center), stroke);
-}
-
-pub(crate) fn draw_telemetry_labels(
-    painter: &Painter,
-    settings: &TelemetryLabelSettings,
-    screen_points: &[(Pos2, &GeoPoint)],
-) {
-    const MIN_LABEL_DISTANCE: f32 = 60.0; // Minimum pixels between labels
-
-    let mut last_label_pos: Option<Pos2> = None;
-    const POINT_SEPARATION: usize = 8;
-    let mut points_since_drawn = 0;
-    let mut point_candidate: Option<(Pos2, &GeoPoint)> = None;
-
-    for (point_pos, geo_point) in screen_points {
-        points_since_drawn += 1;
-
-        if points_since_drawn < POINT_SEPARATION {
-            if points_since_drawn > POINT_SEPARATION / 2
-                && last_label_pos.is_none_or(|lp| point_pos.distance(lp) >= MIN_LABEL_DISTANCE)
-            {
-                point_candidate = Some((*point_pos, geo_point));
-            }
-            continue;
-        }
-
-        // Check distance from last drawn label
-        if points_since_drawn >= POINT_SEPARATION {
-            if last_label_pos.is_none_or(|lp| point_pos.distance(lp) >= MIN_LABEL_DISTANCE) {
-                draw_telemetry_label(painter, settings, *point_pos, geo_point);
-                last_label_pos = Some(*point_pos);
-                points_since_drawn = 0;
-            } else if let Some((p, gp)) = point_candidate {
-                draw_telemetry_label(painter, settings, p, gp);
-                last_label_pos = Some(p);
-                points_since_drawn = 0;
-            }
-        }
-    }
-}
-
-fn draw_telemetry_label(
-    painter: &Painter,
-    settings: &TelemetryLabelSettings,
-    point: Pos2,
-    geo_point: &GeoPoint,
-) {
-    let mut lines = Vec::new();
-
-    if let Some(altitude) = geo_point.altitude
-        && settings.with_altitude
-    {
-        lines.push(altitude.to_string());
-    }
-    if let Some(speed) = geo_point.speed
-        && settings.with_speed
-    {
-        lines.push(format!("{speed:.1} km/h"));
-    }
-
-    // If no data available, don't draw anything
-    if lines.is_empty() {
-        return;
-    }
-
-    const FONT_ID: FontId = FontId::proportional(11.0);
-    const TEXT_COLOR: Color32 = Color32::BLACK;
-    let bg_color = Color32::from_rgba_unmultiplied(255, 255, 255, 200);
-
-    // Offset the text slightly above and to the right of the point
-    let text_pos = point + vec2(5.0, -8.0);
-
-    // Calculate the bounding box for all lines
-    let mut max_width: f32 = 0.0;
-    let mut total_height = 0.0;
-    let line_spacing = 2.0;
-
-    for line in &lines {
-        let galley = painter.layout_no_wrap(line.clone(), FONT_ID.clone(), TEXT_COLOR);
-        max_width = max_width.max(galley.size().x);
-        total_height += galley.size().y + line_spacing;
-    }
-    total_height -= line_spacing; // Remove spacing after last line
-
-    // Create rect for background
-    let text_rect = egui::Rect::from_min_size(text_pos, Vec2::new(max_width, total_height));
-    let padded_rect = text_rect.expand(2.0);
-
-    // Draw background
-    painter.rect_filled(padded_rect, 2.0, bg_color);
-
-    // Draw each line of text
-    let mut current_y = text_pos.y;
-    for line in lines {
-        let galley = painter.layout_no_wrap(line.clone(), FONT_ID.clone(), TEXT_COLOR);
-        painter.text(
-            Pos2::new(text_pos.x, current_y),
-            egui::Align2::LEFT_TOP,
-            line,
-            FONT_ID.clone(),
-            TEXT_COLOR,
-        );
-        current_y += galley.size().y + line_spacing;
-    }
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough
