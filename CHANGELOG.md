@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.2.0]
+
+### Fixed
+
+- Fix label spacing on map viewport
+
 ### Changed
 
 - On `unix` use `MADV_SEQUENTIAL` to inform filesystem about memory access patterns when parsing input files
 
 ### Dependencies
 
+- Update egui to `0.33.0`
 - `egui_kittest`: 0.32.3 → 0.33.0 ([#366](https://github.com/luftkode/plotinator3000/pull/366))
 - `toml`: 0.9.6 → 0.9.8 ([#366](https://github.com/luftkode/plotinator3000/pull/366))
 

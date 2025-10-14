@@ -114,7 +114,7 @@ impl PlotAppHarnessWrapper {
     }
 
     pub fn get_screen_rect(&self) -> Rect {
-        self.harness.ctx.screen_rect()
+        self.harness.ctx.content_rect()
     }
 
     /*
