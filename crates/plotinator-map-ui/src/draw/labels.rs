@@ -1,14 +1,36 @@
 use egui::{Color32, FontId, Painter, Pos2, Rect, epaint::Galley, vec2};
 use plotinator_log_if::prelude::GeoPoint;
+use plotinator_proc_macros::log_time;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::draw::TelemetryLabelSettings;
+pub(crate) struct TelemetryLabelSettings {
+    pub(crate) draw: bool,
+    pub(crate) with_speed: bool,
+    pub(crate) with_altitude: bool,
+}
 
-/// Pre-calculated label data ready for placement
-pub struct PreCalculatedLabel {
+impl TelemetryLabelSettings {
+    pub(crate) fn draw_speed(&self) -> bool {
+        self.with_speed
+    }
+    pub(crate) fn draw_altitude(&self) -> bool {
+        self.with_altitude
+    }
+}
+
+pub struct CandidatePoint {
+    pos: Pos2,
+    altitude: Option<f64>,
+    speed: Option<f64>,
+    color: Color32,
+}
+
+/// Represents a fully laid-out label ready to be drawn.
+pub struct PlacedLabel {
     pub rect: Rect,
-    pub galleys: Vec<Arc<Galley>>,
+    pub galleys: Option<Vec<Arc<Galley>>>,
+    pub path_color: Color32,
 }
 
 /// Manages the placement of non-overlapping labels on a 2D plane.
@@ -18,16 +40,16 @@ pub struct LabelPlacer {
     grid: Vec<Vec<usize>>,
     grid_dims: (usize, usize),
     cell_size: f32,
-    // buffers for caching
+    // buffers for caching allocations
     #[serde(skip)]
-    candidate_buffer: Vec<(Pos2, GeoPoint)>,
+    candidate_buffer: Vec<CandidatePoint>,
     #[serde(skip)]
-    precalc_buffer: Vec<PreCalculatedLabel>,
+    label_buffer: Vec<PlacedLabel>,
 }
 
 impl Default for LabelPlacer {
     fn default() -> Self {
-        Self::new(32.0)
+        Self::new(64.0)
     }
 }
 
@@ -40,7 +62,7 @@ impl LabelPlacer {
             grid_dims: (0, 0),
             cell_size,
             candidate_buffer: Vec::new(),
-            precalc_buffer: Vec::new(),
+            label_buffer: Vec::new(),
         }
     }
 
@@ -71,11 +93,18 @@ impl LabelPlacer {
     /// This should be called for each path to gather all candidate labels.
     /// The `min_screen_distance` (in pixels) ensures labels are spaced out regardless of zoom.
     /// Results are accumulated in the internal buffer.
+    #[log_time]
     pub fn collect_label_candidates(
         &mut self,
         screen_points: &[(Pos2, &GeoPoint)],
         min_screen_distance: f32,
+        path_color: Color32,
+        settings: &TelemetryLabelSettings,
     ) {
+        if !(settings.draw_altitude() || settings.draw_speed()) {
+            return;
+        }
+
         let mut last_label_pos: Option<Pos2> = None;
 
         for (screen_pos, geo_point) in screen_points {
@@ -88,50 +117,57 @@ impl LabelPlacer {
             };
 
             if should_place {
-                self.candidate_buffer
-                    .push((*screen_pos, (*geo_point).clone()));
+                self.candidate_buffer.push(CandidatePoint {
+                    pos: *screen_pos,
+                    altitude: if settings.draw_altitude() {
+                        geo_point.altitude.map(|a| a.val())
+                    } else {
+                        None
+                    },
+                    speed: if settings.draw_speed() {
+                        geo_point.speed
+                    } else {
+                        None
+                    },
+                    color: path_color,
+                });
                 last_label_pos = Some(*screen_pos);
             }
         }
     }
 
-    /// Pre-calculates all label layouts for candidates.
+    /// Calculates and places all labels, handling collisions.
     ///
-    /// Call this after collecting all candidates and before placing labels.
-    pub fn precalculate_labels(&mut self, painter: &Painter, settings: &TelemetryLabelSettings) {
-        self.precalc_buffer.clear();
+    /// Call this after collecting all candidates for all paths.
+    #[log_time]
+    pub fn place_all_labels(&mut self, painter: &Painter) {
+        self.label_buffer.clear();
 
-        for (screen_pos, geo_point) in &self.candidate_buffer {
-            if let Some((rect, galleys)) =
-                calculate_label_layout(painter, settings, *screen_pos, geo_point)
-            {
-                self.precalc_buffer
-                    .push(PreCalculatedLabel { rect, galleys });
-            }
+        log::debug!("{} candidate labels", self.candidate_buffer.len());
+
+        for candidate in &self.candidate_buffer {
+            let (rect, galleys) = calculate_label_layout(painter, candidate);
+            self.label_buffer.push(PlacedLabel {
+                rect,
+                galleys: Some(galleys),
+                path_color: candidate.color,
+            });
         }
-    }
 
-    /// Places all pre-calculated labels, handling collisions.
-    ///
-    /// Call this after precalculate_labels.
-    pub fn place_labels(&mut self, painter: &Painter) {
-        for i in 0..self.precalc_buffer.len() {
-            let label = &self.precalc_buffer[i];
+        let mut placed_labels = std::mem::take(&mut self.label_buffer);
+        for label in &mut placed_labels {
             if !self.collides(&label.rect) {
-                draw_precalculated_label(painter, label.rect, &label.galleys);
+                draw_label(painter, label);
                 self.register_label(label.rect);
             }
         }
-    }
 
-    /// Clears the candidate and precalc buffers for the next frame.
-    ///
-    /// Call this after placing labels.
-    pub fn clear_frame_data(&mut self) {
+        self.label_buffer = placed_labels;
+        self.label_buffer.clear();
         self.candidate_buffer.clear();
-        self.precalc_buffer.clear();
     }
 
+    #[inline]
     fn collides(&self, rect: &Rect) -> bool {
         let (min_x, min_y, max_x, max_y) = self.get_grid_bounds(rect);
 
@@ -150,6 +186,7 @@ impl LabelPlacer {
         false
     }
 
+    #[inline]
     fn register_label(&mut self, rect: Rect) {
         let new_index = self.placed_rects.len();
         self.placed_rects.push(rect);
@@ -166,6 +203,7 @@ impl LabelPlacer {
         }
     }
 
+    #[inline]
     fn get_grid_bounds(&self, rect: &Rect) -> (usize, usize, usize, usize) {
         let grid_w = self.grid_dims.0.saturating_sub(1);
         let grid_h = self.grid_dims.1.saturating_sub(1);
@@ -179,26 +217,14 @@ impl LabelPlacer {
 }
 
 /// Calculates the layout and bounding box for a telemetry label.
-fn calculate_label_layout(
-    painter: &Painter,
-    settings: &TelemetryLabelSettings,
-    point: Pos2,
-    geo_point: &GeoPoint,
-) -> Option<(Rect, Vec<Arc<Galley>>)> {
+#[inline]
+fn calculate_label_layout(painter: &Painter, point: &CandidatePoint) -> (Rect, Vec<Arc<Galley>>) {
     let mut lines = Vec::with_capacity(2);
-    if settings.with_altitude {
-        if let Some(altitude) = geo_point.altitude {
-            lines.push(altitude.to_string());
-        }
+    if let Some(altitude) = point.altitude {
+        lines.push(format!("{altitude:.0} m"));
     }
-    if settings.with_speed {
-        if let Some(speed) = geo_point.speed {
-            lines.push(format!("{speed:.1} km/h"));
-        }
-    }
-
-    if lines.is_empty() {
-        return None;
+    if let Some(speed) = point.speed {
+        lines.push(format!("{speed:.1} km/h"));
     }
 
     const FONT_ID: FontId = FontId::proportional(11.0);
@@ -218,24 +244,46 @@ fn calculate_label_layout(
     }
     total_height += LINE_SPACING * (galleys.len().saturating_sub(1) as f32);
 
-    let text_pos = point + vec2(5.0, -8.0);
+    let text_pos = point.pos + vec2(5.0, -8.0);
     let text_rect = Rect::from_min_size(text_pos, vec2(max_width, total_height));
     let padded_rect = text_rect.expand(2.0);
 
-    Some((padded_rect, galleys))
+    (padded_rect, galleys)
 }
 
-/// Draws a pre-calculated label to the screen.
-fn draw_precalculated_label(painter: &Painter, rect: Rect, galleys: &[Arc<Galley>]) {
-    let bg_color = Color32::from_rgba_unmultiplied(255, 255, 255, 200);
+/// Blends a path color with white to create a subtle tinted background.
+///
+/// This ensures the background is light enough for black text while maintaining
+/// visual connection to the path color.
+#[inline]
+fn get_label_background_color(path_color: Color32) -> Color32 {
+    let [r, g, b, _] = path_color.to_srgba_unmultiplied();
+
+    // Blend the path color with white (factor of 0.3 means 70% white, 30% path color)
+    // This creates a subtle tint that doesn't overpower the text
+    let blend_factor = 0.3;
+    let r = ((r as f32) * blend_factor + 255.0 * (1.0 - blend_factor)) as u8;
+    let g = ((g as f32) * blend_factor + 255.0 * (1.0 - blend_factor)) as u8;
+    let b = ((b as f32) * blend_factor + 255.0 * (1.0 - blend_factor)) as u8;
+
+    Color32::from_rgba_unmultiplied(r, g, b, 220)
+}
+
+/// Draws a label to the screen with path-colored background.
+#[inline]
+fn draw_label(painter: &Painter, label: &mut PlacedLabel) {
+    let bg_color = get_label_background_color(label.path_color);
     const TEXT_COLOR: Color32 = Color32::BLACK;
     const LINE_SPACING: f32 = 2.0;
 
-    painter.rect_filled(rect, 2.0, bg_color);
+    painter.rect_filled(label.rect, 2.0, bg_color);
 
-    let mut current_pos = rect.min + vec2(2.0, 2.0);
-    for galley in galleys {
-        painter.galley(current_pos, galley.clone(), TEXT_COLOR);
-        current_pos.y += galley.size().y + LINE_SPACING;
+    let mut current_pos = label.rect.min + vec2(2.0, 2.0);
+    if let Some(galleys) = label.galleys.take() {
+        for galley in galleys {
+            let curr_galley_size_y = galley.size().y;
+            painter.galley(current_pos, galley, TEXT_COLOR);
+            current_pos.y += curr_galley_size_y + LINE_SPACING;
+        }
     }
 }

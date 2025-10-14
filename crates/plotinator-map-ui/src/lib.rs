@@ -8,7 +8,7 @@ use egui_phosphor::regular::{
     SELECTION_ALL, SQUARE,
 };
 use plotinator_log_if::{
-    prelude::{GeoPoint, PrimaryGeoSpatialData},
+    prelude::PrimaryGeoSpatialData,
     rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset},
 };
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,10 @@ use walkers::{Map, Position};
 
 use crate::{
     commander::{MapCommand, MapUiChannels, MapUiCommander, PlotMessage},
-    draw::{DrawSettings, TelemetryLabelSettings, labels::LabelPlacer},
+    draw::{
+        DrawSettings,
+        labels::{LabelPlacer, TelemetryLabelSettings},
+    },
     geo_path::{ClosestPoint, GeoPath, MqttGeoPath, PathEntry, find_closest_point_to_cursor},
     map_state::MapState,
 };
@@ -361,7 +364,6 @@ impl MapViewPort {
         .double_click_to_zoom(true);
 
         map.show(ui, |ui, projector, _map_rect| {
-            let screen_rect = ui.available_rect_before_wrap();
             let draw_heading = zoom_level > self.heading_arrow_threshold;
             let draw_telemetry_label = zoom_level > self.telemetry_label_threshold;
 
@@ -374,7 +376,8 @@ impl MapViewPort {
                 },
             };
 
-            self.label_placer.begin_frame(screen_rect);
+            self.label_placer
+                .begin_frame(ui.available_rect_before_wrap());
 
             // Draw regular paths
             for (i, path) in self.geo_data.iter().enumerate() {
@@ -383,7 +386,13 @@ impl MapViewPort {
                 }
                 let is_hovered = self.hovered_path == Some(i);
 
-                draw::draw_path(ui, projector, path, &draw_settings_fn(path));
+                draw::draw_path(
+                    ui,
+                    projector,
+                    path,
+                    &draw_settings_fn(path),
+                    &mut self.label_placer,
+                );
                 if is_hovered {
                     draw::highlight_whole_path(ui.painter(), projector, path);
                 }
@@ -396,58 +405,20 @@ impl MapViewPort {
                 }
                 let is_hovered = self.hovered_mqtt_path == Some(i);
 
-                draw::draw_path(ui, projector, path, &draw_settings_fn(path));
+                draw::draw_path(
+                    ui,
+                    projector,
+                    path,
+                    &draw_settings_fn(path),
+                    &mut self.label_placer,
+                );
                 if is_hovered {
                     draw::highlight_whole_path(ui.painter(), projector, path);
                 }
             }
 
             if draw_telemetry_label {
-                for path in self.geo_data.iter() {
-                    if !path.is_visible() {
-                        continue;
-                    }
-                    let screen_points: Vec<(Pos2, &GeoPoint)> = path
-                        .points()
-                        .iter()
-                        .map(|p| (projector.project(p.position).to_pos2(), p))
-                        .collect();
-
-                    self.label_placer
-                        .collect_label_candidates(&screen_points, 40.0);
-                }
-
-                for path in self.mqtt_geo_data.iter() {
-                    if !path.is_visible() {
-                        continue;
-                    }
-                    let screen_points: Vec<(Pos2, &GeoPoint)> = path
-                        .points()
-                        .iter()
-                        .map(|p| (projector.project(p.position).to_pos2(), p))
-                        .collect();
-
-                    self.label_placer
-                        .collect_label_candidates(&screen_points, 40.0);
-                }
-
-                // Pre-calculate all label layouts
-                let telemetry_settings = TelemetryLabelSettings {
-                    draw: true,
-                    with_speed: draw_settings_fn(&self.geo_data[0])
-                        .telemetry_label
-                        .with_speed,
-                    with_altitude: draw_settings_fn(&self.geo_data[0])
-                        .telemetry_label
-                        .with_altitude,
-                };
-                self.label_placer
-                    .precalculate_labels(ui.painter(), &telemetry_settings);
-
-                self.label_placer.place_labels(ui.painter());
-
-                // Clear for next frame
-                self.label_placer.clear_frame_data();
+                self.label_placer.place_all_labels(ui.painter());
             }
 
             if let Some(pointer_time) = self.plot_time_pointer_pos {
