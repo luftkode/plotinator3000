@@ -254,7 +254,7 @@ impl FrameGpsDatasets {
             mode.push([ts, *entry.mode as f64]);
             let speed_sample = *entry.speed;
             if !speed_sample.is_nan() {
-                speed.push((*entry.speed).into());
+                speed.push((*entry.speed * 1.852).into()); // knots → km/h
             }
             sats.push([ts, *entry.satellites as f64]);
 

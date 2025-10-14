@@ -235,6 +235,7 @@ impl FromStr for Gps {
                 .parse()
                 .map_err(|e: ParseFloatError| GpsError::Speed(e.to_string()))?
         };
+        let speed = speed * 1.852; // knots → km/h
         let hdop_str = parts[14];
         let hdop = if hdop_str == "NaN" {
             f32::NAN
