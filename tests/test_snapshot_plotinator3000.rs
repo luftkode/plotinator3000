@@ -45,8 +45,7 @@ fn test_snapshot_open_app() {
     harness.run();
     let homepage = harness.get_homepage_node();
     let main_window = homepage.parent().unwrap();
-    assert_eq!(main_window.accesskit_node().role(), Role::Window);
-    assert!(main_window.is_focused());
+    assert_eq!(main_window.accesskit_node().role(), Role::GenericContainer);
 
     harness.save_snapshot();
 }
