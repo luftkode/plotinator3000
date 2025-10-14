@@ -2,6 +2,7 @@ use egui::{Color32, FontId, Painter, Pos2, Rect, epaint::Galley, vec2};
 use plotinator_log_if::prelude::GeoPoint;
 use plotinator_proc_macros::log_time;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 use std::sync::Arc;
 
 pub(crate) struct TelemetryLabelSettings {
@@ -37,9 +38,10 @@ pub struct PlacedLabel {
 #[derive(Deserialize, Serialize)]
 pub struct LabelPlacer {
     placed_rects: Vec<Rect>,
-    grid: Vec<Vec<usize>>,
+    grid: Vec<SmallVec<[usize; 4]>>,
     grid_dims: (usize, usize),
     cell_size: f32,
+    padded_screen_rect: Rect,
     // buffers for caching allocations
     #[serde(skip)]
     candidate_buffer: Vec<CandidatePoint>,
@@ -61,6 +63,7 @@ impl LabelPlacer {
             grid: Vec::new(),
             grid_dims: (0, 0),
             cell_size,
+            padded_screen_rect: Rect::ZERO,
             candidate_buffer: Vec::new(),
             label_buffer: Vec::new(),
         }
@@ -76,6 +79,9 @@ impl LabelPlacer {
             cell.clear();
         }
 
+        // Store screen rect for bounds checking during label collection
+        self.padded_screen_rect = screen_rect.expand(20.);
+
         let new_grid_dims = (
             (screen_rect.width() / self.cell_size).ceil() as usize + 1,
             (screen_rect.height() / self.cell_size).ceil() as usize + 1,
@@ -84,7 +90,7 @@ impl LabelPlacer {
         if self.grid_dims != new_grid_dims {
             self.grid_dims = new_grid_dims;
             self.grid
-                .resize_with(self.grid_dims.0 * self.grid_dims.1, Vec::new);
+                .resize_with(self.grid_dims.0 * self.grid_dims.1, SmallVec::new);
         }
     }
 
@@ -108,6 +114,9 @@ impl LabelPlacer {
         let mut last_label_pos: Option<Pos2> = None;
 
         for (screen_pos, geo_point) in screen_points {
+            if !self.padded_screen_rect.contains(*screen_pos) {
+                continue;
+            }
             // Check if this point is far enough from the last labeled point
             let should_place = if let Some(last_pos) = last_label_pos {
                 let distance = (*screen_pos - last_pos).length();
@@ -156,9 +165,10 @@ impl LabelPlacer {
 
         let mut placed_labels = std::mem::take(&mut self.label_buffer);
         for label in &mut placed_labels {
-            if !self.collides(&label.rect) {
+            let bounds = self.get_grid_bounds(&label.rect);
+            if !self.collides_with_bounds(&label.rect, bounds) {
                 draw_label(painter, label);
-                self.register_label(label.rect);
+                self.register_label_with_bounds(label.rect, bounds);
             }
         }
 
@@ -168,8 +178,8 @@ impl LabelPlacer {
     }
 
     #[inline]
-    fn collides(&self, rect: &Rect) -> bool {
-        let (min_x, min_y, max_x, max_y) = self.get_grid_bounds(rect);
+    fn collides_with_bounds(&self, rect: &Rect, bounds: (usize, usize, usize, usize)) -> bool {
+        let (min_x, min_y, max_x, max_y) = bounds;
 
         for y in min_y..=max_y {
             for x in min_x..=max_x {
@@ -187,11 +197,11 @@ impl LabelPlacer {
     }
 
     #[inline]
-    fn register_label(&mut self, rect: Rect) {
+    fn register_label_with_bounds(&mut self, rect: Rect, bounds: (usize, usize, usize, usize)) {
         let new_index = self.placed_rects.len();
         self.placed_rects.push(rect);
 
-        let (min_x, min_y, max_x, max_y) = self.get_grid_bounds(&rect);
+        let (min_x, min_y, max_x, max_y) = bounds;
 
         for y in min_y..=max_y {
             for x in min_x..=max_x {

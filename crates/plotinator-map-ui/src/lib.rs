@@ -345,10 +345,15 @@ impl MapViewPort {
     }
 
     /// Renders the main map panel and all geographical data on it.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "Hard to avoid without mutably borrowing self again or using unreadable closures"
+    )]
     fn show_map_panel(&mut self, ui: &mut Ui) {
         let pointer_pos = self.pointer_hovered_pos;
-        let fallback_position = self.map_state.data().center_position;
-        let my_position = self.mqtt_latest_position.unwrap_or(fallback_position);
+        let my_position = self
+            .mqtt_latest_position
+            .unwrap_or(self.map_state.data().center_position);
 
         let tile_state = self
             .map_state
@@ -381,39 +386,33 @@ impl MapViewPort {
 
             // Draw regular paths
             for (i, path) in self.geo_data.iter().enumerate() {
-                if !path.is_visible() {
-                    continue;
-                }
-                let is_hovered = self.hovered_path == Some(i);
-
-                draw::draw_path(
-                    ui,
-                    projector,
-                    path,
-                    &draw_settings_fn(path),
-                    &mut self.label_placer,
-                );
-                if is_hovered {
-                    draw::highlight_whole_path(ui.painter(), projector, path);
+                if path.is_visible() {
+                    draw::draw_path(
+                        ui.painter(),
+                        projector,
+                        path,
+                        &draw_settings_fn(path),
+                        &mut self.label_placer,
+                    );
+                    if self.hovered_path == Some(i) {
+                        draw::highlight_whole_path(ui.painter(), projector, path);
+                    }
                 }
             }
 
             // Draw MQTT paths
             for (i, path) in self.mqtt_geo_data.iter().enumerate() {
-                if !path.is_visible() {
-                    continue;
-                }
-                let is_hovered = self.hovered_mqtt_path == Some(i);
-
-                draw::draw_path(
-                    ui,
-                    projector,
-                    path,
-                    &draw_settings_fn(path),
-                    &mut self.label_placer,
-                );
-                if is_hovered {
-                    draw::highlight_whole_path(ui.painter(), projector, path);
+                if path.is_visible() {
+                    draw::draw_path(
+                        ui.painter(),
+                        projector,
+                        path,
+                        &draw_settings_fn(path),
+                        &mut self.label_placer,
+                    );
+                    if self.hovered_mqtt_path == Some(i) {
+                        draw::highlight_whole_path(ui.painter(), projector, path);
+                    }
                 }
             }
 

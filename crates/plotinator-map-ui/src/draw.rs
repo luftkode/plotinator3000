@@ -17,7 +17,7 @@ pub struct DrawSettings {
 
 #[log_time]
 pub(crate) fn draw_path(
-    ui: &egui::Ui,
+    painter: &Painter,
     projector: &Projector,
     path: &impl GeoPath,
     settings: &DrawSettings,
@@ -46,7 +46,7 @@ pub(crate) fn draw_path(
     }
 
     draw_path_inner(
-        ui,
+        painter,
         &screen_points,
         path_color,
         path.speed_bounds(),
@@ -56,14 +56,12 @@ pub(crate) fn draw_path(
 
 #[log_time]
 pub(crate) fn draw_path_inner(
-    ui: &egui::Ui,
+    painter: &Painter,
     screen_points: &[(Pos2, &GeoPoint)],
     path_color: Color32,
     speed_range: (f64, f64),
     settings: &DrawSettings,
 ) {
-    let painter = ui.painter();
-
     // Draw the path as a colored line with altitude-based opacity
     const MAX_ALTITUDE: f64 = 400.0;
 
