@@ -152,8 +152,6 @@ impl LabelPlacer {
     pub fn place_all_labels(&mut self, painter: &Painter) {
         self.label_buffer.clear();
 
-        log::debug!("{} candidate labels", self.candidate_buffer.len());
-
         for candidate in &self.candidate_buffer {
             let (rect, galleys) = calculate_label_layout(painter, candidate);
             self.label_buffer.push(PlacedLabel {

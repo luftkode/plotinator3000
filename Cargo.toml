@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "2.1.0"
+version = "2.2.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -47,19 +47,20 @@ plotinator-strfmt.path = "crates/plotinator-strfmt"
 plotinator-file-io.path = "crates/plotinator-file-io"
 plotinator-csv.path = "crates/plotinator-csv"
 plotinator-map-ui.path = "crates/plotinator-map-ui"
-egui = { version = "0.32", features = ["rayon", "callstack"] }
-egui-notify = "0.20.0"
-eframe = { version = "0.32", default-features = false, features = [
+egui = { version = "0.33", features = ["rayon", "callstack"] }
+egui-notify = "0.21.0"
+eframe = { version = "0.33", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
     "wayland",
     "x11",
 ] }
-egui_plot = { version = "0.33", features = ["serde"] }
-egui_extras = "0.32.3"
-egui-phosphor = "0.10.0"
-walkers = { version = "0.45.0", features = ["serde"] }
+egui_plot = { version = "0.34", features = ["serde"] }
+egui_extras = "0.33"
+# TODO: Move back to main repo once the update PR is merged
+egui-phosphor = { git = "https://github.com/ItsEthra/egui-phosphor.git", branch = "egui-0.33" }
+walkers = { version = "0.47.0", features = ["serde"] }
 rayon = "1.11.0"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
@@ -86,7 +87,7 @@ dirs = "6.0.0"
 smallvec = { version = "1.15.1", features = ["serde"]}
 tempfile = "3.23.0"
 rfd = "0.15"
-zip = "5.0"
+zip = "6.0"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
@@ -135,7 +136,7 @@ tempfile.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 # For GUI and GUI snapshot tests
-egui_kittest = { version = "0.32.1", features = [
+egui_kittest = { version = "0.33.0", features = [
     "eframe",
     "snapshot",
     "wgpu",

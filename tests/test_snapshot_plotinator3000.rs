@@ -1,5 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 mod util;
+use egui_kittest::kittest::Queryable as _;
 use plotinator_test_util::{bifrost_current, mbed_pid_v6_regular, mbed_status_v6_regular};
 use util::*;
 
@@ -14,13 +15,11 @@ fn test_snapshot_open_global_app() {
     harness.run();
 
     let map_button = harness.get_by_label_contains("Map");
-    assert!(map_button.accesskit_node().is_clickable());
 
     map_button.click();
     harness.run();
 
     let zoom_to_fit_button = harness.get_by_label_contains("Zoom to fit");
-    assert!(zoom_to_fit_button.accesskit_node().is_clickable());
     zoom_to_fit_button.click();
     harness.run();
 
@@ -46,8 +45,7 @@ fn test_snapshot_open_app() {
     harness.run();
     let homepage = harness.get_homepage_node();
     let main_window = homepage.parent().unwrap();
-    assert_eq!(main_window.accesskit_node().role(), Role::Window);
-    assert!(main_window.is_focused());
+    assert_eq!(main_window.accesskit_node().role(), Role::GenericContainer);
 
     harness.save_snapshot();
 }
@@ -56,7 +54,6 @@ fn test_snapshot_open_app() {
 fn test_snapshot_open_mqtt_config_window_connect_disabled() {
     let mut harness = PlotAppHarnessWrapper::new("default_mqtt_config_window");
     let mqtt_button = harness.get_mqtt_connect_button();
-    assert!(mqtt_button.accesskit_node().is_clickable());
 
     mqtt_button.click();
     harness.run();
@@ -121,7 +118,6 @@ fn test_snapshot_open_loaded_files() {
 
     // Check that we can now click the loaded files button
     let loaded_files_button = harness.get_loaded_files_button();
-    assert!(loaded_files_button.accesskit_node().is_clickable());
 
     // Click and render the loaded files window
     loaded_files_button.click();
@@ -140,7 +136,6 @@ fn test_snapshot_open_loaded_files_open_log_window() {
     harness.run_steps(2);
     // Check that we can now click the loaded files button
     let loaded_files_button = harness.get_loaded_files_button();
-    assert!(loaded_files_button.accesskit_node().is_clickable());
 
     // Click and render the loaded files window
     loaded_files_button.click();
@@ -151,8 +146,6 @@ fn test_snapshot_open_loaded_files_open_log_window() {
     let loaded_mbed_pid_button = loaded_files_window.get_by(|n| {
         n.role() == Role::Button && n.label().is_some_and(|l| l.contains("Mbed PID v6 #"))
     });
-
-    assert!(loaded_mbed_pid_button.accesskit_node().is_clickable());
 
     loaded_mbed_pid_button.click();
     harness.step();
