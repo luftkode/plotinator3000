@@ -133,6 +133,7 @@ jobs:
         shell: "bash"
       - name: "Set MAPBOX API token (public token)"
         run: "echo \"PLOTINATOR3000_MAPBOX_API=${{ secrets.PLOTINATOR3000_MAPBOX_API }}\" >> $GITHUB_ENV"
+        shell: "bash"
       - name: Install dist
         run: ${{ matrix.install_dist.run }}
       # Get the dist-manifest
