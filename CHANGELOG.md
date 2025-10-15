@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.2.2]
+
+- Fix satellite map on windows
+
 ## [2.2.1]
 
 - Convert frame-gps and NavSys speed from nautical miles to km/h
