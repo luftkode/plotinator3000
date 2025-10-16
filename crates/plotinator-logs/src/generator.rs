@@ -7,6 +7,7 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
+use plotinator_log_if::rawplot::{DataType, RawPlotBuilder};
 use plotinator_log_if::{log::LogEntry, parseable::Parseable, prelude::*};
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
@@ -152,86 +153,80 @@ impl GitMetadata for GeneratorLog {
 
 // Helper function to keep all the boiler plate of building each plot
 fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
-    vec![
-        RawPlotCommon::new(
-            format!("Rotor [R] ({LEGEND})"),
+    RawPlotBuilder::new(LEGEND)
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.r_rotor.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::ElectricalResistance {
+                name: "Rotor".into(),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("RPM ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.rpm.into()),
-            ExpectedPlotRange::Thousands,
+            DataType::other_unitless("RPM", ExpectedPlotRange::Thousands, false),
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("Power [W] ({LEGEND})"),
+        .add(
+            // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.pwm / 100.0).into()),
+            DataType::Percentage { name: "PWM".into() },
+        )
+        .add(
             plot_points_from_log_entry(
                 entries,
                 |e| e.timestamp_ns(),
                 |e| f64::from(e.vout) * f64::from(e.i_in),
             ),
-            ExpectedPlotRange::Thousands,
+            DataType::Power {
+                name: "Power".into(),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("PWM [%] ({LEGEND})"),
-            // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.pwm / 100.0).into()),
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            format!("Load [%] ({LEGEND})"),
+        .add(
             // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.load / 100.0).into()),
-            ExpectedPlotRange::Percentage,
+            DataType::Percentage {
+                name: "Load".into(),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("Rotor [I] ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_rotor.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::Current {
+                suffix: Some("Rotor".into()),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("Temp1 °C ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp1.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::Temperature {
+                name: "Temp1".into(),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("Temp2 °C ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp2.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::Temperature {
+                name: "Temp2".into(),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("I_in ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_in.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::Current {
+                suffix: Some("in".into()),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("Iout ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_out.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::Current {
+                suffix: Some("out".into()),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("Vbat [V] ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vbat.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::Voltage {
+                name: "Battery".into(),
+            },
         )
-        .into(),
-        RawPlotCommon::new(
-            format!("Vout [V] ({LEGEND})"),
+        .add(
             plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vout.into()),
-            ExpectedPlotRange::Hundreds,
+            DataType::Voltage { name: "out".into() },
         )
-        .into(),
-    ]
+        .build()
 }
 
 impl fmt::Display for GeneratorLog {

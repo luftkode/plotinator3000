@@ -27,7 +27,7 @@ pub fn add_plot_data_to_plot_collections(
     const PARALLEL_THRESHOLD: usize = 200_000;
     // We just check the first one, usually formats will have the same number of points for all the data series
     let first_plot_points_count: usize = data.raw_plots().first().map_or(0, |p| match p {
-        RawPlot::Generic { common } | RawPlot::Boolean { common } => common.points().len(),
+        RawPlot::Generic { common } => common.points().len(),
         RawPlot::GeoSpatialDataset(geo) => geo.len(),
     });
 
@@ -44,12 +44,15 @@ pub fn add_plot_data_to_plot_collections(
         match raw_plot {
             RawPlot::GeoSpatialDataset(geo_data) => {
                 for common in geo_data.raw_plots_common() {
-                    plot_settings
-                        .add_plot_name_if_not_exists(common.name(), data.descriptive_name());
+                    plot_settings.add_plot_name_if_not_exists(
+                        common.ty().to_owned(),
+                        data.descriptive_name(),
+                    );
                 }
             }
-            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
-                plot_settings.add_plot_name_if_not_exists(common.name(), data.descriptive_name());
+            RawPlot::Generic { common } => {
+                plot_settings
+                    .add_plot_name_if_not_exists(common.ty().to_owned(), data.descriptive_name());
             }
         }
     }
@@ -69,7 +72,7 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
         .iter()
         .filter_map(|rp| match rp {
             RawPlot::GeoSpatialDataset(geo_data) => Some(geo_data.raw_plots_common()),
-            _ => None,
+            RawPlot::Generic { .. } => None,
         })
         .flatten()
         .collect();
@@ -78,7 +81,7 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
     let new_cooked_plots: Vec<(ExpectedPlotRange, CookedPlot)> = geo_plots
         .par_iter()
         .chain(data.raw_plots().par_iter().filter_map(|rp| match rp {
-            RawPlot::Generic { common } | RawPlot::Boolean { common } => Some(common),
+            RawPlot::Generic { common } => Some(common),
             RawPlot::GeoSpatialDataset(_) => None,
         }))
         .filter_map(|rpc| {
@@ -126,31 +129,29 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
 fn add_plot_points_to_collections_seq(plots: &mut Plots, data: &SupportedFormat, data_id: u16) {
     for raw_plot in data.raw_plots() {
         match raw_plot {
-            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
-                match common.expected_range() {
-                    ExpectedPlotRange::Percentage => {
-                        plots.percentage_mut().add_plot_if_not_exists(
-                            common,
-                            data_id,
-                            data.descriptive_name(),
-                        );
-                    }
-                    ExpectedPlotRange::Hundreds => {
-                        plots.one_to_hundred_mut().add_plot_if_not_exists(
-                            common,
-                            data_id,
-                            data.descriptive_name(),
-                        );
-                    }
-                    ExpectedPlotRange::Thousands => {
-                        plots.thousands_mut().add_plot_if_not_exists(
-                            common,
-                            data_id,
-                            data.descriptive_name(),
-                        );
-                    }
+            RawPlot::Generic { common } => match common.expected_range() {
+                ExpectedPlotRange::Percentage => {
+                    plots.percentage_mut().add_plot_if_not_exists(
+                        common,
+                        data_id,
+                        data.descriptive_name(),
+                    );
                 }
-            }
+                ExpectedPlotRange::Hundreds => {
+                    plots.one_to_hundred_mut().add_plot_if_not_exists(
+                        common,
+                        data_id,
+                        data.descriptive_name(),
+                    );
+                }
+                ExpectedPlotRange::Thousands => {
+                    plots.thousands_mut().add_plot_if_not_exists(
+                        common,
+                        data_id,
+                        data.descriptive_name(),
+                    );
+                }
+            },
             RawPlot::GeoSpatialDataset(geo_data) => {
                 for common in geo_data.raw_plots_common() {
                     match common.expected_range() {

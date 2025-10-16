@@ -90,9 +90,12 @@ impl SkytemHdf5 for Tsc {
 
         plots.retain(|p| match p {
             RawPlot::GeoSpatialDataset(_) => true,
-            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
+            RawPlot::Generic { common } => {
                 if common.points().len() < 2 {
-                    log::warn!("Discarding plot with less than 2 points: {}", common.name());
+                    log::warn!(
+                        "Discarding plot with less than 2 points: {}",
+                        common.legend_name()
+                    );
                     false
                 } else {
                     true
@@ -162,11 +165,11 @@ mod tests {
 
         let zero_pos_first_10: Vec<[f64; 2]> = match plots.first().unwrap() {
             RawPlot::Generic { common } => common.points().iter().copied().take(10).collect(),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
         let bfield_first_10: Vec<[f64; 2]> = match &plots[1] {
             RawPlot::Generic { common } => common.points().iter().copied().take(10).collect(),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
 
         insta::assert_debug_snapshot!(zero_pos_first_10);

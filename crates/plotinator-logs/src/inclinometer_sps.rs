@@ -7,8 +7,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use plotinator_log_if::{parseable::Parseable, prelude::*};
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::{parseable::Parseable, prelude::*, rawplot::DataType};
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::{
@@ -140,18 +139,18 @@ impl Parseable for InclinometerSps {
             // Create pitch plot for this sensor
             if !pitch_points.is_empty() {
                 raw_plots.push(RawPlotCommon::new(
-                    format!("Pitch°  {LEGEND}{sensor_id}°"),
+                    format!("{LEGEND}{sensor_id}"),
                     pitch_points,
-                    ExpectedPlotRange::Hundreds,
+                    DataType::Pitch,
                 ));
             }
 
             // Create roll plot for this sensor
             if !roll_points.is_empty() {
                 raw_plots.push(RawPlotCommon::new(
-                    format!("Roll° {LEGEND}{sensor_id}"),
+                    format!("{LEGEND}{sensor_id}"),
                     roll_points,
-                    ExpectedPlotRange::Hundreds,
+                    DataType::Roll,
                 ));
             }
         }
@@ -159,7 +158,7 @@ impl Parseable for InclinometerSps {
         // Filter out empty plots and log warnings
         raw_plots.retain(|rp| {
             if rp.points().is_empty() {
-                log::warn!("{} has no data", rp.name());
+                log::warn!("{} has no data", rp.legend_name());
                 false
             } else {
                 true

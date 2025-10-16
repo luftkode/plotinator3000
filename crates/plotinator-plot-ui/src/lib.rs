@@ -129,7 +129,7 @@ impl LogPlotUi {
                     "Total data points in loaded files: {}",
                     format_large_number(*total_data_points),
                 ))
-                .duration(Some(Duration::from_secs(20)));
+                .duration(Some(Duration::from_secs(10)));
         }
 
         let mut reset_plot_bounds = false;

@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use hdf5::H5Type;
 use ndarray::Array1;
 use plotinator_log_if::{
-    prelude::{GeoSpatialDataBuilder, RawPlotCommon},
-    rawplot::RawPlot,
+    prelude::GeoSpatialDataBuilder,
+    rawplot::{DataType, RawPlot, RawPlotBuilder},
 };
 use plotinator_ui_util::ExpectedPlotRange;
 
@@ -88,11 +88,11 @@ impl GpsPvtRecords {
             h_elips.push([t, e.height_meters()]);
             hacc.push([t, e.h_acc as f64 * 1e-3]); // mm -> m
             vacc.push([t, e.v_acc as f64 * 1e-3]); // mm -> m
-            sacc.push([t, e.s_acc as f64 * 1e-3]); // mm/s -> m/s
+            sacc.push([t, e.s_acc as f64 * 3.6e-3]); // mm/s -> km/h
             pdop.push([t, e.p_dop as f64 * 0.01]);
-            vel_n.push([t, e.vel_n as f64 * 1e-3]); // mm/s -> m/s
-            vel_e.push([t, e.vel_e as f64 * 1e-3]); // mm/s -> m/s
-            vel_d.push([t, e.vel_d as f64 * 1e-3]); // mm/s -> m/s
+            vel_n.push([t, e.vel_n as f64 * 3.6e-3]); // mm/s -> km/h
+            vel_e.push([t, e.vel_e as f64 * 3.6e-3]); // mm/s -> km/h
+            vel_d.push([t, e.vel_d as f64 * 3.6e-3]); // mm/s -> km/h
             mag_dec.push([t, e.mag_dec as f64 * 1e-2]); // degrees * 1e-2 -> degrees
 
             // Extract valid flags
@@ -125,122 +125,35 @@ impl GpsPvtRecords {
             .build_into_rawplot()
             .expect("invalid builder");
 
-        let mut plots = vec![
-            RawPlotCommon::new("Satellites", numsv, ExpectedPlotRange::Hundreds).into(),
-            RawPlotCommon::new(
-                "Height [ellipsoid, m]",
-                h_elips,
-                ExpectedPlotRange::Hundreds,
+        let mut plots = RawPlotBuilder::new(TSC_LEGEND_NAME)
+            .add(
+                numsv,
+                DataType::other_unitless("Satellites", ExpectedPlotRange::Hundreds, false),
             )
-            .into(),
-            RawPlotCommon::new("Height [MSL, m]", h_msl, ExpectedPlotRange::Hundreds).into(),
-            RawPlotCommon::new(
-                "Horizontal accuracy [m]",
-                hacc,
-                ExpectedPlotRange::Hundreds,
+            .add(h_msl, DataType::AltitudeMSL)
+            .add(h_elips, DataType::AltitudeEllipsoidal)
+            .add(hacc, DataType::other_distance("Horizontal acc", true))
+            .add(vacc, DataType::other_distance("Vertical acc", true))
+            .add(sacc, DataType::other_velocity("Speed acc", true))
+            .add(
+                pdop,
+                DataType::other_unitless("PDOP", ExpectedPlotRange::Hundreds, true),
             )
-            .into(),
-            RawPlotCommon::new(
-                "Vertical accuracy [m]",
-                vacc,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Speed accuracy [m/s]",
-                sacc,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new("Position DOP", pdop, ExpectedPlotRange::Hundreds).into(),
-            RawPlotCommon::new(
-                "Velocity North [m/s]",
-                vel_n,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Velocity East [m/s]",
-                vel_e,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Velocity Down [m/s]",
-                vel_d,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Magnetic Declination [deg]",
-                mag_dec,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            // Valid flags
-            RawPlotCommon::new(
-                "Valid Date [bool]",
-                valid_date,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Valid Time [bool]",
-                valid_time,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Valid Fully Resolved [bool]",
-                valid_fully_resolved,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Valid Magnetic Declination [bool]",
-                valid_mag,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            // Status flags
-            RawPlotCommon::new(
-                "GNSS Fix OK [bool]",
-                gnss_fix_ok,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Differential Solution [bool]",
-                diff_soln,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Head Vehicle Valid [bool]",
-                head_veh_valid,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            // Additional flags
-            RawPlotCommon::new(
-                "Confirmed Available [bool]",
-                confirmed_avail,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Confirmed Date [bool]",
-                confirmed_date,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Confirmed Time [bool]",
-                confirmed_time,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-        ];
+            .add(vel_n, DataType::other_velocity("Velocity North", true))
+            .add(vel_e, DataType::other_velocity("Velocity East", true))
+            .add(vel_d, DataType::other_velocity("Velocity Down", true))
+            .add(mag_dec, DataType::other_degrees("Magnetic Decl.", true))
+            .add(valid_date, DataType::bool("Valid Date"))
+            .add(valid_time, DataType::bool("Valid Time"))
+            .add(valid_fully_resolved, DataType::bool("Valid fully resolved"))
+            .add(valid_mag, DataType::bool("Valid Magnetic Declination"))
+            .add(gnss_fix_ok, DataType::bool("GNSS Fix OK"))
+            .add(diff_soln, DataType::bool("Differential Solution"))
+            .add(head_veh_valid, DataType::bool("Head Vehicle Valid"))
+            .add(confirmed_avail, DataType::bool("Confirmed Available"))
+            .add(confirmed_date, DataType::bool("Confirmed Date"))
+            .add(confirmed_time, DataType::bool("Confirmed Time"))
+            .build();
         if let Some(geo_data) = geo_data {
             plots.push(geo_data);
         }

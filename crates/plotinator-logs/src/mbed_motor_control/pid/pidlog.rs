@@ -1,7 +1,10 @@
 use crate::mbed_motor_control::mbed_config::MbedConfig as _;
 use crate::mbed_motor_control::mbed_header::MbedMotorControlLogHeader as _;
 use anyhow::bail;
-use plotinator_log_if::log::LogEntry as _;
+use plotinator_log_if::{
+    log::LogEntry as _,
+    rawplot::{DataType, RawPlotBuilder},
+};
 use plotinator_ui_util::ExpectedPlotRange;
 
 use crate::{mbed_motor_control::mbed_header::SIZEOF_UNIQ_DESC, parse_unique_description};
@@ -31,7 +34,7 @@ pub struct PidLog {
 
 impl PidLog {
     // helper function build all the plots that can be made from a pidlog
-    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlotCommon> {
+    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlot> {
         let entry_count = entries.len();
         let mut rpm_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut pid_output_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -94,58 +97,35 @@ impl PidLog {
         first_valid_rpm_count: Vec<[f64; 2]>,
         fan_on: Vec<[f64; 2]>,
         vbat: Vec<[f64; 2]>,
-    ) -> Vec<RawPlotCommon> {
-        let mut raw_plots = vec![];
-        if !rpm.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("RPM ({LEGEND})"),
+    ) -> Vec<RawPlot> {
+        RawPlotBuilder::new(LEGEND)
+            .add(
                 rpm,
-                ExpectedPlotRange::Thousands,
-            ));
-        }
-        if !pid_output.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("PID Output ({LEGEND})"),
+                DataType::other_unitless("RPM", ExpectedPlotRange::Thousands, false),
+            )
+            .add(
                 pid_output,
-                ExpectedPlotRange::Percentage,
-            ));
-        }
-        if !servo_duty_cycle.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Servo Duty Cycle ({LEGEND})"),
+                DataType::other_unitless("PID Output", ExpectedPlotRange::Percentage, false),
+            )
+            .add(
                 servo_duty_cycle,
-                ExpectedPlotRange::Percentage,
-            ));
-        }
-        if !rpm_error_count.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("RPM Error Count ({LEGEND})"),
+                DataType::other_unitless("Servo Duty Cycle", ExpectedPlotRange::Percentage, true),
+            )
+            .add(
                 rpm_error_count,
-                ExpectedPlotRange::Hundreds,
-            ));
-        }
-        if !first_valid_rpm_count.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("First Valid RPM Count ({LEGEND})"),
+                DataType::other_unitless("RPM Error Count", ExpectedPlotRange::Hundreds, false),
+            )
+            .add(
                 first_valid_rpm_count,
-                ExpectedPlotRange::Hundreds,
-            ));
-        }
-        if !fan_on.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Fan On ({LEGEND})"),
-                fan_on,
-                ExpectedPlotRange::Percentage,
-            ));
-        }
-        if !vbat.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Vbat [V] ({LEGEND})"),
-                vbat,
-                ExpectedPlotRange::Hundreds,
-            ));
-        }
-        raw_plots
+                DataType::other_unitless(
+                    "First Valid RPM Count",
+                    ExpectedPlotRange::Hundreds,
+                    false,
+                ),
+            )
+            .add(fan_on, DataType::bool("Fan ON"))
+            .add(vbat, DataType::Voltage { name: "Bat".into() })
+            .build()
     }
 }
 
@@ -216,22 +196,6 @@ impl Parseable for PidLog {
             .collect();
 
         let all_plots_raw = Self::build_raw_plots(startup_timestamp_ns, &vec_of_entries);
-        // Iterate through the plots and make sure all the first timestamps match
-        if let Some(first_plot) = all_plots_raw.first()
-            && let Some([first_timestamp, ..]) = first_plot.points().first()
-        {
-            for p in &all_plots_raw {
-                if let Some([current_first_timestamp, ..]) = p.points().first() {
-                    debug_assert_eq!(
-                        current_first_timestamp, first_timestamp,
-                        "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
-                    );
-                }
-            }
-        }
-
-        let all_plots_raw = all_plots_raw.into_iter().map(Into::into).collect();
-
         Ok((
             Self {
                 header,

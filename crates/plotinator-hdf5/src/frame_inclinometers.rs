@@ -3,8 +3,7 @@ use std::io;
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
-use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*, rawplot::DataType};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -72,20 +71,14 @@ impl SkytemHdf5 for FrameInclinometers {
                 old_roll1_with_ts.push([*timestamp, old_roll as f64]);
             }
 
-            let pitch1_rawplot = RawPlotCommon::new(
-                format!("Pitch° ({LEGEND_NAME}1)"),
-                pitch1_with_ts,
-                ExpectedPlotRange::Hundreds,
-            );
-            let roll1_rawplot = RawPlotCommon::new(
-                format!("Roll° ({LEGEND_NAME}1)"),
-                roll1_with_ts,
-                ExpectedPlotRange::Hundreds,
-            );
+            let pitch1_rawplot =
+                RawPlotCommon::new(format!("{LEGEND_NAME}1"), pitch1_with_ts, DataType::Pitch);
+            let roll1_rawplot =
+                RawPlotCommon::new(format!("{LEGEND_NAME}1"), roll1_with_ts, DataType::Roll);
             let old_roll1_rawplot = RawPlotCommon::new(
-                format!("Roll° (Old) ({LEGEND_NAME}1)"),
+                format!(" (Old) ({LEGEND_NAME}1)"),
                 old_roll1_with_ts,
-                ExpectedPlotRange::Hundreds,
+                DataType::Roll,
             );
             raw_plots.push(pitch1_rawplot.into());
             raw_plots.push(roll1_rawplot.into());
@@ -120,21 +113,15 @@ impl SkytemHdf5 for FrameInclinometers {
                 old_roll2_with_ts.push([*timestamp, old_roll as f64]);
             }
 
-            let pitch2_rawplot = RawPlotCommon::new(
-                format!("Pitch° ({LEGEND_NAME}2)"),
-                pitch2_with_ts,
-                ExpectedPlotRange::Hundreds,
-            );
+            let pitch2_rawplot =
+                RawPlotCommon::new(format!("{LEGEND_NAME}2"), pitch2_with_ts, DataType::Pitch);
 
-            let roll2_rawplot = RawPlotCommon::new(
-                format!("Roll° ({LEGEND_NAME}2)"),
-                roll2_with_ts,
-                ExpectedPlotRange::Hundreds,
-            );
+            let roll2_rawplot =
+                RawPlotCommon::new(format!("{LEGEND_NAME}2"), roll2_with_ts, DataType::Roll);
             let old_roll2_rawplot = RawPlotCommon::new(
-                format!("Roll° (Old) ({LEGEND_NAME}2)"),
+                format!(" (Old) ({LEGEND_NAME}2"),
                 old_roll2_with_ts,
-                ExpectedPlotRange::Hundreds,
+                DataType::Roll,
             );
 
             raw_plots.push(pitch2_rawplot.into());
@@ -289,7 +276,7 @@ mod tests {
         assert_eq!(frame_inclinometers.raw_plots.len(), 6);
         match &frame_inclinometers.raw_plots[0] {
             RawPlot::Generic { common } => assert_eq!(common.points().len(), 32),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         }
 
         Ok(())

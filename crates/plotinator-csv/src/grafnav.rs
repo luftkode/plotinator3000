@@ -1,6 +1,9 @@
 use anyhow::bail;
 use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone as _, Utc};
-use plotinator_log_if::prelude::*;
+use plotinator_log_if::{
+    prelude::*,
+    rawplot::{DataType, RawPlotBuilder},
+};
 use plotinator_ui_util::ExpectedPlotRange;
 use std::io::{self, BufRead as _};
 
@@ -234,89 +237,68 @@ impl Parseable for GrafNavPPP {
             .build_into_rawplot()
             .expect("invalid builder");
 
-        let mut raw_plots = vec![
-            // Position
-            RawPlotCommon::new(
-                format!("Height MSL [m] ({LEGEND_NAME})"),
+        let mut raw_plots = RawPlotBuilder::new(LEGEND_NAME)
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_msl),
-                ExpectedPlotRange::Hundreds,
+                DataType::AltitudeMSL,
             )
-            .into(),
-            RawPlotCommon::new(
-                format!("Height Ellipsoid [m] ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_ell),
-                ExpectedPlotRange::Hundreds,
+                DataType::AltitudeEllipsoidal,
             )
-            .into(),
             // UTM Coordinates
-            RawPlotCommon::new(
-                format!("Northing [m] ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.northing),
-                ExpectedPlotRange::Thousands,
+                DataType::UtmNorthing,
             )
-            .into(),
-            RawPlotCommon::new(
-                format!("Easting [m] ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.easting),
-                ExpectedPlotRange::Thousands,
+                DataType::UtmEasting,
             )
-            .into(),
             // Velocity
-            RawPlotCommon::new(
-                format!("Velocity East [km/h] ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_east),
-                ExpectedPlotRange::Hundreds,
+                DataType::other_velocity("East", true),
             )
-            .into(),
-            RawPlotCommon::new(
-                format!("Velocity North [km/h] ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_north),
-                ExpectedPlotRange::Hundreds,
+                DataType::other_velocity("North", true),
             )
-            .into(),
-            RawPlotCommon::new(
-                format!("Velocity Up [km/h] ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_up),
-                ExpectedPlotRange::Hundreds,
+                DataType::other_velocity("Up", true),
             )
-            .into(),
             // Quality indicators
-            RawPlotCommon::new(
-                format!("Quality Factor ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.quality as f64),
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("Quality Factor", ExpectedPlotRange::Hundreds, false),
             )
-            .into(),
-            RawPlotCommon::new(
-                format!("PDOP ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pdop),
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("PDOP", ExpectedPlotRange::Hundreds, true),
             )
-            .into(),
-            RawPlotCommon::new(
-                format!("Number of Satellites ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(
                     &entries,
                     |e| e.timestamp_ns(),
                     |e| e.num_satellites as f64,
                 ),
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("Satellites", ExpectedPlotRange::Hundreds, false),
             )
-            .into(),
-            // Other
-            RawPlotCommon::new(
-                format!("Undulation [m] ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.undulation),
-                ExpectedPlotRange::Hundreds,
+                DataType::Other {
+                    name: "Undulation".into(),
+                    unit: Some("m".into()),
+                    plot_range: ExpectedPlotRange::Hundreds,
+                    default_hidden: true,
+                },
             )
-            .into(),
-            RawPlotCommon::new(
-                format!("Sequence Number ({LEGEND_NAME})"),
+            .add(
                 plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.seq_num as f64),
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("Sequence Number", ExpectedPlotRange::Hundreds, true),
             )
-            .into(),
-        ];
+            .build();
 
         if let Some(geo_data) = geo_data {
             raw_plots.push(geo_data);

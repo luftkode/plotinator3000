@@ -7,7 +7,11 @@ use std::{
 use chrono::{DateTime, Utc};
 use entries::NavSysSpsEntry;
 use header::NavSysSpsHeader;
-use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_log_if::{
+    parseable::Parseable,
+    prelude::*,
+    rawplot::{DataType, RawPlotBuilder},
+};
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
@@ -67,7 +71,7 @@ impl GpsDataCollector {
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
         // Create GeoSpatial plot if we have valid position data
         if !self.timestamps.is_empty() {
-            let mut builder = GeoSpatialDataBuilder::new(sensor_name.to_owned())
+            let mut builder = GeoSpatialDataBuilder::new(sensor_name)
                 .timestamp(&self.timestamps)
                 .lat(&self.latitude)
                 .lon(&self.longitude);
@@ -84,64 +88,40 @@ impl GpsDataCollector {
             }
         }
 
-        // Create additional generic plots
-        if !self.time_delta.is_empty() {
-            raw_plots.push(
-                RawPlotCommon::new(
-                    format!("Time delta [ms] ({sensor_name})"),
-                    self.time_delta,
-                    ExpectedPlotRange::Thousands,
-                )
-                .into(),
-            );
-        }
-        if !self.satellites.is_empty() {
-            raw_plots.push(
-                RawPlotCommon::new(
-                    format!("Satellites ({sensor_name})"),
-                    self.satellites,
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-            );
-        }
-        if !self.hdop.is_empty() {
-            raw_plots.push(
-                RawPlotCommon::new(
-                    format!("HDOP ({sensor_name})"),
-                    self.hdop,
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-            );
-        }
-        if !self.vdop.is_empty() {
-            raw_plots.push(
-                RawPlotCommon::new(
-                    format!("VDOP ({sensor_name})"),
-                    self.vdop,
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-            );
-        }
-        if !self.pdop.is_empty() {
-            raw_plots.push(
-                RawPlotCommon::new(
-                    format!("PDOP ({sensor_name})"),
-                    self.pdop,
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-            );
-        }
+        let mut additional_plots = RawPlotBuilder::new(sensor_name)
+            .add(
+                self.time_delta,
+                DataType::TimeDelta {
+                    name: "Sample".into(),
+                    unit: "ms".into(),
+                },
+            )
+            .add(
+                self.satellites,
+                DataType::other_unitless("Satellites", ExpectedPlotRange::Hundreds, false),
+            )
+            .add(
+                self.hdop,
+                DataType::other_unitless("HDOP", ExpectedPlotRange::Hundreds, true),
+            )
+            .add(
+                self.vdop,
+                DataType::other_unitless("VDOP", ExpectedPlotRange::Hundreds, true),
+            )
+            .add(
+                self.pdop,
+                DataType::other_unitless("PDOP", ExpectedPlotRange::Hundreds, true),
+            )
+            .build();
+        raw_plots.append(&mut additional_plots);
     }
 }
 
 // Helper struct for height sensor data
 #[derive(Default)]
 pub(crate) struct HeightDataCollector {
-    altitude: Vec<[f64; 2]>,
+    altitudes: Vec<f64>,
+    timestamps: Vec<f64>,
     invalid: Vec<[f64; 2]>,
     invalid_count: u64,
 }
@@ -149,7 +129,8 @@ pub(crate) struct HeightDataCollector {
 impl HeightDataCollector {
     pub(crate) fn add_entry(&mut self, ts: f64, altitude: Option<f64>) {
         if let Some(alt) = altitude {
-            self.altitude.push([ts, alt]);
+            self.altitudes.push(alt);
+            self.timestamps.push(ts);
         } else {
             self.invalid_count += 1;
             self.invalid.push([ts, self.invalid_count as f64]);
@@ -157,19 +138,22 @@ impl HeightDataCollector {
     }
 
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
-        if !self.altitude.is_empty() {
-            raw_plots.push(RawPlot::from(RawPlotCommon::new(
-                format!("Altitude [m] ({sensor_name})"),
-                self.altitude,
-                ExpectedPlotRange::Hundreds,
-            )));
+        if let Ok(Some(geo_data)) = GeoSpatialDataBuilder::new(sensor_name)
+            .timestamp(&self.timestamps)
+            .altitude_from_laser(self.altitudes)
+            .build()
+        {
+            raw_plots.push(geo_data.into());
         }
         if !self.invalid.is_empty() {
-            raw_plots.push(RawPlot::from(RawPlotCommon::new(
-                format!("Invalid Count ({sensor_name})"),
-                self.invalid,
-                ExpectedPlotRange::Thousands,
-            )));
+            raw_plots.push(
+                RawPlotCommon::new(
+                    sensor_name,
+                    self.invalid,
+                    DataType::other_unitless("Invalid Count", ExpectedPlotRange::Thousands, false),
+                )
+                .into(),
+            );
         }
     }
 }
@@ -189,18 +173,10 @@ impl TiltDataCollector {
 
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
         if !self.pitch.is_empty() {
-            raw_plots.push(RawPlot::from(RawPlotCommon::new(
-                format!("Pitch° ({sensor_name})"),
-                self.pitch,
-                ExpectedPlotRange::Hundreds,
-            )));
+            raw_plots.push(RawPlotCommon::new(sensor_name, self.pitch, DataType::Pitch).into());
         }
         if !self.roll.is_empty() {
-            raw_plots.push(RawPlot::from(RawPlotCommon::new(
-                format!("Roll° ({sensor_name})"),
-                self.roll,
-                ExpectedPlotRange::Hundreds,
-            )));
+            raw_plots.push(RawPlotCommon::new(sensor_name, self.roll, DataType::Roll).into());
         }
     }
 }
@@ -217,15 +193,9 @@ impl MagDataCollector {
     }
 
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
-        if !self.values.is_empty() {
-            raw_plots.push(
-                RawPlotCommon::new(
-                    format!("B-field [nT] ({sensor_name})"),
-                    self.values,
-                    ExpectedPlotRange::Thousands,
-                )
-                .into(),
-            );
+        if self.values.len() > 1 {
+            raw_plots
+                .push(RawPlotCommon::new(sensor_name, self.values, DataType::MagneticFlux).into());
         }
     }
 }

@@ -3,8 +3,11 @@ use std::{io, path::Path};
 use chrono::{DateTime, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
-use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::{
+    hdf5::SkytemHdf5,
+    prelude::*,
+    rawplot::{DataType, RawPlotBuilder},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -16,7 +19,6 @@ use crate::{
 };
 
 const LEGEND_NAME: &str = "Njord-INS";
-const RAW_PLOT_NAME_SUFFIX: &str = "(Njord-INS)";
 
 impl SkytemHdf5 for NjordIns {
     #[allow(
@@ -116,11 +118,15 @@ impl SkytemHdf5 for NjordIns {
 
         let mut raw_plots: Vec<RawPlot> = vec![];
 
-        if let Some(delta_t_samples) = delta_t_samples_opt {
+        if let Some(delta_t_samples) = delta_t_samples_opt
+            && delta_t_samples.points().len() > 2
+        {
             raw_plots.push(delta_t_samples.into());
         }
 
-        if let Some(offset_plot) = rawplot_offset_opt {
+        if let Some(offset_plot) = rawplot_offset_opt
+            && offset_plot.points().len() > 2
+        {
             raw_plots.push(offset_plot.into());
         }
         if let Some(plots) = orientation_position_plots {
@@ -201,98 +207,53 @@ fn process_system_status(
         data_output_overflow_alarm.push([*ts, row[15] as f64]);
     }
 
-    vec![
-        RawPlotCommon::new(
-            "System Failures [bool]".to_owned(),
-            system_failures,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Accelerometer Sensor Failures [bool]".to_owned(),
+    RawPlotBuilder::new(LEGEND_NAME)
+        .add(system_failures, DataType::bool("System Failures"))
+        .add(
             accelerometer_sensor_failures,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Accelerometer Sensor Failures"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "Gyroscope Sensor Failures [bool]".to_owned(),
+        .add(
             gyroscope_sensor_failures,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Gyroscope Sensor Failures"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "Magnetometer Sensor Failures [bool]".to_owned(),
+        .add(
             magnetometer_sensor_failures,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Magnetometer Sensor Failures"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "Pressure Sensor Failures [bool]".to_owned(),
+        .add(
             pressure_sensor_failures,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Pressure Sensor Failures"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "GNSS Failures [bool]".to_owned(),
-            gnss_failures,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Accelerometer Over Range [bool]".to_owned(),
+        .add(gnss_failures, DataType::bool("GNSS Failures"))
+        .add(
             accelerometer_over_range,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Accelerometer Over Range"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "Gyroscope Over Range [bool]".to_owned(),
-            gyroscope_over_range,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Magnetometer Over Range [bool]".to_owned(),
+        .add(gyroscope_over_range, DataType::bool("Gyroscope Over Range"))
+        .add(
             magnetometer_over_range,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Magnetometer Over Range"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "Pressure Over Range [bool]".to_owned(),
-            pressure_over_range,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "Minimum Temperature Alarm [bool]".to_owned(),
+        .add(pressure_over_range, DataType::bool("Pressure Over Range"))
+        .add(
             minimum_temperature_alarm,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Minimum Temperature Alarm"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "Maximum Temperature Alarm [bool]".to_owned(),
+        .add(
             maximum_temperature_alarm,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Maximum Temperature Alarm"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "High Voltage Alarm [bool]".to_owned(),
-            high_voltage_alarm,
-            ExpectedPlotRange::Percentage,
-        )
-        .into(),
-        RawPlotCommon::new(
-            "GNSS Antenna Connection [bool]".to_owned(),
+        .add(high_voltage_alarm, DataType::bool("High Voltage Alarm"))
+        .add(
             gnss_antenna_connection,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("GNSS Antenna Connection"),
         )
-        .into(),
-        RawPlotCommon::new(
-            "Data Output Overflow Alarm [bool]".to_owned(),
+        .add(
             data_output_overflow_alarm,
-            ExpectedPlotRange::Percentage,
+            DataType::bool("Data Output Overflow Alarm"),
         )
-        .into(),
-    ]
+        .build()
 }
 
 fn process_filter_status(
@@ -366,33 +327,44 @@ fn process_filter_status(
         external_heading_active.push([*ts, row[12] as f64]);
     }
 
-    fn make_rawplot(name: &str, data: Vec<[f64; 2]>) -> RawPlot {
-        RawPlotCommon::new(name.to_owned(), data, ExpectedPlotRange::Percentage).into()
-    }
-
-    vec![
-        make_rawplot(
-            "Orientation Filter Initialized [bool]",
+    RawPlotBuilder::new(LEGEND_NAME)
+        .add(
             orientation_filter_initialized,
-        ),
-        make_rawplot(
-            "Navigation Filter Initialized [bool]",
+            DataType::bool("Orientation Filter Initialized"),
+        )
+        .add(
             navigation_filter_initialized,
-        ),
-        make_rawplot("Heading Initialized [bool]", heading_initialized),
-        make_rawplot("UTC Time Initialized [bool]", utc_time_initialized),
-        make_rawplot("Event 1 Occurred [bool]", event_1_occurred),
-        make_rawplot("Event 2 Occurred [bool]", event_2_occurred),
-        make_rawplot("Internal GNSS Enabled [bool]", internal_gnss_enabled),
-        make_rawplot("Velocity Heading Enabled [bool]", velocity_heading_enabled),
-        make_rawplot(
-            "Atmospheric Altitude Enabled [bool]",
+            DataType::bool("Navigation Filter Initialized"),
+        )
+        .add(heading_initialized, DataType::bool("Heading Initialized"))
+        .add(utc_time_initialized, DataType::bool("UTC Time Initialized"))
+        .add(event_1_occurred, DataType::bool("Event 1 Occurred"))
+        .add(event_2_occurred, DataType::bool("Event 2 Occurred"))
+        .add(
+            internal_gnss_enabled,
+            DataType::bool("Internal GNSS Enabled"),
+        )
+        .add(
+            velocity_heading_enabled,
+            DataType::bool("Velocity Heading Enabled"),
+        )
+        .add(
             atmospheric_altitude_enabled,
-        ),
-        make_rawplot("External Position Active [bool]", external_position_active),
-        make_rawplot("External Velocity Active [bool]", external_velocity_active),
-        make_rawplot("External Heading Active [bool]", external_heading_active),
-    ]
+            DataType::bool("Atmospheric Altitude Enabled"),
+        )
+        .add(
+            external_position_active,
+            DataType::bool("External Position Active"),
+        )
+        .add(
+            external_velocity_active,
+            DataType::bool("External Velocity Active"),
+        )
+        .add(
+            external_heading_active,
+            DataType::bool("External Heading Active"),
+        )
+        .build()
 }
 
 fn process_orientation_and_position(
@@ -441,18 +413,8 @@ fn process_orientation_and_position(
         .build_into_rawplot()?;
 
     let mut plots = vec![
-        RawPlotCommon::new(
-            format!("Roll° ({LEGEND_NAME})"),
-            rolls,
-            ExpectedPlotRange::Hundreds,
-        )
-        .into(),
-        RawPlotCommon::new(
-            format!("Pitch° ({LEGEND_NAME})"),
-            pitches,
-            ExpectedPlotRange::Hundreds,
-        )
-        .into(),
+        RawPlotCommon::new(LEGEND_NAME, rolls, DataType::Roll).into(),
+        RawPlotCommon::new(LEGEND_NAME, pitches, DataType::Pitch).into(),
     ];
     if let Some(geo_data) = geo_data {
         plots.push(geo_data);
@@ -528,8 +490,7 @@ impl NjordIns {
         let microseconds: Array2<i64> = microseconds_dataset.read()?;
         let timestamps: Vec<i64> = combine_timestamps(&unix_time, &microseconds);
         let first_timestamp = *timestamps.first().expect("No timestamps in dataset");
-        let time_between_samples =
-            util::gen_time_between_samples_rawplot(&timestamps, RAW_PLOT_NAME_SUFFIX);
+        let time_between_samples = util::gen_time_between_samples_rawplot(&timestamps, LEGEND_NAME);
         // convert to f64 once and for all
         let timestamps: Vec<f64> = timestamps.into_iter().map(|ts| ts as f64).collect();
         Ok((first_timestamp, timestamps, time_between_samples))
@@ -541,8 +502,7 @@ impl NjordIns {
         let sys_time = open_dataset(hdf5_file, Self::SYSTEM_TIMESTAMP, Self::EXPECT_DIMENSION)?;
         let sys_time: Vec<i64> = sys_time.read_raw()?;
         let first_timestamp = *sys_time.first().expect("No timestamps in dataset");
-        let time_between_samples =
-            util::gen_time_between_samples_rawplot(&sys_time, RAW_PLOT_NAME_SUFFIX);
+        let time_between_samples = util::gen_time_between_samples_rawplot(&sys_time, LEGEND_NAME);
         let plot_timestamps: Vec<f64> = sys_time.iter().map(|ts| *ts as f64).collect();
         let gps_unix_time = open_dataset(
             hdf5_file,
@@ -566,9 +526,12 @@ impl NjordIns {
             plot_timestamps,
             time_between_samples,
             RawPlotCommon::new(
-                format!("Δt GPS/System [ms] {RAW_PLOT_NAME_SUFFIX}"),
+                LEGEND_NAME,
                 time_offset,
-                ExpectedPlotRange::Hundreds,
+                DataType::TimeDelta {
+                    name: "GPS Time".into(),
+                    unit: "ms".into(),
+                },
             ),
         ))
     }
@@ -631,7 +594,7 @@ mod tests {
         assert_eq!(njord_ins.raw_plots.len(), 31);
         match &njord_ins.raw_plots[1] {
             RawPlot::Generic { common } => assert_eq!(common.points().len(), 4840),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
 
         Ok(())

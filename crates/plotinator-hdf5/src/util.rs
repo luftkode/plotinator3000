@@ -4,8 +4,7 @@ use hdf5::{
     Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
-use plotinator_log_if::prelude::RawPlotCommon;
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::{prelude::RawPlotCommon, rawplot::DataType};
 
 /// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
@@ -22,7 +21,7 @@ pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
     Ok(())
 }
 
-/// Logs all dataset attributes at INFO verbosity
+/// Logs all dataset attributes at TRACE verbosity
 ///
 /// Ignores errors
 pub(crate) fn log_all_attributes(ds: &hdf5::Dataset) {
@@ -39,7 +38,7 @@ pub(crate) fn log_all_attributes(ds: &hdf5::Dataset) {
             log::error!("Failed reading attribute '{attr:?}' value as string");
             continue;
         };
-        log::debug!("Attr: {attr_val_as_str}");
+        log::trace!("Attr: {attr_val_as_str}");
     }
 }
 
@@ -178,25 +177,28 @@ pub(crate) fn open_dataset(
 
 pub(crate) fn gen_time_between_samples_rawplot(
     timestamps: &[i64],
-    rawplot_name_suffix: &str,
+    legend_name: &str,
 ) -> Option<RawPlotCommon> {
     calc_time_between_samples(timestamps)
-        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
+        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, legend_name))
 }
 
 pub(crate) fn gen_time_between_samples_rawplot_2d(
     timestamps: &ndarray::Array2<i64>,
-    rawplot_name_suffix: &str,
+    legend_name: &str,
 ) -> Option<RawPlotCommon> {
     calc_time_between_samples_2d(timestamps)
-        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, rawplot_name_suffix))
+        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, legend_name))
 }
 
-fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, rawplot_name_suffix: &str) -> RawPlotCommon {
+fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, legend_name: &str) -> RawPlotCommon {
     RawPlotCommon::new(
-        format!("Δt sample [ms] {rawplot_name_suffix}"),
+        legend_name,
         points,
-        ExpectedPlotRange::Hundreds,
+        DataType::TimeDelta {
+            name: "Sample".into(),
+            unit: "ms".into(),
+        },
     )
 }
 

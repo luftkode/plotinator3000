@@ -3,10 +3,11 @@ use hdf5::H5Type;
 use ndarray::{ArrayBase, Dim, OwnedRepr};
 use plotinator_log_if::{
     leap_seconds::{GpsWeek, TowMs, TowSubMs, gps_to_unix_ns},
-    prelude::RawPlotCommon,
-    rawplot::RawPlot,
+    rawplot::{DataType, RawPlot, RawPlotBuilder},
 };
 use plotinator_ui_util::ExpectedPlotRange;
+
+use crate::tsc::TSC_LEGEND_NAME;
 
 type GpsMarks = ArrayBase<OwnedRepr<GpsMarkRecord>, Dim<[usize; 1]>>;
 
@@ -89,74 +90,47 @@ impl GpsMarkRecords {
             "Timestamp Δt stats (without faults) [s]".to_owned(),
             normal_stats,
         ));
-        (
-            vec![
-                RawPlotCommon::new(
-                    "Pulse width [µs]".to_owned(),
-                    pulse_width,
-                    ExpectedPlotRange::Thousands,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Accuracy estimate [ns]".to_owned(),
-                    acc_est,
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-                RawPlotCommon::new("Count".to_owned(), count, ExpectedPlotRange::Thousands).into(),
-                RawPlotCommon::new(
-                    "Mode running [bool]".to_owned(),
-                    mode_running,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new("Run [bool]".to_owned(), run, ExpectedPlotRange::Percentage)
-                    .into(),
-                RawPlotCommon::new(
-                    "New falling edge [bool]".to_owned(),
-                    new_falling_edge,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Timebase GNSS [bool]".to_owned(),
-                    timebase_gnss,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Timebase UTC [bool]".to_owned(),
-                    timebase_utc,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "UTC available [bool]".to_owned(),
-                    utc_avail,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Time valid [bool]".to_owned(),
-                    time_valid,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "New rising edge [bool]".to_owned(),
-                    new_rising_edge,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Timestamp Δt [s]".to_owned(),
-                    delta_computer.take_plot_points(),
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-            ],
-            metadata,
-        )
+
+        let raw_plots = RawPlotBuilder::new(TSC_LEGEND_NAME)
+            .add(
+                pulse_width,
+                DataType::Other {
+                    name: "Pulse width".into(),
+                    unit: Some("µs".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: true,
+                },
+            )
+            .add(
+                acc_est,
+                DataType::Other {
+                    name: "accuracy estimate".into(),
+                    unit: Some("ns".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: true,
+                },
+            )
+            .add(
+                count,
+                DataType::other_unitless("Count", ExpectedPlotRange::Thousands, true),
+            )
+            .add(mode_running, DataType::bool("Mode running"))
+            .add(new_falling_edge, DataType::bool("New falling edge"))
+            .add(run, DataType::bool("Run"))
+            .add(timebase_gnss, DataType::bool("Timebase GNSS"))
+            .add(timebase_utc, DataType::bool("Timebase UTC"))
+            .add(utc_avail, DataType::bool("UTC available"))
+            .add(time_valid, DataType::bool("Time valid"))
+            .add(new_rising_edge, DataType::bool("New rising edge"))
+            .add(
+                delta_computer.take_plot_points(),
+                DataType::TimeDelta {
+                    name: "GPS sample".into(),
+                    unit: "s".into(),
+                },
+            )
+            .build();
+        (raw_plots, metadata)
     }
 }
 

@@ -1,8 +1,9 @@
-use std::collections::BTreeMap;
-
 use egui::RichText;
+use egui_phosphor::regular::DATABASE;
+use plotinator_log_if::rawplot::DataType;
 use plotinator_plot_util::CookedPlot;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameFilter {
@@ -30,9 +31,10 @@ impl PlotNameFilter {
     }
 
     /// Returns whether the filter already contains a plot with the given name and association
-    pub fn contains(&self, plot_name: &str, associated_descriptive_name: &str) -> bool {
+    pub fn contains(&self, plot_ty: &DataType, associated_descriptive_name: &str) -> bool {
         self.plots.iter().any(|p| {
-            p.name() == plot_name && p.associated_descriptive_name == associated_descriptive_name
+            p.name() == plot_ty.name()
+                && p.associated_descriptive_name == associated_descriptive_name
         })
     }
 
@@ -75,7 +77,7 @@ impl PlotNameFilter {
 
     pub fn all_bools_set_show(&mut self, show: bool) {
         for p in &mut self.plots {
-            if p.name().contains("[bool]") {
+            if matches!(p.ty, DataType::Bool { .. }) {
                 p.set_show(show);
             }
         }
@@ -188,7 +190,8 @@ impl PlotNameFilter {
             .show(ui, |ui| {
                 for (descriptive_name, plot_indices) in grouped_plots {
                     // Create a CollapsingHeader for each group.
-                    let header_text = format!("{descriptive_name} ({})", plot_indices.len());
+                    let header_text =
+                        format!("{DATABASE} {descriptive_name} ({})", plot_indices.len());
                     egui::CollapsingHeader::new(RichText::new(header_text).strong())
                         .default_open(true)
                         .show(ui, |ui| {
@@ -196,11 +199,11 @@ impl PlotNameFilter {
                             for &plot_index in &plot_indices {
                                 let plot = &mut self.plots[plot_index];
                                 let dataset_count = count_plot_occurrences(plot.name());
-                                let plot_name = plot.name().to_owned();
-
+                                let plot_data_name_txt = RichText::new(plot.name());
                                 ui.horizontal(|ui| {
-                                    plot.hovered =
-                                        ui.toggle_value(&mut plot.show, plot_name).hovered();
+                                    plot.hovered = ui
+                                        .toggle_value(&mut plot.show, plot_data_name_txt)
+                                        .hovered();
                                     if dataset_count > 0 {
                                         ui.label(
                                             RichText::new(format!("({dataset_count})"))
@@ -219,6 +222,7 @@ impl PlotNameFilter {
 #[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameShow {
     name: String,
+    ty: DataType,
     // The descriptive name of the log it came from
     associated_descriptive_name: String,
     show: bool,
@@ -227,10 +231,11 @@ pub struct PlotNameShow {
 }
 
 impl PlotNameShow {
-    pub fn new(name: String, show: bool, associated_descriptive_name: String) -> Self {
+    pub fn new(ty: DataType, associated_descriptive_name: String) -> Self {
         Self {
-            name,
-            show,
+            name: ty.name().into_owned(),
+            show: ty.default_hidden(),
+            ty,
             associated_descriptive_name,
             hovered: false,
         }

@@ -1,6 +1,10 @@
 use anyhow::bail;
 use chrono::{DateTime, Utc};
-use plotinator_log_if::{parseable::Parseable, prelude::*};
+use plotinator_log_if::{
+    parseable::Parseable,
+    prelude::*,
+    rawplot::{DataType, RawPlotBuilder},
+};
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io};
@@ -36,10 +40,7 @@ pub struct StatusLog {
 
 impl StatusLog {
     // helper function build all the plots that can be made from a statuslog
-    fn build_raw_plots(
-        startup_timestamp_ns: f64,
-        entries: &[StatusLogEntry],
-    ) -> Vec<RawPlotCommon> {
+    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
         let entry_count = entries.len();
         let mut engine_temp_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut fan_on_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -146,52 +147,37 @@ impl StatusLog {
         setpoint: Vec<[f64; 2]>,
         motor_state: Vec<[f64; 2]>,
         runtime_h: Vec<[f64; 2]>,
-    ) -> Vec<RawPlotCommon> {
-        let mut raw_plots = vec![];
-        if !engine_temp.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Engine Temp °C ({LEGEND})"),
+    ) -> Vec<RawPlot> {
+        RawPlotBuilder::new(LEGEND)
+            .add(
                 engine_temp,
-                ExpectedPlotRange::Hundreds,
-            ));
-        }
-        if !fan_on.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Fan On ({LEGEND})"),
-                fan_on,
-                ExpectedPlotRange::Percentage,
-            ));
-        }
-        if !vbat.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Vbat [V] ({LEGEND})"),
+                DataType::Temperature {
+                    name: "Engine Temp".into(),
+                },
+            )
+            .add(fan_on, DataType::bool("Fan ON"))
+            .add(
                 vbat,
-                ExpectedPlotRange::Hundreds,
-            ));
-        }
-        if !setpoint.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Setpoint ({LEGEND})"),
+                DataType::Voltage {
+                    name: "Battery".into(),
+                },
+            )
+            .add(
                 setpoint,
-                ExpectedPlotRange::Thousands,
-            ));
-        }
-
-        if !motor_state.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Motor State ({LEGEND})"),
+                DataType::other_unitless("Setpoint", ExpectedPlotRange::Thousands, false),
+            )
+            .add(
                 motor_state,
-                ExpectedPlotRange::Hundreds,
-            ));
-        }
-        if !runtime_h.is_empty() {
-            raw_plots.push(RawPlotCommon::new(
-                format!("Runtime [h] ({LEGEND})"),
+                DataType::other_unitless("Motor State", ExpectedPlotRange::Hundreds, true),
+            )
+            .add(
                 runtime_h,
-                ExpectedPlotRange::Hundreds,
-            ));
-        }
-        raw_plots
+                DataType::Time {
+                    name: "Runtime".into(),
+                    unit: "h".into(),
+                },
+            )
+            .build()
     }
 }
 
@@ -267,20 +253,6 @@ impl Parseable for StatusLog {
         )];
 
         let all_plots_raw = Self::build_raw_plots(startup_timestamp_ns, &vec_of_entries);
-        // Iterate through the plots and make sure all the first timestamps match
-        if let Some(first_plot) = all_plots_raw.first()
-            && let Some([first_timestamp, ..]) = first_plot.points().first()
-        {
-            for p in &all_plots_raw {
-                if let Some([current_first_timestamp, ..]) = p.points().first() {
-                    debug_assert_eq!(
-                        current_first_timestamp, first_timestamp,
-                        "First timestamp of plots are not equal, was an offset applied to some plots but not all?"
-                    );
-                }
-            }
-        }
-        let all_plots_raw = all_plots_raw.into_iter().map(Into::into).collect();
 
         Ok((
             Self {

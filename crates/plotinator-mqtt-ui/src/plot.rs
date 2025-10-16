@@ -3,7 +3,10 @@ use std::mem;
 use chrono::DateTime;
 use egui::Color32;
 use egui_plot::PlotPoint;
-use plotinator_log_if::{prelude::RawPlotCommon, rawplot::RawPlot};
+use plotinator_log_if::{
+    prelude::RawPlotCommon,
+    rawplot::{DataType, RawPlot},
+};
 use plotinator_mqtt::data::listener::{
     MqttData, MqttGeoPoint, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
 };
@@ -43,17 +46,18 @@ impl MqttPlotData {
                 }),
             }
         } else {
-            let MqttTopicData { topic, payload } = data;
+            let MqttTopicData { topic, payload, ty } = data;
             match payload {
                 TopicPayload::Point(p) => self.mqtt_plot_data.push((
                     MqttPlotPoints {
                         topic,
                         data: vec![p],
+                        ty,
                     },
                     auto_color_plot_area(ExpectedPlotRange::Hundreds),
                 )),
                 TopicPayload::Points(data) => self.mqtt_plot_data.push((
-                    MqttPlotPoints { topic, data },
+                    MqttPlotPoints { topic, data, ty },
                     auto_color_plot_area(ExpectedPlotRange::Hundreds),
                 )),
                 TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint { topic, point }),
@@ -95,6 +99,7 @@ impl MqttPlotData {
 pub struct MqttPlotPoints {
     pub topic: String,
     pub data: Vec<PlotPoint>,
+    pub ty: Option<DataType>,
 }
 
 impl TryFrom<MqttPlotPoints> for RawPlotCommon {
@@ -115,15 +120,19 @@ impl TryFrom<MqttPlotPoints> for RawPlotCommon {
         }
         let min = min.abs();
         let max = max.abs();
-        let is_boolean = (max == 1. || max == 0.) && (min == 0. || min == 1.);
-        let expected_range = if is_boolean {
-            ExpectedPlotRange::Percentage
-        } else if max < 300. && min > -300. {
-            ExpectedPlotRange::Hundreds
-        } else {
-            ExpectedPlotRange::Thousands
-        };
-        Ok(Self::new(name, points, expected_range))
+        let ty = mqtt_pp.ty.unwrap_or_else(|| {
+            let is_boolean = (max == 1. || max == 0.) && (min == 0. || min == 1.);
+            let expected_range = if is_boolean {
+                ExpectedPlotRange::Percentage
+            } else if max < 300. && min > -300. {
+                ExpectedPlotRange::Hundreds
+            } else {
+                ExpectedPlotRange::Thousands
+            };
+            DataType::other_unitless(name, expected_range, false)
+        });
+
+        Ok(Self::new("", points, ty))
     }
 }
 
@@ -177,14 +186,15 @@ impl From<MqttPlotPoints> for SerializableMqttPlotPoints {
         Self {
             topic: original.topic,
             data: serializable_data,
+            ty: original.ty,
         }
     }
 }
 impl From<SerializableMqttPlotPoints> for MqttPlotPoints {
     fn from(serializable: SerializableMqttPlotPoints) -> Self {
-        let SerializableMqttPlotPoints { topic, data } = serializable;
+        let SerializableMqttPlotPoints { topic, data, ty } = serializable;
         let data = data.into_iter().map(|[x, y]| PlotPoint { x, y }).collect();
-        Self { topic, data }
+        Self { topic, data, ty }
     }
 }
 
@@ -201,6 +211,9 @@ mod tests {
         let original_mqtt_plot_points = MqttPlotPoints {
             topic: "sensor/temperature".to_owned(),
             data: original_data,
+            ty: Some(DataType::Temperature {
+                name: "Fridge Temp".into(),
+            }),
         };
 
         // Convert to helper struct for serialization

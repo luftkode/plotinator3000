@@ -4,20 +4,23 @@ use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
-use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
+use plotinator_log_if::{
+    hdf5::SkytemHdf5,
+    prelude::*,
+    rawplot::{DataType, RawPlotBuilder},
+};
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     stream_descriptor::StreamDescriptor,
     util::{
-        self, assert_description_in_attrs, log_all_attributes, open_dataset,
-        read_any_attribute_to_string, read_string_attribute,
+        self, assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute,
     },
 };
 
-const RAW_PLOT_NAME_SUFFIX_1: &str = "(HE1)";
-const RAW_PLOT_NAME_SUFFIX_2: &str = "(HE2)";
+const LEGEND_NAME_1: &str = "HE1";
+const LEGEND_NAME_2: &str = "HE2";
 
 impl SkytemHdf5 for FrameAltimeters {
     #[allow(clippy::too_many_lines, reason = "long but simple")]
@@ -29,13 +32,11 @@ impl SkytemHdf5 for FrameAltimeters {
         log_all_attributes(&height2_dataset);
         log_all_attributes(&timestamp2_dataset);
 
-        let height1_unit = read_any_attribute_to_string(&height1_dataset.attr("unit")?)?;
         let heights1: Array2<f32> = height1_dataset.read()?;
         log::info!(
             "Got frame altimeter1 heights with {} samples",
             heights1.len()
         );
-        let height2_unit = read_any_attribute_to_string(&height2_dataset.attr("unit")?)?;
         let heights2: Array2<f32> = height2_dataset.read()?;
         log::info!(
             "Got frame altimeter1 heights with {} samples",
@@ -46,9 +47,9 @@ impl SkytemHdf5 for FrameAltimeters {
         let timestamp2_data: Array2<i64> = timestamp2_dataset.read_2d()?;
 
         let (timestamps1, first_timestamp1_opt, delta_t_sample_opt1) =
-            Self::process_timestamps(&timestamp1_data, RAW_PLOT_NAME_SUFFIX_1);
+            Self::process_timestamps(&timestamp1_data, LEGEND_NAME_1);
         let (timestamps2, first_timestamp2_opt, delta_t_sample_opt2) =
-            Self::process_timestamps(&timestamp2_data, RAW_PLOT_NAME_SUFFIX_2);
+            Self::process_timestamps(&timestamp2_data, LEGEND_NAME_2);
 
         let total_starting_timestamp = match (first_timestamp1_opt, first_timestamp2_opt) {
             (None, None) => bail!("Both timestamp datasets are empty"),
@@ -86,38 +87,33 @@ impl SkytemHdf5 for FrameAltimeters {
             &timestamp2_dataset,
         )?;
 
-        let mut raw_plots = vec![
-            RawPlotCommon::new(
-                format!("Height [{height1_unit}] {RAW_PLOT_NAME_SUFFIX_1}"),
-                height1_with_ts,
-                ExpectedPlotRange::Hundreds,
-            ),
-            RawPlotCommon::new(
-                format!("Height Invalid Count {RAW_PLOT_NAME_SUFFIX_1}"),
+        let mut raw_plots = RawPlotBuilder::new(LEGEND_NAME_1)
+            .add(height1_with_ts, DataType::AltitudeLaser)
+            .add(
                 height1_invalid_values,
-                ExpectedPlotRange::Thousands,
-            ),
-            RawPlotCommon::new(
-                format!("Height [{height2_unit}] {RAW_PLOT_NAME_SUFFIX_2}"),
-                height2_with_ts,
-                ExpectedPlotRange::Hundreds,
-            ),
-            RawPlotCommon::new(
-                format!("Height Invalid Count {RAW_PLOT_NAME_SUFFIX_2}"),
-                height2_invalid_values,
-                ExpectedPlotRange::Thousands,
-            ),
-        ];
+                DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
+            )
+            .build();
+        raw_plots.append(
+            &mut RawPlotBuilder::new(LEGEND_NAME_2)
+                .add(height2_with_ts, DataType::AltitudeLaser)
+                .add(
+                    height2_invalid_values,
+                    DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
+                )
+                .build(),
+        );
 
-        if let Some(delta_t_sample1) = delta_t_sample_opt1 {
-            raw_plots.push(delta_t_sample1);
+        if let Some(delta_t_sample1) = delta_t_sample_opt1
+            && delta_t_sample1.points().len() > 2
+        {
+            raw_plots.push(delta_t_sample1.into());
         }
-        if let Some(delta_t_sample2) = delta_t_sample_opt2 {
-            raw_plots.push(delta_t_sample2);
+        if let Some(delta_t_sample2) = delta_t_sample_opt2
+            && delta_t_sample2.points().len() > 2
+        {
+            raw_plots.push(delta_t_sample2.into());
         }
-
-        raw_plots.retain(|rp| rp.points().len() > 2);
-        let raw_plots = raw_plots.into_iter().map(Into::into).collect();
 
         Ok(Self {
             starting_timestamp_utc: total_starting_timestamp,
@@ -195,14 +191,14 @@ impl FrameAltimeters {
 
     fn process_timestamps(
         timestamp_data: &Array2<i64>,
-        plot_name_suffix: &str,
+        legend_name: &str,
     ) -> (Vec<f64>, Option<DateTime<Utc>>, Option<RawPlotCommon>) {
         let first_timestamp = timestamp_data
             .first()
             .map(|ts| chrono::Utc.timestamp_nanos(*ts).to_utc());
 
         let delta_t_samples =
-            util::gen_time_between_samples_rawplot_2d(timestamp_data, plot_name_suffix);
+            util::gen_time_between_samples_rawplot_2d(timestamp_data, legend_name);
 
         let mut timestamps = vec![];
         for t in timestamp_data {
@@ -271,7 +267,7 @@ mod tests {
         assert_eq!(frame_altimeters.raw_plots.len(), 4);
         match &frame_altimeters.raw_plots[0] {
             RawPlot::Generic { common } => assert_eq!(common.points().len(), 1091),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
 
         Ok(())

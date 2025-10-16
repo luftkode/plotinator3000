@@ -12,6 +12,7 @@ use egui_plot::PlotBounds;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
+use plotinator_log_if::rawplot::DataType;
 use plotinator_plot_util::{CookedPlot, MipMapConfiguration, Plots};
 use plotinator_ui_util::{ExpectedPlotRange, theme_color};
 use serde::{Deserialize, Serialize};
@@ -278,13 +279,10 @@ impl PlotSettings {
     /// # Arguments
     /// - `plot_name` The name of the plot, i.e. the name that appears on the plot legend
     /// - `descriptive_name` the name of the logfile e.g. `Mbed Pid v6` or `frame-altimeter`
-    pub fn add_plot_name_if_not_exists(&mut self, plot_name: &str, descriptive_name: &str) {
-        if !self.plot_name_filter.contains(plot_name, descriptive_name) {
-            self.plot_name_filter.add_plot(PlotNameShow::new(
-                plot_name.to_owned(),
-                true,
-                descriptive_name.to_owned(),
-            ));
+    pub fn add_plot_name_if_not_exists(&mut self, ty: DataType, descriptive_name: &str) {
+        if !self.plot_name_filter.contains(&ty, descriptive_name) {
+            self.plot_name_filter
+                .add_plot(PlotNameShow::new(ty, descriptive_name.to_owned()));
         }
     }
 

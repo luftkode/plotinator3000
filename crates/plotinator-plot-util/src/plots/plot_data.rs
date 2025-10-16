@@ -171,7 +171,7 @@ impl CookedPlot {
             raw_plot_points,
             mipmap_minmax_plot_points: Some(mipmap_min_pp),
             max_bounds: Some(max_bounds),
-            name: raw_plot.name().to_owned(),
+            name: raw_plot.legend_name().to_owned(),
             log_id,
             label,
             associated_descriptive_name,
