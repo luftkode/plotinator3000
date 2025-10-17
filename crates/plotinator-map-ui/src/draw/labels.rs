@@ -259,28 +259,11 @@ fn calculate_label_layout(painter: &Painter, point: &CandidatePoint) -> (Rect, V
     (padded_rect, galleys)
 }
 
-/// Blends a path color with white to create a subtle tinted background.
-///
-/// This ensures the background is light enough for black text while maintaining
-/// visual connection to the path color.
-#[inline]
-fn get_label_background_color(path_color: Color32) -> Color32 {
-    let [r, g, b, _] = path_color.to_srgba_unmultiplied();
-
-    // Blend the path color with white (factor of 0.3 means 70% white, 30% path color)
-    // This creates a subtle tint that doesn't overpower the text
-    let blend_factor = 0.3;
-    let r = ((r as f32) * blend_factor + 255.0 * (1.0 - blend_factor)) as u8;
-    let g = ((g as f32) * blend_factor + 255.0 * (1.0 - blend_factor)) as u8;
-    let b = ((b as f32) * blend_factor + 255.0 * (1.0 - blend_factor)) as u8;
-
-    Color32::from_rgba_unmultiplied(r, g, b, 220)
-}
-
 /// Draws a label to the screen with path-colored background.
 #[inline]
 fn draw_label(painter: &Painter, label: &mut PlacedLabel) {
-    let bg_color = get_label_background_color(label.path_color);
+    //  Blends the path color with white to create a subtle tinted background
+    let bg_color = Color32::WHITE.blend(label.path_color.gamma_multiply(0.2));
     const TEXT_COLOR: Color32 = Color32::BLACK;
     const LINE_SPACING: f32 = 2.0;
 

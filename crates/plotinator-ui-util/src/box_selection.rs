@@ -60,7 +60,7 @@ impl BoxSelection {
             painter.rect_filled(
                 selection_rect,
                 0.0,
-                egui::Color32::from_rgba_unmultiplied(100, 100, 200, 50),
+                egui::Color32::from_rgba_unmultiplied_const(100, 100, 200, 50),
             );
             painter.rect_stroke(
                 selection_rect,
