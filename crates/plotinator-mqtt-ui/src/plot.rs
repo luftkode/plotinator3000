@@ -28,8 +28,6 @@ pub struct MqttPlotData {
 impl MqttPlotData {
     #[inline]
     pub(crate) fn insert_inner_data(&mut self, mqtt_data: MqttTopicData) {
-        log::info!("Inserting {mqtt_data:?}");
-        log::warn!("Existing: {:?   }", self.mqtt_plot_data);
         if let Some((mp, _)) = self
             .mqtt_plot_data
             .iter_mut()

@@ -194,12 +194,15 @@ fn fill_log_plots(
                     }
                 }
                 if let Some(mut max_bounds) = max_bounds {
-                    // finally extend each bound by 10%
-                    let margin_fraction = egui::Vec2::splat(0.1);
+                    // finally extend each bound by 5%
+                    let margin_fraction = egui::Vec2::splat(0.05);
                     max_bounds.add_relative_margin_x(margin_fraction);
                     max_bounds.add_relative_margin_y(margin_fraction);
                     plot_ui.set_plot_bounds(max_bounds);
                 }
+                plot_ui
+                    .ctx()
+                    .request_discard("Resetting plot bounds often causes visual glitches");
             } else if plot_ui.response().clicked() {
                 if plot_ui.ctx().input(|i| i.modifiers.shift) {
                     if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {

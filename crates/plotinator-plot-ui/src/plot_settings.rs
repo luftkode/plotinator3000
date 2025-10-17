@@ -84,6 +84,7 @@ impl PlotSettings {
         axis_cfg: &mut AxisConfig,
         plots: &plotinator_plot_util::Plots,
         selected_box: Option<PlotBounds>,
+        reset_plot_bounds: &mut bool,
     ) {
         if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(theme_color(
@@ -95,7 +96,7 @@ impl PlotSettings {
             self.series_plot_settings.show(ui);
         } else {
             self.show_loaded_files(ui, selected_box);
-            self.ui_plot_filter_settings(ui, plots);
+            self.ui_plot_filter_settings(ui, plots, reset_plot_bounds);
             self.mipmap_settings.show(ui);
             show_axis_settings(ui, axis_cfg);
             self.series_plot_settings.show(ui);
@@ -103,13 +104,18 @@ impl PlotSettings {
         }
     }
 
-    fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
+    fn ui_plot_filter_settings(
+        &mut self,
+        ui: &mut egui::Ui,
+        plots: &plotinator_plot_util::Plots,
+        reset_plot_bounds: &mut bool,
+    ) {
         self.ps_ui.ui_toggle_show_filter(ui);
         if self.ps_ui.show_filter_settings {
             egui::Window::new(self.ps_ui.filter_settings_text())
                 .open(&mut self.ps_ui.show_filter_settings)
                 .show(ui.ctx(), |ui| {
-                    self.plot_name_filter.show(ui, plots);
+                    self.plot_name_filter.show(ui, plots, reset_plot_bounds);
                 });
             if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
                 self.ps_ui.show_filter_settings = false;
@@ -324,7 +330,6 @@ impl PlotSettings {
         let mut log_id_filter: Vec<u16> = vec![];
         for settings in &self.loaded_log_settings {
             if !settings.show_log() {
-                log::info!("Not showing: {}", settings.descriptive_name());
                 log_id_filter.push(settings.log_id());
             }
         }

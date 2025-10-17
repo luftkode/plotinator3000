@@ -54,6 +54,9 @@ pub fn fill_mqtt_plots(
             if let Some(max_bounds) = get_mqtt_auto_scaled_plot_bounds(mqtt_plots) {
                 plot_ui.set_plot_bounds(max_bounds);
             }
+            plot_ui
+                .ctx()
+                .request_discard("Resetting plot bounds often causes visual glitches");
         } else if resp.clicked() {
             if plot_ui.ctx().input(|i| i.modifiers.shift) {
                 if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {

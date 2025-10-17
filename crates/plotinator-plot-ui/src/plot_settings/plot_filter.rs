@@ -106,8 +106,13 @@ impl PlotNameFilter {
     }
 
     /// Shows the window where users can toggle plot visibility based on plot labels
-    pub fn show(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
-        self.show_enable_disable_all(ui);
+    pub fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+        plots: &plotinator_plot_util::Plots,
+        reset_plot_bounds: &mut bool,
+    ) {
+        self.show_enable_disable_all(ui, reset_plot_bounds);
 
         // Helper function to count occurrences of a plot name across all datasets
         let count_plot_occurrences = |plot_name: &str| -> usize {
@@ -159,9 +164,12 @@ impl PlotNameFilter {
                                 let dataset_count = count_plot_occurrences(plot.name());
                                 let plot_data_name_txt = RichText::new(plot.name());
                                 ui.horizontal(|ui| {
-                                    plot.hovered = ui
-                                        .toggle_value(&mut plot.show, plot_data_name_txt)
-                                        .hovered();
+                                    let response =
+                                        ui.toggle_value(&mut plot.show, plot_data_name_txt);
+                                    plot.hovered = response.hovered();
+                                    if response.clicked() && plot.show {
+                                        *reset_plot_bounds = true;
+                                    }
                                     if dataset_count > 0 {
                                         ui.label(
                                             RichText::new(format!("({dataset_count})"))
@@ -176,7 +184,7 @@ impl PlotNameFilter {
             });
     }
 
-    fn show_enable_disable_all(&mut self, ui: &mut egui::Ui) {
+    fn show_enable_disable_all(&mut self, ui: &mut egui::Ui, reset_plot_bounds: &mut bool) {
         let mut enable_all = false;
         let mut disable_all = false;
         let mut enable_all_bools = false;
@@ -219,6 +227,9 @@ impl PlotNameFilter {
             self.all_bools_set_show(true);
         } else if disable_all_bools {
             self.all_bools_set_show(false);
+        }
+        if enable_all || enable_all_bools {
+            *reset_plot_bounds = true;
         }
     }
 }

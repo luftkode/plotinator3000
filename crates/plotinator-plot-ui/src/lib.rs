@@ -105,12 +105,15 @@ impl LogPlotUi {
             link_group.replace(ui.id().with("linked_plots"));
         }
 
+        let mut reset_plot_bounds = false;
+
         plot_ui::show_settings_grid(
             ui,
             axis_config,
             plot_settings,
             plots,
             box_selection.selected(),
+            &mut reset_plot_bounds,
         );
 
         for file in loaded_files {
@@ -132,7 +135,6 @@ impl LogPlotUi {
                 .duration(Some(Duration::from_secs(10)));
         }
 
-        let mut reset_plot_bounds = false;
         // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
         if *first_frame {
             plots.build_plots();
