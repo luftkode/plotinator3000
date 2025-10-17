@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.3.0]
+
 - Add scroll button in MQTT mode to automatically scroll plot area to follow incoming data
 - Add button for clearing all received MQTT data while still retaining current connections and subscriptions
 - Remove custom zoom implementation and use the superior one that `egui_plot` crate now provides
