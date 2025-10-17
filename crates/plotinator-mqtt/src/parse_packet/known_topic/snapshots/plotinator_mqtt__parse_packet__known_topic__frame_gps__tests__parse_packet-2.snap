@@ -6,92 +6,150 @@ MqttData {
     inner: Topics(
         [
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 lat]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 56.217777252197266,
                     },
                 ),
+                ty: Some(
+                    Latitude,
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 lon]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 10.147778511047363,
                     },
                 ),
+                ty: Some(
+                    Longitude,
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 alt]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 66.62000274658203,
                     },
                 ),
+                ty: Some(
+                    AltitudeMSL,
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 mode]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 3.0,
                     },
                 ),
+                ty: Some(
+                    Other {
+                        name: "GPS Fix mode",
+                        unit: None,
+                        plot_range: Percentage,
+                        default_hidden: false,
+                    },
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 hdop]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 0.800000011920929,
                     },
                 ),
+                ty: Some(
+                    Other {
+                        name: "HDOP",
+                        unit: None,
+                        plot_range: Hundreds,
+                        default_hidden: true,
+                    },
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 vdop]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 1.5,
                     },
                 ),
+                ty: Some(
+                    Other {
+                        name: "VDOP",
+                        unit: None,
+                        plot_range: Hundreds,
+                        default_hidden: true,
+                    },
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 pdop]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 1.7000000476837158,
                     },
                 ),
+                ty: Some(
+                    Other {
+                        name: "PDOP",
+                        unit: None,
+                        plot_range: Hundreds,
+                        default_hidden: true,
+                    },
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 satellites]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 10.0,
                     },
                 ),
+                ty: Some(
+                    Other {
+                        name: "Satellites",
+                        unit: None,
+                        plot_range: Hundreds,
+                        default_hidden: false,
+                    },
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 speed]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 0.052000001072883606,
                     },
                 ),
+                ty: Some(
+                    Velocity,
+                ),
             },
             MqttTopicData {
-                topic: "dt/tc/frame-gps/x/gps[GP2 offset ms]",
+                topic: "dt/tc/frame-gps/x/gps[GP2]",
                 payload: Point(
                     PlotPoint {
                         x: 1.7573213631409147e18,
                         y: 140.0,
+                    },
+                ),
+                ty: Some(
+                    TimeDelta {
+                        name: "Offset",
+                        unit: "ms",
                     },
                 ),
             },
@@ -112,6 +170,7 @@ MqttData {
                         ),
                     },
                 ),
+                ty: None,
             },
         ],
     ),

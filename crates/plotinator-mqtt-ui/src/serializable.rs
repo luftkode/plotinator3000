@@ -12,6 +12,7 @@ pub struct SerializableMqttPlotData {
 // It represents the data in a way that Serde understands for PlotPoint which does not itself implement serialize/deserialize
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct SerializableMqttPlotPoints {
+    pub(crate) legend_name: String,
     pub(crate) topic: String,
     pub(crate) data: Vec<[f64; 2]>, // Represent PlotPoint as a tuple for serialization
     pub(crate) ty: Option<DataType>,

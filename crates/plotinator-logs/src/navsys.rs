@@ -92,7 +92,7 @@ impl GpsDataCollector {
             .add(
                 self.time_delta,
                 DataType::TimeDelta {
-                    name: "Sample".into(),
+                    name: "GPS Time".into(),
                     unit: "ms".into(),
                 },
             )

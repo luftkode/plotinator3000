@@ -109,6 +109,14 @@ impl MqttTopicData {
     pub fn topic(&self) -> &str {
         &self.topic
     }
+
+    /// Returns the name as it would appear in the plot area legend e.g. `/dt/tc/frame-gps/1 Velocity [km/h]`
+    #[inline]
+    pub fn legend(&self) -> String {
+        self.ty
+            .as_ref()
+            .map_or_else(|| self.topic.clone(), |t| t.legend_name_mqtt(&self.topic))
+    }
 }
 
 #[derive(Debug)]

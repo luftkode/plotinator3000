@@ -171,13 +171,16 @@ impl<'s> DataType {
                 plot_range: _,
                 default_hidden: _,
             } => format!(
-                "{name} {unit_str}",
-                unit_str = unit.as_ref().map(|u| format!("[{u}]")).unwrap_or_default()
+                "{name}{unit_str}",
+                unit_str = unit.as_ref().map(|u| format!(" [{u}]")).unwrap_or_default()
             )
             .into(),
         }
     }
 
+    /// Returns the legend name for the [`DataType`] when it comes from a loaded file
+    ///
+    /// e.g. `Velocity [km/h] (frame-gps)`
     pub fn legend_name(&self, dataset_name: &str) -> String {
         let mut legend = self.name().into_owned();
         if !dataset_name.is_empty() {
@@ -186,6 +189,16 @@ impl<'s> DataType {
             legend.push_str(dataset_name);
             legend.push(')');
         }
+        legend
+    }
+
+    /// Returns the legend name for the [`DataType`] when it comes via MQTT
+    ///
+    /// e.g. `/dt/tc/frame-gps/1 Velocity [km/h]`
+    pub fn legend_name_mqtt(&self, topic: &str) -> String {
+        let mut legend = topic.to_owned();
+        legend.push(' ');
+        legend.push_str(&self.name());
         legend
     }
 

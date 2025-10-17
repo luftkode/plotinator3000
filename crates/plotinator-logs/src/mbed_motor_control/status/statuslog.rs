@@ -168,7 +168,7 @@ impl StatusLog {
             )
             .add(
                 motor_state,
-                DataType::other_unitless("Motor State", ExpectedPlotRange::Hundreds, true),
+                DataType::other_unitless("Motor State", ExpectedPlotRange::Hundreds, false),
             )
             .add(
                 runtime_h,

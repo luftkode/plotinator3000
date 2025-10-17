@@ -1,4 +1,3 @@
-use egui::{Modifiers, Vec2};
 use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{CookedPlot, Plots, StoredPlotLabels};
 use plotinator_supported_formats::SupportedFormat;
@@ -206,46 +205,4 @@ fn add_plot_labels_to_collections(plots: &mut Plots, data: &SupportedFormat, dat
             }
         }
     }
-}
-
-/// Returns input scroll and modifiers for a given UI element.
-pub fn get_cursor_scroll_input(ui: &egui::Ui) -> (Option<Vec2>, Modifiers) {
-    ui.input(|i| {
-        let scroll = i.events.iter().find_map(|e| match e {
-            egui::Event::MouseWheel {
-                unit: _,
-                delta,
-                modifiers: _,
-            } => Some(*delta),
-            _ => None,
-        });
-        (scroll, i.modifiers)
-    })
-}
-
-/// Set and return a zoom factor from input scroll and modifiers.
-///
-/// * `CTRL` + scroll: Zoom on X-axis
-/// * `CTRL + ALT`: Zoom on Y-axis
-pub fn set_zoom_factor(scroll: Vec2, modifiers: Modifiers) -> Option<Vec2> {
-    const SCROLL_MULTIPLIER: f32 = 0.1;
-    let scroll = Vec2::splat(scroll.x + scroll.y);
-    let mut zoom_factor = Vec2::from([
-        (scroll.x * SCROLL_MULTIPLIER).exp(),
-        (scroll.y * SCROLL_MULTIPLIER).exp(),
-    ]);
-
-    let ctrl = modifiers.ctrl;
-    let ctrl_plus_alt = modifiers.alt && ctrl;
-
-    if ctrl_plus_alt {
-        log::debug!("CTRL+ALT locks X-axis");
-        zoom_factor.x = 1.0;
-    } else if ctrl {
-        log::debug!("CTRL locks Y-axis");
-        zoom_factor.y = 1.0;
-    }
-
-    log::debug!("zoom_factor={zoom_factor}");
-    if ctrl { Some(zoom_factor) } else { None }
 }

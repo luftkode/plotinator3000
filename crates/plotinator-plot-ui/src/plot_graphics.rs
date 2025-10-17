@@ -1,9 +1,9 @@
-use egui::{Vec2, Vec2b};
+use egui::Vec2b;
 use egui_plot::{AxisHints, HPlacement, Legend, Plot, PlotBounds};
 use plotinator_plot_util::{PlotData, Plots};
 use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
 
-use crate::{PlotMode, util};
+use crate::PlotMode;
 
 use super::{ClickDelta, axis_config::AxisConfig, plot_settings::PlotSettings, x_axis_formatter};
 
@@ -154,9 +154,6 @@ fn fill_log_plots(
 ) {
     plotinator_macros::profile_function!();
 
-    let (scroll, modifiers) = util::get_cursor_scroll_input(gui);
-    let final_zoom_factor: Option<Vec2> = scroll.and_then(|s| util::set_zoom_factor(s, modifiers));
-
     for (ui, plot, ptype) in plot_components {
         ui.show(gui, |plot_ui| {
             let area_hovered = plot_ui.response().hovered();
@@ -184,11 +181,8 @@ fn fill_log_plots(
             if plot_settings.highlight(ptype) {
                 plotinator_ui_util::highlight_plot_rect(plot_ui);
             }
-            if area_hovered && let Some(final_zoom_factor) = final_zoom_factor {
-                plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
-            }
 
-            if plot_ui.response().double_clicked() || reset_plot_bounds {
+            if reset_plot_bounds {
                 let filter_plots = plot_settings.apply_filters(plot.plots());
                 let mut max_bounds: Option<PlotBounds> = None;
                 for fp in filter_plots {
@@ -284,8 +278,8 @@ fn build_plot_ui<'a>(
         .link_cursor(link_group, [axis_config.link_cursor_x(), false])
         .y_axis_min_width(60.0) // Adds enough margin for 5-digits
         .allow_boxed_zoom(true)
-        .allow_zoom(false) // Manually implemented
+        .allow_zoom(true)
         .allow_scroll(true)
-        .allow_double_click_reset(false) // Manually implemented
+        .allow_double_click_reset(true)
         .x_grid_spacer(x_axis_formatter::x_grid)
 }

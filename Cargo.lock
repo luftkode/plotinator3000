@@ -4053,6 +4053,7 @@ dependencies = [
  "plotinator-macros",
  "plotinator-mqtt",
  "plotinator-ui-util",
+ "pretty_assertions",
  "serde",
  "serde_json",
  "smallvec",

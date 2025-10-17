@@ -23,5 +23,8 @@ chrono.workspace = true
 anyhow.workspace = true
 smallvec.workspace = true
 
+[dev-dependencies]
+pretty_assertions.workspace = true
+
 [lints]
 workspace = true
