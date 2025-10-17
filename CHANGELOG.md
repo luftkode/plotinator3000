@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Add scroll button in MQTT mode to automatically scroll plot area to follow incoming data
 - Remove custom zoom implementation and use the superior one that `egui_plot` crate now provides
 - Define typical data types such as velocity and altitude, and handle them in the same way when it comes to plot legends and more
 - Improve the legend naming of plotted data coming from MQTT messages
