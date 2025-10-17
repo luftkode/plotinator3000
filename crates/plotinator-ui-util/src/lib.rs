@@ -48,8 +48,8 @@ pub fn highlight_plot_rect(ui: &egui_plot::PlotUi) {
         egui::CornerRadius::same(1),
         plot_theme_color(
             ui,
-            Color32::from_rgba_unmultiplied(60, 60, 60, 80), // slightly brighter
-            Color32::from_rgba_unmultiplied(180, 180, 180, 80), // slightly darker
+            Color32::from_rgba_unmultiplied_const(60, 60, 60, 80), // slightly brighter
+            Color32::from_rgba_unmultiplied_const(180, 180, 180, 80), // slightly darker
         ),
     );
 }

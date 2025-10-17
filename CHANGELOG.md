@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Tweak map label colors
+- Constify some color math
+
 ## [2.3.0]
 
 - Add scroll button in MQTT mode to automatically scroll plot area to follow incoming data
