@@ -1,6 +1,6 @@
 use egui::Color32;
 use egui_plot::{Plot, PlotBounds};
-use plotinator_mqtt_ui::plot::MqttPlotPoints;
+use plotinator_mqtt_ui::{connection::PlotScroller, plot::MqttPlotPoints};
 use plotinator_plot_util::draw_series::SeriesDrawMode;
 use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
 
@@ -16,6 +16,7 @@ pub fn fill_mqtt_plots(
     mqtt_plot_area: Plot<'_>,
     mqtt_plots: &[(MqttPlotPoints, Color32)],
     set_auto_bounds: &mut bool,
+    plot_scroller: &mut PlotScroller,
     box_selection: &mut BoxSelection,
     #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
@@ -46,8 +47,13 @@ pub fn fill_mqtt_plots(
         }
 
         let resp = plot_ui.response();
-        if plot_ui.response().double_clicked() {
+        // If user drags the plot, disable scrolling mode.
+        if resp.dragged() {
+            plot_scroller.disable();
+        }
+        if resp.double_clicked() {
             *set_auto_bounds = true;
+            plot_scroller.disable();
         }
         if reset_plot_bounds {
             *set_auto_bounds = true;
@@ -68,6 +74,11 @@ pub fn fill_mqtt_plots(
         } else if *set_auto_bounds {
             plot_ui.set_auto_bounds(true);
             *set_auto_bounds = false;
+        } else if plot_scroller.active() {
+            // If scrolling is active, update the bounds based on elapsed time.
+            let mut bounds = plot_ui.plot_bounds();
+            plot_scroller.update(&mut bounds);
+            plot_ui.set_plot_bounds(bounds);
         }
 
         click_delta.ui(plot_ui, ExpectedPlotRange::Hundreds);
@@ -132,8 +143,8 @@ pub fn get_mqtt_auto_scaled_plot_bounds(
         }
     }
     if let Some(mut max_bounds) = max_bounds {
-        // finally extend each bound by 10%
-        let margin_fraction = egui::Vec2::splat(0.1);
+        // finally extend each bound by 5%
+        let margin_fraction = egui::Vec2::splat(0.05);
         max_bounds.add_relative_margin_x(margin_fraction);
         max_bounds.add_relative_margin_y(margin_fraction);
         if max_bounds.is_valid() {
