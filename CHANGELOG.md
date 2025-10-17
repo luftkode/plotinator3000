@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed an issue where plots were not highlighted when the corresponding generic category was hovered in the plot filter window
 - Fixed and revised some unit conversions
 
+## [2.2.2]
+
+- Fix satellite map on windows
+
 ## [2.2.1]
 
 - Convert frame-gps and NavSys speed from nautical miles to km/h
