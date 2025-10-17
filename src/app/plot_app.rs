@@ -21,7 +21,7 @@ pub struct PlotApp {
     #[serde(skip)]
     first_frame: bool,
     #[serde(skip)]
-    toasts: Toasts,
+    pub(crate) toasts: Toasts,
     #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     pub(crate) map_commander: plotinator_map_ui::commander::MapUiCommander,
 

@@ -2,7 +2,8 @@ use anyhow::bail;
 use chrono::{TimeZone as _, Utc};
 use egui_plot::PlotPoint;
 use pilot_display::{PilotDisplayCoordinates, PilotDisplayRemainingDistance};
-use plotinator_log_if::prelude::GeoPoint;
+use plotinator_log_if::{prelude::GeoPoint, rawplot::DataType};
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
@@ -95,72 +96,125 @@ impl KnownTopic {
                 let mut topic_data: Vec<MqttTopicData> = Vec::with_capacity(11);
 
                 if let Some(lat) = p.position.lat {
-                    topic_data.push(MqttTopicData::single_with_ts(
-                        self.subtopic_str(&format!("GP{id} lat")),
-                        lat.into(),
-                        timestamp,
-                    ));
+                    topic_data.push(
+                        MqttTopicData::single_with_ts(
+                            self.subtopic_str(&format!("GP{id}")),
+                            lat.into(),
+                            timestamp,
+                        )
+                        .with_ty(DataType::Latitude),
+                    );
                 }
                 if let Some(lon) = p.position.lon {
-                    topic_data.push(MqttTopicData::single_with_ts(
-                        self.subtopic_str(&format!("GP{id} lon")),
-                        lon.into(),
-                        timestamp,
-                    ));
+                    topic_data.push(
+                        MqttTopicData::single_with_ts(
+                            self.subtopic_str(&format!("GP{id}")),
+                            lon.into(),
+                            timestamp,
+                        )
+                        .with_ty(DataType::Longitude),
+                    );
                 }
                 if let Some(alt) = p.position.alt {
-                    topic_data.push(MqttTopicData::single_with_ts(
-                        self.subtopic_str(&format!("GP{id} alt")),
-                        alt.into(),
-                        timestamp,
-                    ));
+                    topic_data.push(
+                        MqttTopicData::single_with_ts(
+                            self.subtopic_str(&format!("GP{id}")),
+                            alt.into(),
+                            timestamp,
+                        )
+                        .with_ty(DataType::AltitudeMSL),
+                    );
                 };
 
-                topic_data.push(MqttTopicData::single_with_ts(
-                    self.subtopic_str(&format!("GP{id} mode")),
-                    p.mode as f64,
-                    timestamp,
-                ));
+                topic_data.push(
+                    MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id}")),
+                        p.mode as f64,
+                        timestamp,
+                    )
+                    .with_ty(DataType::other_unitless(
+                        "GPS Fix mode",
+                        ExpectedPlotRange::Percentage,
+                        false,
+                    )),
+                );
 
                 if let Some(hdop) = p.gps_status.hdop {
-                    topic_data.push(MqttTopicData::single_with_ts(
-                        self.subtopic_str(&format!("GP{id} hdop")),
-                        hdop.into(),
-                        timestamp,
-                    ));
+                    topic_data.push(
+                        MqttTopicData::single_with_ts(
+                            self.subtopic_str(&format!("GP{id}")),
+                            hdop.into(),
+                            timestamp,
+                        )
+                        .with_ty(DataType::other_unitless(
+                            "HDOP",
+                            ExpectedPlotRange::Hundreds,
+                            true,
+                        )),
+                    );
                 }
                 if let Some(vdop) = p.gps_status.vdop {
-                    topic_data.push(MqttTopicData::single_with_ts(
-                        self.subtopic_str(&format!("GP{id} vdop")),
-                        vdop.into(),
-                        timestamp,
-                    ));
+                    topic_data.push(
+                        MqttTopicData::single_with_ts(
+                            self.subtopic_str(&format!("GP{id}")),
+                            vdop.into(),
+                            timestamp,
+                        )
+                        .with_ty(DataType::other_unitless(
+                            "VDOP",
+                            ExpectedPlotRange::Hundreds,
+                            true,
+                        )),
+                    );
                 }
                 if let Some(pdop) = p.gps_status.pdop {
-                    topic_data.push(MqttTopicData::single_with_ts(
-                        self.subtopic_str(&format!("GP{id} pdop")),
-                        pdop.into(),
-                        timestamp,
-                    ));
+                    topic_data.push(
+                        MqttTopicData::single_with_ts(
+                            self.subtopic_str(&format!("GP{id}")),
+                            pdop.into(),
+                            timestamp,
+                        )
+                        .with_ty(DataType::other_unitless(
+                            "PDOP",
+                            ExpectedPlotRange::Hundreds,
+                            true,
+                        )),
+                    );
                 }
-                topic_data.push(MqttTopicData::single_with_ts(
-                    self.subtopic_str(&format!("GP{id} satellites")),
-                    p.gps_status.satellites.into(),
-                    timestamp,
-                ));
+                topic_data.push(
+                    MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id}")),
+                        p.gps_status.satellites.into(),
+                        timestamp,
+                    )
+                    .with_ty(DataType::other_unitless(
+                        "Satellites",
+                        ExpectedPlotRange::Hundreds,
+                        false,
+                    )),
+                );
 
                 if let Some(speed) = p.speed {
-                    topic_data.push(MqttTopicData::single_with_ts(
-                        self.subtopic_str(&format!("GP{id} speed")),
-                        speed.into(),
-                        timestamp,
-                    ));
+                    topic_data.push(
+                        MqttTopicData::single_with_ts(
+                            self.subtopic_str(&format!("GP{id}")),
+                            speed.into(),
+                            timestamp,
+                        )
+                        .with_ty(DataType::Velocity),
+                    );
                 }
-                topic_data.push(MqttTopicData::single_with_ts(
-                    self.subtopic_str(&format!("GP{id} offset ms")),
-                    offset,
-                    timestamp,
-                ));
+                topic_data.push(
+                    MqttTopicData::single_with_ts(
+                        self.subtopic_str(&format!("GP{id}")),
+                        offset,
+                        timestamp,
+                    )
+                    .with_ty(DataType::TimeDelta {
+                        name: "Offset".into(),
+                        unit: "ms".into(),
+                    }),
+                );
                 if let Some(geo_point) = p.maybe_get_geopoint() {
                     topic_data.push(MqttTopicData::single_geopoint(
                         self.subtopic_str(&id.to_string()),
@@ -172,8 +226,10 @@ impl KnownTopic {
             Self::PilotDisplayCoordinates => {
                 let p: PilotDisplayCoordinates = serde_json::from_str(p)?;
 
-                let lat = MqttTopicData::single(self.subtopic_str("lat"), p.lat());
-                let lon = MqttTopicData::single(self.subtopic_str("lon"), p.lon());
+                let lat = MqttTopicData::single(self.subtopic_str("lat"), p.lat())
+                    .with_ty(DataType::Latitude);
+                let lon = MqttTopicData::single(self.subtopic_str("lon"), p.lon())
+                    .with_ty(DataType::Longitude);
 
                 let geo_point = GeoPoint::new(util::now_timestamp(), (p.lat(), p.lon()));
                 let geo_data = MqttTopicData::single_geopoint(self.to_string(), geo_point);

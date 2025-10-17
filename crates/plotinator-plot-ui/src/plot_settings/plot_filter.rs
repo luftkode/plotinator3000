@@ -1,8 +1,9 @@
-use std::collections::BTreeMap;
-
 use egui::RichText;
+use egui_phosphor::regular::DATABASE;
+use plotinator_log_if::rawplot::DataType;
 use plotinator_plot_util::CookedPlot;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameFilter {
@@ -30,17 +31,18 @@ impl PlotNameFilter {
     }
 
     /// Returns whether the filter already contains a plot with the given name and association
-    pub fn contains(&self, plot_name: &str, associated_descriptive_name: &str) -> bool {
+    pub fn contains(&self, plot_ty: &DataType, associated_descriptive_name: &str) -> bool {
         self.plots.iter().any(|p| {
-            p.name() == plot_name && p.associated_descriptive_name == associated_descriptive_name
+            p.name() == plot_ty.name()
+                && p.associated_descriptive_name == associated_descriptive_name
         })
     }
 
     /// Returns whether a plot with the given name should be highlighted (is hovered)
-    pub fn should_highlight(&self, plot_name: &str) -> bool {
+    pub fn should_highlight(&self, log_id: u16, plot_ty: &DataType) -> bool {
         self.plots
             .iter()
-            .find(|p| p.name() == plot_name)
+            .find(|p| p.log_id == log_id && &p.ty == plot_ty)
             .is_some_and(|p| p.is_hovered())
     }
 
@@ -48,22 +50,22 @@ impl PlotNameFilter {
     /// and returns an iterator that yields all the [`PlotValues`] that should be shown
     ///
     /// The id filter `fn_show_id` should return true if the given log should be shown according to the ID filter
-    pub fn filter_plot_values<'pv, IF>(
+    pub fn filter_plot_values<'pv>(
         &'pv self,
         plot_data: &'pv [CookedPlot],
-        fn_show_id: IF,
-    ) -> impl Iterator<Item = &'pv CookedPlot>
-    where
-        IF: Fn(u16) -> bool,
-    {
+        hide_ids: Vec<u16>,
+    ) -> impl Iterator<Item = &'pv CookedPlot> {
         plot_data.iter().filter(move |pv| {
-            self.plots
-                .iter()
-                .find(|pf| {
-                    pf.name() == pv.name()
-                        && pf.associated_descriptive_name == pv.associated_descriptive_name()
-                })
-                .is_some_and(|pf| pf.show() && fn_show_id(pv.log_id()))
+            if let Some(p_candidate) = self.plots.iter().find(|pf| {
+                &pf.ty == pv.ty()
+                    && pf.associated_descriptive_name == pv.associated_descriptive_name()
+            }) && p_candidate.show()
+                && !hide_ids.contains(&pv.log_id())
+            {
+                true
+            } else {
+                false
+            }
         })
     }
 
@@ -75,7 +77,7 @@ impl PlotNameFilter {
 
     pub fn all_bools_set_show(&mut self, show: bool) {
         for p in &mut self.plots {
-            if p.name().contains("[bool]") {
+            if matches!(p.ty, DataType::Bool { .. }) {
                 p.set_show(show);
             }
         }
@@ -104,7 +106,85 @@ impl PlotNameFilter {
     }
 
     /// Shows the window where users can toggle plot visibility based on plot labels
-    pub fn show(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
+    pub fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+        plots: &plotinator_plot_util::Plots,
+        reset_plot_bounds: &mut bool,
+    ) {
+        self.show_enable_disable_all(ui, reset_plot_bounds);
+
+        // Helper function to count occurrences of a plot name across all datasets
+        let count_plot_occurrences = |plot_name: &str| -> usize {
+            let mut count = 0;
+
+            // Count in percentage plots
+            count += plots
+                .percentage()
+                .plots()
+                .iter()
+                .filter(|p| p.name() == plot_name)
+                .count();
+
+            // Count in hundreds plots
+            count += plots
+                .one_to_hundred()
+                .plots()
+                .iter()
+                .filter(|p| p.name() == plot_name)
+                .count();
+
+            // Count in thousands plots
+            count += plots
+                .thousands()
+                .plots()
+                .iter()
+                .filter(|p| p.name() == plot_name)
+                .count();
+
+            count
+        };
+
+        // Get the cached grouped plots
+        let grouped_plots = self.get_grouped_plots().clone();
+
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                for (descriptive_name, plot_indices) in grouped_plots {
+                    // Create a CollapsingHeader for each group.
+                    let header_text =
+                        format!("{DATABASE} {descriptive_name} ({})", plot_indices.len());
+                    egui::CollapsingHeader::new(RichText::new(header_text).strong())
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            // Render the toggle buttons for each plot within the group.
+                            for &plot_index in &plot_indices {
+                                let plot = &mut self.plots[plot_index];
+                                let dataset_count = count_plot_occurrences(plot.name());
+                                let plot_data_name_txt = RichText::new(plot.name());
+                                ui.horizontal(|ui| {
+                                    let response =
+                                        ui.toggle_value(&mut plot.show, plot_data_name_txt);
+                                    plot.hovered = response.hovered();
+                                    if response.clicked() && plot.show {
+                                        *reset_plot_bounds = true;
+                                    }
+                                    if dataset_count > 0 {
+                                        ui.label(
+                                            RichText::new(format!("({dataset_count})"))
+                                                .small()
+                                                .color(ui.visuals().weak_text_color()),
+                                        );
+                                    }
+                                });
+                            }
+                        });
+                }
+            });
+    }
+
+    fn show_enable_disable_all(&mut self, ui: &mut egui::Ui, reset_plot_bounds: &mut bool) {
         let mut enable_all = false;
         let mut disable_all = false;
         let mut enable_all_bools = false;
@@ -148,90 +228,33 @@ impl PlotNameFilter {
         } else if disable_all_bools {
             self.all_bools_set_show(false);
         }
-
-        // Helper function to count occurrences of a plot name across all datasets
-        let count_plot_occurrences = |plot_name: &str| -> usize {
-            let mut count = 0;
-
-            // Count in percentage plots
-            count += plots
-                .percentage()
-                .plots()
-                .iter()
-                .filter(|p| p.name() == plot_name)
-                .count();
-
-            // Count in hundreds plots
-            count += plots
-                .one_to_hundred()
-                .plots()
-                .iter()
-                .filter(|p| p.name() == plot_name)
-                .count();
-
-            // Count in thousands plots
-            count += plots
-                .thousands()
-                .plots()
-                .iter()
-                .filter(|p| p.name() == plot_name)
-                .count();
-
-            count
-        };
-
-        // Get the cached grouped plots
-        let grouped_plots = self.get_grouped_plots().clone();
-
-        egui::ScrollArea::vertical()
-            .auto_shrink([false; 2])
-            .show(ui, |ui| {
-                for (descriptive_name, plot_indices) in grouped_plots {
-                    // Create a CollapsingHeader for each group.
-                    let header_text = format!("{descriptive_name} ({})", plot_indices.len());
-                    egui::CollapsingHeader::new(RichText::new(header_text).strong())
-                        .default_open(true)
-                        .show(ui, |ui| {
-                            // Render the toggle buttons for each plot within the group.
-                            for &plot_index in &plot_indices {
-                                let plot = &mut self.plots[plot_index];
-                                let dataset_count = count_plot_occurrences(plot.name());
-                                let plot_name = plot.name().to_owned();
-
-                                ui.horizontal(|ui| {
-                                    plot.hovered =
-                                        ui.toggle_value(&mut plot.show, plot_name).hovered();
-                                    if dataset_count > 0 {
-                                        ui.label(
-                                            RichText::new(format!("({dataset_count})"))
-                                                .small()
-                                                .color(ui.visuals().weak_text_color()),
-                                        );
-                                    }
-                                });
-                            }
-                        });
-                }
-            });
+        if enable_all || enable_all_bools {
+            *reset_plot_bounds = true;
+        }
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PlotNameShow {
     name: String,
+    ty: DataType,
     // The descriptive name of the log it came from
     associated_descriptive_name: String,
+    // The log ID of the log it came from
+    log_id: u16,
     show: bool,
     // On hover: Highlight the line plots that match the name
     hovered: bool,
 }
 
 impl PlotNameShow {
-    pub fn new(name: String, show: bool, associated_descriptive_name: String) -> Self {
+    pub fn new(ty: DataType, associated_descriptive_name: String, log_id: u16) -> Self {
         Self {
-            name,
-            show,
+            name: ty.name().into_owned(),
+            show: !ty.default_hidden(),
+            ty,
             associated_descriptive_name,
+            log_id,
             hovered: false,
         }
     }

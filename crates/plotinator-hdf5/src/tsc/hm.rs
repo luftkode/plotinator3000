@@ -1,10 +1,13 @@
 use anyhow::{Context as _, ensure};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
-use plotinator_log_if::{prelude::RawPlotCommon, rawplot::RawPlot};
+use plotinator_log_if::{
+    prelude::RawPlotCommon,
+    rawplot::{DataType, RawPlot},
+};
 use plotinator_ui_util::ExpectedPlotRange;
 use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
 
-use crate::tsc::metadata::RootMetadata;
+use crate::tsc::{TSC_LEGEND_NAME, metadata::RootMetadata};
 
 struct CountTeslaVal(f64);
 struct SubDivStrideNs(f64);
@@ -383,15 +386,25 @@ impl<'h5> HmData<'h5> {
         Ok((
             vec![
                 RawPlotCommon::new(
-                    "0-position (Z) [nT]".to_owned(),
+                    TSC_LEGEND_NAME,
                     final_zero_points,
-                    ExpectedPlotRange::Thousands,
+                    DataType::Other {
+                        name: "0-position (Z)".into(),
+                        unit: Some("nT".into()),
+                        plot_range: ExpectedPlotRange::Thousands,
+                        default_hidden: false,
+                    },
                 )
                 .into(),
                 RawPlotCommon::new(
-                    "B-field (Z) [nT]".to_owned(),
+                    TSC_LEGEND_NAME,
                     final_bfield_points,
-                    ExpectedPlotRange::Thousands,
+                    DataType::Other {
+                        name: "B-field (Z)".into(),
+                        unit: Some("nT".into()),
+                        plot_range: ExpectedPlotRange::Thousands,
+                        default_hidden: false,
+                    },
                 )
                 .into(),
             ],

@@ -12,6 +12,7 @@ use egui_plot::PlotBounds;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
+use plotinator_log_if::rawplot::DataType;
 use plotinator_plot_util::{CookedPlot, MipMapConfiguration, Plots};
 use plotinator_ui_util::{ExpectedPlotRange, theme_color};
 use serde::{Deserialize, Serialize};
@@ -83,6 +84,7 @@ impl PlotSettings {
         axis_cfg: &mut AxisConfig,
         plots: &plotinator_plot_util::Plots,
         selected_box: Option<PlotBounds>,
+        reset_plot_bounds: &mut bool,
     ) {
         if self.loaded_log_settings.is_empty() {
             ui.label(RichText::new("No Files Loaded").color(theme_color(
@@ -94,7 +96,7 @@ impl PlotSettings {
             self.series_plot_settings.show(ui);
         } else {
             self.show_loaded_files(ui, selected_box);
-            self.ui_plot_filter_settings(ui, plots);
+            self.ui_plot_filter_settings(ui, plots, reset_plot_bounds);
             self.mipmap_settings.show(ui);
             show_axis_settings(ui, axis_cfg);
             self.series_plot_settings.show(ui);
@@ -102,13 +104,18 @@ impl PlotSettings {
         }
     }
 
-    fn ui_plot_filter_settings(&mut self, ui: &mut egui::Ui, plots: &plotinator_plot_util::Plots) {
+    fn ui_plot_filter_settings(
+        &mut self,
+        ui: &mut egui::Ui,
+        plots: &plotinator_plot_util::Plots,
+        reset_plot_bounds: &mut bool,
+    ) {
         self.ps_ui.ui_toggle_show_filter(ui);
         if self.ps_ui.show_filter_settings {
             egui::Window::new(self.ps_ui.filter_settings_text())
                 .open(&mut self.ps_ui.show_filter_settings)
                 .show(ui.ctx(), |ui| {
-                    self.plot_name_filter.show(ui, plots);
+                    self.plot_name_filter.show(ui, plots, reset_plot_bounds);
                 });
             if ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
                 self.ps_ui.show_filter_settings = false;
@@ -278,12 +285,17 @@ impl PlotSettings {
     /// # Arguments
     /// - `plot_name` The name of the plot, i.e. the name that appears on the plot legend
     /// - `descriptive_name` the name of the logfile e.g. `Mbed Pid v6` or `frame-altimeter`
-    pub fn add_plot_name_if_not_exists(&mut self, plot_name: &str, descriptive_name: &str) {
-        if !self.plot_name_filter.contains(plot_name, descriptive_name) {
+    pub fn add_plot_name_if_not_exists(
+        &mut self,
+        ty: DataType,
+        descriptive_name: &str,
+        log_id: u16,
+    ) {
+        if !self.plot_name_filter.contains(&ty, descriptive_name) {
             self.plot_name_filter.add_plot(PlotNameShow::new(
-                plot_name.to_owned(),
-                true,
+                ty,
                 descriptive_name.to_owned(),
+                log_id,
             ));
         }
     }
@@ -295,14 +307,7 @@ impl PlotSettings {
         plotinator_macros::profile_function!();
         let id_filter = self.log_id_filter();
         self.plot_name_filter
-            .filter_plot_values(plot_vals, move |id| {
-                for id_inst in &id_filter {
-                    if *id_inst == id {
-                        return false;
-                    }
-                }
-                true
-            })
+            .filter_plot_values(plot_vals, id_filter)
     }
 
     /// Get the next ID for a loaded data format, used for when a new file is loaded and added to the collection of plot data and plot settings
@@ -349,7 +354,7 @@ impl PlotSettings {
         let set_plot_highlight = |plot_data: &mut plotinator_plot_util::PlotData| {
             for pd in plot_data.plots_as_mut() {
                 let should_highlight = ids_to_highlight.contains(&pd.log_id())
-                    || self.plot_name_filter.should_highlight(pd.name());
+                    || self.plot_name_filter.should_highlight(pd.log_id(), pd.ty());
                 *pd.get_highlight_mut() = should_highlight;
             }
             for pl in plot_data.plot_labels_as_mut() {

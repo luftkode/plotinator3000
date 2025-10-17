@@ -3,7 +3,10 @@ use std::mem;
 use chrono::DateTime;
 use egui::Color32;
 use egui_plot::PlotPoint;
-use plotinator_log_if::{prelude::RawPlotCommon, rawplot::RawPlot};
+use plotinator_log_if::{
+    prelude::RawPlotCommon,
+    rawplot::{DataType, RawPlot},
+};
 use plotinator_mqtt::data::listener::{
     MqttData, MqttGeoPoint, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
 };
@@ -24,13 +27,13 @@ pub struct MqttPlotData {
 
 impl MqttPlotData {
     #[inline]
-    pub(crate) fn insert_inner_data(&mut self, data: MqttTopicData) {
+    pub(crate) fn insert_inner_data(&mut self, mqtt_data: MqttTopicData) {
         if let Some((mp, _)) = self
             .mqtt_plot_data
             .iter_mut()
-            .find(|(mp, _)| mp.topic == data.topic())
+            .find(|(mp, _)| mp.legend_name == mqtt_data.legend())
         {
-            match data.payload {
+            match mqtt_data.payload {
                 TopicPayload::Points(plot_points) => {
                     for p in plot_points {
                         mp.data.push(p);
@@ -38,22 +41,30 @@ impl MqttPlotData {
                 }
                 TopicPayload::Point(plot_point) => mp.data.push(plot_point),
                 TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint {
-                    topic: data.topic,
+                    topic: mqtt_data.topic,
                     point,
                 }),
             }
         } else {
-            let MqttTopicData { topic, payload } = data;
+            let legend_name = mqtt_data.legend();
+            let MqttTopicData { topic, payload, ty } = mqtt_data;
             match payload {
                 TopicPayload::Point(p) => self.mqtt_plot_data.push((
                     MqttPlotPoints {
+                        legend_name,
                         topic,
                         data: vec![p],
+                        ty,
                     },
                     auto_color_plot_area(ExpectedPlotRange::Hundreds),
                 )),
                 TopicPayload::Points(data) => self.mqtt_plot_data.push((
-                    MqttPlotPoints { topic, data },
+                    MqttPlotPoints {
+                        legend_name,
+                        topic,
+                        data,
+                        ty,
+                    },
                     auto_color_plot_area(ExpectedPlotRange::Hundreds),
                 )),
                 TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint { topic, point }),
@@ -93,8 +104,10 @@ impl MqttPlotData {
 /// where it is plotable
 #[derive(Debug, Clone, PartialEq)]
 pub struct MqttPlotPoints {
+    pub legend_name: String,
     pub topic: String,
     pub data: Vec<PlotPoint>,
+    pub ty: Option<DataType>,
 }
 
 impl TryFrom<MqttPlotPoints> for RawPlotCommon {
@@ -115,15 +128,19 @@ impl TryFrom<MqttPlotPoints> for RawPlotCommon {
         }
         let min = min.abs();
         let max = max.abs();
-        let is_boolean = (max == 1. || max == 0.) && (min == 0. || min == 1.);
-        let expected_range = if is_boolean {
-            ExpectedPlotRange::Percentage
-        } else if max < 300. && min > -300. {
-            ExpectedPlotRange::Hundreds
-        } else {
-            ExpectedPlotRange::Thousands
-        };
-        Ok(Self::new(name, points, expected_range))
+        let ty = mqtt_pp.ty.unwrap_or_else(|| {
+            let is_boolean = (max == 1. || max == 0.) && (min == 0. || min == 1.);
+            let expected_range = if is_boolean {
+                ExpectedPlotRange::Percentage
+            } else if max < 300. && min > -300. {
+                ExpectedPlotRange::Hundreds
+            } else {
+                ExpectedPlotRange::Thousands
+            };
+            DataType::other_unitless(name, expected_range, false)
+        });
+
+        Ok(Self::new("", points, ty))
     }
 }
 
@@ -175,41 +192,60 @@ impl From<MqttPlotPoints> for SerializableMqttPlotPoints {
     fn from(original: MqttPlotPoints) -> Self {
         let serializable_data = original.data.into_iter().map(|p| [p.x, p.y]).collect();
         Self {
+            legend_name: original.legend_name,
             topic: original.topic,
             data: serializable_data,
+            ty: original.ty,
         }
     }
 }
 impl From<SerializableMqttPlotPoints> for MqttPlotPoints {
     fn from(serializable: SerializableMqttPlotPoints) -> Self {
-        let SerializableMqttPlotPoints { topic, data } = serializable;
+        let SerializableMqttPlotPoints {
+            legend_name,
+            topic,
+            data,
+            ty,
+        } = serializable;
         let data = data.into_iter().map(|[x, y]| PlotPoint { x, y }).collect();
-        Self { topic, data }
+        Self {
+            legend_name,
+            topic,
+            data,
+            ty,
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use egui_plot::PlotPoint;
+    use pretty_assertions::assert_str_eq;
 
     use super::*;
 
     #[test]
     fn test_serialize_deserialize_helper() {
         let original_data = vec![PlotPoint { x: 1.0, y: 2.0 }, PlotPoint { x: 3.0, y: 4.0 }];
-
+        let ty = DataType::Temperature {
+            name: "Fridge Temp".into(),
+        };
+        let topic = "sensor/temperature";
         let original_mqtt_plot_points = MqttPlotPoints {
-            topic: "sensor/temperature".to_owned(),
+            legend_name: ty.legend_name_mqtt(topic),
+            topic: topic.to_owned(),
             data: original_data,
+            ty: Some(ty),
         };
 
         // Convert to helper struct for serialization
         let serializable_points: SerializableMqttPlotPoints =
             original_mqtt_plot_points.clone().into();
         let serialized = serde_json::to_string(&serializable_points).unwrap();
-        assert_eq!(
+
+        assert_str_eq!(
             serialized,
-            r#"{"topic":"sensor/temperature","data":[[1.0,2.0],[3.0,4.0]]}"#
+            r#"{"legend_name":"sensor/temperature Fridge Temp °C","topic":"sensor/temperature","data":[[1.0,2.0],[3.0,4.0]],"ty":{"Temperature":{"name":"Fridge Temp"}}}"#
         );
 
         // Deserialize into helper struct
@@ -219,7 +255,7 @@ mod tests {
         let deserialized_mqtt_plot_points: MqttPlotPoints = deserialized_serializable_points.into();
 
         let expected_data = vec![PlotPoint { x: 1.0, y: 2.0 }, PlotPoint { x: 3.0, y: 4.0 }];
-        assert_eq!(deserialized_mqtt_plot_points.topic, "sensor/temperature");
+        assert_str_eq!(deserialized_mqtt_plot_points.topic, "sensor/temperature");
         assert_eq!(deserialized_mqtt_plot_points.data, expected_data);
 
         assert_eq!(original_mqtt_plot_points, deserialized_mqtt_plot_points);

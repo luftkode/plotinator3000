@@ -1,6 +1,6 @@
 use crate::util;
 use egui_plot::PlotPoint;
-use plotinator_log_if::prelude::GeoPoint;
+use plotinator_log_if::{prelude::GeoPoint, rawplot::DataType};
 
 /// Received MQTT data, before it is plotable.
 ///
@@ -55,6 +55,7 @@ impl From<Vec<MqttTopicData>> for MqttTopicDataWrapper {
 pub struct MqttTopicData {
     pub topic: String,
     pub payload: TopicPayload,
+    pub ty: Option<DataType>,
 }
 
 impl MqttTopicData {
@@ -74,6 +75,7 @@ impl MqttTopicData {
                 y: value,
             }
             .into(),
+            ty: None,
         }
     }
 
@@ -83,6 +85,7 @@ impl MqttTopicData {
         Self {
             topic,
             payload: TopicPayload::GeoPoint(point),
+            ty: None,
         }
     }
 
@@ -91,12 +94,28 @@ impl MqttTopicData {
         Self {
             topic,
             payload: points.into(),
+            ty: None,
         }
+    }
+
+    /// Specify the type of the MQTT data
+    #[inline]
+    pub fn with_ty(mut self, ty: DataType) -> Self {
+        self.ty = Some(ty);
+        self
     }
 
     #[inline]
     pub fn topic(&self) -> &str {
         &self.topic
+    }
+
+    /// Returns the name as it would appear in the plot area legend e.g. `/dt/tc/frame-gps/1 Velocity [km/h]`
+    #[inline]
+    pub fn legend(&self) -> String {
+        self.ty
+            .as_ref()
+            .map_or_else(|| self.topic.clone(), |t| t.legend_name_mqtt(&self.topic))
     }
 }
 

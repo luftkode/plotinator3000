@@ -7,7 +7,7 @@ use ndarray::Array2;
 use plotinator_log_if::{
     hdf5::SkytemHdf5,
     prelude::{GeoSpatialDataBuilder, PlotLabels, Plotable, RawPlotCommon},
-    rawplot::RawPlot,
+    rawplot::{DataType, RawPlot},
 };
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
@@ -303,44 +303,47 @@ impl FrameGpsDatasets {
 
         let raw_plots = vec![
             RawPlotCommon::new(
-                format!("HDOP ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 hdop,
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("HDOP", ExpectedPlotRange::Hundreds, true),
             ),
             RawPlotCommon::new(
-                format!("PDOP ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 pdop,
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("PDOP", ExpectedPlotRange::Hundreds, true),
             ),
             RawPlotCommon::new(
-                format!("VDOP ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 vdop,
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("VDOP", ExpectedPlotRange::Hundreds, true),
             ),
             RawPlotCommon::new(
-                format!("Time Offset [ms] ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 gps_time_offset,
-                ExpectedPlotRange::Hundreds,
+                DataType::TimeDelta {
+                    name: "Time Offset".into(),
+                    unit: "ms".into(),
+                },
             ),
             RawPlotCommon::new(
-                format!("Mode ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 mode,
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("Fix Mode", ExpectedPlotRange::Hundreds, false),
             ),
             RawPlotCommon::new(
-                format!("Altitude-NaN-cnt ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 alt_nan_count,
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("Altitude-NaN-cnt", ExpectedPlotRange::Hundreds, true),
             ),
             RawPlotCommon::new(
-                format!("Altitude-NaN ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 alt_nan_bool,
-                ExpectedPlotRange::Percentage,
+                DataType::other_unitless("Altitude-NaN", ExpectedPlotRange::Percentage, true),
             ),
             RawPlotCommon::new(
-                format!("Satellites ({LEGEND_NAME}{id})"),
+                format!("{LEGEND_NAME}{id}"),
                 sats,
-                ExpectedPlotRange::Hundreds,
+                DataType::other_unitless("Satellites", ExpectedPlotRange::Hundreds, false),
             ),
         ];
 
@@ -350,7 +353,7 @@ impl FrameGpsDatasets {
         }
         for rp in raw_plots {
             if rp.points().is_empty() {
-                log::debug!("{} has no data", rp.name());
+                log::debug!("{} has no data", rp.legend_name());
             } else {
                 plots.push(rp.into());
             }

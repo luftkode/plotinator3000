@@ -9,8 +9,9 @@ pub fn show_settings_grid(
     plot_settings: &mut PlotSettings,
     plots: &plotinator_plot_util::Plots,
     selected_box: Option<PlotBounds>,
+    reset_plot_bounds: &mut bool,
 ) {
     ui.horizontal_wrapped(|ui| {
-        plot_settings.show(ui, axis_cfg, plots, selected_box);
+        plot_settings.show(ui, axis_cfg, plots, selected_box, reset_plot_bounds);
     });
 }

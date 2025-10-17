@@ -1,10 +1,8 @@
-use egui::{Color32, Vec2};
+use egui::Color32;
 use egui_plot::{Plot, PlotBounds};
-use plotinator_mqtt_ui::plot::MqttPlotPoints;
+use plotinator_mqtt_ui::{connection::PlotScroller, plot::MqttPlotPoints};
 use plotinator_plot_util::draw_series::SeriesDrawMode;
 use plotinator_ui_util::{ExpectedPlotRange, box_selection::BoxSelection};
-
-use crate::util;
 
 use super::click_delta::ClickDelta;
 
@@ -18,14 +16,12 @@ pub fn fill_mqtt_plots(
     mqtt_plot_area: Plot<'_>,
     mqtt_plots: &[(MqttPlotPoints, Color32)],
     set_auto_bounds: &mut bool,
+    plot_scroller: &mut PlotScroller,
     box_selection: &mut BoxSelection,
     #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
 ) {
     plotinator_macros::profile_function!();
-
-    let (scroll, modifiers) = util::get_cursor_scroll_input(gui);
-    let final_zoom_factor: Option<Vec2> = scroll.and_then(|s| util::set_zoom_factor(s, modifiers));
 
     mqtt_plot_area.show(gui, |plot_ui| {
         let area_hovered = plot_ui.response().hovered();
@@ -50,16 +46,23 @@ pub fn fill_mqtt_plots(
             }
         }
 
-        if area_hovered && let Some(final_zoom_factor) = final_zoom_factor {
-            plot_ui.zoom_bounds_around_hovered(final_zoom_factor);
-        }
-
         let resp = plot_ui.response();
-        if plot_ui.response().double_clicked() || reset_plot_bounds {
+        // If user drags the plot, disable scrolling mode.
+        if resp.dragged() {
+            plot_scroller.disable();
+        }
+        if resp.double_clicked() {
+            *set_auto_bounds = true;
+            plot_scroller.disable();
+        }
+        if reset_plot_bounds {
             *set_auto_bounds = true;
             if let Some(max_bounds) = get_mqtt_auto_scaled_plot_bounds(mqtt_plots) {
                 plot_ui.set_plot_bounds(max_bounds);
             }
+            plot_ui
+                .ctx()
+                .request_discard("Resetting plot bounds often causes visual glitches");
         } else if resp.clicked() {
             if plot_ui.ctx().input(|i| i.modifiers.shift) {
                 if let Some(pointer_coordinate) = plot_ui.pointer_coordinate() {
@@ -71,6 +74,11 @@ pub fn fill_mqtt_plots(
         } else if *set_auto_bounds {
             plot_ui.set_auto_bounds(true);
             *set_auto_bounds = false;
+        } else if plot_scroller.active() {
+            // If scrolling is active, update the bounds based on elapsed time.
+            let mut bounds = plot_ui.plot_bounds();
+            plot_scroller.update(&mut bounds);
+            plot_ui.set_plot_bounds(bounds);
         }
 
         click_delta.ui(plot_ui, ExpectedPlotRange::Hundreds);
@@ -85,7 +93,7 @@ pub fn fill_mqtt_plots(
             }
             plotinator_plot_util::plot_raw_mqtt_line(
                 plot_ui,
-                &mp.topic,
+                &mp.legend_name,
                 &mp.data,
                 *color,
                 series_draw_mode,
@@ -135,8 +143,8 @@ pub fn get_mqtt_auto_scaled_plot_bounds(
         }
     }
     if let Some(mut max_bounds) = max_bounds {
-        // finally extend each bound by 10%
-        let margin_fraction = egui::Vec2::splat(0.1);
+        // finally extend each bound by 5%
+        let margin_fraction = egui::Vec2::splat(0.05);
         max_bounds.add_relative_margin_x(margin_fraction);
         max_bounds.add_relative_margin_y(margin_fraction);
         if max_bounds.is_valid() {

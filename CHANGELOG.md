@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.3.0]
+
+- Add scroll button in MQTT mode to automatically scroll plot area to follow incoming data
+- Add button for clearing all received MQTT data while still retaining current connections and subscriptions
+- Remove custom zoom implementation and use the superior one that `egui_plot` crate now provides
+- Define typical data types such as velocity and altitude, and handle them in the same way when it comes to plot legends and more
+- Improve the legend naming of plotted data coming from MQTT messages
+- Fixed an issue where plots were not highlighted when the corresponding generic category was hovered in the plot filter window
+- Fixed and revised some unit conversions
+
 ## [2.2.2]
 
 - Fix satellite map on windows

@@ -32,10 +32,11 @@ pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 pub enum PlotMode<'a> {
     Logs(&'a mut Plots),
     #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-    MQTT(
-        &'a [(plotinator_mqtt_ui::plot::MqttPlotPoints, Color32)],
-        &'a mut bool,
-    ),
+    MQTT {
+        plots: &'a [(plotinator_mqtt_ui::plot::MqttPlotPoints, Color32)],
+        auto_bounds: &'a mut bool,
+        plot_scroller: &'a mut plotinator_mqtt_ui::connection::PlotScroller,
+    },
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -105,12 +106,15 @@ impl LogPlotUi {
             link_group.replace(ui.id().with("linked_plots"));
         }
 
+        let mut reset_plot_bounds = false;
+
         plot_ui::show_settings_grid(
             ui,
             axis_config,
             plot_settings,
             plots,
             box_selection.selected(),
+            &mut reset_plot_bounds,
         );
 
         for file in loaded_files {
@@ -129,10 +133,9 @@ impl LogPlotUi {
                     "Total data points in loaded files: {}",
                     format_large_number(*total_data_points),
                 ))
-                .duration(Some(Duration::from_secs(20)));
+                .duration(Some(Duration::from_secs(10)));
         }
 
-        let mut reset_plot_bounds = false;
         // Various stored knowledge about the plot needs to be reset and recalculated if the plot is invalidated
         if *first_frame {
             plots.build_plots();
@@ -157,7 +160,11 @@ impl LogPlotUi {
             if mqtt_plots.is_empty() {
                 PlotMode::Logs(plots)
             } else {
-                PlotMode::MQTT(mqtt_plots, &mut mqtt.set_auto_bounds)
+                PlotMode::MQTT {
+                    plots: mqtt_plots,
+                    auto_bounds: &mut mqtt.set_auto_bounds,
+                    plot_scroller: &mut mqtt.plot_scroller,
+                }
             }
         };
         #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]

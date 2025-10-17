@@ -7,8 +7,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use plotinator_log_if::{parseable::Parseable, prelude::*};
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::{parseable::Parseable, prelude::*, rawplot::DataType};
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::entries::mag::MagSensor;
@@ -114,25 +113,19 @@ impl Parseable for MagSps {
         // Create plots for each sensor
         let mut raw_plots = Vec::new();
         for (sensor_id, mag_points) in sensor_groups {
-            if !mag_points.is_empty() {
-                raw_plots.push(RawPlotCommon::new(
-                    format!("Sensor {sensor_id} B-field [nT]"),
-                    mag_points,
-                    ExpectedPlotRange::Thousands,
-                ));
+            if mag_points.len() > 1 {
+                raw_plots.push(
+                    RawPlotCommon::new(
+                        format!("MA{sensor_id}"),
+                        mag_points,
+                        DataType::MagneticFlux,
+                    )
+                    .into(),
+                );
+            } else {
+                log::warn!("MA{sensor_id} doesn't have enough points to plot (at least 2)");
             }
         }
-
-        // Filter out empty plots and log warnings
-        raw_plots.retain(|rp| {
-            if rp.points().is_empty() {
-                log::warn!("{} has no data", rp.name());
-                false
-            } else {
-                true
-            }
-        });
-        let raw_plots: Vec<RawPlot> = raw_plots.into_iter().map(Into::into).collect();
 
         Ok((Self { entries, raw_plots }, bytes_read))
     }

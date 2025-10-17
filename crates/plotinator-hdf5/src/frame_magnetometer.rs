@@ -2,8 +2,7 @@ use std::{io, path::Path};
 
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::{Dataset, H5Type};
-use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*};
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*, rawplot::DataType};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -111,22 +110,23 @@ impl SkytemHdf5 for FrameMagnetometer {
         }
 
         let raw_plots = vec![
+            RawPlotCommon::new(LEGEND_NAME, mag_vals, DataType::MagneticFlux).into(),
             RawPlotCommon::new(
-                format!("Mag [nT] ({LEGEND_NAME})"),
-                mag_vals,
-                ExpectedPlotRange::Thousands,
-            )
-            .into(),
-            RawPlotCommon::new(
-                format!("Mag Clk Δ [ms] ({LEGEND_NAME})"),
+                LEGEND_NAME,
                 mag_clk_delta,
-                ExpectedPlotRange::Thousands,
+                DataType::TimeDelta {
+                    name: "Mag Clk".into(),
+                    unit: "ms".into(),
+                },
             )
             .into(),
             RawPlotCommon::new(
-                format!("GPS Time Δ [ms] ({LEGEND_NAME})"),
+                LEGEND_NAME,
                 gps_sys_delta,
-                ExpectedPlotRange::Thousands,
+                DataType::TimeDelta {
+                    name: "GPS Time".into(),
+                    unit: "ms".into(),
+                },
             )
             .into(),
         ];
@@ -226,15 +226,15 @@ mod tests {
         assert_eq!(frame_magnetometer.raw_plots.len(), 3);
         match &frame_magnetometer.raw_plots[0] {
             RawPlot::Generic { common } => assert_eq!(common.points().len(), 46515),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
         match &frame_magnetometer.raw_plots[1] {
             RawPlot::Generic { common } => assert_eq!(common.points().len(), 46515),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
         match &frame_magnetometer.raw_plots[2] {
             RawPlot::Generic { common } => assert_eq!(common.points().len(), 930),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
 
         Ok(())

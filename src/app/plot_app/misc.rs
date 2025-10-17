@@ -42,7 +42,7 @@ pub(super) fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]
         for l in logs {
             if let Some(parse_info) = l.parse_info() {
                 log::debug!(
-                    "Unparsed bytes for {remainder}:{log_name}",
+                    "Unparsed bytes for {log_name}: {remainder}",
                     remainder = parse_info.remainder_bytes(),
                     log_name = l.descriptive_name()
                 );
@@ -73,12 +73,13 @@ pub(super) fn configure_text_styles(ctx: &egui::Context, font_size: f32) {
 pub(super) fn collapsible_instructions(ui: &mut egui::Ui) {
     ui.collapsing("Instructions", |ui| {
         ui.label("Pan: Drag, or scroll (+ shift = horizontal).");
-        ui.label("Box zooming: Right click + drag.");
         if cfg!(target_os = "macos") {
-            ui.label("X-axis zoom: CTRL/⌘ + scroll.");
+            ui.label("Box zooming: CTRL/⌘ + scroll.");
+            ui.label("X-axis zoom: CTRL/⌘ + Shift + scroll.");
             ui.label("Y-axis zoom: CTRL/⌘ + ALT + scroll.");
         } else {
-            ui.label("X-axis zoom: CTRL + scroll.");
+            ui.label("Box zooming: CTRL + scroll.");
+            ui.label("X-axis zoom: CTRL + Shift + scroll.");
             ui.label("Y-axis zoom: CTRL + ALT + scroll.");
         }
         ui.label("Reset view: double-click.");

@@ -6,7 +6,7 @@ use plotinator_ui_util::{ExpectedPlotRange, auto_color_plot_area, auto_terrain_s
 use serde::{Deserialize, Serialize};
 use walkers::{Position, lat_lon};
 
-use crate::rawplot::{RawPlot, RawPlotCommon, path_data::caching::CachedValues};
+use crate::rawplot::{DataType, RawPlot, RawPlotCommon, path_data::caching::CachedValues};
 
 pub mod caching;
 
@@ -124,6 +124,9 @@ pub struct GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
 
 impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
     /// Start building, supplying a name such as `GP1` or `Njord Altimeter`
+    ///
+    /// At minimum, timestamps and either coordinates (both lat and lon) or another kind of auxiliary data such as
+    /// altitude or speed is required, otherwise the builder will fail to build.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -390,47 +393,47 @@ impl PrimaryGeoSpatialData {
         }
         let color = self.color;
         let mut plots = vec![
-            RawPlotCommon::with_color(
-                format!("Latitude° ({})", self.name),
-                latitude,
-                ExpectedPlotRange::Hundreds,
-                color,
-            ),
-            RawPlotCommon::with_color(
-                format!("Longitude° ({})", self.name),
-                longitude,
-                ExpectedPlotRange::Hundreds,
-                color,
-            ),
+            RawPlotCommon::with_color(&self.name, latitude, DataType::Latitude, color),
+            RawPlotCommon::with_color(&self.name, longitude, DataType::Longitude, color),
         ];
         if !altitude.is_empty() {
             plots.push(RawPlotCommon::with_color(
-                format!("Altitude [m] ({})", self.name),
+                &self.name,
                 altitude,
-                ExpectedPlotRange::Hundreds,
+                if self.points.first().is_some_and(|p| {
+                    p.altitude.is_some_and(|a| match a {
+                        GeoAltitude::Laser(_) => true,
+                        GeoAltitude::Gnss(_) => false,
+                    })
+                }) {
+                    DataType::AltitudeLaser
+                } else {
+                    // TODO: Differentiate from ellipsoid
+                    DataType::AltitudeMSL
+                },
                 color,
             ));
         }
         if !heading.is_empty() {
             plots.push(RawPlotCommon::with_color(
-                format!("Heading° ({})", self.name),
+                &self.name,
                 heading,
-                ExpectedPlotRange::Hundreds,
+                DataType::Heading,
                 color,
             ));
         }
         if !speed.is_empty() {
             plots.push(RawPlotCommon::with_color(
-                format!("Speed [km/h] ({})", self.name),
+                &self.name,
                 speed,
-                ExpectedPlotRange::Hundreds,
+                DataType::Velocity,
                 color,
             ));
         }
 
         plots.retain(|rp| {
             if rp.points().len() < 2 {
-                log::debug!("{} has no data", rp.name());
+                log::debug!("{} has no data", rp.legend_name());
                 false
             } else {
                 true
@@ -504,9 +507,9 @@ impl AuxiliaryGeoSpatialData {
             }
             if heading.len() > 1 {
                 plots.push(RawPlotCommon::with_color(
-                    format!("Heading° ({})", self.name),
+                    &self.name,
                     heading,
-                    ExpectedPlotRange::Hundreds,
+                    DataType::Heading,
                     color,
                 ));
             }
@@ -518,9 +521,9 @@ impl AuxiliaryGeoSpatialData {
             }
             if speed.len() > 1 {
                 plots.push(RawPlotCommon::with_color(
-                    format!("Speed [km/h] ({})", self.name),
+                    &self.name,
                     speed,
-                    ExpectedPlotRange::Hundreds,
+                    DataType::Velocity,
                     color,
                 ));
             }
@@ -536,9 +539,9 @@ impl AuxiliaryGeoSpatialData {
             }
             if altitude.len() > 1 {
                 plots.push(RawPlotCommon::with_color(
-                    format!("Altitude [m] ({})", self.name),
+                    &self.name,
                     altitude,
-                    ExpectedPlotRange::Hundreds,
+                    DataType::AltitudeLaser,
                     color,
                 ));
             }

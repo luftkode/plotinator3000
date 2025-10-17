@@ -1,4 +1,3 @@
-use egui::{Modifiers, Vec2};
 use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{CookedPlot, Plots, StoredPlotLabels};
 use plotinator_supported_formats::SupportedFormat;
@@ -14,10 +13,10 @@ pub fn add_plot_data_to_plot_collections(
     plot_settings: &mut PlotSettings,
 ) {
     // This is how all logs get their log_id, and how each plot for each log gets their log_id
-    let data_id = plot_settings.next_log_id();
+    let log_id = plot_settings.next_log_id();
 
     plot_settings.add_log_setting(LoadedLogSettings::new(
-        data_id,
+        log_id,
         data.descriptive_name().to_owned(),
         data.first_timestamp(),
         data.metadata(),
@@ -27,7 +26,7 @@ pub fn add_plot_data_to_plot_collections(
     const PARALLEL_THRESHOLD: usize = 200_000;
     // We just check the first one, usually formats will have the same number of points for all the data series
     let first_plot_points_count: usize = data.raw_plots().first().map_or(0, |p| match p {
-        RawPlot::Generic { common } | RawPlot::Boolean { common } => common.points().len(),
+        RawPlot::Generic { common } => common.points().len(),
         RawPlot::GeoSpatialDataset(geo) => geo.len(),
     });
 
@@ -35,26 +34,33 @@ pub fn add_plot_data_to_plot_collections(
         log::info!(
             "Processing new plots in parallel (point count {first_plot_points_count} exceeds threshold {PARALLEL_THRESHOLD})"
         );
-        add_plot_points_to_collections_par(plots, data, data_id);
+        add_plot_points_to_collections_par(plots, data, log_id);
     } else {
-        add_plot_points_to_collections_seq(plots, data, data_id);
+        add_plot_points_to_collections_seq(plots, data, log_id);
     }
 
     for raw_plot in data.raw_plots() {
         match raw_plot {
             RawPlot::GeoSpatialDataset(geo_data) => {
                 for common in geo_data.raw_plots_common() {
-                    plot_settings
-                        .add_plot_name_if_not_exists(common.name(), data.descriptive_name());
+                    plot_settings.add_plot_name_if_not_exists(
+                        common.ty().to_owned(),
+                        data.descriptive_name(),
+                        log_id,
+                    );
                 }
             }
-            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
-                plot_settings.add_plot_name_if_not_exists(common.name(), data.descriptive_name());
+            RawPlot::Generic { common } => {
+                plot_settings.add_plot_name_if_not_exists(
+                    common.ty().to_owned(),
+                    data.descriptive_name(),
+                    log_id,
+                );
             }
         }
     }
 
-    add_plot_labels_to_collections(plots, data, data_id);
+    add_plot_labels_to_collections(plots, data, log_id);
 }
 
 fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat, data_id: u16) {
@@ -69,7 +75,7 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
         .iter()
         .filter_map(|rp| match rp {
             RawPlot::GeoSpatialDataset(geo_data) => Some(geo_data.raw_plots_common()),
-            _ => None,
+            RawPlot::Generic { .. } => None,
         })
         .flatten()
         .collect();
@@ -78,7 +84,7 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
     let new_cooked_plots: Vec<(ExpectedPlotRange, CookedPlot)> = geo_plots
         .par_iter()
         .chain(data.raw_plots().par_iter().filter_map(|rp| match rp {
-            RawPlot::Generic { common } | RawPlot::Boolean { common } => Some(common),
+            RawPlot::Generic { common } => Some(common),
             RawPlot::GeoSpatialDataset(_) => None,
         }))
         .filter_map(|rpc| {
@@ -126,31 +132,29 @@ fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat,
 fn add_plot_points_to_collections_seq(plots: &mut Plots, data: &SupportedFormat, data_id: u16) {
     for raw_plot in data.raw_plots() {
         match raw_plot {
-            RawPlot::Generic { common } | RawPlot::Boolean { common } => {
-                match common.expected_range() {
-                    ExpectedPlotRange::Percentage => {
-                        plots.percentage_mut().add_plot_if_not_exists(
-                            common,
-                            data_id,
-                            data.descriptive_name(),
-                        );
-                    }
-                    ExpectedPlotRange::Hundreds => {
-                        plots.one_to_hundred_mut().add_plot_if_not_exists(
-                            common,
-                            data_id,
-                            data.descriptive_name(),
-                        );
-                    }
-                    ExpectedPlotRange::Thousands => {
-                        plots.thousands_mut().add_plot_if_not_exists(
-                            common,
-                            data_id,
-                            data.descriptive_name(),
-                        );
-                    }
+            RawPlot::Generic { common } => match common.expected_range() {
+                ExpectedPlotRange::Percentage => {
+                    plots.percentage_mut().add_plot_if_not_exists(
+                        common,
+                        data_id,
+                        data.descriptive_name(),
+                    );
                 }
-            }
+                ExpectedPlotRange::Hundreds => {
+                    plots.one_to_hundred_mut().add_plot_if_not_exists(
+                        common,
+                        data_id,
+                        data.descriptive_name(),
+                    );
+                }
+                ExpectedPlotRange::Thousands => {
+                    plots.thousands_mut().add_plot_if_not_exists(
+                        common,
+                        data_id,
+                        data.descriptive_name(),
+                    );
+                }
+            },
             RawPlot::GeoSpatialDataset(geo_data) => {
                 for common in geo_data.raw_plots_common() {
                     match common.expected_range() {
@@ -201,46 +205,4 @@ fn add_plot_labels_to_collections(plots: &mut Plots, data: &SupportedFormat, dat
             }
         }
     }
-}
-
-/// Returns input scroll and modifiers for a given UI element.
-pub fn get_cursor_scroll_input(ui: &egui::Ui) -> (Option<Vec2>, Modifiers) {
-    ui.input(|i| {
-        let scroll = i.events.iter().find_map(|e| match e {
-            egui::Event::MouseWheel {
-                unit: _,
-                delta,
-                modifiers: _,
-            } => Some(*delta),
-            _ => None,
-        });
-        (scroll, i.modifiers)
-    })
-}
-
-/// Set and return a zoom factor from input scroll and modifiers.
-///
-/// * `CTRL` + scroll: Zoom on X-axis
-/// * `CTRL + ALT`: Zoom on Y-axis
-pub fn set_zoom_factor(scroll: Vec2, modifiers: Modifiers) -> Option<Vec2> {
-    const SCROLL_MULTIPLIER: f32 = 0.1;
-    let scroll = Vec2::splat(scroll.x + scroll.y);
-    let mut zoom_factor = Vec2::from([
-        (scroll.x * SCROLL_MULTIPLIER).exp(),
-        (scroll.y * SCROLL_MULTIPLIER).exp(),
-    ]);
-
-    let ctrl = modifiers.ctrl;
-    let ctrl_plus_alt = modifiers.alt && ctrl;
-
-    if ctrl_plus_alt {
-        log::debug!("CTRL+ALT locks X-axis");
-        zoom_factor.x = 1.0;
-    } else if ctrl {
-        log::debug!("CTRL locks Y-axis");
-        zoom_factor.y = 1.0;
-    }
-
-    log::debug!("zoom_factor={zoom_factor}");
-    if ctrl { Some(zoom_factor) } else { None }
 }

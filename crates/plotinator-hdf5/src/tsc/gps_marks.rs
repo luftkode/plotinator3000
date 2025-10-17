@@ -3,10 +3,11 @@ use hdf5::H5Type;
 use ndarray::{ArrayBase, Dim, OwnedRepr};
 use plotinator_log_if::{
     leap_seconds::{GpsWeek, TowMs, TowSubMs, gps_to_unix_ns},
-    prelude::RawPlotCommon,
-    rawplot::RawPlot,
+    rawplot::{DataType, RawPlot, RawPlotBuilder},
 };
 use plotinator_ui_util::ExpectedPlotRange;
+
+use crate::tsc::TSC_LEGEND_NAME;
 
 type GpsMarks = ArrayBase<OwnedRepr<GpsMarkRecord>, Dim<[usize; 1]>>;
 
@@ -57,8 +58,41 @@ impl GpsMarkRecords {
         let mut time_valid = Vec::with_capacity(time.len());
         let mut new_rising_edge = Vec::with_capacity(time.len());
 
+        // Default-hide flags
+        let mut default_hide_mode_running = true;
+        let mut default_hide_run = true;
+        let mut default_hide_new_falling_edge = true;
+        let mut default_hide_timebase_gnss = true;
+        let mut default_hide_timebase_utc = true;
+        let mut default_hide_utc_avail = true;
+        let mut default_hide_time_valid = true;
+        let mut default_hide_new_rising_edge = true;
+
+        // Previous values (for change detection)
+        let mut prev_mode_running: Option<f64> = None;
+        let mut prev_run: Option<f64> = None;
+        let mut prev_new_falling_edge: Option<f64> = None;
+        let mut prev_timebase_gnss: Option<f64> = None;
+        let mut prev_timebase_utc: Option<f64> = None;
+        let mut prev_utc_avail: Option<f64> = None;
+        let mut prev_time_valid: Option<f64> = None;
+        let mut prev_new_rising_edge: Option<f64> = None;
+
         let mut step_counter = StepCounter::new();
         let mut delta_computer = DeltaComputer::new();
+
+        macro_rules! detect_change {
+            ($prev:ident, $curr:expr, $flag:ident) => {{
+                if $flag {
+                    if let Some(p) = $prev {
+                        if (p - $curr).abs() > 0.1 {
+                            $flag = false;
+                        }
+                    }
+                    $prev = Some($curr);
+                }
+            }};
+        }
 
         for (e, &t) in self.inner.iter().zip(&time) {
             step_counter.record_count(e.count, t);
@@ -68,14 +102,44 @@ impl GpsMarkRecords {
             acc_est.push([t, e.acc_est as f64]);
             count.push([t, e.count as f64]);
 
-            mode_running.push([t, e.flag(GpsMarkRecord::FLAGS_MODE_RUNNING)]);
-            run.push([t, e.flag(GpsMarkRecord::FLAGS_RUN)]);
-            new_falling_edge.push([t, e.flag(GpsMarkRecord::FLAGS_NEWFALLINGEDGE)]);
-            timebase_gnss.push([t, e.flag(GpsMarkRecord::FLAGS_TIMEBASE_GNSS)]);
-            timebase_utc.push([t, e.flag(GpsMarkRecord::FLAGS_TIMEBASE_UTC)]);
-            utc_avail.push([t, e.flag(GpsMarkRecord::FLAGS_UTC_AVAIL)]);
-            time_valid.push([t, e.flag(GpsMarkRecord::FLAGS_TIME_VALID)]);
-            new_rising_edge.push([t, e.flag(GpsMarkRecord::FLAGS_NEWRISINGEDGE)]);
+            let v_mode_running = e.flag(GpsMarkRecord::FLAGS_MODE_RUNNING);
+            let v_run = e.flag(GpsMarkRecord::FLAGS_RUN);
+            let v_new_falling_edge = e.flag(GpsMarkRecord::FLAGS_NEWFALLINGEDGE);
+            let v_timebase_gnss = e.flag(GpsMarkRecord::FLAGS_TIMEBASE_GNSS);
+            let v_timebase_utc = e.flag(GpsMarkRecord::FLAGS_TIMEBASE_UTC);
+            let v_utc_avail = e.flag(GpsMarkRecord::FLAGS_UTC_AVAIL);
+            let v_time_valid = e.flag(GpsMarkRecord::FLAGS_TIME_VALID);
+            let v_new_rising_edge = e.flag(GpsMarkRecord::FLAGS_NEWRISINGEDGE);
+
+            mode_running.push([t, v_mode_running]);
+            run.push([t, v_run]);
+            new_falling_edge.push([t, v_new_falling_edge]);
+            timebase_gnss.push([t, v_timebase_gnss]);
+            timebase_utc.push([t, v_timebase_utc]);
+            utc_avail.push([t, v_utc_avail]);
+            time_valid.push([t, v_time_valid]);
+            new_rising_edge.push([t, v_new_rising_edge]);
+
+            detect_change!(prev_mode_running, v_mode_running, default_hide_mode_running);
+            detect_change!(prev_run, v_run, default_hide_run);
+            detect_change!(
+                prev_new_falling_edge,
+                v_new_falling_edge,
+                default_hide_new_falling_edge
+            );
+            detect_change!(
+                prev_timebase_gnss,
+                v_timebase_gnss,
+                default_hide_timebase_gnss
+            );
+            detect_change!(prev_timebase_utc, v_timebase_utc, default_hide_timebase_utc);
+            detect_change!(prev_utc_avail, v_utc_avail, default_hide_utc_avail);
+            detect_change!(prev_time_valid, v_time_valid, default_hide_time_valid);
+            detect_change!(
+                prev_new_rising_edge,
+                v_new_rising_edge,
+                default_hide_new_rising_edge
+            );
         }
 
         // Add step counter metadata
@@ -89,74 +153,32 @@ impl GpsMarkRecords {
             "Timestamp Δt stats (without faults) [s]".to_owned(),
             normal_stats,
         ));
-        (
-            vec![
-                RawPlotCommon::new(
-                    "Pulse width [µs]".to_owned(),
-                    pulse_width,
-                    ExpectedPlotRange::Thousands,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Accuracy estimate [ns]".to_owned(),
-                    acc_est,
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-                RawPlotCommon::new("Count".to_owned(), count, ExpectedPlotRange::Thousands).into(),
-                RawPlotCommon::new(
-                    "Mode running [bool]".to_owned(),
-                    mode_running,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new("Run [bool]".to_owned(), run, ExpectedPlotRange::Percentage)
-                    .into(),
-                RawPlotCommon::new(
-                    "New falling edge [bool]".to_owned(),
-                    new_falling_edge,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Timebase GNSS [bool]".to_owned(),
-                    timebase_gnss,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Timebase UTC [bool]".to_owned(),
-                    timebase_utc,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "UTC available [bool]".to_owned(),
-                    utc_avail,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Time valid [bool]".to_owned(),
-                    time_valid,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "New rising edge [bool]".to_owned(),
-                    new_rising_edge,
-                    ExpectedPlotRange::Percentage,
-                )
-                .into(),
-                RawPlotCommon::new(
-                    "Timestamp Δt [s]".to_owned(),
-                    delta_computer.take_plot_points(),
-                    ExpectedPlotRange::Hundreds,
-                )
-                .into(),
-            ],
-            metadata,
-        )
+
+        #[rustfmt::skip]
+        let raw_plots = RawPlotBuilder::new(TSC_LEGEND_NAME)
+            .add(pulse_width, DataType::Other {
+                    name: "Pulse width".into(),
+                    unit: Some("µs".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: true})
+            .add(acc_est, DataType::Other {
+                    name: "accuracy estimate".into(),
+                    unit: Some("ns".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: true})
+            .add(count, DataType::other_unitless("Count", ExpectedPlotRange::Thousands, true))
+            .add(mode_running, DataType::bool("Mode running", default_hide_mode_running))
+            .add(run, DataType::bool("Run", default_hide_run))
+            .add(new_falling_edge, DataType::bool("New falling edge", default_hide_new_falling_edge))
+            .add(timebase_gnss, DataType::bool("Timebase GNSS", default_hide_timebase_gnss))
+            .add(timebase_utc, DataType::bool("Timebase UTC", default_hide_timebase_utc))
+            .add(utc_avail, DataType::bool("UTC available", default_hide_utc_avail))
+            .add(time_valid, DataType::bool("Time valid", default_hide_time_valid))
+            .add(new_rising_edge, DataType::bool("New rising edge", default_hide_new_rising_edge))
+            .add(delta_computer.take_plot_points(), DataType::TimeDelta {
+                    name: "GPS sample".into(),
+                    unit: "s".into()});
+        (raw_plots.build(), metadata)
     }
 }
 

@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use hdf5::H5Type;
 use ndarray::Array1;
 use plotinator_log_if::{
-    prelude::{GeoSpatialDataBuilder, RawPlotCommon},
-    rawplot::RawPlot,
+    prelude::GeoSpatialDataBuilder,
+    rawplot::{DataType, RawPlot, RawPlotBuilder},
 };
 use plotinator_ui_util::ExpectedPlotRange;
 
@@ -71,6 +71,28 @@ impl GpsPvtRecords {
         let mut confirmed_date = Vec::with_capacity(time.len());
         let mut confirmed_time = Vec::with_capacity(time.len());
 
+        let mut default_hide_valid_date = true;
+        let mut default_hide_valid_time = true;
+        let mut default_hide_valid_fully_resolved = true;
+        let mut default_hide_valid_mag = true;
+        let mut default_hide_gnss_fix_ok = true;
+        let mut default_hide_diff_soln = true;
+        let mut default_hide_head_veh_valid = true;
+        let mut default_hide_confirmed_avail = true;
+        let mut default_hide_confirmed_date = true;
+        let mut default_hide_confirmed_time = true;
+
+        let mut prev_valid_date: Option<f64> = None;
+        let mut prev_valid_time: Option<f64> = None;
+        let mut prev_valid_fully_resolved: Option<f64> = None;
+        let mut prev_valid_mag: Option<f64> = None;
+        let mut prev_gnss_fix_ok: Option<f64> = None;
+        let mut prev_diff_soln: Option<f64> = None;
+        let mut prev_head_veh_valid: Option<f64> = None;
+        let mut prev_confirmed_avail: Option<f64> = None;
+        let mut prev_confirmed_date: Option<f64> = None;
+        let mut prev_confirmed_time: Option<f64> = None;
+
         for (e, &timestamp_opt) in self.inner.iter().zip(&time) {
             let Some(t) = timestamp_opt else {
                 log::warn!("Ignoring NAV-PVT data from invalid timestamp");
@@ -88,31 +110,81 @@ impl GpsPvtRecords {
             h_elips.push([t, e.height_meters()]);
             hacc.push([t, e.h_acc as f64 * 1e-3]); // mm -> m
             vacc.push([t, e.v_acc as f64 * 1e-3]); // mm -> m
-            sacc.push([t, e.s_acc as f64 * 1e-3]); // mm/s -> m/s
+            sacc.push([t, e.s_acc as f64 * 3.6e-3]); // mm/s -> km/h
             pdop.push([t, e.p_dop as f64 * 0.01]);
-            vel_n.push([t, e.vel_n as f64 * 1e-3]); // mm/s -> m/s
-            vel_e.push([t, e.vel_e as f64 * 1e-3]); // mm/s -> m/s
-            vel_d.push([t, e.vel_d as f64 * 1e-3]); // mm/s -> m/s
+            vel_n.push([t, e.vel_n as f64 * 3.6e-3]); // mm/s -> km/h
+            vel_e.push([t, e.vel_e as f64 * 3.6e-3]); // mm/s -> km/h
+            vel_d.push([t, e.vel_d as f64 * 3.6e-3]); // mm/s -> km/h
             mag_dec.push([t, e.mag_dec as f64 * 1e-2]); // degrees * 1e-2 -> degrees
 
             // Extract valid flags
-            valid_date.push([t, e.flag_valid(GpsPvtRecord::VALID_DATE)]);
-            valid_time.push([t, e.flag_valid(GpsPvtRecord::VALID_TIME)]);
-            valid_fully_resolved.push([t, e.flag_valid(GpsPvtRecord::VALID_FULLY_RESOLVED)]);
-            valid_mag.push([t, e.flag_valid(GpsPvtRecord::VALID_MAG)]);
-
+            let v_valid_date = e.flag_valid(GpsPvtRecord::VALID_DATE);
+            let v_valid_time = e.flag_valid(GpsPvtRecord::VALID_TIME);
+            let v_valid_fully_resolved = e.flag_valid(GpsPvtRecord::VALID_FULLY_RESOLVED);
+            let v_valid_mag = e.flag_valid(GpsPvtRecord::VALID_MAG);
             // Extract status flags
-            gnss_fix_ok.push([t, e.flag_status(GpsPvtRecord::FLAGS_GNSS_FIX_OK)]);
-            diff_soln.push([t, e.flag_status(GpsPvtRecord::FLAGS_DIFF_SOLN)]);
-            head_veh_valid.push([t, e.flag_status(GpsPvtRecord::FLAGS_HEAD_VEH_VALID)]);
-
+            let v_gnss_fix_ok = e.flag_status(GpsPvtRecord::FLAGS_GNSS_FIX_OK);
+            let v_diff_soln = e.flag_status(GpsPvtRecord::FLAGS_DIFF_SOLN);
+            let v_head_veh_valid = e.flag_status(GpsPvtRecord::FLAGS_HEAD_VEH_VALID);
             // Extract additional flags
-            confirmed_avail.push([
-                t,
-                e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_AVAILABLE),
-            ]);
-            confirmed_date.push([t, e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_DATE)]);
-            confirmed_time.push([t, e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_TIME)]);
+            let v_confirmed_avail = e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_AVAILABLE);
+            let v_confirmed_date = e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_DATE);
+            let v_confirmed_time = e.flag_additional(GpsPvtRecord::FLAGS2_CONFIRMED_TIME);
+
+            valid_date.push([t, v_valid_date]);
+            valid_time.push([t, v_valid_time]);
+            valid_fully_resolved.push([t, v_valid_fully_resolved]);
+            valid_mag.push([t, v_valid_mag]);
+            gnss_fix_ok.push([t, v_gnss_fix_ok]);
+            diff_soln.push([t, v_diff_soln]);
+            head_veh_valid.push([t, v_head_veh_valid]);
+            confirmed_avail.push([t, v_confirmed_avail]);
+            confirmed_date.push([t, v_confirmed_date]);
+            confirmed_time.push([t, v_confirmed_time]);
+
+            macro_rules! detect_change {
+                ($prev:ident, $curr:expr, $flag:ident) => {{
+                    if $flag {
+                        if let Some(p) = $prev {
+                            if (p - $curr).abs() > 0.1 {
+                                $flag = false;
+                            }
+                        }
+                        $prev = Some($curr);
+                    }
+                }};
+            }
+
+            detect_change!(prev_valid_date, v_valid_date, default_hide_valid_date);
+            detect_change!(prev_valid_time, v_valid_time, default_hide_valid_time);
+            detect_change!(
+                prev_valid_fully_resolved,
+                v_valid_fully_resolved,
+                default_hide_valid_fully_resolved
+            );
+            detect_change!(prev_valid_mag, v_valid_mag, default_hide_valid_mag);
+            detect_change!(prev_gnss_fix_ok, v_gnss_fix_ok, default_hide_gnss_fix_ok);
+            detect_change!(prev_diff_soln, v_diff_soln, default_hide_diff_soln);
+            detect_change!(
+                prev_head_veh_valid,
+                v_head_veh_valid,
+                default_hide_head_veh_valid
+            );
+            detect_change!(
+                prev_confirmed_avail,
+                v_confirmed_avail,
+                default_hide_confirmed_avail
+            );
+            detect_change!(
+                prev_confirmed_date,
+                v_confirmed_date,
+                default_hide_confirmed_date
+            );
+            detect_change!(
+                prev_confirmed_time,
+                v_confirmed_time,
+                default_hide_confirmed_time
+            );
         }
 
         let geo_data: Option<RawPlot> = GeoSpatialDataBuilder::new(TSC_LEGEND_NAME.to_owned())
@@ -125,122 +197,31 @@ impl GpsPvtRecords {
             .build_into_rawplot()
             .expect("invalid builder");
 
-        let mut plots = vec![
-            RawPlotCommon::new("Satellites", numsv, ExpectedPlotRange::Hundreds).into(),
-            RawPlotCommon::new(
-                "Height [ellipsoid, m]",
-                h_elips,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new("Height [MSL, m]", h_msl, ExpectedPlotRange::Hundreds).into(),
-            RawPlotCommon::new(
-                "Horizontal accuracy [m]",
-                hacc,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Vertical accuracy [m]",
-                vacc,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Speed accuracy [m/s]",
-                sacc,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new("Position DOP", pdop, ExpectedPlotRange::Hundreds).into(),
-            RawPlotCommon::new(
-                "Velocity North [m/s]",
-                vel_n,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Velocity East [m/s]",
-                vel_e,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Velocity Down [m/s]",
-                vel_d,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Magnetic Declination [deg]",
-                mag_dec,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-            // Valid flags
-            RawPlotCommon::new(
-                "Valid Date [bool]",
-                valid_date,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Valid Time [bool]",
-                valid_time,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Valid Fully Resolved [bool]",
-                valid_fully_resolved,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Valid Magnetic Declination [bool]",
-                valid_mag,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            // Status flags
-            RawPlotCommon::new(
-                "GNSS Fix OK [bool]",
-                gnss_fix_ok,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Differential Solution [bool]",
-                diff_soln,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Head Vehicle Valid [bool]",
-                head_veh_valid,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            // Additional flags
-            RawPlotCommon::new(
-                "Confirmed Available [bool]",
-                confirmed_avail,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Confirmed Date [bool]",
-                confirmed_date,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-            RawPlotCommon::new(
-                "Confirmed Time [bool]",
-                confirmed_time,
-                ExpectedPlotRange::Percentage,
-            )
-            .into(),
-        ];
+        #[rustfmt::skip]
+        let plots = RawPlotBuilder::new(TSC_LEGEND_NAME)
+            .add(numsv, DataType::other_unitless("Satellites", ExpectedPlotRange::Hundreds, false))
+            .add(h_msl, DataType::AltitudeMSL)
+            .add(h_elips, DataType::AltitudeEllipsoidal)
+            .add(hacc, DataType::other_distance("Horizontal acc", true))
+            .add(vacc, DataType::other_distance("Vertical acc", true))
+            .add(sacc, DataType::other_velocity("Speed acc", true))
+            .add(pdop, DataType::other_unitless("PDOP", ExpectedPlotRange::Hundreds, true))
+            .add(vel_n, DataType::other_velocity("Velocity North", true))
+            .add(vel_e, DataType::other_velocity("Velocity East", true))
+            .add(vel_d, DataType::other_velocity("Velocity Down", true))
+            .add(mag_dec, DataType::other_degrees("Magnetic Decl.", true))
+            .add(valid_date, DataType::bool("Valid Date", default_hide_valid_date))
+            .add(valid_time, DataType::bool("Valid Time", default_hide_valid_time))
+            .add(valid_fully_resolved, DataType::bool("Valid fully resolved", default_hide_valid_fully_resolved))
+            .add(valid_mag, DataType::bool("Valid Magnetic Declination", default_hide_valid_mag))
+            .add(gnss_fix_ok, DataType::bool("GNSS Fix OK", default_hide_gnss_fix_ok))
+            .add(diff_soln, DataType::bool("Differential Solution", default_hide_diff_soln))
+            .add(head_veh_valid, DataType::bool("Head Vehicle Valid", default_hide_head_veh_valid))
+            .add(confirmed_avail, DataType::bool("Confirmed Available", default_hide_confirmed_avail))
+            .add(confirmed_date, DataType::bool("Confirmed Date", default_hide_confirmed_date))
+            .add(confirmed_time, DataType::bool("Confirmed Time", default_hide_confirmed_time));
+        let mut plots = plots.build();
+
         if let Some(geo_data) = geo_data {
             plots.push(geo_data);
         }

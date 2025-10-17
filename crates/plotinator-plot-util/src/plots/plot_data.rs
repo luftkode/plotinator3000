@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
-use plotinator_log_if::prelude::RawPlotCommon;
+use plotinator_log_if::{prelude::RawPlotCommon, rawplot::DataType};
 use plotinator_ui_util::auto_color_plot_area;
 use serde::{Deserialize, Serialize};
 
@@ -88,6 +88,7 @@ impl PlotData {
 
     pub fn add_plot(&mut self, raw_plot: &RawPlotCommon, log_id: u16, descriptive_name: &str) {
         let new_plot = CookedPlot::new(raw_plot, log_id, descriptive_name.to_owned());
+        log::info!("Adding plot: {}", new_plot.name());
         self.plots.push(new_plot);
         self.calc_max_bounds();
     }
@@ -132,6 +133,7 @@ pub struct CookedPlot {
     associated_descriptive_name: String,
     color: Color32,
     highlight: bool,
+    ty: DataType,
 }
 
 type PointList<'pl> = &'pl [[f64; 2]];
@@ -171,8 +173,9 @@ impl CookedPlot {
             raw_plot_points,
             mipmap_minmax_plot_points: Some(mipmap_min_pp),
             max_bounds: Some(max_bounds),
-            name: raw_plot.name().to_owned(),
+            name: raw_plot.legend_name().to_owned(),
             log_id,
+            ty: raw_plot.ty().clone(),
             label,
             associated_descriptive_name,
             color,
@@ -369,6 +372,10 @@ impl CookedPlot {
     /// Label of the plot which includes the log id ie. `"<name> #<log_id>"`
     pub fn label(&self) -> &str {
         &self.label
+    }
+
+    pub fn ty(&self) -> &DataType {
+        &self.ty
     }
 
     /// Whether or not the line should be highlighted

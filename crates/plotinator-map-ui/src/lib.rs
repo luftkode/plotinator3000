@@ -328,8 +328,12 @@ impl MapViewPort {
 
             // The button is only enabled when the map is in a "detached" state, i.e., the user
             // has dragged it away from the followed position.
-            let follow_button = egui::Button::new(RichText::new(format!("{AIRPLANE} Follow Position")));
-
+            let follow_txt = if is_detached { "Follow Position" } else { "<< Following >>"};
+            let mut btn_txt = RichText::new(format!("{AIRPLANE} {follow_txt}"));
+            if !is_detached {
+                btn_txt = btn_txt.color(Color32::GREEN);
+            }
+            let follow_button = egui::Button::new(btn_txt);
             if ui.add_enabled(is_detached, follow_button)
                 .on_hover_text("Follow the live position, locking the map's center to the latest coordinate received on MQTT. Only applies to the latest received MQTT point")
                 .clicked()

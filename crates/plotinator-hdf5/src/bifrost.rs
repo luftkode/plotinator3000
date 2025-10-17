@@ -5,13 +5,15 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use hdf5::Dataset;
 use num_traits::ToPrimitive as _;
 use plotinator_log_if::prelude::*;
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::rawplot::DataType;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
 use crate::util::{
     assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute,
 };
+
+const LEGEND_NAME: &str = "TX Bifrost";
 
 impl SkytemHdf5 for BifrostLoopCurrent {
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
@@ -119,19 +121,25 @@ fn process_points_to_rawplots(
     }
 
     let plot_polarity0 = RawPlotCommon::new(
-        "+ Polarity [A]".to_owned(),
+        LEGEND_NAME,
         polarity0_currents,
-        ExpectedPlotRange::Hundreds,
+        DataType::Current {
+            suffix: Some("+".into()),
+        },
     );
     let plot_polarity1 = RawPlotCommon::new(
-        "- Polarity [A]".to_owned(),
+        LEGEND_NAME,
         polarity1_currents,
-        ExpectedPlotRange::Hundreds,
+        DataType::Current {
+            suffix: Some("-".into()),
+        },
     );
     let plot_combined = RawPlotCommon::new(
-        "Combined [A]".to_owned(),
+        LEGEND_NAME,
         combined_currents,
-        ExpectedPlotRange::Hundreds,
+        DataType::Current {
+            suffix: Some("Combined".into()),
+        },
     );
     vec![
         plot_polarity0.into(),
@@ -236,7 +244,7 @@ mod tests {
                 let expected_last_value = 17.78993797302246;
                 assert_eq!(common.points().last().unwrap()[1], expected_last_value);
             }
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
 
         Ok(())

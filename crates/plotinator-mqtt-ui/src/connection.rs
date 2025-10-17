@@ -1,10 +1,60 @@
+use std::time::Instant;
+
 use egui::Color32;
+use egui_plot::PlotBounds;
 
 use crate::{
     cfg_window::MqttConfigWindow,
     data_receiver::MqttDataReceiver,
     plot::{MqttPlotData, MqttPlotPoints},
 };
+
+/// Manages the state for automatically scrolling the plot over time.
+#[allow(missing_copy_implementations, reason = "it's a singleton")]
+#[derive(Default)]
+pub struct PlotScroller {
+    active: bool,
+    last_update: Option<Instant>,
+}
+
+impl PlotScroller {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Calculates the elapsed time since the last call and translates the
+    /// provided `PlotBounds` horizontally (along the x-axis).
+    ///
+    /// The translation is based on nanoseconds to match the plot's time representation.
+    /// If this is the first call, it returns the original bounds without modification.
+    pub fn update(&mut self, bounds: &mut PlotBounds) {
+        let now = Instant::now();
+        if let Some(last_update) = self.last_update {
+            let elapsed_ns = now.duration_since(last_update).as_nanos() as f64;
+            bounds.translate((elapsed_ns, 0.0));
+        }
+        self.last_update = Some(now);
+    }
+
+    /// Resets the internal timer. This should be called whenever scrolling is
+    /// disabled to prevent a large time jump when it's re-enabled.
+    fn reset(&mut self) {
+        self.last_update = None;
+    }
+
+    pub fn active(&self) -> bool {
+        self.active
+    }
+
+    pub fn disable(&mut self) {
+        self.active = false;
+    }
+
+    pub fn activate(&mut self) {
+        self.reset();
+        self.active = true;
+    }
+}
 
 #[derive(Default)]
 pub struct MqttConnection {
@@ -13,13 +63,35 @@ pub struct MqttConnection {
     pub mqtt_plot_data: Option<MqttPlotData>,
     // auto scale plot bounds (MQTT only)
     pub set_auto_bounds: bool,
+    /// Scroll the plot to follow the incoming data,
+    pub plot_scroller: PlotScroller,
 }
 
 impl MqttConnection {
+    /// Clear all data and shutdown all connections
     pub fn reset(&mut self) {
         self.mqtt_data_receiver.clear();
         self.mqtt_config_window = None;
         self.mqtt_plot_data = None;
+    }
+
+    /// Clears all the plot points in all MQTT plot data while still retaining known topics etc.
+    pub fn clear_data(&mut self) {
+        if let Some(data) = self.mqtt_plot_data.as_mut() {
+            for (plot_points, _) in &mut data.mqtt_plot_data {
+                plot_points.data.clear();
+            }
+        }
+    }
+
+    pub fn total_points(&self) -> u32 {
+        let mut total_points: u32 = 0;
+        if let Some(data) = self.mqtt_plot_data.as_ref() {
+            for (plot_points, _) in &data.mqtt_plot_data {
+                total_points += plot_points.data.len() as u32;
+            }
+        }
+        total_points
     }
 
     pub fn connect(&mut self) {
@@ -106,7 +178,7 @@ impl MqttConnection {
     }
 
     pub fn connection_modes(&self) -> Vec<MqttConnectionMode> {
-        let mut modes = vec![];
+        let mut modes = Vec::with_capacity(self.mqtt_data_receiver.len());
         for receiver in &self.mqtt_data_receiver {
             let broker_host = receiver.broker_host().to_owned();
             if receiver.connected() {

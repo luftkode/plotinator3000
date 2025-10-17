@@ -3,17 +3,16 @@ use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
 use ndarray::Array2;
 use plotinator_log_if::prelude::*;
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::rawplot::DataType;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
 use crate::stream_descriptor::StreamDescriptor;
 use crate::util::{
-    self, assert_description_in_attrs, log_all_attributes, open_dataset,
-    read_any_attribute_to_string, read_string_attribute,
+    self, assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute,
 };
 
-const RAW_PLOT_NAME_SUFFIX: &str = "(Njord-WASP)";
+const LEGEND_NAME: &str = "Njord-WASP";
 
 impl SkytemHdf5 for Wasp200 {
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
@@ -21,7 +20,6 @@ impl SkytemHdf5 for Wasp200 {
         log_all_attributes(&height_dataset);
         log_all_attributes(&timestamp_dataset);
 
-        let height_unit = read_any_attribute_to_string(&height_dataset.attr("unit")?)?;
         let heights: ndarray::Array2<f32> = height_dataset.read()?;
         log::info!("Got wasp wasp heights with {} samples", heights.len());
 
@@ -34,14 +32,8 @@ impl SkytemHdf5 for Wasp200 {
             height_with_ts.push([ts, *height as f64]);
         }
 
-        let mut raw_plots = vec![
-            RawPlotCommon::new(
-                format!("Height [{height_unit}] {RAW_PLOT_NAME_SUFFIX}"),
-                height_with_ts,
-                ExpectedPlotRange::Hundreds,
-            )
-            .into(),
-        ];
+        let mut raw_plots =
+            vec![RawPlotCommon::new(LEGEND_NAME, height_with_ts, DataType::AltitudeLaser).into()];
 
         if let Some(delta_t_samples) = delta_t_samples_opt {
             raw_plots.push(delta_t_samples.into());
@@ -146,8 +138,7 @@ impl Wasp200 {
             .timestamp_nanos(*timestamps_raw.first().expect("Empty timestamps"))
             .to_utc();
 
-        let delta_t_samples =
-            util::gen_time_between_samples_rawplot(&timestamps_raw, RAW_PLOT_NAME_SUFFIX);
+        let delta_t_samples = util::gen_time_between_samples_rawplot(&timestamps_raw, LEGEND_NAME);
 
         let mut timestamps = vec![];
         for t in timestamps_raw {
@@ -186,7 +177,7 @@ mod tests {
 
         match &wasp200.raw_plots[0] {
             RawPlot::Generic { common } => assert_eq!(common.points().len(), 70971),
-            _ => unreachable!(),
+            RawPlot::GeoSpatialDataset(_) => unreachable!(),
         }
 
         Ok(())
