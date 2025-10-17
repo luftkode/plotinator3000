@@ -26,13 +26,23 @@ For inspiration/educational purposes. Anyone developing `egui`/`eframe` apps may
 
 ## Installation
 
-See the [latest release](https://github.com/luftkode/plotinator3000/releases/latest) and choose the installation method you prefer.
+See the [latest release](https://github.com/luftkode/plotinator3000/releases/latest) and choose the installation method you prefer, or if you're lazy you can choose the recommended method for your system below.
 
-## Use in browser: https://plotinator3000.web.app/
+### 🖥️ Windows 🖥️
 
-A more stripped down version is also available as a web app at https://plotinator3000.web.app/ it lacks certain features like drag-n-dropping zip-files and directories, and will likely never have HDF5 support.
+Download the [latest MSI installer: plotinator3000-x86_64-pc-windows-msvc.msi](https://github.com/luftkode/plotinator3000/releases/latest/download/plotinator3000-x86_64-pc-windows-msvc.msi).
 
-## Quick start
+### 🍎 MacOS & 🐧 Linux
+
+Run the installation script in a terminal
+
+```console
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/luftkode/plotinator3000/releases/latest/download/plotinator3000-installer.sh | sh
+```
+
+## Developing
+
+### Quick start
 
 Check the [Justfile](Justfile) for recipes to get started, or invoke `just` to list available recipes.
 
@@ -53,8 +63,6 @@ Serve as WASM on a local web server
 ```shell
 just serve
 ```
-
-## Developer info
 
 ### The code
 
@@ -85,7 +93,3 @@ pr-run-mode = "upload"
 ```
 
 Will run the release pipeline on pull request, then you can open a PR and develop/fix/test the release pipeline.
-
-#### Web app deployment
-
-Currently done on Firebase because it is easy and free for static websites which is what this app compiles to. Long term deployment is undecided and the web app is more of an after thought, `Plotinator3000` works best as a native app.
