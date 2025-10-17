@@ -155,7 +155,7 @@ impl StatusLog {
                     name: "Engine Temp".into(),
                 },
             )
-            .add(fan_on, DataType::bool("Fan ON"))
+            .add(fan_on, DataType::bool("Fan ON", true))
             .add(
                 vbat,
                 DataType::Voltage {

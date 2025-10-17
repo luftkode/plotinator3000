@@ -39,10 +39,10 @@ impl PlotNameFilter {
     }
 
     /// Returns whether a plot with the given name should be highlighted (is hovered)
-    pub fn should_highlight(&self, plot_name: &str) -> bool {
+    pub fn should_highlight(&self, log_id: u16, plot_ty: &DataType) -> bool {
         self.plots
             .iter()
-            .find(|p| p.name() == plot_name)
+            .find(|p| p.log_id == log_id && &p.ty == plot_ty)
             .is_some_and(|p| p.is_hovered())
     }
 

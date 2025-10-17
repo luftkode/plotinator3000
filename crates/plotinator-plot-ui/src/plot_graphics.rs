@@ -228,7 +228,6 @@ fn fill_log_plots(
 ///
 /// * `plot_ui` - The plot UI to paint on.
 /// * `plot_data` - [`PlotData`].
-/// * `line_width` - The width of plot lines.
 /// * `plot_settings` - Controls which plots to display.
 fn fill_plot<'p>(
     plot_ui: &mut egui_plot::PlotUi<'p>,

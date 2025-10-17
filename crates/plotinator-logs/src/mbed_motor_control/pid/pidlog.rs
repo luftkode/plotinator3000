@@ -123,7 +123,7 @@ impl PidLog {
                     false,
                 ),
             )
-            .add(fan_on, DataType::bool("Fan ON"))
+            .add(fan_on, DataType::bool("Fan ON", true))
             .add(vbat, DataType::Voltage { name: "Bat".into() })
             .build()
     }

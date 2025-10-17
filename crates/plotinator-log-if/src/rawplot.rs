@@ -120,7 +120,7 @@ pub enum DataType {
     /// Temperature in celsius °C
     Temperature { name: String },
     /// Flag, something that is 0 or 1, with the `name` in the string
-    Bool { name: String },
+    Bool { name: String, default_hidden: bool },
     /// Time/duration e.g. engine runtime in hours [h]
     Time { name: String, unit: String },
     /// Time delta, e.g. the difference between system time and GPS time or sample time
@@ -161,7 +161,7 @@ impl<'s> DataType {
             Self::ElectricalResistance { name } => format!("{name} [Ω]").into(),
             Self::MagneticFlux => "Flux [nT]".into(),
             Self::Temperature { name } => format!("{name} °C").into(),
-            Self::Bool { name } => format!("{name} [bool]").into(),
+            Self::Bool { name, .. } => format!("{name} [bool]").into(),
             Self::Time { name, unit } => format!("{name} [{unit}]").into(),
             Self::TimeDelta { name, unit } => format!("{name} Δ [{unit}]").into(),
             Self::Percentage { name } => format!("{name} [%]").into(),
@@ -190,8 +190,11 @@ impl<'s> DataType {
     }
 
     /// Bool/flag with the `name` such as e.g. `UTC enabled` for a GNSS receiver
-    pub fn bool(name: impl Into<String>) -> Self {
-        Self::Bool { name: name.into() }
+    pub fn bool(name: impl Into<String>, default_hidden: bool) -> Self {
+        Self::Bool {
+            name: name.into(),
+            default_hidden,
+        }
     }
 
     /// `other` data type with no unit, e.g. PDOP
@@ -280,11 +283,12 @@ impl<'s> DataType {
             | Self::ElectricalResistance { .. }
             | Self::MagneticFlux
             | Self::Temperature { .. }
-            | Self::Bool { .. }
             | Self::Time { .. }
             | Self::TimeDelta { .. }
             | Self::Percentage { .. } => false,
-            Self::Other { default_hidden, .. } => *default_hidden,
+            Self::Bool { default_hidden, .. } | Self::Other { default_hidden, .. } => {
+                *default_hidden
+            }
             Self::UtmNorthing
             | Self::UtmEasting
             | Self::Latitude

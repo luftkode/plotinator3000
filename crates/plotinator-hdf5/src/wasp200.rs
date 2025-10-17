@@ -12,7 +12,7 @@ use crate::util::{
     self, assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute,
 };
 
-const RAW_PLOT_NAME_SUFFIX: &str = "(Njord-WASP)";
+const LEGEND_NAME: &str = "Njord-WASP";
 
 impl SkytemHdf5 for Wasp200 {
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
@@ -32,14 +32,8 @@ impl SkytemHdf5 for Wasp200 {
             height_with_ts.push([ts, *height as f64]);
         }
 
-        let mut raw_plots = vec![
-            RawPlotCommon::new(
-                RAW_PLOT_NAME_SUFFIX,
-                height_with_ts,
-                DataType::AltitudeLaser,
-            )
-            .into(),
-        ];
+        let mut raw_plots =
+            vec![RawPlotCommon::new(LEGEND_NAME, height_with_ts, DataType::AltitudeLaser).into()];
 
         if let Some(delta_t_samples) = delta_t_samples_opt {
             raw_plots.push(delta_t_samples.into());
@@ -144,8 +138,7 @@ impl Wasp200 {
             .timestamp_nanos(*timestamps_raw.first().expect("Empty timestamps"))
             .to_utc();
 
-        let delta_t_samples =
-            util::gen_time_between_samples_rawplot(&timestamps_raw, RAW_PLOT_NAME_SUFFIX);
+        let delta_t_samples = util::gen_time_between_samples_rawplot(&timestamps_raw, LEGEND_NAME);
 
         let mut timestamps = vec![];
         for t in timestamps_raw {

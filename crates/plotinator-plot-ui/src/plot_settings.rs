@@ -349,7 +349,7 @@ impl PlotSettings {
         let set_plot_highlight = |plot_data: &mut plotinator_plot_util::PlotData| {
             for pd in plot_data.plots_as_mut() {
                 let should_highlight = ids_to_highlight.contains(&pd.log_id())
-                    || self.plot_name_filter.should_highlight(pd.name());
+                    || self.plot_name_filter.should_highlight(pd.log_id(), pd.ty());
                 *pd.get_highlight_mut() = should_highlight;
             }
             for pl in plot_data.plot_labels_as_mut() {

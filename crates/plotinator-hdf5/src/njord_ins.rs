@@ -188,72 +188,121 @@ fn process_system_status(
     let mut gnss_antenna_connection = Vec::with_capacity(dataset_len);
     let mut data_output_overflow_alarm = Vec::with_capacity(dataset_len);
 
+    let mut default_hide_sys_fail = true;
+    let mut default_hide_sensor_fail = true;
+    let mut default_hide_gyro_fail = true;
+    let mut default_hide_mag_fail = true;
+    let mut default_hide_pressure_fail = true;
+    let mut default_hide_gnss_fail = true;
+    let mut default_hide_accel_over_range = true;
+    let mut default_hide_gyro_over_range = true;
+    let mut default_hide_mag_over_range = true;
+    let mut default_hide_pressure_over_range = true;
+    let mut default_hide_min_temp_alarm = true;
+    let mut default_hide_max_temp_alarm = true;
+    let mut default_hide_high_voltage_alarm = true;
+    let mut default_hide_gnss_antenna_conn = true;
+    let mut default_hide_data_output_overflow_alarm = true;
+
     for (row, ts) in system_status.rows().into_iter().zip(timestamps) {
-        system_failures.push([*ts, row[0] as f64]);
-        accelerometer_sensor_failures.push([*ts, row[1] as f64]);
-        gyroscope_sensor_failures.push([*ts, row[2] as f64]);
-        magnetometer_sensor_failures.push([*ts, row[3] as f64]);
-        pressure_sensor_failures.push([*ts, row[4] as f64]);
-        gnss_failures.push([*ts, row[5] as f64]);
-        accelerometer_over_range.push([*ts, row[6] as f64]);
-        gyroscope_over_range.push([*ts, row[7] as f64]);
-        magnetometer_over_range.push([*ts, row[8] as f64]);
-        pressure_over_range.push([*ts, row[9] as f64]);
-        minimum_temperature_alarm.push([*ts, row[10] as f64]);
-        maximum_temperature_alarm.push([*ts, row[11] as f64]);
+        let sys_fail = row[0] as f64;
+        let accel_fail = row[1] as f64;
+        let gyro_fail = row[2] as f64;
+        let mag_fail = row[3] as f64;
+        let pressure_fail = row[4] as f64;
+        let gnss_fail = row[5] as f64;
+        let accel_over = row[6] as f64;
+        let gyro_over = row[7] as f64;
+        let mag_over = row[8] as f64;
+        let pressure_over = row[9] as f64;
+        let min_temp_alarm = row[10] as f64;
+        let max_temp_alarm = row[11] as f64;
+        let high_voltage_alarm_val = row[13] as f64;
+        let gnss_antenna_conn_val = row[14] as f64;
+        let data_output_overflow_val = row[15] as f64;
+
+        if sys_fail > 0.0 {
+            default_hide_sys_fail = false;
+        }
+        if accel_fail > 0.0 {
+            default_hide_sensor_fail = false;
+        }
+        if gyro_fail > 0.0 {
+            default_hide_gyro_fail = false;
+        }
+        if mag_fail > 0.0 {
+            default_hide_mag_fail = false;
+        }
+        if pressure_fail > 0.0 {
+            default_hide_pressure_fail = false;
+        }
+        if gnss_fail > 0.0 {
+            default_hide_gnss_fail = false;
+        }
+        if accel_over > 0.0 {
+            default_hide_accel_over_range = false;
+        }
+        if gyro_over > 0.0 {
+            default_hide_gyro_over_range = false;
+        }
+        if mag_over > 0.0 {
+            default_hide_mag_over_range = false;
+        }
+        if pressure_over > 0.0 {
+            default_hide_pressure_over_range = false;
+        }
+        if min_temp_alarm > 0.0 {
+            default_hide_min_temp_alarm = false;
+        }
+        if max_temp_alarm > 0.0 {
+            default_hide_max_temp_alarm = false;
+        }
+        if high_voltage_alarm_val > 0.0 {
+            default_hide_high_voltage_alarm = false;
+        }
+        if gnss_antenna_conn_val > 0.0 {
+            default_hide_gnss_antenna_conn = false;
+        }
+        if data_output_overflow_val > 0.0 {
+            default_hide_data_output_overflow_alarm = false;
+        }
+
+        system_failures.push([*ts, sys_fail]);
+        accelerometer_sensor_failures.push([*ts, accel_fail]);
+        gyroscope_sensor_failures.push([*ts, gyro_fail]);
+        magnetometer_sensor_failures.push([*ts, mag_fail]);
+        pressure_sensor_failures.push([*ts, pressure_fail]);
+        gnss_failures.push([*ts, gnss_fail]);
+        accelerometer_over_range.push([*ts, accel_over]);
+        gyroscope_over_range.push([*ts, gyro_over]);
+        magnetometer_over_range.push([*ts, mag_over]);
+        pressure_over_range.push([*ts, pressure_over]);
+        minimum_temperature_alarm.push([*ts, min_temp_alarm]);
+        maximum_temperature_alarm.push([*ts, max_temp_alarm]);
         // Bit 12 is reserved/unused
-        high_voltage_alarm.push([*ts, row[13] as f64]);
-        gnss_antenna_connection.push([*ts, row[14] as f64]);
-        data_output_overflow_alarm.push([*ts, row[15] as f64]);
+        high_voltage_alarm.push([*ts, high_voltage_alarm_val]);
+        gnss_antenna_connection.push([*ts, gnss_antenna_conn_val]);
+        data_output_overflow_alarm.push([*ts, data_output_overflow_val]);
     }
 
-    RawPlotBuilder::new(LEGEND_NAME)
-        .add(system_failures, DataType::bool("System Failures"))
-        .add(
-            accelerometer_sensor_failures,
-            DataType::bool("Accelerometer Sensor Failures"),
-        )
-        .add(
-            gyroscope_sensor_failures,
-            DataType::bool("Gyroscope Sensor Failures"),
-        )
-        .add(
-            magnetometer_sensor_failures,
-            DataType::bool("Magnetometer Sensor Failures"),
-        )
-        .add(
-            pressure_sensor_failures,
-            DataType::bool("Pressure Sensor Failures"),
-        )
-        .add(gnss_failures, DataType::bool("GNSS Failures"))
-        .add(
-            accelerometer_over_range,
-            DataType::bool("Accelerometer Over Range"),
-        )
-        .add(gyroscope_over_range, DataType::bool("Gyroscope Over Range"))
-        .add(
-            magnetometer_over_range,
-            DataType::bool("Magnetometer Over Range"),
-        )
-        .add(pressure_over_range, DataType::bool("Pressure Over Range"))
-        .add(
-            minimum_temperature_alarm,
-            DataType::bool("Minimum Temperature Alarm"),
-        )
-        .add(
-            maximum_temperature_alarm,
-            DataType::bool("Maximum Temperature Alarm"),
-        )
-        .add(high_voltage_alarm, DataType::bool("High Voltage Alarm"))
-        .add(
-            gnss_antenna_connection,
-            DataType::bool("GNSS Antenna Connection"),
-        )
-        .add(
-            data_output_overflow_alarm,
-            DataType::bool("Data Output Overflow Alarm"),
-        )
-        .build()
+    #[rustfmt::skip]
+    let plots = RawPlotBuilder::new(LEGEND_NAME)
+        .add(system_failures, DataType::bool("System Failures", default_hide_sys_fail))
+        .add(accelerometer_sensor_failures, DataType::bool("Accelerometer Sensor Failures", default_hide_sensor_fail))
+        .add(gyroscope_sensor_failures, DataType::bool("Gyroscope Sensor Failures", default_hide_gyro_fail))
+        .add(magnetometer_sensor_failures, DataType::bool("Magnetometer Sensor Failures", default_hide_mag_fail))
+        .add(pressure_sensor_failures, DataType::bool("Pressure Sensor Failures", default_hide_pressure_fail))
+        .add(gnss_failures, DataType::bool("GNSS Failures", default_hide_gnss_fail))
+        .add(accelerometer_over_range, DataType::bool("Accelerometer Over Range", default_hide_accel_over_range))
+        .add(gyroscope_over_range, DataType::bool("Gyroscope Over Range", default_hide_gyro_over_range))
+        .add(magnetometer_over_range, DataType::bool("Magnetometer Over Range", default_hide_mag_over_range))
+        .add(pressure_over_range, DataType::bool("Pressure Over Range", default_hide_pressure_over_range))
+        .add(minimum_temperature_alarm, DataType::bool("Minimum Temperature Alarm", default_hide_min_temp_alarm))
+        .add(maximum_temperature_alarm, DataType::bool("Maximum Temperature Alarm", default_hide_max_temp_alarm))
+        .add(high_voltage_alarm, DataType::bool("High Voltage Alarm", default_hide_high_voltage_alarm))
+        .add(gnss_antenna_connection, DataType::bool("GNSS Antenna Connection", default_hide_gnss_antenna_conn))
+        .add(data_output_overflow_alarm, DataType::bool("Data Output Overflow Alarm", default_hide_data_output_overflow_alarm));
+    plots.build()
 }
 
 fn process_filter_status(
@@ -305,7 +354,20 @@ fn process_filter_status(
     let mut external_velocity_active = Vec::with_capacity(dataset_len);
     let mut external_heading_active = Vec::with_capacity(dataset_len);
 
+    // Track first and last seen values to detect constant signals
+    let num_fields = 13; // we use bits 0–12 as shown
+    let mut first_values: Vec<Option<f64>> = vec![None; num_fields];
+    let mut last_values: Vec<f64> = vec![0.0; num_fields];
+
     for (row, ts) in filter_status.rows().into_iter().zip(timestamps) {
+        for i in 0..num_fields {
+            let val = row[i] as f64;
+            if first_values[i].is_none() {
+                first_values[i] = Some(val);
+            }
+            last_values[i] = val;
+        }
+
         orientation_filter_initialized.push([*ts, row[0] as f64]);
         navigation_filter_initialized.push([*ts, row[1] as f64]);
         heading_initialized.push([*ts, row[2] as f64]);
@@ -327,44 +389,31 @@ fn process_filter_status(
         external_heading_active.push([*ts, row[12] as f64]);
     }
 
-    RawPlotBuilder::new(LEGEND_NAME)
-        .add(
-            orientation_filter_initialized,
-            DataType::bool("Orientation Filter Initialized"),
-        )
-        .add(
-            navigation_filter_initialized,
-            DataType::bool("Navigation Filter Initialized"),
-        )
-        .add(heading_initialized, DataType::bool("Heading Initialized"))
-        .add(utc_time_initialized, DataType::bool("UTC Time Initialized"))
-        .add(event_1_occurred, DataType::bool("Event 1 Occurred"))
-        .add(event_2_occurred, DataType::bool("Event 2 Occurred"))
-        .add(
-            internal_gnss_enabled,
-            DataType::bool("Internal GNSS Enabled"),
-        )
-        .add(
-            velocity_heading_enabled,
-            DataType::bool("Velocity Heading Enabled"),
-        )
-        .add(
-            atmospheric_altitude_enabled,
-            DataType::bool("Atmospheric Altitude Enabled"),
-        )
-        .add(
-            external_position_active,
-            DataType::bool("External Position Active"),
-        )
-        .add(
-            external_velocity_active,
-            DataType::bool("External Velocity Active"),
-        )
-        .add(
-            external_heading_active,
-            DataType::bool("External Heading Active"),
-        )
-        .build()
+    let mut default_hides = Vec::with_capacity(num_fields);
+    for i in 0..num_fields {
+        let all_same = match first_values[i] {
+            Some(first) => (first - last_values[i]).abs() < 0.1,
+            None => true,
+        };
+        default_hides.push(all_same); // true = hide if all same
+    }
+
+    #[rustfmt::skip]
+    let plots = RawPlotBuilder::new(LEGEND_NAME)
+        .add(orientation_filter_initialized, DataType::bool("Orientation Filter Initialized", default_hides[0]))
+        .add(navigation_filter_initialized, DataType::bool("Navigation Filter Initialized", default_hides[1]))
+        .add(heading_initialized, DataType::bool("Heading Initialized", default_hides[2]))
+        .add(utc_time_initialized, DataType::bool("UTC Time Initialized", default_hides[3]))
+        .add(event_1_occurred, DataType::bool("Event 1 Occurred", default_hides[5]))
+        .add(event_2_occurred, DataType::bool("Event 2 Occurred", default_hides[6]))
+        .add(internal_gnss_enabled, DataType::bool("Internal GNSS Enabled", default_hides[7]))
+        .add(velocity_heading_enabled, DataType::bool("Velocity Heading Enabled", default_hides[8]))
+        .add(atmospheric_altitude_enabled, DataType::bool("Atmospheric Altitude Enabled", default_hides[9]))
+        .add(external_position_active, DataType::bool("External Position Active", default_hides[10]))
+        .add(external_velocity_active, DataType::bool("External Velocity Active", default_hides[11]))
+        .add(external_heading_active, DataType::bool("External Heading Active", default_hides[12]));
+
+    plots.build()
 }
 
 fn process_orientation_and_position(
