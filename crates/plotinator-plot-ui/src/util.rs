@@ -14,10 +14,10 @@ pub fn add_plot_data_to_plot_collections(
     plot_settings: &mut PlotSettings,
 ) {
     // This is how all logs get their log_id, and how each plot for each log gets their log_id
-    let data_id = plot_settings.next_log_id();
+    let log_id = plot_settings.next_log_id();
 
     plot_settings.add_log_setting(LoadedLogSettings::new(
-        data_id,
+        log_id,
         data.descriptive_name().to_owned(),
         data.first_timestamp(),
         data.metadata(),
@@ -35,9 +35,9 @@ pub fn add_plot_data_to_plot_collections(
         log::info!(
             "Processing new plots in parallel (point count {first_plot_points_count} exceeds threshold {PARALLEL_THRESHOLD})"
         );
-        add_plot_points_to_collections_par(plots, data, data_id);
+        add_plot_points_to_collections_par(plots, data, log_id);
     } else {
-        add_plot_points_to_collections_seq(plots, data, data_id);
+        add_plot_points_to_collections_seq(plots, data, log_id);
     }
 
     for raw_plot in data.raw_plots() {
@@ -47,17 +47,21 @@ pub fn add_plot_data_to_plot_collections(
                     plot_settings.add_plot_name_if_not_exists(
                         common.ty().to_owned(),
                         data.descriptive_name(),
+                        log_id,
                     );
                 }
             }
             RawPlot::Generic { common } => {
-                plot_settings
-                    .add_plot_name_if_not_exists(common.ty().to_owned(), data.descriptive_name());
+                plot_settings.add_plot_name_if_not_exists(
+                    common.ty().to_owned(),
+                    data.descriptive_name(),
+                    log_id,
+                );
             }
         }
     }
 
-    add_plot_labels_to_collections(plots, data, data_id);
+    add_plot_labels_to_collections(plots, data, log_id);
 }
 
 fn add_plot_points_to_collections_par(plots: &mut Plots, data: &SupportedFormat, data_id: u16) {

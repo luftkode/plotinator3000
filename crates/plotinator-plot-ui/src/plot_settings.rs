@@ -279,10 +279,18 @@ impl PlotSettings {
     /// # Arguments
     /// - `plot_name` The name of the plot, i.e. the name that appears on the plot legend
     /// - `descriptive_name` the name of the logfile e.g. `Mbed Pid v6` or `frame-altimeter`
-    pub fn add_plot_name_if_not_exists(&mut self, ty: DataType, descriptive_name: &str) {
+    pub fn add_plot_name_if_not_exists(
+        &mut self,
+        ty: DataType,
+        descriptive_name: &str,
+        log_id: u16,
+    ) {
         if !self.plot_name_filter.contains(&ty, descriptive_name) {
-            self.plot_name_filter
-                .add_plot(PlotNameShow::new(ty, descriptive_name.to_owned()));
+            self.plot_name_filter.add_plot(PlotNameShow::new(
+                ty,
+                descriptive_name.to_owned(),
+                log_id,
+            ));
         }
     }
 
@@ -293,14 +301,7 @@ impl PlotSettings {
         plotinator_macros::profile_function!();
         let id_filter = self.log_id_filter();
         self.plot_name_filter
-            .filter_plot_values(plot_vals, move |id| {
-                for id_inst in &id_filter {
-                    if *id_inst == id {
-                        return false;
-                    }
-                }
-                true
-            })
+            .filter_plot_values(plot_vals, id_filter)
     }
 
     /// Get the next ID for a loaded data format, used for when a new file is loaded and added to the collection of plot data and plot settings
@@ -323,6 +324,7 @@ impl PlotSettings {
         let mut log_id_filter: Vec<u16> = vec![];
         for settings in &self.loaded_log_settings {
             if !settings.show_log() {
+                log::info!("Not showing: {}", settings.descriptive_name());
                 log_id_filter.push(settings.log_id());
             }
         }

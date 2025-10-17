@@ -50,22 +50,22 @@ impl PlotNameFilter {
     /// and returns an iterator that yields all the [`PlotValues`] that should be shown
     ///
     /// The id filter `fn_show_id` should return true if the given log should be shown according to the ID filter
-    pub fn filter_plot_values<'pv, IF>(
+    pub fn filter_plot_values<'pv>(
         &'pv self,
         plot_data: &'pv [CookedPlot],
-        fn_show_id: IF,
-    ) -> impl Iterator<Item = &'pv CookedPlot>
-    where
-        IF: Fn(u16) -> bool,
-    {
+        hide_ids: Vec<u16>,
+    ) -> impl Iterator<Item = &'pv CookedPlot> {
         plot_data.iter().filter(move |pv| {
-            self.plots
-                .iter()
-                .find(|pf| {
-                    pf.name() == pv.name()
-                        && pf.associated_descriptive_name == pv.associated_descriptive_name()
-                })
-                .is_some_and(|pf| pf.show() && fn_show_id(pv.log_id()))
+            if let Some(p_candidate) = self.plots.iter().find(|pf| {
+                &pf.ty == pv.ty()
+                    && pf.associated_descriptive_name == pv.associated_descriptive_name()
+            }) && p_candidate.show()
+                && !hide_ids.contains(&pv.log_id())
+            {
+                true
+            } else {
+                false
+            }
         })
     }
 
@@ -225,18 +225,21 @@ pub struct PlotNameShow {
     ty: DataType,
     // The descriptive name of the log it came from
     associated_descriptive_name: String,
+    // The log ID of the log it came from
+    log_id: u16,
     show: bool,
     // On hover: Highlight the line plots that match the name
     hovered: bool,
 }
 
 impl PlotNameShow {
-    pub fn new(ty: DataType, associated_descriptive_name: String) -> Self {
+    pub fn new(ty: DataType, associated_descriptive_name: String, log_id: u16) -> Self {
         Self {
             name: ty.name().into_owned(),
-            show: ty.default_hidden(),
+            show: !ty.default_hidden(),
             ty,
             associated_descriptive_name,
+            log_id,
             hovered: false,
         }
     }

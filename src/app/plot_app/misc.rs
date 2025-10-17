@@ -42,7 +42,7 @@ pub(super) fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]
         for l in logs {
             if let Some(parse_info) = l.parse_info() {
                 log::debug!(
-                    "Unparsed bytes for {remainder}:{log_name}",
+                    "Unparsed bytes for {log_name}: {remainder}",
                     remainder = parse_info.remainder_bytes(),
                     log_name = l.descriptive_name()
                 );
