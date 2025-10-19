@@ -32,19 +32,21 @@ impl SkytemHdf5 for FrameAltimeters {
         log_all_attributes(&height2_dataset);
         log_all_attributes(&timestamp2_dataset);
 
-        let heights1: Array2<f32> = height1_dataset.read()?;
+        let heights1: Array2<f32> = height1_dataset.read_2d()?;
+        let heights1: Vec<f64> = heights1.into_iter().map(|h| h as f64).collect();
         log::info!(
             "Got frame altimeter1 heights with {} samples",
             heights1.len()
         );
-        let heights2: Array2<f32> = height2_dataset.read()?;
+        let heights2: Array2<f32> = height2_dataset.read_2d()?;
+        let heights2: Vec<f64> = heights2.into_iter().map(|h| h as f64).collect();
         log::info!(
-            "Got frame altimeter1 heights with {} samples",
+            "Got frame altimeter2 heights with {} samples",
             heights2.len()
         );
 
-        let timestamp1_data: Array2<i64> = timestamp1_dataset.read_2d()?;
-        let timestamp2_data: Array2<i64> = timestamp2_dataset.read_2d()?;
+        let timestamp1_data: Vec<i64> = timestamp1_dataset.read_raw()?;
+        let timestamp2_data: Vec<i64> = timestamp2_dataset.read_raw()?;
 
         let (timestamps1, first_timestamp1_opt, delta_t_sample_opt1) =
             Self::process_timestamps(&timestamp1_data, LEGEND_NAME_1);
@@ -57,26 +59,20 @@ impl SkytemHdf5 for FrameAltimeters {
             (Some(ts1), Some(ts2)) => ts1.min(ts2),
         };
 
-        let mut height1_with_ts: Vec<[f64; 2]> = Vec::new();
         let mut height1_invalid_values_count: u64 = 0;
         let mut height1_invalid_values: Vec<[f64; 2]> = Vec::new();
-        for (height, ts) in heights1.iter().zip(timestamps1) {
+        for (height, ts) in heights1.iter().zip(&timestamps1) {
             if *height > Self::INVALID_VALUE_THRESHOLD {
                 height1_invalid_values_count += 1;
-                height1_invalid_values.push([ts, height1_invalid_values_count as f64]);
-            } else {
-                height1_with_ts.push([ts, *height as f64]);
+                height1_invalid_values.push([*ts, height1_invalid_values_count as f64]);
             }
         }
-        let mut height2_with_ts: Vec<[f64; 2]> = Vec::new();
         let mut height2_invalid_values_count: u64 = 0;
         let mut height2_invalid_values: Vec<[f64; 2]> = Vec::new();
-        for (height, ts) in heights2.iter().zip(timestamps2) {
+        for (height, ts) in heights2.iter().zip(&timestamps2) {
             if *height > Self::INVALID_VALUE_THRESHOLD {
                 height2_invalid_values_count += 1;
-                height2_invalid_values.push([ts, height2_invalid_values_count as f64]);
-            } else {
-                height2_with_ts.push([ts, *height as f64]);
+                height2_invalid_values.push([*ts, height2_invalid_values_count as f64]);
             }
         }
 
@@ -88,7 +84,6 @@ impl SkytemHdf5 for FrameAltimeters {
         )?;
 
         let mut raw_plots = RawPlotBuilder::new(LEGEND_NAME_1)
-            .add(height1_with_ts, DataType::AltitudeLaser)
             .add(
                 height1_invalid_values,
                 DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
@@ -96,13 +91,27 @@ impl SkytemHdf5 for FrameAltimeters {
             .build();
         raw_plots.append(
             &mut RawPlotBuilder::new(LEGEND_NAME_2)
-                .add(height2_with_ts, DataType::AltitudeLaser)
                 .add(
                     height2_invalid_values,
                     DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
                 )
                 .build(),
         );
+
+        let geo_data_builder1 = GeoSpatialDataBuilder::new(LEGEND_NAME_1)
+            .timestamp(&timestamps1)
+            .altitude_from_laser(heights1);
+        let geo_data_builder2 = GeoSpatialDataBuilder::new(LEGEND_NAME_2)
+            .timestamp(&timestamps2)
+            .altitude_from_laser(heights2);
+
+        if let Ok(Some(geo_data1)) = geo_data_builder1.build_into_rawplot() {
+            raw_plots.push(geo_data1);
+        }
+
+        if let Ok(Some(geo_data2)) = geo_data_builder2.build_into_rawplot() {
+            raw_plots.push(geo_data2);
+        }
 
         if let Some(delta_t_sample1) = delta_t_sample_opt1
             && delta_t_sample1.points().len() > 2
@@ -157,7 +166,7 @@ pub struct FrameAltimeters {
 impl FrameAltimeters {
     // The actual invalid placeholder value for the ILM is the ASCII string "99999.99"
     // we label any value above this value as invalid as the ILM cannot go above ~500m anyways
-    const INVALID_VALUE_THRESHOLD: f32 = 2000.;
+    const INVALID_VALUE_THRESHOLD: f64 = 2000.;
 
     const HEIGHT1_DATASET: &str = "height-1";
     const HEIGHT2_DATASET: &str = "height-2";
@@ -190,15 +199,14 @@ impl FrameAltimeters {
     }
 
     fn process_timestamps(
-        timestamp_data: &Array2<i64>,
+        timestamp_data: &[i64],
         legend_name: &str,
     ) -> (Vec<f64>, Option<DateTime<Utc>>, Option<RawPlotCommon>) {
         let first_timestamp = timestamp_data
             .first()
             .map(|ts| chrono::Utc.timestamp_nanos(*ts).to_utc());
 
-        let delta_t_samples =
-            util::gen_time_between_samples_rawplot_2d(timestamp_data, legend_name);
+        let delta_t_samples = util::gen_time_between_samples_rawplot(timestamp_data, legend_name);
 
         let mut timestamps = vec![];
         for t in timestamp_data {
