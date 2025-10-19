@@ -128,14 +128,14 @@ impl MapViewPort {
                             }
 
                             for unmerged_aux in &self.unmerged_aux_data {
-                                let _ = primary_data.merge_auxiliary(unmerged_aux, 5e9);
+                                let _ = primary_data.merge_auxiliary(unmerged_aux, 7e9);
                             }
 
                             self.add_geo_data(primary_data);
                         }
                         GeoSpatialDataset::AuxGeoSpatialData(aux_data) => {
                             for path in &mut self.geo_data {
-                                let _ = path.data.merge_auxiliary(&aux_data, 5e9);
+                                let _ = path.data.merge_auxiliary(&aux_data, 7e9);
                             }
                         }
                     }

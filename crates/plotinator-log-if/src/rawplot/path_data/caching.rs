@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::prelude::GeoPoint;
+use crate::{
+    prelude::{GeoAltitude, GeoPoint},
+    rawplot::path_data::Altitude,
+};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct CachedValues {
@@ -46,7 +49,7 @@ impl CachedValues {
                 speed_min = speed_min.min(speed);
                 speed_max = speed_max.max(speed);
             }
-            if let Some(altitude) = point.altitude.map(|a| a.val())
+            if let Some(Altitude::Valid(altitude)) = point.altitude.map(|a| a.val())
                 && Self::valid_altitude(altitude)
             {
                 altitude_min = altitude_min.min(altitude);
@@ -144,6 +147,18 @@ impl CachedValues {
         self.update_lat(lat);
         self.update_lon(lon);
         self.update_speed(point.speed);
-        self.update_altitude(point.altitude.map(|a| a.val()));
+
+        if let Some(alt) = point.altitude {
+            match alt {
+                GeoAltitude::Gnss(alt) => match alt {
+                    Altitude::Valid(v) => self.update_altitude(Some(v)),
+                    Altitude::Invalid(_) => (), // Invalid are ignored
+                },
+                GeoAltitude::Laser(alt) => match alt {
+                    Altitude::Valid(v) => self.update_altitude(Some(v)),
+                    Altitude::Invalid(_) => (), // Invalid are ignored
+                },
+            }
+        }
     }
 }

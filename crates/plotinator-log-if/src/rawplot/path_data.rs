@@ -27,6 +27,32 @@ impl RawGeoAltitudes {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum Altitude {
+    Valid(f64),
+    Invalid(f64),
+}
+
+impl Altitude {
+    #[inline(always)]
+    fn new(altitude: f64, min_max: Option<(f64, f64)>) -> Self {
+        if let Some((min, max)) = min_max
+            && altitude < min
+            && altitude > max
+        {
+            Self::Invalid(altitude)
+        } else {
+            Self::Valid(altitude)
+        }
+    }
+
+    fn val(&self) -> f64 {
+        match self {
+            Altitude::Valid(v) | Altitude::Invalid(v) => *v,
+        }
+    }
+}
+
 /// Altitude sample
 ///
 /// Laser is preferred over GNSS, so if [`AuxiliaryGeoSpatialData`] is loaded that is compatible with an existing [`GeoSpatialData`] that only has
@@ -34,16 +60,20 @@ impl RawGeoAltitudes {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum GeoAltitude {
     /// Altitude source is a GNSS receiver
-    Gnss(f64),
+    Gnss(Altitude),
     /// Altitude source is a laser range finder
-    Laser(f64),
+    Laser(Altitude),
 }
 
 impl GeoAltitude {
-    pub fn val(&self) -> f64 {
+    pub fn val(&self) -> Altitude {
         match self {
             Self::Gnss(val) | Self::Laser(val) => *val,
         }
+    }
+
+    pub fn inner_raw(&self) -> f64 {
+        self.val().val()
     }
 
     pub fn source(&self) -> &str {
@@ -52,14 +82,19 @@ impl GeoAltitude {
             Self::Laser(_) => "Laser",
         }
     }
+
+    pub fn is_laser(&self) -> bool {
+        matches!(self, GeoAltitude::Laser(_))
+    }
+    pub fn is_gnss(&self) -> bool {
+        matches!(self, GeoAltitude::Gnss(_))
+    }
 }
 
 impl fmt::Display for GeoAltitude {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Gnss(v) | Self::Laser(v) => write!(f, "{v:.0} m"),
-        }
+        write!(f, "{:.0} m", self.val().val())
     }
 }
 
@@ -119,6 +154,7 @@ pub struct GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
     lon: Option<&'c [f64]>,
     heading: Option<&'d [f64]>,
     altitude: Option<RawGeoAltitudes>,
+    altitude_valid_range: Option<(f64, f64)>, // Min/Max
     speed: Option<&'f [f64]>,
 }
 
@@ -135,6 +171,7 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
             lon: None,
             heading: None,
             altitude: None,
+            altitude_valid_range: None,
             speed: None,
         }
     }
@@ -176,6 +213,15 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
         self.altitude(RawGeoAltitudes::Laser(altitude.into_boxed_slice()))
     }
 
+    pub fn altitude_valid_range(mut self, (min, max): (f64, f64)) -> Self {
+        debug_assert_eq!(
+            self.altitude_valid_range, None,
+            "Altitude valid range assigned twice"
+        );
+        self.altitude_valid_range = Some((min, max));
+        self
+    }
+
     /// km/h
     pub fn speed(mut self, speed: &'f [f64]) -> Self {
         self.speed = Some(speed);
@@ -189,6 +235,9 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
     }
 
     /// Attempt to turn the builder into [`GeoSpatialDataBuildOutput`]
+    ///
+    /// If the builder has coordinates it will produce a [`PrimaryGeoSpatialData`], if it instead has any of altitude, velocity, heading, it will
+    /// produce a [`AuxiliaryGeoSpatialData`]
     pub fn build(self) -> anyhow::Result<Option<GeoSpatialDataset>> {
         let Self {
             name,
@@ -197,6 +246,7 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
             lon,
             heading,
             altitude,
+            altitude_valid_range,
             speed,
         } = self;
 
@@ -232,10 +282,16 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
                 {
                     match alt {
                         RawGeoAltitudes::Gnss(alts) => {
-                            point = point.with_altitude(GeoAltitude::Gnss(alts[i]));
+                            point = point.with_altitude(GeoAltitude::Gnss(Altitude::new(
+                                alts[i],
+                                altitude_valid_range,
+                            )));
                         }
                         RawGeoAltitudes::Laser(alts) => {
-                            point = point.with_altitude(GeoAltitude::Laser(alts[i]));
+                            point = point.with_altitude(GeoAltitude::Laser(Altitude::new(
+                                alts[i],
+                                altitude_valid_range,
+                            )));
                         }
                     }
                 }
@@ -259,7 +315,22 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
             }
             if let Some(alt) = altitude {
                 debug_assert_eq!(alt.len(), ts.len());
-                aux_geo_data = aux_geo_data.with_altitude(alt);
+                let mut processed_altitudes: Vec<GeoAltitude> = Vec::with_capacity(alt.len());
+                match alt {
+                    RawGeoAltitudes::Gnss(alts) => {
+                        for a in alts {
+                            processed_altitudes
+                                .push(GeoAltitude::Gnss(Altitude::new(a, altitude_valid_range)));
+                        }
+                    }
+                    RawGeoAltitudes::Laser(alts) => {
+                        for a in alts {
+                            processed_altitudes
+                                .push(GeoAltitude::Laser(Altitude::new(a, altitude_valid_range)));
+                        }
+                    }
+                }
+                aux_geo_data = aux_geo_data.with_altitude(processed_altitudes);
             }
             if let Some(spd) = speed {
                 debug_assert_eq!(spd.len(), ts.len());
@@ -375,6 +446,8 @@ impl PrimaryGeoSpatialData {
         let mut latitude = Vec::with_capacity(data_len);
         let mut longitude = Vec::with_capacity(data_len);
         let mut altitude = Vec::with_capacity(altitude_len);
+        let mut altitude_invalid_count: u64 = 0;
+        let mut altitude_invalid_counts = Vec::new();
         let mut heading = Vec::with_capacity(heading_len);
         let mut speed = Vec::with_capacity(speed_len);
         for p in &self.points {
@@ -382,7 +455,13 @@ impl PrimaryGeoSpatialData {
             latitude.push([t, p.position.y()]);
             longitude.push([t, p.position.x()]);
             if let Some(alt) = p.altitude {
-                altitude.push([t, alt.val()]);
+                match alt.val() {
+                    Altitude::Valid(v) => altitude.push([t, v]),
+                    Altitude::Invalid(_) => {
+                        altitude_invalid_count += 1;
+                        altitude_invalid_counts.push([t, altitude_invalid_count as f64]);
+                    }
+                }
             }
             if let Some(head) = p.heading {
                 heading.push([t, head]);
@@ -413,6 +492,14 @@ impl PrimaryGeoSpatialData {
                 },
                 color,
             ));
+            if !altitude_invalid_counts.is_empty() {
+                plots.push(RawPlotCommon::with_color(
+                    &self.name,
+                    altitude_invalid_counts,
+                    DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
+                    color,
+                ));
+            }
         }
         if !heading.is_empty() {
             plots.push(RawPlotCommon::with_color(
@@ -456,7 +543,8 @@ impl PrimaryGeoSpatialData {
 pub struct AuxiliaryGeoSpatialData {
     pub name: String,
     pub timestamps: Vec<f64>,
-    pub altitudes: Option<RawGeoAltitudes>,
+    pub altitudes: Option<Vec<GeoAltitude>>,
+    pub invalid_altitudes_count: Option<Vec<f64>>,
     pub speeds: Option<Vec<f64>>,
     pub headings: Option<Vec<f64>>,
     pub color: Color32,
@@ -469,6 +557,7 @@ impl AuxiliaryGeoSpatialData {
             name: name.into(),
             timestamps,
             altitudes: None,
+            invalid_altitudes_count: None,
             speeds: None,
             headings: None,
             color,
@@ -483,7 +572,7 @@ impl AuxiliaryGeoSpatialData {
     }
 
     /// Meters
-    pub fn with_altitude(mut self, altitude: RawGeoAltitudes) -> Self {
+    pub fn with_altitude(mut self, altitude: Vec<GeoAltitude>) -> Self {
         debug_assert_eq!(self.timestamps.len(), altitude.len());
         self.altitudes = Some(altitude);
         self
@@ -530,18 +619,31 @@ impl AuxiliaryGeoSpatialData {
         }
 
         if let Some(altitudes) = &self.altitudes {
-            let altitudes = match altitudes {
-                RawGeoAltitudes::Gnss(a) | RawGeoAltitudes::Laser(a) => a,
-            };
             let mut altitude = Vec::with_capacity(altitudes.len());
-            for (t, hdg) in self.timestamps.iter().zip(altitudes) {
-                altitude.push([*t, *hdg]);
+            let mut invalid_altitude_counts = Vec::new();
+            let mut invalid_altitude_count: u64 = 0;
+            for (t, alt) in self.timestamps.iter().zip(altitudes) {
+                match alt.val() {
+                    Altitude::Valid(v) => altitude.push([*t, v]),
+                    Altitude::Invalid(_) => {
+                        invalid_altitude_count += 1;
+                        invalid_altitude_counts.push([*t, invalid_altitude_count as f64]);
+                    }
+                }
             }
             if altitude.len() > 1 {
                 plots.push(RawPlotCommon::with_color(
                     &self.name,
                     altitude,
                     DataType::AltitudeLaser,
+                    color,
+                ));
+            }
+            if invalid_altitude_counts.len() > 1 {
+                plots.push(RawPlotCommon::with_color(
+                    &self.name,
+                    invalid_altitude_counts,
+                    DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
                     color,
                 ));
             }
@@ -552,20 +654,40 @@ impl AuxiliaryGeoSpatialData {
     /// Check if this auxiliary data is compatible with a primary dataset
     /// Returns true if start/end timestamps align within `tolerance_ns` (nanoseconds)
     pub fn is_compatible_with(&self, primary: &PrimaryGeoSpatialData, tolerance_ns: f64) -> bool {
-        if self.timestamps.is_empty() || primary.points.is_empty() {
+        log::info!(
+            "Checking if primary data '{}' is compatible with '{}'",
+            primary.name,
+            self.name
+        );
+
+        if self.timestamps.is_empty() {
+            log::debug!("Not compatible: {} has no timestamps", self.name);
+            return false;
+        }
+        if primary.points.is_empty() {
+            log::debug!("Not compatible: {} has not points", primary.name);
             return false;
         }
 
         let Some((aux_start, aux_end)) = self.time_range() else {
+            log::debug!("Not compatible: {} has not time range", self.name);
             return false;
         };
 
         let Some((primary_start, primary_end)) = primary.time_range() else {
+            log::debug!("Not compatible: {} has not time range", primary.name);
             return false;
         };
 
-        (aux_start - primary_start).abs() <= tolerance_ns
-            && (aux_end - primary_end).abs() <= tolerance_ns
+        let delta_start = (aux_start - primary_start).abs();
+        let delta_end = (aux_end - primary_end).abs();
+        let start_is_compatible = delta_start <= tolerance_ns;
+        let end_is_compatible = delta_end <= tolerance_ns;
+        let delta_start_s = delta_start / 1e9;
+        let delta_end_s = delta_end / 1e9;
+        log::info!("Delta start: {delta_start_s}s, compatible: {start_is_compatible}");
+        log::info!("Delta end: {delta_end_s}s, compatible: {end_is_compatible}");
+        start_is_compatible && end_is_compatible
     }
 
     /// Get the time range covered by the data
@@ -585,28 +707,39 @@ impl PrimaryGeoSpatialData {
         aux: &AuxiliaryGeoSpatialData,
         tolerance_ns: f64,
     ) -> Result<(), MergeError> {
+        let aux_name = &aux.name;
+        let primary_name = self.name.clone();
         if !aux.is_compatible_with(self, tolerance_ns) {
+            log::info!("{primary_name} and {aux_name} are not compatible");
             return Err(MergeError::IncompatibleTimeRange);
         }
 
         let mut any_merged = false;
 
         // Merge altitude if we don't have it or we have it and it's GNSS and the `aux` one is laser
-        if let Some(aux_alt) = &aux.altitudes
-            && self.points.first().is_none_or(|p| {
-                p.altitude.is_none_or(|p| match p {
-                    GeoAltitude::Gnss(_) => match aux_alt {
-                        RawGeoAltitudes::Gnss(_) => false,
-                        // Replace existing altitude if it is from GNNS and the new one is from laser
-                        RawGeoAltitudes::Laser(_) => true,
-                    },
-                    GeoAltitude::Laser(_) => false,
-                })
-            })
-        {
-            self.merge_altitude_nearest(&aux.timestamps, aux_alt);
-            log::info!("Merged altitude of '{}' into '{}'", aux.name, self.name);
-            any_merged = true;
+        let aux_has_altitude = aux.altitudes.is_some();
+        let aux_altitude_laser = aux
+            .altitudes
+            .as_ref()
+            .is_some_and(|a| a.first().is_some_and(|p| p.is_laser()));
+        log::debug!(
+            "Aux '{aux_name}' has altitude={aux_has_altitude}, is_laser={aux_altitude_laser}"
+        );
+        let primary_has_altitude = self.points.first().is_some_and(|p| p.altitude.is_some());
+        let primary_altitude_is_gnss = self
+            .points
+            .first()
+            .is_some_and(|p| p.altitude.is_some_and(|a| a.is_gnss()));
+        if let Some(aux_alt) = &aux.altitudes {
+            if !primary_has_altitude || (primary_altitude_is_gnss && aux_altitude_laser) {
+                self.merge_altitude_nearest(&aux.timestamps, aux_alt);
+                log::info!("Merged altitude of '{aux_name}' into '{primary_name}'");
+                any_merged = true;
+            } else {
+                log::debug!("Altitude is not mergeable");
+            }
+        } else {
+            log::debug!("Altitude is not mergeable");
         }
 
         // Check if we already have the data fields
@@ -620,6 +753,8 @@ impl PrimaryGeoSpatialData {
             });
             log::info!("Merged speed of '{}' into '{}'", aux.name, self.name);
             any_merged = true;
+        } else {
+            log::debug!("Speed is not mergeable");
         }
 
         if let Some(aux_hdg) = &aux.headings
@@ -630,6 +765,8 @@ impl PrimaryGeoSpatialData {
             });
             log::info!("Merged heading of '{}' into '{}'", aux.name, self.name);
             any_merged = true;
+        } else {
+            log::debug!("heading is not mergeable");
         }
 
         if any_merged {
@@ -685,23 +822,10 @@ impl PrimaryGeoSpatialData {
 
     /// Helper to merge a single field using nearest-neighbor lookup
     /// Optimized for monotonically increasing timestamps - O(n+m) complexity
-    fn merge_altitude_nearest(&mut self, aux_times: &[f64], altitudes: &RawGeoAltitudes) {
+    fn merge_altitude_nearest(&mut self, aux_times: &[f64], altitudes: &[GeoAltitude]) {
         if aux_times.is_empty() {
             return;
         }
-
-        let mut is_gnss = false;
-        let mut is_laser = false;
-        let altitudes = match altitudes {
-            RawGeoAltitudes::Gnss(cow) => {
-                is_gnss = true;
-                cow
-            }
-            RawGeoAltitudes::Laser(cow) => {
-                is_laser = true;
-                cow
-            }
-        };
 
         let mut aux_idx = 0;
         let last_idx = aux_times.len() - 1;
@@ -721,12 +845,7 @@ impl PrimaryGeoSpatialData {
                 }
             }
 
-            let val = altitudes[aux_idx];
-            if is_gnss {
-                point.altitude = Some(GeoAltitude::Gnss(val));
-            } else if is_laser {
-                point.altitude = Some(GeoAltitude::Laser(val));
-            }
+            point.altitude = Some(altitudes[aux_idx]);
         }
     }
 }
@@ -784,7 +903,7 @@ mod tests {
         };
         assert_eq!(
             geo_data.points[0].altitude,
-            Some(GeoAltitude::Gnss(altitude[0]))
+            Some(GeoAltitude::Gnss(Altitude::Valid(altitude[0])))
         );
         Ok(())
     }
@@ -809,10 +928,17 @@ mod tests {
 
         // Auxiliary dataset at ~3 Hz (higher frequency)
         let aux_times = vec![1.0e9, 1.33e9, 1.66e9, 2.0e9, 2.33e9, 2.66e9, 3.0e9];
-        let aux_altitude = vec![100.0, 105.0, 110.0, 115.0, 120.0, 125.0, 130.0];
+        let aux_altitude = vec![
+            GeoAltitude::Laser(Altitude::Valid(100.0)),
+            GeoAltitude::Laser(Altitude::Valid(105.0)),
+            GeoAltitude::Laser(Altitude::Valid(110.0)),
+            GeoAltitude::Laser(Altitude::Valid(115.0)),
+            GeoAltitude::Laser(Altitude::Valid(120.0)),
+            GeoAltitude::Laser(Altitude::Valid(125.0)),
+            GeoAltitude::Laser(Altitude::Valid(130.0)),
+        ];
 
-        let aux = AuxiliaryGeoSpatialData::new("Altimeter", aux_times)
-            .with_altitude(RawGeoAltitudes::Gnss(aux_altitude.into()));
+        let aux = AuxiliaryGeoSpatialData::new("Altimeter", aux_times).with_altitude(aux_altitude);
 
         primary.merge_auxiliary(&aux, 5.0e9)?;
 
@@ -820,9 +946,18 @@ mod tests {
         assert_eq!(primary.points.len(), 3);
 
         // Check that nearest values were selected (not interpolated)
-        assert_eq!(primary.points[0].altitude.map(|v| v.val()), Some(100.0)); // Exact match
-        assert_eq!(primary.points[1].altitude.map(|v| v.val()), Some(115.0)); // Exact match
-        assert_eq!(primary.points[2].altitude.map(|v| v.val()), Some(130.0)); // Exact match
+        assert_eq!(
+            primary.points[0].altitude.map(|v| v.inner_raw()),
+            Some(100.0)
+        ); // Exact match
+        assert_eq!(
+            primary.points[1].altitude.map(|v| v.inner_raw()),
+            Some(115.0)
+        ); // Exact match
+        assert_eq!(
+            primary.points[2].altitude.map(|v| v.inner_raw()),
+            Some(130.0)
+        ); // Exact match
         Ok(())
     }
 
@@ -844,16 +979,28 @@ mod tests {
         };
 
         let aux_times = vec![1.0e9, 2.0e9, 3.0e9];
-        let aux_altitude = vec![100.0, 200.0, 300.0];
+        let aux_altitude = vec![
+            GeoAltitude::Laser(Altitude::Valid(100.0)),
+            GeoAltitude::Laser(Altitude::Valid(200.0)),
+            GeoAltitude::Laser(Altitude::Valid(300.0)),
+        ];
 
-        let aux = AuxiliaryGeoSpatialData::new("aux", aux_times)
-            .with_altitude(RawGeoAltitudes::Laser(aux_altitude.into()));
+        let aux = AuxiliaryGeoSpatialData::new("aux", aux_times).with_altitude(aux_altitude);
 
         primary.merge_auxiliary(&aux, 1.0e8)?;
 
-        assert_eq!(primary.points[0].altitude.map(|v| v.val()), Some(100.0));
-        assert_eq!(primary.points[1].altitude.map(|v| v.val()), Some(200.0));
-        assert_eq!(primary.points[2].altitude.map(|v| v.val()), Some(300.0));
+        assert_eq!(
+            primary.points[0].altitude.map(|v| v.inner_raw()),
+            Some(100.0)
+        );
+        assert_eq!(
+            primary.points[1].altitude.map(|v| v.inner_raw()),
+            Some(200.0)
+        );
+        assert_eq!(
+            primary.points[2].altitude.map(|v| v.inner_raw()),
+            Some(300.0)
+        );
         Ok(())
     }
 
@@ -877,17 +1024,31 @@ mod tests {
 
         // Aux at higher frequency
         let aux_times = vec![1.0e9, 1.4e9, 1.8e9, 2.0e9, 2.6e9, 3.0e9];
-        let aux_altitude =
-            RawGeoAltitudes::Laser(vec![100.0, 110.0, 120.0, 200.0, 250.0, 300.0].into());
-
+        let aux_altitude = vec![
+            GeoAltitude::Gnss(Altitude::Valid(100.)),
+            GeoAltitude::Gnss(Altitude::Valid(110.)),
+            GeoAltitude::Gnss(Altitude::Valid(120.)),
+            GeoAltitude::Gnss(Altitude::Valid(200.)),
+            GeoAltitude::Gnss(Altitude::Valid(250.)),
+            GeoAltitude::Gnss(Altitude::Valid(300.)),
+        ];
         let aux = AuxiliaryGeoSpatialData::new("aux", aux_times).with_altitude(aux_altitude);
 
         primary.merge_auxiliary(&aux, 1.0e8)?;
 
         // Should pick nearest neighbors
-        assert_eq!(primary.points[0].altitude.map(|v| v.val()), Some(100.0)); // Exact: 1.0e9
-        assert_eq!(primary.points[1].altitude.map(|v| v.val()), Some(200.0)); // Exact: 2.0e9
-        assert_eq!(primary.points[2].altitude.map(|v| v.val()), Some(300.0)); // Exact: 3.0e9
+        assert_eq!(
+            primary.points[0].altitude.map(|v| v.inner_raw()),
+            Some(100.0)
+        ); // Exact: 1.0e9
+        assert_eq!(
+            primary.points[1].altitude.map(|v| v.inner_raw()),
+            Some(200.0)
+        ); // Exact: 2.0e9
+        assert_eq!(
+            primary.points[2].altitude.map(|v| v.inner_raw()),
+            Some(300.0)
+        ); // Exact: 3.0e9
         Ok(())
     }
 
@@ -911,12 +1072,17 @@ mod tests {
 
         // Aux at 1 Hz
         let aux_times = vec![1.0e9, 2.0e9, 3.0e9];
-        let aux_altitude = RawGeoAltitudes::Gnss(vec![100.0, 200.0, 300.0].into());
+        let aux_altitude = vec![
+            GeoAltitude::Gnss(Altitude::Valid(100.)),
+            GeoAltitude::Gnss(Altitude::Valid(200.)),
+            GeoAltitude::Gnss(Altitude::Valid(300.)),
+        ];
 
         let aux = AuxiliaryGeoSpatialData {
             name: "Aux".to_owned(),
             timestamps: aux_times,
             altitudes: Some(aux_altitude),
+            invalid_altitudes_count: None,
             speeds: None,
             headings: None,
             color: Color32::RED,
@@ -924,11 +1090,26 @@ mod tests {
 
         primary.merge_auxiliary(&aux, 1.0e8).unwrap();
 
-        assert_eq!(primary.points[0].altitude, Some(GeoAltitude::Gnss(100.0))); // 1.0 closest to 1.0
-        assert_eq!(primary.points[1].altitude, Some(GeoAltitude::Gnss(100.0))); // 1.5 closest to 1.0
-        assert_eq!(primary.points[2].altitude, Some(GeoAltitude::Gnss(200.0))); // 2.0 closest to 2.0
-        assert_eq!(primary.points[3].altitude, Some(GeoAltitude::Gnss(200.0))); // 2.5 closest to 2.0
-        assert_eq!(primary.points[4].altitude, Some(GeoAltitude::Gnss(300.0))); // 3.0 closest to 3.0
+        assert_eq!(
+            primary.points[0].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(100.0)))
+        ); // 1.0 closest to 1.0
+        assert_eq!(
+            primary.points[1].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(100.0)))
+        ); // 1.5 closest to 1.0
+        assert_eq!(
+            primary.points[2].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(200.0)))
+        ); // 2.0 closest to 2.0
+        assert_eq!(
+            primary.points[3].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(200.0)))
+        ); // 2.5 closest to 2.0
+        assert_eq!(
+            primary.points[4].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(300.0)))
+        ); // 3.0 closest to 3.0
         Ok(())
     }
 
@@ -950,19 +1131,36 @@ mod tests {
         };
 
         let aux_times = vec![1.0e9, 2.0e9, 3.0e9];
-        let aux_altitude_gnss = RawGeoAltitudes::Gnss(vec![100.0, 200.0, 300.0].into());
-        let aux_altitude_laser = RawGeoAltitudes::Laser(vec![100.0, 200.0, 300.0].into());
+        let aux_altitude_gnss = vec![
+            GeoAltitude::Gnss(Altitude::Valid(100.)),
+            GeoAltitude::Gnss(Altitude::Valid(200.)),
+            GeoAltitude::Gnss(Altitude::Valid(300.)),
+        ];
+        let aux_altitude_laser = vec![
+            GeoAltitude::Laser(Altitude::Valid(100.)),
+            GeoAltitude::Laser(Altitude::Valid(200.)),
+            GeoAltitude::Laser(Altitude::Valid(300.)),
+        ];
 
         let aux_gnss = AuxiliaryGeoSpatialData::new("Aux-gnss", aux_times.clone())
             .with_altitude(aux_altitude_gnss);
         primary.merge_auxiliary(&aux_gnss, 1.0e9)?;
 
         // Before range: picks first
-        assert_eq!(primary.points[0].altitude, Some(GeoAltitude::Gnss(100.0)));
+        assert_eq!(
+            primary.points[0].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(100.0)))
+        );
         // Middle: picks closest
-        assert_eq!(primary.points[1].altitude, Some(GeoAltitude::Gnss(100.0))); // 1.5 closer to 1.0 than 2.0
+        assert_eq!(
+            primary.points[1].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(100.0)))
+        ); // 1.5 closer to 1.0 than 2.0
         // After range: picks last
-        assert_eq!(primary.points[2].altitude, Some(GeoAltitude::Gnss(300.0)));
+        assert_eq!(
+            primary.points[2].altitude,
+            Some(GeoAltitude::Gnss(Altitude::Valid(300.0)))
+        );
 
         let aux_laser =
             AuxiliaryGeoSpatialData::new("Aux-laster", aux_times).with_altitude(aux_altitude_laser);

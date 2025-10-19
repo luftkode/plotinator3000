@@ -129,7 +129,7 @@ impl LabelPlacer {
                 self.candidate_buffer.push(CandidatePoint {
                     pos: *screen_pos,
                     altitude: if settings.draw_altitude() {
-                        geo_point.altitude.map(|a| a.val())
+                        geo_point.altitude.map(|a| a.inner_raw())
                     } else {
                         None
                     },

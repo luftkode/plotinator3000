@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Distinguished types for valid and invalid altitude measurement
+- Fix frame-altimeters height dataset both named HE1
 - Tweak map label colors
 - Constify some color math
 

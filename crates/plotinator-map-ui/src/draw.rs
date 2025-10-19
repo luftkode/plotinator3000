@@ -67,7 +67,7 @@ pub(crate) fn draw_path_inner(
 
     for window in screen_points.windows(2) {
         // Use the altitude from the first point of the segment
-        let altitude = window[0].1.altitude.map_or(0.0, |a| a.val());
+        let altitude = window[0].1.altitude.map_or(0.0, |a| a.inner_raw());
         let opacity = (altitude / MAX_ALTITUDE).clamp(0.0, 1.0);
 
         // Scale the alpha channel of the path color based on altitude
