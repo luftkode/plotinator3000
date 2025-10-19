@@ -18,7 +18,9 @@ GrafNavPPP {
                             ),
                             altitude: Some(
                                 Gnss(
-                                    73.394,
+                                    Valid(
+                                        73.394,
+                                    ),
                                 ),
                             ),
                             speed: Some(
@@ -33,7 +35,9 @@ GrafNavPPP {
                             ),
                             altitude: Some(
                                 Gnss(
-                                    73.388,
+                                    Valid(
+                                        73.388,
+                                    ),
                                 ),
                             ),
                             speed: Some(

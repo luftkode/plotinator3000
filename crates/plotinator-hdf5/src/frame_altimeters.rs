@@ -274,8 +274,8 @@ mod tests {
         assert_eq!(frame_altimeters.metadata.len(), 48);
         assert_eq!(frame_altimeters.raw_plots.len(), 4);
         match &frame_altimeters.raw_plots[0] {
-            RawPlot::Generic { common } => assert_eq!(common.points().len(), 1091),
-            RawPlot::GeoSpatialDataset(_) => unreachable!(),
+            RawPlot::Generic { .. } => unreachable!(),
+            RawPlot::GeoSpatialDataset(geo_data) => assert_eq!(geo_data.len(), 1091),
         };
 
         Ok(())

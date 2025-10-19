@@ -178,8 +178,8 @@ mod tests {
         let wasp200 = Wasp200::from_path(wasp200())?;
 
         match &wasp200.raw_plots[0] {
-            RawPlot::Generic { common } => assert_eq!(common.points().len(), 70971),
-            RawPlot::GeoSpatialDataset(_) => unreachable!(),
+            RawPlot::Generic { .. } => unreachable!(),
+            RawPlot::GeoSpatialDataset(data) => assert_eq!(data.len(), 70971),
         }
 
         Ok(())

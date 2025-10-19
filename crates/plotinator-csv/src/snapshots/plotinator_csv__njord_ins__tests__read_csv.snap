@@ -504,7 +504,9 @@ NjordInsPPP {
                             ),
                             altitude: Some(
                                 Gnss(
-                                    73.88893217076051,
+                                    Valid(
+                                        73.88893217076051,
+                                    ),
                                 ),
                             ),
                             speed: Some(
@@ -519,7 +521,9 @@ NjordInsPPP {
                             ),
                             altitude: Some(
                                 Gnss(
-                                    73.88883762837278,
+                                    Valid(
+                                        73.88883762837278,
+                                    ),
                                 ),
                             ),
                             speed: Some(

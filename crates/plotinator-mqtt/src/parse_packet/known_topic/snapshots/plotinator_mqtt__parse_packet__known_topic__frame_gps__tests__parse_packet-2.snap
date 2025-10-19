@@ -162,7 +162,9 @@ MqttData {
                         heading: None,
                         altitude: Some(
                             Gnss(
-                                66.62000274658203,
+                                Valid(
+                                    66.62000274658203,
+                                ),
                             ),
                         ),
                         speed: Some(
