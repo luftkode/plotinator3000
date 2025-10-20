@@ -141,6 +141,7 @@ impl HeightDataCollector {
         if let Ok(Some(geo_data)) = GeoSpatialDataBuilder::new(sensor_name)
             .timestamp(&self.timestamps)
             .altitude_from_laser(self.altitudes)
+            .altitude_valid_range((0.0, 3000.))
             .build()
         {
             raw_plots.push(geo_data.into());

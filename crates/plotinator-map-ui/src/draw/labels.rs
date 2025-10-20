@@ -261,7 +261,7 @@ fn calculate_label_layout(painter: &Painter, point: &CandidatePoint) -> (Rect, V
                 Altitude::Invalid(a) => format!("invalid: {a:.0} m (L)"),
             }),
             GeoAltitude::MergedLaser { val, source_index } => {
-                lines.push(format!("{val:.0} m (M{source_index})"));
+                lines.push(format!("{val:.0} m (L{source_index})"));
             }
         }
     }

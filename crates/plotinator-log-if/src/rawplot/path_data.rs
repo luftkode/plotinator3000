@@ -41,6 +41,7 @@ impl Altitude {
         {
             Self::Invalid(altitude)
         } else {
+            log::info!("{altitude:.2}");
             Self::Valid(altitude)
         }
     }
@@ -882,9 +883,10 @@ impl PrimaryGeoSpatialData {
                     break;
                 }
             }
-
+            let altitude_sample = altitudes[aux_idx];
+            let val = altitude_sample.inner_raw() as f32;
             point.altitude.push(GeoAltitude::MergedLaser {
-                val: altitudes[aux_idx].inner_raw() as f32,
+                val,
                 source_index: merge_index as u8,
             });
         }

@@ -593,17 +593,17 @@ impl MapViewPort {
             ui.label("hdg");
             ui.label("alt");
 
-            let mut max_merged_count: usize = 0;
+            let mut max_merged_laser_count: usize = 0;
             for path_entry in &self.geo_data {
-                max_merged_count =
-                    max_merged_count.max(path_entry.merged_altimeter_metadata().len());
+                max_merged_laser_count =
+                    max_merged_laser_count.max(path_entry.merged_altimeter_metadata().len());
             }
             for mqtt_path in &self.mqtt_geo_data {
-                max_merged_count =
-                    max_merged_count.max(mqtt_path.merged_altimeter_metadata().len());
+                max_merged_laser_count =
+                    max_merged_laser_count.max(mqtt_path.merged_altimeter_metadata().len());
             }
-            for merged_idx in 0..max_merged_count {
-                ui.label(format!("alt[M{merged_idx}]"));
+            for merged_idx in 0..max_merged_laser_count {
+                ui.label(format!("alt[L{merged_idx}]"));
             }
 
             ui.end_row();
