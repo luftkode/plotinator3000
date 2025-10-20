@@ -38,7 +38,7 @@ impl RawPlotBuilder {
             } else {
                 log::warn!(
                     "Removing {}, points={points} but the minimum for plotting is 2",
-                    rp.ty.legend_name(rp.legend_name())
+                    rp.legend_name()
                 );
                 false
             }

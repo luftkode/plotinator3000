@@ -3,8 +3,6 @@ use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
 use ndarray::Array2;
 use plotinator_log_if::prelude::*;
-use plotinator_log_if::rawplot::DataType;
-use plotinator_log_if::rawplot::path_data::AuxiliaryGeoSpatialData;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 

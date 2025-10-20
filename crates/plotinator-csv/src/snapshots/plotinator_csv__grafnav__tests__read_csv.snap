@@ -8,7 +8,7 @@ GrafNavPPP {
             PrimaryGeoSpatialData(
                 PrimaryGeoSpatialData {
                     name: "GrafNav-PPP",
-                    merged_with: None,
+                    merged: [],
                     points: [
                         GeoPoint {
                             timestamp: 1.757435842e18,
@@ -16,13 +16,13 @@ GrafNavPPP {
                             heading: Some(
                                 0.0,
                             ),
-                            altitude: Some(
+                            altitude: [
                                 Gnss(
                                     Valid(
                                         73.394,
                                     ),
                                 ),
-                            ),
+                            ],
                             speed: Some(
                                 0.106,
                             ),
@@ -33,13 +33,13 @@ GrafNavPPP {
                             heading: Some(
                                 0.0,
                             ),
-                            altitude: Some(
+                            altitude: [
                                 Gnss(
                                     Valid(
                                         73.388,
                                     ),
                                 ),
-                            ),
+                            ],
                             speed: Some(
                                 0.074,
                             ),

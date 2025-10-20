@@ -8,9 +8,10 @@ use egui_phosphor::regular::{
     SELECTION_ALL, SQUARE,
 };
 use plotinator_log_if::{
-    prelude::PrimaryGeoSpatialData,
-    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset},
+    prelude::{GeoAltitude, PrimaryGeoSpatialData},
+    rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset, MergedMetadata},
 };
+use plotinator_mqtt_ui::plot::ColoredGeoLaserAltitude;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender};
@@ -36,7 +37,7 @@ pub struct MapViewPort {
     pub open: bool,
     pub geo_data: Vec<PathEntry>,
     mqtt_geo_data: SmallVec<[MqttGeoPath; 3]>,
-    pub unmerged_aux_data: Vec<AuxiliaryGeoSpatialData>,
+    pub mergable_aux_data: Vec<AuxiliaryGeoSpatialData>,
     map_state: MapState,
 
     label_placer: LabelPlacer,
@@ -111,10 +112,10 @@ impl MapViewPort {
             match cmd {
                 MapCommand::AddGeoData(geo_data) => {
                     match geo_data {
-                        GeoSpatialDataset::PrimaryGeoSpatialData(mut primary_data) => {
+                        GeoSpatialDataset::PrimaryGeoSpatialData(primary_data) => {
                             if let Some(first_point) = primary_data.points.first() {
                                 let has_speed = first_point.speed.is_some();
-                                let has_altitude = first_point.altitude.is_some();
+                                let has_altitude = first_point.altitude.first().is_some();
                                 let has_heading = first_point.heading.is_some();
                                 log::info!(
                                     "Received geo data {}, points include speed={has_speed}, altitude={has_altitude}, heading={has_heading}",
@@ -127,44 +128,55 @@ impl MapViewPort {
                                 );
                             }
 
-                            for unmerged_aux in &self.unmerged_aux_data {
-                                let _ = primary_data.merge_auxiliary(unmerged_aux, 7e9);
-                            }
-
                             self.add_geo_data(primary_data);
                         }
                         GeoSpatialDataset::AuxGeoSpatialData(aux_data) => {
                             for path in &mut self.geo_data {
-                                let _ = path.data.merge_auxiliary(&aux_data, 7e9);
+                                if path
+                                    .data
+                                    .merge_auxiliary(&aux_data, 7e9, aux_data.color)
+                                    .is_ok()
+                                {
+                                    path.settings.show_merged_altitudes.push(true);
+                                }
                             }
+                            self.mergable_aux_data.push(aux_data);
                         }
                     }
 
                     self.zoom_to_fit();
                 }
-                MapCommand::MQTTGeoData(geo_points) => {
+                MapCommand::MQTTGeoData(ref geo_points) => {
                     let maybe_first_data = self.mqtt_geo_data.is_empty();
 
                     // Iterate through incoming MQTT points (typically 1-2, max ~10)
-                    for mqtt_point in geo_points.into_iter() {
+                    for mqtt_point in geo_points.iter() {
+                        let data = match &mqtt_point.data {
+                            plotinator_mqtt::data::listener::GeoData::GeoPoint(geo_point) => {
+                                geo_point
+                            }
+                            plotinator_mqtt::data::listener::GeoData::LaserAltitude { .. } => {
+                                unreachable!("Unsound condition")
+                            }
+                        };
+
                         let mut match_found = false;
                         for mqtt_geo_path in &mut self.mqtt_geo_data {
                             if mqtt_point.topic == mqtt_geo_path.topic {
                                 match_found = true;
                                 // Check if last point has matching timestamp (within microsecond precision)
                                 if let Some(last_point) = mqtt_geo_path.points.last_mut()
-                                    && (last_point.timestamp - mqtt_point.point.timestamp).abs()
-                                        < 1e6
+                                    && (last_point.timestamp - data.timestamp).abs() < 1e6
                                 {
-                                    *last_point = mqtt_point.point;
+                                    *last_point = data.to_owned();
                                 } else {
-                                    mqtt_geo_path.push(mqtt_point.point);
+                                    mqtt_geo_path.push(data.to_owned());
                                 }
                                 break;
                             }
                         }
                         if !match_found {
-                            self.mqtt_geo_data.push(mqtt_point.into());
+                            self.mqtt_geo_data.push(mqtt_point.to_owned().into());
                         }
                     }
 
@@ -185,6 +197,55 @@ impl MapViewPort {
                         self.mqtt_latest_position = Some(latest_point.position);
                     }
                 }
+                MapCommand::MQTTGeoAltitudes(colored_laser_altitudes) => {
+                    for ColoredGeoLaserAltitude {
+                        topic,
+                        timestamp,
+                        altitude,
+                        device,
+                        color,
+                    } in colored_laser_altitudes.into_iter()
+                    {
+                        for mqtt_geo_path in &mut self.mqtt_geo_data {
+                            if mqtt_geo_path.device.is_some_and(|d| d == device) {
+                                if let Some(last_point) = mqtt_geo_path.points.last_mut()
+                                    && last_point.timestamp < timestamp
+                                {
+                                    let idx = mqtt_geo_path
+                                        .merged
+                                        .iter()
+                                        .position(|m| m.color == color)
+                                        .unwrap_or_else(|| {
+                                            let idx = mqtt_geo_path.merged.len();
+                                            mqtt_geo_path.merged.push(MergedMetadata {
+                                                name: topic.clone(),
+                                                color,
+                                            });
+                                            mqtt_geo_path.settings.show_merged_altitudes.push(true);
+                                            idx
+                                        });
+                                    let mut already_merged = false;
+                                    for alt in &last_point.altitude {
+                                        match alt {
+                                            GeoAltitude::Gnss(_) | GeoAltitude::Laser(_) => (),
+                                            GeoAltitude::MergedLaser { source_index, .. } => {
+                                                if *source_index == idx as u8 {
+                                                    already_merged = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if !already_merged {
+                                        last_point.altitude.push(GeoAltitude::MergedLaser {
+                                            val: altitude,
+                                            source_index: idx as u8,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 MapCommand::PointerPos(time_pos) => {
                     log::trace!("Got pointer time: {time_pos:.}");
                     pointer_pos = Some(time_pos);
@@ -195,6 +256,7 @@ impl MapViewPort {
                 MapCommand::Reset => {
                     self.geo_data.clear();
                     self.mqtt_geo_data.clear();
+                    self.mergable_aux_data.clear();
                 }
             }
         }
@@ -209,7 +271,14 @@ impl MapViewPort {
     }
 
     pub fn add_geo_data(&mut self, data: PrimaryGeoSpatialData) {
-        self.geo_data.push(PathEntry::new(data));
+        let mut new_path = PathEntry::new(data);
+        // Check if any of the aux data can be merged into it
+        for aux in &self.mergable_aux_data {
+            if new_path.data.merge_auxiliary(aux, 7e9, aux.color).is_ok() {
+                new_path.settings.show_merged_altitudes.push(true);
+            };
+        }
+        self.geo_data.push(new_path);
     }
 
     /// Shows the map viewport and handles its UI.
@@ -382,6 +451,7 @@ impl MapViewPort {
                     draw: draw_telemetry_label,
                     with_speed: path.path_settings().show_speed,
                     with_altitude: path.path_settings().show_altitude,
+                    merged_altitudes: path.path_settings().show_merged_altitudes.to_owned(),
                 },
             };
 
@@ -506,8 +576,18 @@ impl MapViewPort {
             // Column headers
             ui.label(""); // empty cell for toggle + name
             ui.label("vel");
-            ui.label("alt");
             ui.label("hdg");
+            ui.label("alt");
+
+            let mut max_merged_count: usize = 0;
+            for path_entry in &self.geo_data {
+                max_merged_count =
+                    max_merged_count.max(path_entry.merged_altimeter_metadata().len());
+            }
+            for merged_idx in 0..max_merged_count {
+                ui.label(format!("alt[M{merged_idx}]"));
+            }
+
             ui.end_row();
 
             // Helper for attribute indicator buttons
@@ -556,15 +636,41 @@ impl MapViewPort {
                 );
                 hovered |= attr_button(
                     ui,
-                    first_point.and_then(|p| p.altitude).is_some(),
-                    &mut path_entry.settings.show_altitude,
-                );
-                hovered |= attr_button(
-                    ui,
                     first_point.and_then(|p| p.heading).is_some(),
                     &mut path_entry.settings.show_heading,
                 );
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.altitude.first()).is_some(),
+                    &mut path_entry.settings.show_altitude,
+                );
+                for (idx, alt_metadata) in path_entry
+                    .merged_altimeter_metadata()
+                    .to_vec()
+                    .iter()
+                    .enumerate()
+                {
+                    let is_showing = path_entry.settings.get_merged(idx);
+                    let indicator = if is_showing {
+                        RichText::new(CHECK_CIRCLE).color(alt_metadata.color).weak()
+                    } else {
+                        RichText::new(CIRCLE).color(alt_metadata.color).strong()
+                    };
+                    let resp = ui.button(indicator).on_hover_text(RichText::new(format!(
+                        "Merged from '{}'",
+                        alt_metadata.name
+                    )));
 
+                    if resp.clicked() {
+                        let show = path_entry
+                            .settings
+                            .show_merged_altitudes
+                            .get_mut(idx)
+                            .expect("unsound condition");
+                        *show = !*show;
+                    }
+                    hovered |= resp.hovered();
+                }
                 ui.end_row();
                 if hovered {
                     self.hovered_path = Some(i);
@@ -598,14 +704,43 @@ impl MapViewPort {
                 );
                 hovered |= attr_button(
                     ui,
-                    first_point.and_then(|p| p.altitude).is_some(),
-                    &mut mqtt_path.settings.show_altitude,
-                );
-                hovered |= attr_button(
-                    ui,
                     first_point.and_then(|p| p.heading).is_some(),
                     &mut mqtt_path.settings.show_heading,
                 );
+                hovered |= attr_button(
+                    ui,
+                    first_point.and_then(|p| p.altitude.first()).is_some(),
+                    &mut mqtt_path.settings.show_altitude,
+                );
+
+                for (idx, alt_metadata) in mqtt_path
+                    .merged_altimeter_metadata()
+                    .to_vec()
+                    .iter()
+                    .enumerate()
+                {
+                    log::info!("{idx}: {}", alt_metadata.name);
+                    let is_showing = mqtt_path.settings.get_merged(idx);
+                    let indicator = if is_showing {
+                        RichText::new(CHECK_CIRCLE).color(alt_metadata.color).weak()
+                    } else {
+                        RichText::new(CIRCLE).color(alt_metadata.color).strong()
+                    };
+                    let resp = ui.button(indicator).on_hover_text(RichText::new(format!(
+                        "Merged from '{}'",
+                        alt_metadata.name
+                    )));
+
+                    if resp.clicked() {
+                        let show = mqtt_path
+                            .settings
+                            .show_merged_altitudes
+                            .get_mut(idx)
+                            .expect("unsound condition");
+                        *show = !*show;
+                    }
+                    hovered |= resp.hovered();
+                }
 
                 ui.end_row();
                 if hovered {

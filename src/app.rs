@@ -41,7 +41,7 @@ impl eframe::App for GlobalApp {
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
         {
-            if !self.has_map_opened && self.app.map_commander.any_data_received {
+            if !self.has_map_opened && self.app.map_commander.any_primary_data_received {
                 self.has_map_opened = true;
                 self.open_map_viewport(ctx);
             }

@@ -1,9 +1,9 @@
 use egui::{Color32, Pos2, Rect, vec2};
 use plotinator_log_if::{
-    prelude::{GeoAltitude, GeoPoint, PrimaryGeoSpatialData},
-    rawplot::path_data::caching::CachedValues,
+    prelude::{GeoPoint, PrimaryGeoSpatialData},
+    rawplot::path_data::{MergedMetadata, caching::CachedValues},
 };
-use plotinator_mqtt::data::listener::MqttGeoPoint;
+use plotinator_mqtt::data::listener::{GeoData, MqttDevice, MqttGeoData};
 use plotinator_ui_util::auto_terrain_safe_color;
 use serde::{Deserialize, Serialize};
 use walkers::Projector;
@@ -30,6 +30,9 @@ pub trait GeoPath {
 
     /// Get the [`GeoPathSettings`]
     fn path_settings(&self) -> &GeoPathSettings;
+
+    /// Get a list of metadata of merged altimeter data
+    fn merged_altimeter_metadata(&self) -> &[MergedMetadata];
 }
 
 impl GeoPath for MqttGeoPath {
@@ -59,6 +62,10 @@ impl GeoPath for MqttGeoPath {
 
     fn path_settings(&self) -> &GeoPathSettings {
         &self.settings
+    }
+
+    fn merged_altimeter_metadata(&self) -> &[MergedMetadata] {
+        &self.merged
     }
 }
 
@@ -92,6 +99,10 @@ impl GeoPath for PathEntry {
     fn path_settings(&self) -> &GeoPathSettings {
         &self.settings
     }
+
+    fn merged_altimeter_metadata(&self) -> &[MergedMetadata] {
+        &self.data.merged
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -106,7 +117,7 @@ impl PathEntry {
             data.points.iter().all(|p| !p.timestamp.is_nan()
                 && !p.position.x().is_nan()
                 && !p.position.y().is_nan()
-                && !p.altitude.is_some_and(|a| a.inner_raw().is_nan())
+                && !p.altitude.first().is_some_and(|a| a.inner_raw().is_nan())
                 && !p.speed.is_some_and(|s| s.is_nan())
                 && !p.heading.is_some_and(|h| h.is_nan())),
             "GeoSpatialData with NaN values: {}",
@@ -124,12 +135,13 @@ impl PathEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GeoPathSettings {
     pub visible: bool,
-    pub show_heading: bool,  // if applicable
-    pub show_altitude: bool, // if applicable
-    pub show_speed: bool,    // if applicable
+    pub show_heading: bool,               // if applicable
+    pub show_speed: bool,                 // if applicable
+    pub show_altitude: bool,              // if applicable
+    pub show_merged_altitudes: Vec<bool>, // if applicable
 }
 
 impl Default for GeoPathSettings {
@@ -139,29 +151,55 @@ impl Default for GeoPathSettings {
             show_heading: true,
             show_altitude: true,
             show_speed: true,
+            show_merged_altitudes: vec![],
         }
+    }
+}
+
+impl GeoPathSettings {
+    /// Get the visibility of a type of merged altitude
+    pub(crate) fn get_merged(&self, idx: usize) -> bool {
+        *self
+            .show_merged_altitudes
+            .get(idx)
+            .expect("unsound condition")
     }
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub(crate) struct MqttGeoPath {
     pub(crate) topic: String,
+    /// Device e.g. `njord` or `tc`
+    pub(crate) device: Option<MqttDevice>,
     pub(crate) points: Vec<GeoPoint>,
     pub(crate) settings: GeoPathSettings,
     pub boundary_values: CachedValues,
     pub color: Color32,
+    pub(crate) merged: Vec<MergedMetadata>,
 }
 
-impl From<MqttGeoPoint> for MqttGeoPath {
-    fn from(mqtt_point: MqttGeoPoint) -> Self {
-        let MqttGeoPoint { topic, point } = mqtt_point;
-        let boundary_values = CachedValues::compute(&[point]);
+impl From<MqttGeoData> for MqttGeoPath {
+    fn from(mqtt_point: MqttGeoData) -> Self {
+        let MqttGeoData {
+            topic,
+            device,
+            data,
+        } = mqtt_point;
+        let point = match data {
+            GeoData::GeoPoint(geo_point) => geo_point,
+            GeoData::LaserAltitude { .. } => unreachable!(
+                "It's unsound to attempt to create an MqttGeoPath from data from an altimeter"
+            ),
+        };
+        let boundary_values = CachedValues::compute(&[point.clone()]);
         Self {
             topic,
+            device,
             points: vec![point],
             settings: GeoPathSettings::default(),
             boundary_values,
             color: auto_terrain_safe_color(),
+            merged: vec![],
         }
     }
 }

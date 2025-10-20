@@ -100,10 +100,12 @@ impl SkytemHdf5 for FrameAltimeters {
 
         let geo_data_builder1 = GeoSpatialDataBuilder::new(LEGEND_NAME_1)
             .timestamp(&timestamps1)
-            .altitude_from_laser(heights1);
+            .altitude_from_laser(heights1)
+            .altitude_valid_range((0., Self::INVALID_VALUE_THRESHOLD));
         let geo_data_builder2 = GeoSpatialDataBuilder::new(LEGEND_NAME_2)
             .timestamp(&timestamps2)
-            .altitude_from_laser(heights2);
+            .altitude_from_laser(heights2)
+            .altitude_valid_range((0., Self::INVALID_VALUE_THRESHOLD));
 
         if let Ok(Some(geo_data1)) = geo_data_builder1.build_into_rawplot() {
             raw_plots.push(geo_data1);

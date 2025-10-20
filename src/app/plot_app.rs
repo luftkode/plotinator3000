@@ -171,7 +171,16 @@ impl eframe::App for PlotApp {
                     .as_mut()
                     .and_then(|d| d.take_geo_points())
                 {
-                    self.map_commander.add_mqtt_geo_data(mqtt_geo_points);
+                    self.map_commander.add_mqtt_geo_points(mqtt_geo_points);
+                }
+                if let Some(mqtt_geo_altitudes) = self
+                    .mqtt
+                    .mqtt_plot_data
+                    .as_mut()
+                    .and_then(|d| d.take_geo_altitudes())
+                {
+                    self.map_commander
+                        .add_mqtt_geo_altitudes(mqtt_geo_altitudes);
                 }
             }
 

@@ -1,5 +1,8 @@
 use egui::{Color32, FontId, Painter, Pos2, Rect, epaint::Galley, vec2};
-use plotinator_log_if::prelude::GeoPoint;
+use plotinator_log_if::{
+    prelude::{GeoAltitude, GeoPoint},
+    rawplot::path_data::Altitude,
+};
 use plotinator_proc_macros::log_time;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
@@ -9,6 +12,7 @@ pub(crate) struct TelemetryLabelSettings {
     pub(crate) draw: bool,
     pub(crate) with_speed: bool,
     pub(crate) with_altitude: bool,
+    pub(crate) merged_altitudes: Vec<bool>,
 }
 
 impl TelemetryLabelSettings {
@@ -18,11 +22,15 @@ impl TelemetryLabelSettings {
     pub(crate) fn draw_altitude(&self) -> bool {
         self.with_altitude
     }
+
+    pub(crate) fn draw_merged_altitude(&self, idx: u8) -> bool {
+        self.merged_altitudes.get(idx as usize).is_some_and(|m| *m)
+    }
 }
 
 pub struct CandidatePoint {
     pos: Pos2,
-    altitude: Option<f64>,
+    altitude: Vec<GeoAltitude>,
     speed: Option<f64>,
     color: Color32,
 }
@@ -107,7 +115,10 @@ impl LabelPlacer {
         path_color: Color32,
         settings: &TelemetryLabelSettings,
     ) {
-        if !(settings.draw_altitude() || settings.draw_speed()) {
+        if !(settings.draw_altitude()
+            || settings.draw_speed()
+            || settings.merged_altitudes.iter().any(|m| *m))
+        {
             return;
         }
 
@@ -126,13 +137,24 @@ impl LabelPlacer {
             };
 
             if should_place {
+                let mut altitudes: Vec<GeoAltitude> = vec![];
+                for a in &geo_point.altitude {
+                    match a {
+                        GeoAltitude::Gnss(_) | GeoAltitude::Laser(_) => {
+                            if settings.draw_altitude() {
+                                altitudes.push(*a);
+                            }
+                        }
+                        GeoAltitude::MergedLaser { source_index, .. } => {
+                            if settings.draw_merged_altitude(*source_index) {
+                                altitudes.push(*a);
+                            }
+                        }
+                    }
+                }
                 self.candidate_buffer.push(CandidatePoint {
                     pos: *screen_pos,
-                    altitude: if settings.draw_altitude() {
-                        geo_point.altitude.map(|a| a.inner_raw())
-                    } else {
-                        None
-                    },
+                    altitude: altitudes,
                     speed: if settings.draw_speed() {
                         geo_point.speed
                     } else {
@@ -228,9 +250,22 @@ impl LabelPlacer {
 #[inline]
 fn calculate_label_layout(painter: &Painter, point: &CandidatePoint) -> (Rect, Vec<Arc<Galley>>) {
     let mut lines = Vec::with_capacity(2);
-    if let Some(altitude) = point.altitude {
-        lines.push(format!("{altitude:.0} m"));
+    for alt in &point.altitude {
+        match alt {
+            GeoAltitude::Gnss(altitude) => lines.push(match altitude {
+                Altitude::Valid(a) => format!("{a:.0} m"),
+                Altitude::Invalid(a) => format!("invalid: {a:.0} m"),
+            }),
+            GeoAltitude::Laser(altitude) => lines.push(match altitude {
+                Altitude::Valid(a) => format!("{a:.0} m (L)"),
+                Altitude::Invalid(a) => format!("invalid: {a:.0} m (L)"),
+            }),
+            GeoAltitude::MergedLaser { val, source_index } => {
+                lines.push(format!("{val:.0} m (M{source_index})"));
+            }
+        }
     }
+
     if let Some(speed) = point.speed {
         lines.push(format!("{speed:.1} km/h"));
     }

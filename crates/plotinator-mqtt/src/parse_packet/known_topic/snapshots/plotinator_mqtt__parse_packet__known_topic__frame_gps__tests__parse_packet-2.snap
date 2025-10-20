@@ -155,22 +155,24 @@ MqttData {
             },
             MqttTopicData {
                 topic: "dt/tc/frame-gps/x/gps[2]",
-                payload: GeoPoint(
-                    GeoPoint {
-                        timestamp: 1.757321363e18,
-                        position: POINT(10.147778511047363 56.217777252197266),
-                        heading: None,
-                        altitude: Some(
-                            Gnss(
-                                Valid(
-                                    66.62000274658203,
+                payload: GeoData(
+                    GeoPoint(
+                        GeoPoint {
+                            timestamp: 1.757321363e18,
+                            position: POINT(10.147778511047363 56.217777252197266),
+                            heading: None,
+                            altitude: [
+                                Gnss(
+                                    Valid(
+                                        66.62000274658203,
+                                    ),
                                 ),
+                            ],
+                            speed: Some(
+                                0.09630399942398071,
                             ),
-                        ),
-                        speed: Some(
-                            0.09630399942398071,
-                        ),
-                    },
+                        },
+                    ),
                 ),
                 ty: None,
             },

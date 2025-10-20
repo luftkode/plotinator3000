@@ -1,6 +1,7 @@
 use crate::util;
 use egui_plot::PlotPoint;
 use plotinator_log_if::{prelude::GeoPoint, rawplot::DataType};
+use serde::{Deserialize, Serialize};
 
 /// Received MQTT data, before it is plotable.
 ///
@@ -79,13 +80,27 @@ impl MqttTopicData {
         }
     }
 
-    /// Single [`GeoPoint`] that well eventually end up on the map view
+    /// Single [`GeoPoint`] that will eventually end up on the map view
     #[inline]
     pub fn single_geopoint(topic: String, point: GeoPoint) -> Self {
         Self {
             topic,
-            payload: TopicPayload::GeoPoint(point),
+            payload: TopicPayload::GeoData(GeoData::GeoPoint(point)),
             ty: None,
+        }
+    }
+
+    /// Single altitude sample from a laser range finder that will be attempted to be associated with a path in the map view
+    #[inline]
+    pub fn single_laser_altitude(topic: String, val: f32, device: MqttDevice) -> Self {
+        Self {
+            topic,
+            payload: TopicPayload::GeoData(GeoData::LaserAltitude {
+                timestamp: util::now_timestamp(),
+                val,
+                device,
+            }),
+            ty: Some(DataType::AltitudeLaser),
         }
     }
 
@@ -123,7 +138,7 @@ impl MqttTopicData {
 pub enum TopicPayload {
     Point(PlotPoint),
     Points(Vec<PlotPoint>),
-    GeoPoint(GeoPoint),
+    GeoData(GeoData),
 }
 
 impl From<PlotPoint> for TopicPayload {
@@ -141,7 +156,111 @@ impl From<Vec<PlotPoint>> for TopicPayload {
 }
 
 #[derive(Debug, Clone)]
-pub struct MqttGeoPoint {
+pub enum GeoData {
+    GeoPoint(GeoPoint),
+    LaserAltitude {
+        timestamp: f64,
+        val: f32,
+        device: MqttDevice,
+    },
+}
+
+impl GeoData {
+    fn has_coordinates(&self) -> bool {
+        match self {
+            GeoData::GeoPoint(_) => true,
+            GeoData::LaserAltitude { .. } => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MqttGeoData {
     pub topic: String,
-    pub point: GeoPoint,
+    pub device: Option<MqttDevice>,
+    pub data: GeoData,
+}
+
+impl MqttGeoData {
+    pub fn point(topic: String, point: GeoPoint) -> Self {
+        Self::new(topic, GeoData::GeoPoint(point))
+    }
+
+    fn new(topic: String, data: GeoData) -> Self {
+        Self {
+            device: MqttDevice::new(&topic),
+            topic,
+            data,
+        }
+    }
+
+    pub fn has_coordinates(&self) -> bool {
+        self.data.has_coordinates()
+    }
+}
+
+/// The device, e.g. `njord` in `dt/njord/njord-altimeter/x`
+///
+/// Topic semantics are `<category>/<device>/<application>/<id> ...`
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub enum MqttDevice {
+    Tc,
+    Njord,
+}
+
+impl MqttDevice {
+    /// Parse the device name (the second segment) from an MQTT topic string
+    /// with format `<category>/<device>/<application>/<id> ...`
+    pub fn new(topic: &str) -> Option<Self> {
+        const PREFIX: &str = "dt/";
+        if !topic.starts_with(PREFIX) {
+            return None;
+        }
+
+        // Find the end of the device segment
+        let rest = &topic[PREFIX.len()..];
+        let end = rest.find('/')?;
+        let device_str = &rest[..end];
+
+        match device_str {
+            "tc" => Some(MqttDevice::Tc),
+            "njord" => Some(MqttDevice::Njord),
+            _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_njord_topic() {
+        let topic = "dt/njord/njord-altimeter/x";
+        assert_eq!(MqttDevice::new(topic), Some(MqttDevice::Njord));
+    }
+
+    #[test]
+    fn test_tc_topic() {
+        let topic = "dt/tc/sensor/123";
+        assert_eq!(MqttDevice::new(topic), Some(MqttDevice::Tc));
+    }
+
+    #[test]
+    fn test_unknown_device() {
+        let topic = "dt/unknown/app/1";
+        assert_eq!(MqttDevice::new(topic), None);
+    }
+
+    #[test]
+    fn test_missing_segments() {
+        let topic = "dt/njord";
+        assert_eq!(MqttDevice::new(topic), None);
+    }
+
+    #[test]
+    fn test_empty_topic() {
+        let topic = "";
+        assert_eq!(MqttDevice::new(topic), None);
+    }
 }
