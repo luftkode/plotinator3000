@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Map: Merge altimeter samples from lasers into loaded geo datasets (with coordinates) if the datasets match
+- Map: MQTT: Match received altimeter laser data to existing coordinates if they come from the same device
 - Distinguished types for valid and invalid altitude measurement
 - Fix frame-altimeters height dataset both named HE1
 - Tweak map label colors

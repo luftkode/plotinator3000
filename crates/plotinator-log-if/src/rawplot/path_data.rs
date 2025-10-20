@@ -856,6 +856,8 @@ impl PrimaryGeoSpatialData {
 
     /// Helper to merge a single field using nearest-neighbor lookup
     /// Optimized for monotonically increasing timestamps - O(n+m) complexity
+    ///
+    /// Prefers valid altitude samples - if nearest is invalid, checks neighbors
     fn merge_altitude_nearest(
         &mut self,
         aux_times: &[f64],
@@ -883,8 +885,42 @@ impl PrimaryGeoSpatialData {
                     break;
                 }
             }
-            let altitude_sample = altitudes[aux_idx];
-            let val = altitude_sample.inner_raw() as f32;
+
+            // Check if the nearest altitude is valid
+            let nearest_altitude = altitudes[aux_idx];
+            let selected_altitude = match nearest_altitude.val() {
+                Altitude::Valid(_) => nearest_altitude,
+                Altitude::Invalid(_) => {
+                    // Try to find a valid altitude in the two nearest neighbors
+                    let prev_idx = aux_idx.saturating_sub(1);
+                    let next_idx = (aux_idx + 1).min(last_idx);
+
+                    let prev_valid =
+                        aux_idx > 0 && matches!(altitudes[prev_idx].val(), Altitude::Valid(_));
+                    let next_valid = aux_idx < last_idx
+                        && matches!(altitudes[next_idx].val(), Altitude::Valid(_));
+
+                    if prev_valid && next_valid {
+                        // Both neighbors are valid, pick the closer one
+                        let prev_diff = (aux_times[prev_idx] - target).abs();
+                        let next_diff = (aux_times[next_idx] - target).abs();
+                        if prev_diff < next_diff {
+                            altitudes[prev_idx]
+                        } else {
+                            altitudes[next_idx]
+                        }
+                    } else if prev_valid {
+                        altitudes[prev_idx]
+                    } else if next_valid {
+                        altitudes[next_idx]
+                    } else {
+                        // No valid neighbors, use the invalid one
+                        nearest_altitude
+                    }
+                }
+            };
+
+            let val = selected_altitude.inner_raw() as f32;
             point.altitude.push(GeoAltitude::MergedLaser {
                 val,
                 source_index: merge_index as u8,
