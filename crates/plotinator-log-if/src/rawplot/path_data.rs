@@ -41,7 +41,6 @@ impl Altitude {
         {
             Self::Invalid(altitude)
         } else {
-            log::info!("{altitude:.2}");
             Self::Valid(altitude)
         }
     }

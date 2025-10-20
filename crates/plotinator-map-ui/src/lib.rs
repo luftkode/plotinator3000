@@ -737,7 +737,6 @@ impl MapViewPort {
                     .iter()
                     .enumerate()
                 {
-                    log::info!("{idx}: {}", alt_metadata.name);
                     let is_showing = mqtt_path.settings.get_merged(idx);
                     let indicator = if is_showing {
                         RichText::new(CHECK_CIRCLE).color(alt_metadata.color).weak()
