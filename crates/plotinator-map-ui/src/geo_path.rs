@@ -191,7 +191,7 @@ impl From<MqttGeoData> for MqttGeoPath {
                 "It's unsound to attempt to create an MqttGeoPath from data from an altimeter"
             ),
         };
-        let boundary_values = CachedValues::compute(&[point.clone()]);
+        let boundary_values = CachedValues::compute(std::slice::from_ref(&point));
         Self {
             topic,
             device,

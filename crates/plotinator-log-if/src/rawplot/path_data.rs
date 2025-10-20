@@ -314,40 +314,60 @@ impl<'a, 'b, 'c, 'd, 'f> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f> {
                 PrimaryGeoSpatialData::new(name, points),
             )))
         } else if heading.is_some() || altitude.is_some() || speed.is_some() {
-            let mut aux_geo_data = AuxiliaryGeoSpatialData::new(name, ts.to_owned());
-            if let Some(hdg) = heading {
-                debug_assert_eq!(hdg.len(), ts.len());
-                aux_geo_data = aux_geo_data.with_heading(hdg.to_owned());
-            }
-            if let Some(alt) = altitude {
-                debug_assert_eq!(alt.len(), ts.len());
-                let mut processed_altitudes: Vec<GeoAltitude> = Vec::with_capacity(alt.len());
-                match alt {
-                    RawGeoAltitudes::Gnss(alts) => {
-                        for a in alts {
-                            processed_altitudes
-                                .push(GeoAltitude::Gnss(Altitude::new(a, altitude_valid_range)));
-                        }
-                    }
-                    RawGeoAltitudes::Laser(alts) => {
-                        for a in alts {
-                            processed_altitudes
-                                .push(GeoAltitude::Laser(Altitude::new(a, altitude_valid_range)));
-                        }
-                    }
-                }
-                aux_geo_data = aux_geo_data.with_altitude(processed_altitudes);
-            }
-            if let Some(spd) = speed {
-                debug_assert_eq!(spd.len(), ts.len());
-                aux_geo_data = aux_geo_data.with_speed(spd.to_owned());
-            }
+            let aux_geo_data = Self::build_aux(
+                name,
+                ts.to_owned(),
+                heading,
+                altitude,
+                altitude_valid_range,
+                speed,
+            );
             Ok(Some(GeoSpatialDataset::AuxGeoSpatialData(aux_geo_data)))
         } else {
             bail!(
                 "Cannot build Geo Spatial dataset '{name}' with neither longitude and latitude, or either of heading, speed, or altitude"
             );
         }
+    }
+
+    fn build_aux(
+        name: String,
+        timestamps: Vec<f64>,
+        heading: Option<&[f64]>,
+        altitude: Option<RawGeoAltitudes>,
+        altitude_valid_range: Option<(f64, f64)>,
+        speed: Option<&[f64]>,
+    ) -> AuxiliaryGeoSpatialData {
+        let timestamps_len = timestamps.len();
+        let mut aux_geo_data = AuxiliaryGeoSpatialData::new(name, timestamps);
+        if let Some(hdg) = heading {
+            debug_assert_eq!(hdg.len(), timestamps_len);
+            aux_geo_data = aux_geo_data.with_heading(hdg.to_owned());
+        }
+        if let Some(alt) = altitude {
+            debug_assert_eq!(alt.len(), timestamps_len);
+            let mut processed_altitudes: Vec<GeoAltitude> = Vec::with_capacity(alt.len());
+            match alt {
+                RawGeoAltitudes::Gnss(alts) => {
+                    for a in alts {
+                        processed_altitudes
+                            .push(GeoAltitude::Gnss(Altitude::new(a, altitude_valid_range)));
+                    }
+                }
+                RawGeoAltitudes::Laser(alts) => {
+                    for a in alts {
+                        processed_altitudes
+                            .push(GeoAltitude::Laser(Altitude::new(a, altitude_valid_range)));
+                    }
+                }
+            }
+            aux_geo_data = aux_geo_data.with_altitude(processed_altitudes);
+        }
+        if let Some(spd) = speed {
+            debug_assert_eq!(spd.len(), timestamps_len);
+            aux_geo_data = aux_geo_data.with_speed(spd.to_owned());
+        }
+        aux_geo_data
     }
 }
 
@@ -443,6 +463,7 @@ impl PrimaryGeoSpatialData {
     }
 
     /// Builds and returns all the [`RawPlotCommon`] that can be extracted from the underlying data
+    #[allow(clippy::too_many_lines, reason = "long but simple enough")]
     pub fn raw_plots_common(&self) -> Vec<RawPlotCommon> {
         let data_len = self.points.len();
         let altitude_len = if self.points.first().is_some_and(|p| p.altitude.is_empty()) {

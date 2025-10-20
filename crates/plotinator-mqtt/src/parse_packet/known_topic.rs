@@ -237,7 +237,7 @@ impl KnownTopic {
                     p.parse::<f32>()?,
                     MqttDevice::Tc,
                 ));
-                Ok(Some(data.into()))
+                Ok(Some(data))
             }
             // Explicitly handle altimeter topics even though it's simple numbers
             // to be able to assign the datatype and device that allows handling it in the map
@@ -247,7 +247,7 @@ impl KnownTopic {
                     p.parse::<f32>()?,
                     MqttDevice::Njord,
                 ));
-                Ok(Some(data.into()))
+                Ok(Some(data))
             }
             Self::PilotDisplayCoordinates => {
                 let p: PilotDisplayCoordinates = serde_json::from_str(p)?;

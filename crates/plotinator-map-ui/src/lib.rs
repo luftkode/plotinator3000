@@ -11,6 +11,7 @@ use plotinator_log_if::{
     prelude::{GeoAltitude, PrimaryGeoSpatialData},
     rawplot::path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset, MergedMetadata},
 };
+use plotinator_mqtt::data::listener::MqttGeoData;
 use plotinator_mqtt_ui::plot::ColoredGeoLaserAltitude;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
@@ -37,7 +38,7 @@ pub struct MapViewPort {
     pub open: bool,
     pub geo_data: Vec<PathEntry>,
     mqtt_geo_data: SmallVec<[MqttGeoPath; 3]>,
-    pub mergable_aux_data: Vec<AuxiliaryGeoSpatialData>,
+    pub mergeable_aux_data: Vec<AuxiliaryGeoSpatialData>,
     map_state: MapState,
 
     label_placer: LabelPlacer,
@@ -111,141 +112,13 @@ impl MapViewPort {
         while let Ok(cmd) = self.cmd_rx.as_ref().expect("unsound condition").try_recv() {
             match cmd {
                 MapCommand::AddGeoData(geo_data) => {
-                    match geo_data {
-                        GeoSpatialDataset::PrimaryGeoSpatialData(primary_data) => {
-                            if let Some(first_point) = primary_data.points.first() {
-                                let has_speed = first_point.speed.is_some();
-                                let has_altitude = first_point.altitude.first().is_some();
-                                let has_heading = first_point.heading.is_some();
-                                log::info!(
-                                    "Received geo data {}, points include speed={has_speed}, altitude={has_altitude}, heading={has_heading}",
-                                    primary_data.name
-                                );
-                            } else {
-                                log::info!(
-                                    "Received basic geo data {} with only coordinates",
-                                    primary_data.name
-                                );
-                            }
-
-                            self.add_geo_data(primary_data);
-                        }
-                        GeoSpatialDataset::AuxGeoSpatialData(aux_data) => {
-                            for path in &mut self.geo_data {
-                                if path
-                                    .data
-                                    .merge_auxiliary(&aux_data, 7e9, aux_data.color)
-                                    .is_ok()
-                                {
-                                    path.settings.show_merged_altitudes.push(true);
-                                }
-                            }
-                            self.mergable_aux_data.push(aux_data);
-                        }
-                    }
-
-                    self.zoom_to_fit();
+                    self.handle_cmd_add_geo_data(geo_data);
                 }
-                MapCommand::MQTTGeoData(ref geo_points) => {
-                    let maybe_first_data = self.mqtt_geo_data.is_empty();
-
-                    // Iterate through incoming MQTT points (typically 1-2, max ~10)
-                    for mqtt_point in geo_points.iter() {
-                        let data = match &mqtt_point.data {
-                            plotinator_mqtt::data::listener::GeoData::GeoPoint(geo_point) => {
-                                geo_point
-                            }
-                            plotinator_mqtt::data::listener::GeoData::LaserAltitude { .. } => {
-                                unreachable!("Unsound condition")
-                            }
-                        };
-
-                        let mut match_found = false;
-                        for mqtt_geo_path in &mut self.mqtt_geo_data {
-                            if mqtt_point.topic == mqtt_geo_path.topic {
-                                match_found = true;
-                                // Check if last point has matching timestamp (within microsecond precision)
-                                if let Some(last_point) = mqtt_geo_path.points.last_mut()
-                                    && (last_point.timestamp - data.timestamp).abs() < 1e6
-                                {
-                                    *last_point = data.to_owned();
-                                } else {
-                                    mqtt_geo_path.push(data.to_owned());
-                                }
-                                break;
-                            }
-                        }
-                        if !match_found {
-                            self.mqtt_geo_data.push(mqtt_point.to_owned().into());
-                        }
-                    }
-
-                    if maybe_first_data && !self.mqtt_geo_data.is_empty() {
-                        self.zoom_to_fit();
-                        // After the initial zoom, start following the position automatically.
-                        if let Some(tile_state) = self.map_state.tile_state_as_mut() {
-                            tile_state.map_memory.follow_my_position();
-                        }
-                    }
-
-                    // Update position for the map widget to follow.
-                    if let Some(latest_point) = self
-                        .mqtt_geo_data
-                        .first()
-                        .and_then(|path| path.points.last())
-                    {
-                        self.mqtt_latest_position = Some(latest_point.position);
-                    }
-                }
+                MapCommand::MQTTGeoData(geo_points) => self.handle_cmd_mqtt_geo_data(&geo_points),
                 MapCommand::MQTTGeoAltitudes(colored_laser_altitudes) => {
-                    for ColoredGeoLaserAltitude {
-                        topic,
-                        timestamp,
-                        altitude,
-                        device,
-                        color,
-                    } in colored_laser_altitudes.into_iter()
-                    {
-                        for mqtt_geo_path in &mut self.mqtt_geo_data {
-                            if mqtt_geo_path.device.is_some_and(|d| d == device) {
-                                if let Some(last_point) = mqtt_geo_path.points.last_mut()
-                                    && last_point.timestamp < timestamp
-                                {
-                                    let idx = mqtt_geo_path
-                                        .merged
-                                        .iter()
-                                        .position(|m| m.color == color)
-                                        .unwrap_or_else(|| {
-                                            let idx = mqtt_geo_path.merged.len();
-                                            mqtt_geo_path.merged.push(MergedMetadata {
-                                                name: topic.clone(),
-                                                color,
-                                            });
-                                            mqtt_geo_path.settings.show_merged_altitudes.push(true);
-                                            idx
-                                        });
-                                    let mut already_merged = false;
-                                    for alt in &last_point.altitude {
-                                        match alt {
-                                            GeoAltitude::Gnss(_) | GeoAltitude::Laser(_) => (),
-                                            GeoAltitude::MergedLaser { source_index, .. } => {
-                                                if *source_index == idx as u8 {
-                                                    already_merged = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if !already_merged {
-                                        last_point.altitude.push(GeoAltitude::MergedLaser {
-                                            val: altitude,
-                                            source_index: idx as u8,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    self.handle_cmd_mqtt_geo_altitudes(colored_laser_altitudes);
                 }
+
                 MapCommand::PointerPos(time_pos) => {
                     log::trace!("Got pointer time: {time_pos:.}");
                     pointer_pos = Some(time_pos);
@@ -256,12 +129,153 @@ impl MapViewPort {
                 MapCommand::Reset => {
                     self.geo_data.clear();
                     self.mqtt_geo_data.clear();
-                    self.mergable_aux_data.clear();
+                    self.mergeable_aux_data.clear();
                 }
             }
         }
         if let Some(pos) = pointer_pos {
             self.plot_time_pointer_pos = Some(pos);
+        }
+    }
+
+    fn handle_cmd_add_geo_data(&mut self, geo_data: GeoSpatialDataset) {
+        match geo_data {
+            GeoSpatialDataset::PrimaryGeoSpatialData(primary_data) => {
+                if let Some(first_point) = primary_data.points.first() {
+                    let has_speed = first_point.speed.is_some();
+                    let has_altitude = !first_point.altitude.is_empty();
+                    let has_heading = first_point.heading.is_some();
+                    log::info!(
+                        "Received geo data {}, points include speed={has_speed}, altitude={has_altitude}, heading={has_heading}",
+                        primary_data.name
+                    );
+                } else {
+                    log::info!(
+                        "Received basic geo data {} with only coordinates",
+                        primary_data.name
+                    );
+                }
+
+                self.add_geo_data(primary_data);
+            }
+            GeoSpatialDataset::AuxGeoSpatialData(aux_data) => {
+                for path in &mut self.geo_data {
+                    if path
+                        .data
+                        .merge_auxiliary(&aux_data, 7e9, aux_data.color)
+                        .is_ok()
+                    {
+                        path.settings.show_merged_altitudes.push(true);
+                    }
+                }
+                self.mergeable_aux_data.push(aux_data);
+            }
+        }
+
+        self.zoom_to_fit();
+    }
+
+    fn handle_cmd_mqtt_geo_data(&mut self, geo_points: &SmallVec<[MqttGeoData; 10]>) {
+        let maybe_first_data = self.mqtt_geo_data.is_empty();
+
+        // Iterate through incoming MQTT points (typically 1-2, max ~10)
+        for mqtt_point in geo_points {
+            let data = match &mqtt_point.data {
+                plotinator_mqtt::data::listener::GeoData::GeoPoint(geo_point) => geo_point,
+                plotinator_mqtt::data::listener::GeoData::LaserAltitude { .. } => {
+                    unreachable!("Unsound condition")
+                }
+            };
+
+            let mut match_found = false;
+            for mqtt_geo_path in &mut self.mqtt_geo_data {
+                if mqtt_point.topic == mqtt_geo_path.topic {
+                    match_found = true;
+                    // Check if last point has matching timestamp (within microsecond precision)
+                    if let Some(last_point) = mqtt_geo_path.points.last_mut()
+                        && (last_point.timestamp - data.timestamp).abs() < 1e6
+                    {
+                        *last_point = data.to_owned();
+                    } else {
+                        mqtt_geo_path.push(data.to_owned());
+                    }
+                    break;
+                }
+            }
+            if !match_found {
+                self.mqtt_geo_data.push(mqtt_point.to_owned().into());
+            }
+        }
+
+        if maybe_first_data && !self.mqtt_geo_data.is_empty() {
+            self.zoom_to_fit();
+            // After the initial zoom, start following the position automatically.
+            if let Some(tile_state) = self.map_state.tile_state_as_mut() {
+                tile_state.map_memory.follow_my_position();
+            }
+        }
+
+        // Update position for the map widget to follow.
+        if let Some(latest_point) = self
+            .mqtt_geo_data
+            .first()
+            .and_then(|path| path.points.last())
+        {
+            self.mqtt_latest_position = Some(latest_point.position);
+        }
+    }
+
+    fn handle_cmd_mqtt_geo_altitudes(
+        &mut self,
+        colored_laser_altitudes: Box<SmallVec<[ColoredGeoLaserAltitude; 10]>>,
+    ) {
+        for ColoredGeoLaserAltitude {
+            topic,
+            timestamp,
+            altitude,
+            device,
+            color,
+        } in colored_laser_altitudes.into_iter()
+        {
+            for mqtt_geo_path in &mut self.mqtt_geo_data {
+                // Find paths with data from the same device
+                // and the incoming data has a newer timestamp than the latest point
+                if mqtt_geo_path.device.is_some_and(|d| d == device)
+                    && let Some(last_point) = mqtt_geo_path.points.last_mut()
+                    && last_point.timestamp < timestamp
+                {
+                    let idx = mqtt_geo_path
+                        .merged
+                        .iter()
+                        .position(|m| m.color == color)
+                        .unwrap_or_else(|| {
+                            let idx = mqtt_geo_path.merged.len();
+                            mqtt_geo_path.merged.push(MergedMetadata {
+                                name: topic.clone(),
+                                color,
+                            });
+                            mqtt_geo_path.settings.show_merged_altitudes.push(true);
+                            idx
+                        });
+                    let mut already_merged = false;
+                    for alt in &last_point.altitude {
+                        match alt {
+                            GeoAltitude::Gnss(_) | GeoAltitude::Laser(_) => (),
+                            GeoAltitude::MergedLaser { source_index, .. } => {
+                                if *source_index == idx as u8 {
+                                    already_merged = true;
+                                }
+                            }
+                        }
+                    }
+                    if !already_merged {
+                        last_point.altitude.push(GeoAltitude::MergedLaser {
+                            val: altitude,
+                            source_index: idx as u8,
+                        });
+                    }
+                }
+            }
         }
     }
 
@@ -273,7 +287,7 @@ impl MapViewPort {
     pub fn add_geo_data(&mut self, data: PrimaryGeoSpatialData) {
         let mut new_path = PathEntry::new(data);
         // Check if any of the aux data can be merged into it
-        for aux in &self.mergable_aux_data {
+        for aux in &self.mergeable_aux_data {
             if new_path.data.merge_auxiliary(aux, 7e9, aux.color).is_ok() {
                 new_path.settings.show_merged_altitudes.push(true);
             };
@@ -451,7 +465,7 @@ impl MapViewPort {
                     draw: draw_telemetry_label,
                     with_speed: path.path_settings().show_speed,
                     with_altitude: path.path_settings().show_altitude,
-                    merged_altitudes: path.path_settings().show_merged_altitudes.to_owned(),
+                    merged_altitudes: path.path_settings().show_merged_altitudes.clone(),
                 },
             };
 
@@ -583,6 +597,10 @@ impl MapViewPort {
             for path_entry in &self.geo_data {
                 max_merged_count =
                     max_merged_count.max(path_entry.merged_altimeter_metadata().len());
+            }
+            for mqtt_path in &self.mqtt_geo_data {
+                max_merged_count =
+                    max_merged_count.max(mqtt_path.merged_altimeter_metadata().len());
             }
             for merged_idx in 0..max_merged_count {
                 ui.label(format!("alt[M{merged_idx}]"));

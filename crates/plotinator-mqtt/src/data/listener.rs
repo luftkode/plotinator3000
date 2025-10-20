@@ -168,8 +168,8 @@ pub enum GeoData {
 impl GeoData {
     fn has_coordinates(&self) -> bool {
         match self {
-            GeoData::GeoPoint(_) => true,
-            GeoData::LaserAltitude { .. } => false,
+            Self::GeoPoint(_) => true,
+            Self::LaserAltitude { .. } => false,
         }
     }
 }
@@ -223,8 +223,8 @@ impl MqttDevice {
         let device_str = &rest[..end];
 
         match device_str {
-            "tc" => Some(MqttDevice::Tc),
-            "njord" => Some(MqttDevice::Njord),
+            "tc" => Some(Self::Tc),
+            "njord" => Some(Self::Njord),
             _ => None,
         }
     }

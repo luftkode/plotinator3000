@@ -98,7 +98,7 @@ impl MqttPlotData {
                 )),
                 TopicPayload::GeoData(data) => match data {
                     GeoData::GeoPoint(geo_point) => {
-                        self.geo_data.push(MqttGeoData::point(topic, geo_point))
+                        self.geo_data.push(MqttGeoData::point(topic, geo_point));
                     }
                     GeoData::LaserAltitude {
                         timestamp,
