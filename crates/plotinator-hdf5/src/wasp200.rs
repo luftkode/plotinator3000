@@ -3,7 +3,6 @@ use chrono::{DateTime, Utc};
 use hdf5::{Dataset, H5Type};
 use ndarray::Array2;
 use plotinator_log_if::prelude::*;
-use plotinator_log_if::rawplot::DataType;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 
@@ -20,20 +19,21 @@ impl SkytemHdf5 for Wasp200 {
         log_all_attributes(&height_dataset);
         log_all_attributes(&timestamp_dataset);
 
-        let heights: ndarray::Array2<f32> = height_dataset.read()?;
+        let heights: Vec<f32> = height_dataset.read_raw()?;
+        let heights: Vec<f64> = heights.into_iter().map(|h| h as f64).collect();
         log::info!("Got wasp wasp heights with {} samples", heights.len());
 
         let (timestamps, first_timestamp, delta_t_samples_opt) =
             Self::extract_timestamps(&timestamp_dataset)?;
 
-        let mut height_with_ts: Vec<[f64; 2]> = Vec::new();
-
-        for (height, ts) in heights.iter().zip(timestamps) {
-            height_with_ts.push([ts, *height as f64]);
+        let mut raw_plots = vec![];
+        if let Some(altitude_plot) = GeoSpatialDataBuilder::new(LEGEND_NAME)
+            .timestamp(&timestamps)
+            .altitude_from_laser(heights)
+            .build()?
+        {
+            raw_plots.push(altitude_plot.into());
         }
-
-        let mut raw_plots =
-            vec![RawPlotCommon::new(LEGEND_NAME, height_with_ts, DataType::AltitudeLaser).into()];
 
         if let Some(delta_t_samples) = delta_t_samples_opt {
             raw_plots.push(delta_t_samples.into());
@@ -176,8 +176,8 @@ mod tests {
         let wasp200 = Wasp200::from_path(wasp200())?;
 
         match &wasp200.raw_plots[0] {
-            RawPlot::Generic { common } => assert_eq!(common.points().len(), 70971),
-            RawPlot::GeoSpatialDataset(_) => unreachable!(),
+            RawPlot::Generic { .. } => unreachable!(),
+            RawPlot::GeoSpatialDataset(data) => assert_eq!(data.len(), 70971),
         }
 
         Ok(())

@@ -183,6 +183,7 @@ pub(crate) fn gen_time_between_samples_rawplot(
         .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, legend_name))
 }
 
+#[allow(dead_code, reason = "probably useful again soon")]
 pub(crate) fn gen_time_between_samples_rawplot_2d(
     timestamps: &ndarray::Array2<i64>,
     legend_name: &str,
@@ -223,6 +224,7 @@ pub(crate) fn calc_time_between_samples(timestamps: &[i64]) -> Option<Vec<[f64; 
 
 /// Calculate the time difference between points in a 2D array of unix nanosecond timestamps
 /// Flattens the array and calls the existing `calc_time_between_samples` function
+#[allow(dead_code, reason = "probably useful again soon")]
 pub(crate) fn calc_time_between_samples_2d(
     timestamps: &ndarray::Array2<i64>,
 ) -> Option<Vec<[f64; 2]>> {

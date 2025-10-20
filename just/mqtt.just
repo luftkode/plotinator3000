@@ -67,6 +67,24 @@ pub-multi-random:
     just pub-random-multiple-values "debug/sensors/gps" "20" "30" "1000" "0.05" &
     just pub-random-buffered-values "debug/sensors/mag" "2950" "3030" "5000" "0.01" &
 
+[group("MQTT")]
+pub-frame-altimeter MINUTES="3" TOPIC="dt/tc/frame-altimeter/1/height/10hz":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    END=$(( $(date +%s) + {{MINUTES}}*60 ))
+
+    ALTITUDE=10
+    ADD_VAL=1
+
+    while [ $(date +%s) -lt $END ]; do
+
+        # Gradually increase latitude by a tiny fixed amount each second
+        ALTITUDE=$((ALTITUDE + ADD_VAL))    # roughly 0.00001 degrees per second
+        # Convert back to float strings with dot
+        altitude_str=$(printf "%d.%03d" $((ALTITUDE)) $((ALTITUDE % 10)))
+        mosquitto_pub -h localhost -t "{{TOPIC}}" -m "${altitude_str}"
+        sleep 0.1
+    done
 
 [group("MQTT")]
 pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100":

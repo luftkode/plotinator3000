@@ -8,7 +8,7 @@ use serde::Deserialize;
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    data::listener::{MqttData, MqttTopicData},
+    data::listener::{MqttData, MqttDevice, MqttTopicData},
     parse_packet::known_topic::frame_gps::FrameGpsPacket,
     util,
 };
@@ -23,8 +23,14 @@ pub(crate) enum KnownTopic {
     /// Timestamped packets from `frame-gps`
     #[strum(serialize = "dt/tc/frame-gps/x/gps")]
     TcFrameGps,
+    #[strum(serialize = "dt/tc/frame-altimeter/1/height/10hz")]
+    TcFrameAltimeter1,
+    #[strum(serialize = "dt/tc/frame-altimeter/2/height/10hz")]
+    TcFrameAltimeter2,
     #[strum(serialize = "dt/njord/frame-gps/x/gps")]
     NjordFrameGps,
+    #[strum(serialize = "dt/njord/njord-altimeter/x/height/10hz")]
+    NjordAltimeter,
     #[strum(serialize = "dt/blackbird/sky-ubx/x/coordinates")]
     PilotDisplayCoordinates,
     #[strum(serialize = "dt/blackbird/pd-backend/remaining-distance")]
@@ -222,6 +228,26 @@ impl KnownTopic {
                     ));
                 }
                 Ok(Some(MqttData::multiple(topic_data)))
+            }
+            // Explicitly handle altimeter topics even though it's simple numbers
+            // to be able to assign the datatype that allows handling it in the map
+            Self::TcFrameAltimeter1 | Self::TcFrameAltimeter2 => {
+                let data = MqttData::single(MqttTopicData::single_laser_altitude(
+                    self.to_string(),
+                    p.parse::<f32>()?,
+                    MqttDevice::Tc,
+                ));
+                Ok(Some(data))
+            }
+            // Explicitly handle altimeter topics even though it's simple numbers
+            // to be able to assign the datatype and device that allows handling it in the map
+            Self::NjordAltimeter => {
+                let data = MqttData::single(MqttTopicData::single_laser_altitude(
+                    self.to_string(),
+                    p.parse::<f32>()?,
+                    MqttDevice::Njord,
+                ));
+                Ok(Some(data))
             }
             Self::PilotDisplayCoordinates => {
                 let p: PilotDisplayCoordinates = serde_json::from_str(p)?;

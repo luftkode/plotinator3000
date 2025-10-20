@@ -1,6 +1,7 @@
 use egui::Color32;
 use plotinator_log_if::rawplot::path_data::GeoSpatialDataset;
-use plotinator_mqtt::data::listener::MqttGeoPoint;
+use plotinator_mqtt::data::listener::MqttGeoData;
+use plotinator_mqtt_ui::plot::ColoredGeoLaserAltitude;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -11,7 +12,9 @@ pub enum MapCommand {
     /// Geo spatial data from a loaded dataset
     AddGeoData(GeoSpatialDataset),
     /// Geo spatial data received over MQTT continuously
-    MQTTGeoData(Box<SmallVec<[MqttGeoPoint; 10]>>),
+    MQTTGeoData(Box<SmallVec<[MqttGeoData; 10]>>),
+    /// Laser altitudes received over MQTT, which will be attempted to be associated with existing [`MqttGeoData`]
+    MQTTGeoAltitudes(Box<SmallVec<[ColoredGeoLaserAltitude; 10]>>),
     /// Pointer position on the time axis
     PointerPos(f64),
     FitToAllPaths,
@@ -36,7 +39,7 @@ pub struct MapUiCommander {
     open: bool,
     // Have we received geospatial data at any time? We use this to open the map the first time
     // geo spatial data is received, but we don't wanna keep opening it up if the user chose to close it
-    pub any_data_received: bool,
+    pub any_primary_data_received: bool,
     /// Set by a click on the map button, toggles visibility of the map viewport
     pub map_button_clicked: bool,
     #[serde(skip)]
@@ -55,7 +58,7 @@ impl Default for MapUiCommander {
     fn default() -> Self {
         Self {
             open: false,
-            any_data_received: false,
+            any_primary_data_received: false,
             map_button_clicked: false,
             tx: None,
             rx: None,
@@ -107,13 +110,24 @@ impl MapUiCommander {
 
     pub fn add_geo_data(&mut self, geo_data: GeoSpatialDataset) {
         log::debug!("Sending geo data to map: {}", geo_data.name());
-        self.any_data_received = true;
+        if geo_data.is_primary() && !geo_data.is_empty() {
+            self.any_primary_data_received = true;
+        }
         self.send_cmd(MapCommand::AddGeoData(geo_data));
     }
 
-    pub fn add_mqtt_geo_data(&mut self, mqtt_points: SmallVec<[MqttGeoPoint; 10]>) {
-        self.any_data_received = true;
+    pub fn add_mqtt_geo_points(&mut self, mqtt_points: SmallVec<[MqttGeoData; 10]>) {
+        if mqtt_points.iter().any(|data| data.has_coordinates()) {
+            self.any_primary_data_received = true;
+        }
         self.send_cmd(MapCommand::MQTTGeoData(Box::new(mqtt_points)));
+    }
+
+    pub fn add_mqtt_geo_altitudes(
+        &mut self,
+        mqtt_geo_altitudes: SmallVec<[ColoredGeoLaserAltitude; 10]>,
+    ) {
+        self.send_cmd(MapCommand::MQTTGeoAltitudes(Box::new(mqtt_geo_altitudes)));
     }
 
     /// Send the current pointer position on the time axis to the [`MapViewPort`]

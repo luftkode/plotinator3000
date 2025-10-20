@@ -12,6 +12,7 @@ homepage.workspace = true
 plotinator-log-if.workspace = true
 plotinator-proc-macros.workspace = true
 plotinator-ui-util.workspace = true
+plotinator-mqtt-ui.workspace = true
 
 walkers.workspace = true
 egui-phosphor.workspace = true

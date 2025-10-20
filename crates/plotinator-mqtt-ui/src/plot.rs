@@ -8,12 +8,20 @@ use plotinator_log_if::{
     rawplot::{DataType, RawPlot},
 };
 use plotinator_mqtt::data::listener::{
-    MqttData, MqttGeoPoint, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
+    GeoData, MqttData, MqttDevice, MqttGeoData, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
 };
 use plotinator_ui_util::{ExpectedPlotRange, auto_color_plot_area};
 use smallvec::SmallVec;
 
 use crate::serializable::{SerializableMqttPlotData, SerializableMqttPlotPoints};
+#[derive(Debug, Clone)]
+pub struct ColoredGeoLaserAltitude {
+    pub topic: String,
+    pub timestamp: f64,
+    pub altitude: f32,
+    pub device: MqttDevice,
+    pub color: Color32,
+}
 
 /// A collection of accumulated plot points from various MQTT topics
 ///
@@ -22,13 +30,16 @@ use crate::serializable::{SerializableMqttPlotData, SerializableMqttPlotPoints};
 pub struct MqttPlotData {
     // We typically won't listen to a huge amount of topics
     pub(crate) mqtt_plot_data: SmallVec<[(MqttPlotPoints, Color32); 10]>,
-    pub(crate) geo_data: SmallVec<[MqttGeoPoint; 10]>,
+    // Altitudes that can be associated with geo points
+    pub(crate) geo_altitudes: SmallVec<[ColoredGeoLaserAltitude; 10]>,
+    // Geopoint with coordinates
+    pub(crate) geo_data: SmallVec<[MqttGeoData; 10]>,
 }
 
 impl MqttPlotData {
     #[inline]
     pub(crate) fn insert_inner_data(&mut self, mqtt_data: MqttTopicData) {
-        if let Some((mp, _)) = self
+        if let Some((mp, color)) = self
             .mqtt_plot_data
             .iter_mut()
             .find(|(mp, _)| mp.legend_name == mqtt_data.legend())
@@ -40,10 +51,28 @@ impl MqttPlotData {
                     }
                 }
                 TopicPayload::Point(plot_point) => mp.data.push(plot_point),
-                TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint {
-                    topic: mqtt_data.topic,
-                    point,
-                }),
+                TopicPayload::GeoData(point) => match point {
+                    GeoData::GeoPoint(point) => self
+                        .geo_data
+                        .push(MqttGeoData::point(mqtt_data.topic, point)),
+                    GeoData::LaserAltitude {
+                        timestamp,
+                        val,
+                        device,
+                    } => {
+                        self.geo_altitudes.push(ColoredGeoLaserAltitude {
+                            topic: mqtt_data.topic,
+                            timestamp,
+                            altitude: val,
+                            device,
+                            color: *color,
+                        });
+                        mp.data.push(PlotPoint {
+                            x: timestamp,
+                            y: val.into(),
+                        });
+                    }
+                },
             }
         } else {
             let legend_name = mqtt_data.legend();
@@ -67,7 +96,35 @@ impl MqttPlotData {
                     },
                     auto_color_plot_area(ExpectedPlotRange::Hundreds),
                 )),
-                TopicPayload::GeoPoint(point) => self.geo_data.push(MqttGeoPoint { topic, point }),
+                TopicPayload::GeoData(data) => match data {
+                    GeoData::GeoPoint(geo_point) => {
+                        self.geo_data.push(MqttGeoData::point(topic, geo_point));
+                    }
+                    GeoData::LaserAltitude {
+                        timestamp,
+                        val,
+                        device,
+                    } => {
+                        let new_mqtt_plot_points = MqttPlotPoints {
+                            legend_name,
+                            topic: topic.clone(),
+                            data: vec![PlotPoint {
+                                x: timestamp,
+                                y: val.into(),
+                            }],
+                            ty,
+                        };
+                        let new_color = auto_color_plot_area(ExpectedPlotRange::Hundreds);
+                        self.mqtt_plot_data.push((new_mqtt_plot_points, new_color));
+                        self.geo_altitudes.push(ColoredGeoLaserAltitude {
+                            topic,
+                            timestamp,
+                            altitude: val,
+                            device,
+                            color: new_color,
+                        });
+                    }
+                },
             };
         }
     }
@@ -89,11 +146,20 @@ impl MqttPlotData {
     }
 
     /// Take all available [MQTT Geo Points](MqttGeoPoint)
-    pub fn take_geo_points(&mut self) -> Option<SmallVec<[MqttGeoPoint; 10]>> {
+    pub fn take_geo_points(&mut self) -> Option<SmallVec<[MqttGeoData; 10]>> {
         if self.geo_data.is_empty() {
             None
         } else {
             Some(mem::take(&mut self.geo_data))
+        }
+    }
+
+    /// Take all available [MQTT Geo Altitudes](GeoAltitudes)
+    pub fn take_geo_altitudes(&mut self) -> Option<SmallVec<[ColoredGeoLaserAltitude; 10]>> {
+        if self.geo_altitudes.is_empty() {
+            None
+        } else {
+            Some(mem::take(&mut self.geo_altitudes))
         }
     }
 }
@@ -148,7 +214,9 @@ impl From<MqttPlotData> for SerializableMqttPlotData {
     fn from(original: MqttPlotData) -> Self {
         let MqttPlotData {
             mqtt_plot_data,
-            geo_data: _, // We don't store geo points as they are duplicate data that are just sent to the map view
+            // We don't store geo data as it is duplicate data that are just sent to the map view
+            geo_data: _,
+            geo_altitudes: _,
         } = original;
         let mut first_timestamp = None;
         for (p, _) in &mqtt_plot_data {

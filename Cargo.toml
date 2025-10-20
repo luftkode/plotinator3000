@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "2.3.0"
+version = "2.4.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -88,6 +88,7 @@ smallvec = { version = "1.15.1", features = ["serde"]}
 tempfile = "3.23.0"
 rfd = "0.15"
 zip = "6.0"
+test-log = "0.2.18"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [

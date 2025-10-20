@@ -1,5 +1,8 @@
 use chrono::{DateTime, Utc};
-use plotinator_log_if::prelude::{GeoAltitude, GeoPoint};
+use plotinator_log_if::{
+    prelude::{GeoAltitude, GeoPoint},
+    rawplot::path_data::Altitude,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -23,7 +26,7 @@ impl FrameGpsPacket {
         let lon = self.position.lon?;
         let mut geo = GeoPoint::new(ts, (lat.into(), lon.into()));
         if let Some(alt) = self.position.alt {
-            let geo_alt = GeoAltitude::Gnss(alt.into());
+            let geo_alt = GeoAltitude::Gnss(Altitude::Valid(alt.into()));
             geo = geo.with_altitude(geo_alt);
         }
         if let Some(spd) = self.speed {
