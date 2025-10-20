@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tweak map label colors
 - Constify some color math
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#381](https://github.com/luftkode/plotinator3000/pull/381))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.7 ([#381](https://github.com/luftkode/plotinator3000/pull/381))
+- `crambl/dependabot-changelog-writer`: 1.3.0 → 1.3.1 ([#381](https://github.com/luftkode/plotinator3000/pull/381))
+- `actions/download-artifact`: 4 → 5 ([#381](https://github.com/luftkode/plotinator3000/pull/381))
+
 ## [2.3.0]
 
 - Add scroll button in MQTT mode to automatically scroll plot area to follow incoming data
