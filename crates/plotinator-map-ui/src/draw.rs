@@ -141,23 +141,22 @@ pub(crate) fn draw_heading_arrow(
     geo_point: &plotinator_log_if::prelude::GeoPoint,
     speed_range: (f64, f64),
 ) {
-    let Some((main_line, barb1, barb2)) = calculate_arrow_geometry(center, geo_point, speed_range)
-    else {
+    let Some((origin, vec)) = calculate_arrow_vector(center, geo_point, speed_range) else {
         return;
     };
+
     let outline_color = Color32::BLACK;
     let outline_stroke = Stroke::new(1.5, outline_color);
-    painter.line_segment(main_line, outline_stroke);
-    painter.line_segment(barb1, outline_stroke);
-    painter.line_segment(barb2, outline_stroke);
+
+    painter.arrow(origin, vec, outline_stroke);
 }
 
 #[inline]
-pub(crate) fn calculate_arrow_geometry(
+pub(crate) fn calculate_arrow_vector(
     center: Pos2,
     geo_point: &GeoPoint,
     speed_range: (f64, f64),
-) -> Option<([Pos2; 2], [Pos2; 2], [Pos2; 2])> {
+) -> Option<(Pos2, Vec2)> {
     let heading_deg = geo_point.heading?;
 
     const MIN_ARROW_LENGTH: f32 = 4.0;
@@ -180,17 +179,9 @@ pub(crate) fn calculate_arrow_geometry(
     // 0° North -> Up, 90° East -> Right
     let angle_rad = (90.0 - heading_deg).to_radians() as f32;
     let dir = Vec2::new(angle_rad.cos(), -angle_rad.sin());
-    let tip = center + dir * arrow_length;
+    let vec = dir * arrow_length;
 
-    // Calculate barbs
-    let barb_length = arrow_length * 0.4;
-    let barb_angle = 25.0_f32.to_radians();
-    let back_dir = -dir;
-    let rot = egui::emath::Rot2::from_angle(barb_angle);
-    let barb1 = tip + (rot * back_dir) * barb_length;
-    let barb2 = tip + (rot.inverse() * back_dir) * barb_length;
-
-    Some(([center, tip], [tip, barb1], [tip, barb2]))
+    Some((center, vec))
 }
 
 fn draw_start_marker(painter: &egui::Painter, center: Pos2) {
@@ -214,10 +205,11 @@ fn draw_end_marker(painter: &Painter, center: Pos2) {
     }
     fn line2(center: Pos2) -> [Pos2; 2] {
         [
-            center + Vec2::new(-CROSS_SIZE, CROSS_SIZE),
-            center + Vec2::new(CROSS_SIZE, -CROSS_SIZE),
+            center + vec2(-CROSS_SIZE, CROSS_SIZE),
+            center + vec2(CROSS_SIZE, -CROSS_SIZE),
         ]
     }
+
     // Draw white outline for better visibility
     painter.line_segment(line1(center), outline_stroke);
     painter.line_segment(line2(center), outline_stroke);
