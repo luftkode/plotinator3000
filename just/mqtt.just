@@ -120,3 +120,88 @@ pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100
         mosquitto_pub -h localhost -t "{{TOPIC}}" -m "$JSON"
         sleep 1
     done
+
+[group("MQTT")]
+pub-frame-gps-circle MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" RADIUS_METERS="200":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Starting position (center of circle)
+    CENTER_LAT_INT=56217778  # 56.217778 * 1e6
+    CENTER_LON_INT=10147778  # 10.147778 * 1e6
+    ALT=66.62
+    SPEED_INT=52  # 0.052 * 1000
+    GPS_NR={{GPS_NUM}}
+    MODE=3
+    SATELLITES=10
+
+    # Circle parameters
+    RADIUS_METERS={{RADIUS_METERS}}
+    SECONDS_PER_ROUND=60
+    SLEEP_INTERVAL=1
+
+    # Conversion factors (approximate at latitude ~56°)
+    # 1 degree latitude ≈ 111,320 meters
+    # 1 degree longitude ≈ 111,320 * cos(latitude) ≈ 62,000 meters at 56°N
+    METERS_PER_LAT_DEGREE=111320
+    METERS_PER_LON_DEGREE=62000
+
+    RADIUS_MULTIPLIER=100
+    STEP=0
+
+    END=$(( $(date +%s) + {{MINUTES}}*60 ))
+
+    while [ $(date +%s) -lt $END ]; do
+        TIMESTAMP=$(date +%s%N)
+        GPS_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+
+        # Calculate angle in radians (0 to 2*PI over 60 seconds)
+        # angle = (step / 60) * 2 * PI
+        ANGLE=$(echo "scale=10; ($STEP / $SECONDS_PER_ROUND) * 2 * 3.14159265359" | bc)
+
+        SIN=$(echo "scale=10; s($ANGLE)" | bc -l)
+        COS=$(echo "scale=10; c($ANGLE)" | bc -l)
+
+        # Calculate offsets in meters, then convert to degrees
+        LAT_OFFSET_METERS=$(echo "scale=10; $RADIUS_METERS * $COS * $RADIUS_MULTIPLIER / 100" | bc)
+        LON_OFFSET_METERS=$(echo "scale=10; $RADIUS_METERS * $SIN * $RADIUS_MULTIPLIER / 100" | bc)
+
+        # Convert to microdegrees (integer)
+        LAT_OFFSET=$(echo "scale=0; $LAT_OFFSET_METERS * 1000000 / $METERS_PER_LAT_DEGREE" | bc)
+        LON_OFFSET=$(echo "scale=0; $LON_OFFSET_METERS * 1000000 / $METERS_PER_LON_DEGREE" | bc)
+
+        # Calculate current position
+        LAT_INT=$((CENTER_LAT_INT + LAT_OFFSET))
+        LON_INT=$((CENTER_LON_INT + LON_OFFSET))
+
+        # Add small random jitter
+        LAT_INT=$((LAT_INT + RANDOM % 10 - 5))
+        LON_INT=$((LON_INT + RANDOM % 10 - 5))
+
+        # Update speed with variation
+        SPEED_INT=$((SPEED_INT + RANDOM % 5 + 2))
+
+        # Convert back to float strings with dot
+        LAT=$(printf "%d.%06d" $((LAT_INT / 1000000)) $((LAT_INT % 1000000)))
+        LON=$(printf "%d.%06d" $((LON_INT / 1000000)) $((LON_INT % 1000000)))
+        SPEED=$(printf "30.%03d" $SPEED_INT)
+
+        JSON="{\"gps_nr\": $GPS_NR, \"timestamp\": $TIMESTAMP, \"mode\": $MODE, \"gps_status\": {\"hdop\": 0.8, \"vdop\": 1.5, \"pdop\": 1.7, \"satellites\": $SATELLITES}, \"position\": {\"lat\": $LAT, \"lon\": $LON, \"alt\": $ALT}, \"speed\": $SPEED, \"gps_time\": \"$GPS_TIME\"}"
+
+        mosquitto_pub -h localhost -t "{{TOPIC}}" -m "$JSON"
+
+        # Advance step by sleep interval
+        STEP=$((STEP + SLEEP_INTERVAL))
+
+        # Check if we completed a full circle
+        if [ $STEP -ge $SECONDS_PER_ROUND ]; then
+            STEP=0
+            # Randomly adjust radius for next round: ±20%
+            RADIUS_CHANGE=$((RANDOM % 41 - 20))  # -20 to +20
+            RADIUS_MULTIPLIER=$((RADIUS_MULTIPLIER + RADIUS_CHANGE))
+            [ $RADIUS_MULTIPLIER -lt 50 ] && RADIUS_MULTIPLIER=50
+            [ $RADIUS_MULTIPLIER -gt 150 ] && RADIUS_MULTIPLIER=150
+        fi
+
+        sleep $SLEEP_INTERVAL
+    done

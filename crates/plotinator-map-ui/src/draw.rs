@@ -22,6 +22,7 @@ pub(crate) fn draw_path(
     path: &impl GeoPath,
     settings: &DrawSettings,
     label_placer: &mut LabelPlacer,
+    min_label_spacing: f32,
 ) -> Option<(StartMarker, EndMarker)> {
     if path.points().len() < 2 {
         return None;
@@ -39,7 +40,7 @@ pub(crate) fn draw_path(
     if settings.telemetry_label.draw {
         label_placer.collect_label_candidates(
             &screen_points,
-            40.0,
+            min_label_spacing,
             path_color,
             &settings.telemetry_label,
         );

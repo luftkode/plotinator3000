@@ -1,7 +1,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 use egui::{
-    Align2, CentralPanel, Color32, Frame, Grid, MenuBar, Pos2, RichText, TopBottomPanel, Ui,
-    ViewportBuilder, ViewportId, Window,
+    Align2, CentralPanel, Color32, Frame, Grid, MenuBar, Pos2, RichText, Slider, TopBottomPanel,
+    Ui, ViewportBuilder, ViewportId, Window,
 };
 use egui_phosphor::regular::{
     AIRPLANE, CHECK_CIRCLE, CHECK_SQUARE, CIRCLE, GEAR, GLOBE, GLOBE_HEMISPHERE_WEST,
@@ -33,7 +33,7 @@ mod draw;
 pub(crate) mod geo_path;
 mod map_state;
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct MapViewPort {
     pub open: bool,
     pub geo_data: Vec<PathEntry>,
@@ -45,6 +45,7 @@ pub struct MapViewPort {
 
     pub heading_arrow_threshold: f64,
     pub telemetry_label_threshold: f64,
+    pub telemetry_label_spacing: f32,
 
     #[serde(skip)]
     cmd_rx: Option<Receiver<MapCommand>>,
@@ -69,6 +70,31 @@ pub struct MapViewPort {
     // Is the map currently hovered on?
     #[serde(skip)]
     map_hovered: bool,
+}
+
+impl Default for MapViewPort {
+    fn default() -> Self {
+        Self {
+            open: Default::default(),
+            geo_data: Default::default(),
+            mqtt_geo_data: Default::default(),
+            mergeable_aux_data: Default::default(),
+            map_state: Default::default(),
+            label_placer: Default::default(),
+            heading_arrow_threshold: Default::default(),
+            telemetry_label_threshold: Default::default(),
+            telemetry_label_spacing: 55.,
+            cmd_rx: Default::default(),
+            plot_time_pointer_pos: Default::default(),
+            map_hovered_point: Default::default(),
+            hovered_path: Default::default(),
+            hovered_mqtt_path: Default::default(),
+            mqtt_latest_position: Default::default(),
+            plot_msg_tx: Default::default(),
+            pointer_hovered_pos: Default::default(),
+            map_hovered: Default::default(),
+        }
+    }
 }
 
 impl MapViewPort {
@@ -368,15 +394,17 @@ impl MapViewPort {
             ui.menu_button(format!("{GEAR} Display Settings"), |ui| {
             ui.label("Zoom thresholds");
             ui.add(
-                egui::Slider::new(&mut self.heading_arrow_threshold, 10.0..=20.0)
+                Slider::new(&mut self.heading_arrow_threshold, 10.0..=20.0)
                     .text("Heading arrows")
                     .suffix("x zoom"),
             );
             ui.add(
-                egui::Slider::new(&mut self.telemetry_label_threshold, 10.0..=20.0)
+                Slider::new(&mut self.telemetry_label_threshold, 10.0..=20.0)
                     .text("Telemetry labels")
                     .suffix("x zoom"),
                 );
+                ui.label("Label spacing");
+                ui.add(Slider::new(&mut self.telemetry_label_spacing, 40.0..=200.0).text("Min. label spacing").suffix("px"));
             });
 
             let (is_satellite, is_detached) = {
@@ -484,6 +512,7 @@ impl MapViewPort {
                         path,
                         &draw_settings_fn(path),
                         &mut self.label_placer,
+                        self.telemetry_label_spacing,
                     ) {
                         start_markers.push(start_marker);
                         end_markers.push(end_marker);
@@ -503,6 +532,7 @@ impl MapViewPort {
                         path,
                         &draw_settings_fn(path),
                         &mut self.label_placer,
+                        self.telemetry_label_spacing,
                     ) {
                         start_markers.push(start_marker);
                         end_markers.push(end_marker);
