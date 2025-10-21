@@ -1,4 +1,4 @@
-use egui::{Color32, Painter, Pos2, Stroke, Vec2, vec2};
+use egui::{Color32, Id, LayerId, Order, Painter, Pos2, Stroke, Vec2, vec2};
 use plotinator_log_if::prelude::GeoPoint;
 use plotinator_proc_macros::log_time;
 use walkers::Projector;
@@ -93,14 +93,18 @@ pub(crate) fn draw_path_inner(
         draw_heading_arrows(painter, screen_points, speed_range);
     }
 
+    // Top layer painter for the start/end markers to make sure they are not covered by labels
+    let top_layer = LayerId::new(Order::Foreground, Id::new("map_top"));
+    let top_painter = painter.clone().with_layer_id(top_layer);
+
     // Draw start marker (filled black circle)
     if let Some((start_pos, _)) = screen_points.first() {
-        draw_start_marker(painter, *start_pos);
+        draw_start_marker(&top_painter, *start_pos);
     }
 
     // Draw end marker (black cross)
     if let Some((end_pos, _)) = screen_points.last() {
-        draw_end_marker(painter, *end_pos);
+        draw_end_marker(&top_painter, *end_pos);
     }
 }
 
@@ -184,13 +188,13 @@ pub(crate) fn calculate_arrow_vector(
     Some((center, vec))
 }
 
-fn draw_start_marker(painter: &egui::Painter, center: Pos2) {
+fn draw_start_marker(top_painter: &egui::Painter, center: Pos2) {
     const MARKER_RADIUS: f32 = 6.0;
-    painter.circle_filled(center, MARKER_RADIUS + 1.0, Color32::WHITE);
-    painter.circle_filled(center, MARKER_RADIUS, Color32::BLACK);
+    top_painter.circle_filled(center, MARKER_RADIUS + 1.0, Color32::WHITE);
+    top_painter.circle_filled(center, MARKER_RADIUS, Color32::BLACK);
 }
 
-fn draw_end_marker(painter: &Painter, center: Pos2) {
+fn draw_end_marker(top_painter: &Painter, center: Pos2) {
     const CROSS_SIZE: f32 = 8.0;
     const CROSS_THICKNESS: f32 = 2.5;
 
@@ -211,11 +215,11 @@ fn draw_end_marker(painter: &Painter, center: Pos2) {
     }
 
     // Draw white outline for better visibility
-    painter.line_segment(line1(center), outline_stroke);
-    painter.line_segment(line2(center), outline_stroke);
+    top_painter.line_segment(line1(center), outline_stroke);
+    top_painter.line_segment(line2(center), outline_stroke);
     // Draw black cross
-    painter.line_segment(line1(center), stroke);
-    painter.line_segment(line2(center), stroke);
+    top_painter.line_segment(line1(center), stroke);
+    top_painter.line_segment(line2(center), stroke);
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough

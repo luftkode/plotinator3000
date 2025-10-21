@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Paint the map path start/end markers on the top layer to make sure they are always visible
+- Use the `egui` arrow drawing function instead of the manual implementation
+
 ## [2.4.0]
 
 - Map: Merge altimeter samples from lasers into loaded geo datasets (with coordinates) if the datasets match
