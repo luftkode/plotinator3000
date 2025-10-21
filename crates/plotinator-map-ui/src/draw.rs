@@ -1,4 +1,4 @@
-use egui::{Color32, Id, LayerId, Order, Painter, Pos2, Stroke, Vec2, vec2};
+use egui::{Color32, Painter, Pos2, Stroke, Vec2, vec2};
 use plotinator_log_if::prelude::GeoPoint;
 use plotinator_proc_macros::log_time;
 use walkers::Projector;
@@ -22,9 +22,9 @@ pub(crate) fn draw_path(
     path: &impl GeoPath,
     settings: &DrawSettings,
     label_placer: &mut LabelPlacer,
-) {
+) -> Option<(StartMarker, EndMarker)> {
     if path.points().len() < 2 {
-        return;
+        return None;
     }
 
     let path_color = path.color();
@@ -51,7 +51,7 @@ pub(crate) fn draw_path(
         path_color,
         path.speed_bounds(),
         settings,
-    );
+    )
 }
 
 #[log_time]
@@ -61,7 +61,7 @@ pub(crate) fn draw_path_inner(
     path_color: Color32,
     speed_range: (f64, f64),
     settings: &DrawSettings,
-) {
+) -> Option<(StartMarker, EndMarker)> {
     // Draw the path as a colored line with altitude-based opacity
     const MAX_ALTITUDE: f64 = 400.0;
 
@@ -93,18 +93,15 @@ pub(crate) fn draw_path_inner(
         draw_heading_arrows(painter, screen_points, speed_range);
     }
 
-    // Top layer painter for the start/end markers to make sure they are not covered by labels
-    let top_layer = LayerId::new(Order::Foreground, Id::new("map_top"));
-    let top_painter = painter.clone().with_layer_id(top_layer);
-
-    // Draw start marker (filled black circle)
-    if let Some((start_pos, _)) = screen_points.first() {
-        draw_start_marker(&top_painter, *start_pos);
-    }
-
-    // Draw end marker (black cross)
-    if let Some((end_pos, _)) = screen_points.last() {
-        draw_end_marker(&top_painter, *end_pos);
+    if let (Some((start_pos, _)), Some((end_pos, _))) =
+        (screen_points.first(), screen_points.last())
+    {
+        Some((
+            StartMarker::new(*start_pos, path_color),
+            EndMarker::new(*end_pos, path_color),
+        ))
+    } else {
+        None
     }
 }
 
@@ -188,38 +185,70 @@ pub(crate) fn calculate_arrow_vector(
     Some((center, vec))
 }
 
-fn draw_start_marker(top_painter: &egui::Painter, center: Pos2) {
-    const MARKER_RADIUS: f32 = 6.0;
-    top_painter.circle_filled(center, MARKER_RADIUS + 1.0, Color32::WHITE);
-    top_painter.circle_filled(center, MARKER_RADIUS, Color32::BLACK);
+pub(crate) struct StartMarker {
+    center: Pos2,
+    path_color: Color32,
 }
 
-fn draw_end_marker(top_painter: &Painter, center: Pos2) {
-    const CROSS_SIZE: f32 = 8.0;
-    const CROSS_THICKNESS: f32 = 2.5;
-
-    let stroke = Stroke::new(CROSS_THICKNESS, Color32::BLACK);
-    let outline_stroke = Stroke::new(CROSS_THICKNESS + 1.0, Color32::WHITE);
-
-    fn line1(center: Pos2) -> [Pos2; 2] {
-        [
-            center + vec2(-CROSS_SIZE, -CROSS_SIZE),
-            center + vec2(CROSS_SIZE, CROSS_SIZE),
-        ]
-    }
-    fn line2(center: Pos2) -> [Pos2; 2] {
-        [
-            center + vec2(-CROSS_SIZE, CROSS_SIZE),
-            center + vec2(CROSS_SIZE, -CROSS_SIZE),
-        ]
+impl StartMarker {
+    pub(crate) fn new(center: Pos2, path_color: Color32) -> Self {
+        Self { center, path_color }
     }
 
-    // Draw white outline for better visibility
-    top_painter.line_segment(line1(center), outline_stroke);
-    top_painter.line_segment(line2(center), outline_stroke);
-    // Draw black cross
-    top_painter.line_segment(line1(center), stroke);
-    top_painter.line_segment(line2(center), stroke);
+    pub(crate) fn draw(self, painter: &Painter) {
+        let Self { center, path_color } = self;
+        const MARKER_RADIUS: f32 = 6.0;
+        // Outer colored ring to show path association
+        painter.circle_filled(center, MARKER_RADIUS + 1.5, path_color);
+        // White ring for contrast
+        painter.circle_filled(center, MARKER_RADIUS + 1.0, Color32::WHITE);
+        // Black center
+        painter.circle_filled(center, MARKER_RADIUS, Color32::BLACK);
+    }
+}
+
+pub(crate) struct EndMarker {
+    center: Pos2,
+    path_color: Color32,
+}
+
+impl EndMarker {
+    pub(crate) fn new(center: Pos2, path_color: Color32) -> Self {
+        Self { center, path_color }
+    }
+
+    pub(crate) fn draw(self, painter: &Painter) {
+        let Self { center, path_color } = self;
+        const CROSS_SIZE: f32 = 8.0;
+        const CROSS_THICKNESS: f32 = 2.5;
+
+        let stroke = Stroke::new(CROSS_THICKNESS, Color32::BLACK);
+        let color_stroke = Stroke::new(CROSS_THICKNESS + 1.5, path_color);
+        let outline_stroke = Stroke::new(CROSS_THICKNESS + 1.0, Color32::WHITE);
+
+        fn line1(center: Pos2) -> [Pos2; 2] {
+            [
+                center + vec2(-CROSS_SIZE, -CROSS_SIZE),
+                center + vec2(CROSS_SIZE, CROSS_SIZE),
+            ]
+        }
+        fn line2(center: Pos2) -> [Pos2; 2] {
+            [
+                center + vec2(-CROSS_SIZE, CROSS_SIZE),
+                center + vec2(CROSS_SIZE, -CROSS_SIZE),
+            ]
+        }
+
+        // Draw white outline for better visibility
+        painter.line_segment(line1(center), outline_stroke);
+        painter.line_segment(line2(center), outline_stroke);
+        // Draw colored layer to show path association
+        painter.line_segment(line1(center), color_stroke);
+        painter.line_segment(line2(center), color_stroke);
+        // Draw black cross
+        painter.line_segment(line1(center), stroke);
+        painter.line_segment(line2(center), stroke);
+    }
 }
 
 /// Find the closest point to the cursor in the geo spatial data and highlight it if it is close enough

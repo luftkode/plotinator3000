@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 - Paint the map path start/end markers on the top layer to make sure they are always visible
+- Draw the start/end markers with an additional outline that is the color of the path they are associated with
 - Use the `egui` arrow drawing function instead of the manual implementation
 
 ## [2.4.0]

@@ -14,14 +14,14 @@ use plotinator_log_if::{
 use plotinator_mqtt::data::listener::MqttGeoData;
 use plotinator_mqtt_ui::plot::ColoredGeoLaserAltitude;
 use serde::{Deserialize, Serialize};
-use smallvec::SmallVec;
+use smallvec::{SmallVec, smallvec};
 use std::sync::mpsc::{Receiver, Sender};
 use walkers::{Map, Position};
 
 use crate::{
     commander::{MapCommand, MapUiChannels, MapUiCommander, PlotMessage},
     draw::{
-        DrawSettings,
+        DrawSettings, EndMarker, StartMarker,
         labels::{LabelPlacer, TelemetryLabelSettings},
     },
     geo_path::{ClosestPoint, GeoPath, MqttGeoPath, PathEntry, find_closest_point_to_cursor},
@@ -472,16 +472,22 @@ impl MapViewPort {
             self.label_placer
                 .begin_frame(ui.available_rect_before_wrap());
 
+            let mut start_markers: SmallVec<[StartMarker; 4]> = smallvec![];
+            let mut end_markers: SmallVec<[EndMarker; 4]> = smallvec![];
+
             // Draw regular paths
             for (i, path) in self.geo_data.iter().enumerate() {
                 if path.is_visible() {
-                    draw::draw_path(
+                    if let Some((start_marker, end_marker)) = draw::draw_path(
                         ui.painter(),
                         projector,
                         path,
                         &draw_settings_fn(path),
                         &mut self.label_placer,
-                    );
+                    ) {
+                        start_markers.push(start_marker);
+                        end_markers.push(end_marker);
+                    }
                     if self.hovered_path == Some(i) {
                         draw::highlight_whole_path(ui.painter(), projector, path);
                     }
@@ -491,13 +497,16 @@ impl MapViewPort {
             // Draw MQTT paths
             for (i, path) in self.mqtt_geo_data.iter().enumerate() {
                 if path.is_visible() {
-                    draw::draw_path(
+                    if let Some((start_marker, end_marker)) = draw::draw_path(
                         ui.painter(),
                         projector,
                         path,
                         &draw_settings_fn(path),
                         &mut self.label_placer,
-                    );
+                    ) {
+                        start_markers.push(start_marker);
+                        end_markers.push(end_marker);
+                    }
                     if self.hovered_mqtt_path == Some(i) {
                         draw::highlight_whole_path(ui.painter(), projector, path);
                     }
@@ -506,6 +515,12 @@ impl MapViewPort {
 
             if draw_telemetry_label {
                 self.label_placer.place_all_labels(ui.painter());
+            }
+
+            // Draw start/end markers here to ensure they are on top of the labels
+            for (start_marker, end_marker) in start_markers.into_iter().zip(end_markers) {
+                start_marker.draw(ui.painter());
+                end_marker.draw(ui.painter());
             }
 
             if let Some(pointer_time) = self.plot_time_pointer_pos {
