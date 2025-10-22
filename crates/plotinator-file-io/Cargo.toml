@@ -29,7 +29,7 @@ zip = { workspace = true }
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures = "0.4"
+wasm-bindgen-futures.workspace = true
 
 [dev-dependencies]
 plotinator-log-if.workspace = true
