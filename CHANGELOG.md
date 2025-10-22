@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Add App icon and description metadata for the windows executable
+
 ## [2.5.0]
 
 - Make map minimum label spacing configurable and change the default to be slightly higher
