@@ -273,7 +273,7 @@ impl MapViewPort {
                     let idx = mqtt_geo_path
                         .merged
                         .iter()
-                        .position(|m| m.color == color)
+                        .position(|m| m.name == topic)
                         .unwrap_or_else(|| {
                             let idx = mqtt_geo_path.merged.len();
                             mqtt_geo_path.merged.push(MergedMetadata {
