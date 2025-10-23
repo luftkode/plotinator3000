@@ -1,6 +1,6 @@
 use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
-use plotinator_log_if::{prelude::*, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use std::io::{self, BufRead as _};
 

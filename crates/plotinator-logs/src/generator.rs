@@ -7,8 +7,7 @@ use std::{
 };
 
 use chrono::NaiveDateTime;
-use plotinator_log_if::rawplot::{DataType, RawPlotBuilder};
-use plotinator_log_if::{log::LogEntry, parseable::Parseable, prelude::*};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 

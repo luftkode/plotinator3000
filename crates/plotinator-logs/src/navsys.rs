@@ -7,11 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use entries::NavSysSpsEntry;
 use header::NavSysSpsHeader;
-use plotinator_log_if::{
-    parseable::Parseable,
-    prelude::*,
-    rawplot::{DataType, RawPlotBuilder},
-};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 

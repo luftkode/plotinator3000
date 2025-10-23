@@ -4,11 +4,7 @@ use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
-use plotinator_log_if::{
-    hdf5::SkytemHdf5,
-    prelude::*,
-    rawplot::{DataType, RawPlotBuilder},
-};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 

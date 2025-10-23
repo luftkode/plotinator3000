@@ -6,7 +6,9 @@ use plotinator_ui_util::{ExpectedPlotRange, auto_color_plot_area, auto_terrain_s
 use serde::{Deserialize, Serialize};
 use walkers::{Position, lat_lon};
 
-use crate::rawplot::{DataType, RawPlot, RawPlotCommon, path_data::caching::CachedValues};
+use crate::rawplot::{
+    DataType, RawPlot, path_data::caching::CachedValues, rawplot_common::RawPlotCommon,
+};
 
 pub mod caching;
 

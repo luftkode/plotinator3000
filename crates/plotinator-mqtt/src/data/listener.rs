@@ -1,6 +1,6 @@
 use crate::util;
 use egui_plot::PlotPoint;
-use plotinator_log_if::{prelude::GeoPoint, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Received MQTT data, before it is plotable.

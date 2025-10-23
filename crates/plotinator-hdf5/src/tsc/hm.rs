@@ -1,9 +1,6 @@
 use anyhow::{Context as _, ensure};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
-use plotinator_log_if::{
-    prelude::RawPlotCommon,
-    rawplot::{DataType, RawPlot},
-};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
 

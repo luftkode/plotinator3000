@@ -3,11 +3,7 @@ use std::{io, path::Path};
 use chrono::{DateTime, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
-use plotinator_log_if::{
-    hdf5::SkytemHdf5,
-    prelude::*,
-    rawplot::{DataType, RawPlotBuilder},
-};
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
