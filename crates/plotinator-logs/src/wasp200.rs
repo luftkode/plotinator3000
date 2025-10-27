@@ -61,7 +61,7 @@ impl LogEntry for AltimeterEntry {
     }
 
     fn timestamp_ns(&self) -> i64 {
-        self.timestamp_ns() as i64
+        self.timestamp_ns()
     }
 }
 

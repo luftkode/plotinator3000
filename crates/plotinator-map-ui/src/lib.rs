@@ -138,7 +138,7 @@ impl MapViewPort {
         while let Ok(cmd) = self.cmd_rx.as_ref().expect("unsound condition").try_recv() {
             match cmd {
                 MapCommand::AddGeoData(geo_data) => {
-                    self.handle_cmd_add_geo_data(geo_data);
+                    self.handle_cmd_add_geo_data(*geo_data);
                 }
                 MapCommand::MQTTGeoData(geo_points) => self.handle_cmd_mqtt_geo_data(&geo_points),
                 MapCommand::MQTTGeoAltitudes(colored_laser_altitudes) => {

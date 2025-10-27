@@ -136,44 +136,14 @@ impl Parseable for InclinometerSps {
         // Create plots for each sensor
         let mut raw_plots = Vec::new();
         for (sensor_id, (pitch_points, roll_points, timestamps)) in sensor_groups {
-            let mut builder = RawPlotBuilder::new(format!("{LEGEND}{sensor_id}"))
-                .add(pitch_points, DataType::Pitch);
-            // Create pitch plot for this sensor
-            if !pitch_points.is_empty() {
-                raw_plots.push(
-                    RawPlotCommon::new(
-                        format!("{LEGEND}{sensor_id}"),
-                        pitch_points,
-                        DataType::Pitch,
-                    )
-                    .into(),
-                );
-            }
+            let mut plots = RawPlotBuilder::new(format!("{LEGEND}{sensor_id}"))
+                .add_timestamp_delta(&timestamps)
+                .add(pitch_points, DataType::Pitch)
+                .add(roll_points, DataType::Roll)
+                .build();
 
-            // Create roll plot for this sensor
-            if !roll_points.is_empty() {
-                raw_plots.push(
-                    RawPlotCommon::new(format!("{LEGEND}{sensor_id}"), roll_points, DataType::Roll)
-                        .into(),
-                );
-            }
-
-            raw_plots.append(
-                &mut RawPlotBuilder::new(format!("{LEGEND}{sensor_id}"))
-                    .add_timestamp_delta(&timestamps)
-                    .build(),
-            );
+            raw_plots.append(&mut plots);
         }
-
-        // Filter out empty plots and log warnings
-        raw_plots.retain(|rp| {
-            if rp.points().is_empty() {
-                log::warn!("{} has no data", rp.legend_name());
-                false
-            } else {
-                true
-            }
-        });
 
         Ok((
             Self {
@@ -181,7 +151,7 @@ impl Parseable for InclinometerSps {
                 calibration_data_1,
                 calibration_data_2,
                 entries,
-                raw_plots: raw_plots.into_iter().map(Into::into).collect(),
+                raw_plots,
             },
             bytes_read,
         ))

@@ -620,12 +620,20 @@ mod tests {
     #[test]
     fn test_read_njord_ins() -> TestResult {
         let njord_ins = NjordIns::from_path(njord_ins())?;
-        assert_eq!(njord_ins.metadata.len(), 44);
-        assert_eq!(njord_ins.raw_plots.len(), 31);
-        match &njord_ins.raw_plots[1] {
-            RawPlot::Generic { common } => assert_eq!(common.points().len(), 4840),
+
+        let metadata_count = njord_ins.metadata.len();
+        let raw_plot_count = njord_ins.raw_plots.len();
+        let first_raw_plot_points_count = match &njord_ins.raw_plots[1] {
+            RawPlot::Generic { common } => common.points().len(),
             RawPlot::GeoSpatialDataset(_) => unreachable!(),
         };
+
+        let counts = vec![
+            ("metadata_count", metadata_count),
+            ("raw_plot_count", raw_plot_count),
+            ("first_raw_plot_points_count", first_raw_plot_points_count),
+        ];
+        insta::assert_debug_snapshot!(counts);
 
         Ok(())
     }

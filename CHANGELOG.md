@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.7.0]
+
 - Added B-field and zero position plots for X and Y-coil high-moment
+- Fix zoom reset for Log plot mode.
+- Added sample time delta for all supported formats.
 
 ## [2.6.0]
 

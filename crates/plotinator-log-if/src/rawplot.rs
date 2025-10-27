@@ -1,11 +1,9 @@
-use std::marker::PhantomData;
-
 use ndarray::{ArrayBase, Ix1};
 use num_traits::{AsPrimitive, PrimInt};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    algorithms,
+    algorithms::{self, scale_timestamp_distances},
     prelude::DataType,
     rawplot::{
         path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset, PrimaryGeoSpatialData},
@@ -55,13 +53,14 @@ impl RawPlotBuilder {
         self
     }
 
-    fn add_timestamp_delta_rawplot(&mut self, timestamp_delta: Vec<[f64; 2]>) {
+    fn add_timestamp_delta_rawplot(&mut self, mut timestamp_delta_ns: Vec<[f64; 2]>) {
+        let scaled_unit = scale_timestamp_distances(&mut timestamp_delta_ns);
         self.raw_plots.push(RawPlotCommon::new(
             self.dataset_name.clone(),
-            timestamp_delta,
+            timestamp_delta_ns,
             DataType::TimeDelta {
                 name: "Sample".into(),
-                unit: "ms".into(),
+                unit: scaled_unit,
             },
         ));
     }

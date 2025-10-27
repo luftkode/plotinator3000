@@ -1,10 +1,11 @@
 use ndarray::{ArrayBase, Data, Ix1};
-use num_traits::{AsPrimitive, PrimInt};
+
+use crate::rawplot::TimeStampPrimitive;
 
 /// Calculates distances between consecutive timestamps
 ///
 /// Takes a collection of unix nanosecond timestamps and returns a vector
-/// where each entry contains [timestamp, distance_to_previous].
+/// where each entry contains [timestamp, `distance_to_previous`].
 /// The first entry has a distance of 0.0.
 ///
 /// # Example
@@ -14,7 +15,7 @@ use num_traits::{AsPrimitive, PrimInt};
 /// let result = timestamp_distances(&timestamps);
 /// assert_eq!(result, vec![[1000.0, 0.0], [1500.0, 500.0], [2100.0, 600.0]]);
 /// ```
-pub fn timestamp_distances(timestamps: &[impl PrimInt + AsPrimitive<f64>]) -> Vec<[f64; 2]> {
+pub fn timestamp_distances(timestamps: &[impl TimeStampPrimitive]) -> Vec<[f64; 2]> {
     if timestamps.is_empty() {
         return Vec::new();
     }
@@ -36,7 +37,7 @@ pub fn timestamp_distances(timestamps: &[impl PrimInt + AsPrimitive<f64>]) -> Ve
 /// Calculates distances between consecutive timestamps from an ndarray
 ///
 /// Takes an ndarray of unix nanosecond timestamps and returns a vector
-/// where each entry contains [timestamp, distance_to_previous].
+/// where each entry contains [timestamp,  `distance_to_previous`].
 ///
 /// # Example
 /// ```
@@ -49,7 +50,7 @@ pub fn timestamp_distances(timestamps: &[impl PrimInt + AsPrimitive<f64>]) -> Ve
 /// ```
 pub fn timestamp_distances_ndarray<T, S>(timestamps: &ArrayBase<S, Ix1>) -> Vec<[f64; 2]>
 where
-    T: PrimInt + AsPrimitive<f64>,
+    T: TimeStampPrimitive,
     S: Data<Elem = T>,
 {
     if timestamps.is_empty() {
@@ -68,6 +69,32 @@ where
     }
 
     result
+}
+
+/// Take a vector of nanosecond timestamp deltas, and scales them and returns the final unit
+///
+/// If the delta is very large, e.g. ~1s the vector is scaled to milliseconds and returns `ms`
+/// and if the delta is very small (less than 1 microsecond) it's not scaled and returns `ns`.
+pub fn scale_timestamp_distances(timestamp_delta_ns: &mut Vec<[f64; 2]>) -> String {
+    // Skip the first sample as it's 0 per definition
+    let first_samples: Vec<f64> = timestamp_delta_ns
+        .iter()
+        .skip(1)
+        .take(20)
+        .map(|s| s[1])
+        .collect::<Vec<f64>>();
+    let actual_len = first_samples.len();
+    let sum: f64 = first_samples.iter().sum();
+    let avg = sum / actual_len as f64;
+    // If the distance is less than a micro-second we plot the distance in ns
+    if avg < 1_000. {
+        "ns".into()
+    } else {
+        for delta_ns in timestamp_delta_ns {
+            delta_ns[1] /= 1_000_000.; // Convert to ms
+        }
+        "ms".into()
+    }
 }
 
 #[cfg(test)]
@@ -105,8 +132,8 @@ mod tests {
     }
 
     #[test]
-    fn test_i32() {
-        let timestamps = vec![100i32, 150, 210];
+    fn test_i64() {
+        let timestamps = vec![100i64, 150, 210];
         let result = timestamp_distances(&timestamps);
         assert_eq!(result, vec![[100.0, 0.0], [150.0, 50.0], [210.0, 60.0]]);
     }

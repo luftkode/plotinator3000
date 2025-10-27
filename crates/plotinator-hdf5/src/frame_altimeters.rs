@@ -5,14 +5,11 @@ use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
 use plotinator_log_if::prelude::*;
-use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     stream_descriptor::StreamDescriptor,
-    util::{
-        self, assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute,
-    },
+    util::{assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute},
 };
 
 const LEGEND_NAME_1: &str = "HE1";
@@ -213,12 +210,19 @@ mod tests {
     #[test]
     fn test_read_frame_altimeters() -> TestResult {
         let frame_altimeters = FrameAltimeters::from_path(frame_altimeters())?;
-        assert_eq!(frame_altimeters.metadata.len(), 48);
-        assert_eq!(frame_altimeters.raw_plots.len(), 4);
-        match &frame_altimeters.raw_plots[0] {
+        let metadata_count = frame_altimeters.metadata.len();
+        let raw_plot_count = frame_altimeters.raw_plots.len();
+        let first_raw_plot_points_count = match &frame_altimeters.raw_plots[0] {
             RawPlot::Generic { .. } => unreachable!(),
-            RawPlot::GeoSpatialDataset(geo_data) => assert_eq!(geo_data.len(), 1091),
+            RawPlot::GeoSpatialDataset(geo_data) => geo_data.len(),
         };
+
+        let counts = vec![
+            ("metadata_count", metadata_count),
+            ("raw_plot_count", raw_plot_count),
+            ("first_raw_plot_points_count", first_raw_plot_points_count),
+        ];
+        insta::assert_debug_snapshot!(counts);
 
         Ok(())
     }

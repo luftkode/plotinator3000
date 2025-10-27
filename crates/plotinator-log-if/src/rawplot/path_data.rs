@@ -1,8 +1,8 @@
-use std::{fmt, marker::PhantomData};
+use std::fmt;
 
 use anyhow::bail;
 use egui::Color32;
-use num_traits::{AsPrimitive, PrimInt};
+use num_traits::AsPrimitive as _;
 use plotinator_ui_util::{
     ExpectedPlotRange, auto_color_plot_area, auto_terrain_safe_color, invalid_data_color,
 };
@@ -264,6 +264,7 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
             altitude_valid_range,
             speed,
         } = self;
+        log::info!("Building GeoSpatialDataset: {name}");
 
         let Some(ts) = timestamp else {
             bail!(
@@ -278,7 +279,17 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
             return Ok(None);
         }
 
-        let delta_samples = algorithms::timestamp_distances(ts);
+        let mut delta_t_samples_ns = algorithms::timestamp_distances(ts);
+        let scaled_unit = algorithms::scale_timestamp_distances(&mut delta_t_samples_ns);
+        log::info!("Scaled {name} to {scaled_unit}");
+        let delta_t_samples_plot = RawPlotCommon::new(
+            name.clone(),
+            delta_t_samples_ns,
+            DataType::TimeDelta {
+                name: "Sample".into(),
+                unit: scaled_unit,
+            },
+        );
 
         if let Some(lat) = lat
             && let Some(lon) = lon
@@ -322,12 +333,13 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
             }
 
             Ok(Some(GeoSpatialDataset::PrimaryGeoSpatialData(
-                PrimaryGeoSpatialData::new(name, points, delta_samples),
+                PrimaryGeoSpatialData::new(name, points, delta_t_samples_plot),
             )))
         } else if heading.is_some() || altitude.is_some() || speed.is_some() {
             let aux_geo_data = Self::build_aux(
                 name,
                 ts.to_owned(),
+                delta_t_samples_plot,
                 heading,
                 altitude,
                 altitude_valid_range,
@@ -344,18 +356,24 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
     fn build_aux(
         name: String,
         timestamps: Vec<T>,
+        delta_t_samples_plot: RawPlotCommon,
         heading: Option<&[f64]>,
         altitude: Option<RawGeoAltitudes>,
         altitude_valid_range: Option<(f64, f64)>,
         speed: Option<&[f64]>,
     ) -> AuxiliaryGeoSpatialData {
         let timestamps_len = timestamps.len();
-        let mut aux_geo_data =
-            AuxiliaryGeoSpatialData::new(name, timestamps.into_iter().map(|t| t.as_()).collect());
+        let mut aux_geo_data = AuxiliaryGeoSpatialData::new(
+            name,
+            timestamps.into_iter().map(|t| t.as_()).collect(),
+            delta_t_samples_plot,
+        );
+
         if let Some(hdg) = heading {
             debug_assert_eq!(hdg.len(), timestamps_len);
             aux_geo_data = aux_geo_data.with_heading(hdg.to_owned());
         }
+
         if let Some(alt) = altitude {
             debug_assert_eq!(alt.len(), timestamps_len);
             let mut processed_altitudes: Vec<GeoAltitude> = Vec::with_capacity(alt.len());
@@ -442,20 +460,24 @@ pub struct PrimaryGeoSpatialData {
     /// Name of the [`AuxiliaryGeoSpatialData`] that was merged into this instance (if any)
     pub merged: Vec<MergedMetadata>,
     pub points: Vec<GeoPoint>,
-    pub delta_t_samples: Option<Vec<[f64; 2]>>,
+    pub delta_t_samples_plot: Option<RawPlotCommon>,
     pub color: Color32,
     cached: CachedValues,
 }
 
 impl PrimaryGeoSpatialData {
-    pub fn new(name: String, points: Vec<GeoPoint>, delta_t_samples: Vec<[f64; 2]>) -> Self {
+    pub(crate) fn new(
+        name: String,
+        points: Vec<GeoPoint>,
+        delta_t_samples_plot: RawPlotCommon,
+    ) -> Self {
         let color = auto_terrain_safe_color();
         let cached = CachedValues::compute(&points);
         Self {
             name,
             merged: vec![],
             points,
-            delta_t_samples: Some(delta_t_samples),
+            delta_t_samples_plot: Some(delta_t_samples_plot),
             color,
             cached,
         }
@@ -571,19 +593,11 @@ impl PrimaryGeoSpatialData {
         }
 
         debug_assert!(
-            self.delta_t_samples.is_some(),
+            self.delta_t_samples_plot.is_some(),
             "No delta t samples, was raw_plots_common() called twice?"
         );
-        if let Some(delta_t_samples) = &self.delta_t_samples {
-            plots.push(RawPlotCommon::new(
-                &self.name,
-                delta_t_samples.clone(),
-                DataType::TimeDelta {
-                    name: "Sample".into(),
-                    unit: "ms".into(),
-                },
-            ));
-            todo!("Try not cloning delta_t_samples");
+        if let Some(p) = &self.delta_t_samples_plot {
+            plots.push(p.clone());
         }
 
         plots.retain(|rp| {
@@ -611,6 +625,7 @@ impl PrimaryGeoSpatialData {
 pub struct AuxiliaryGeoSpatialData {
     pub name: String,
     pub timestamps: Vec<u64>,
+    pub delta_t_samples_plot: Option<RawPlotCommon>,
     pub altitudes: Option<Vec<GeoAltitude>>,
     pub invalid_altitudes_count: Option<Vec<f64>>,
     pub speeds: Option<Vec<f64>>,
@@ -619,11 +634,16 @@ pub struct AuxiliaryGeoSpatialData {
 }
 
 impl AuxiliaryGeoSpatialData {
-    pub fn new(name: impl Into<String>, timestamps: Vec<u64>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        timestamps: Vec<u64>,
+        delta_t_samples_plot: RawPlotCommon,
+    ) -> Self {
         let color = auto_color_plot_area(ExpectedPlotRange::Hundreds);
         Self {
             name: name.into(),
             timestamps,
+            delta_t_samples_plot: Some(delta_t_samples_plot),
             altitudes: None,
             invalid_altitudes_count: None,
             speeds: None,
@@ -657,14 +677,9 @@ impl AuxiliaryGeoSpatialData {
     pub fn raw_plots_common(&self) -> Vec<RawPlotCommon> {
         let color = self.color;
         let mut plots = vec![];
-        plots.push(RawPlotCommon::new(
-            &self.name,
-            algorithms::timestamp_distances(&self.timestamps),
-            DataType::TimeDelta {
-                name: "Sample".into(),
-                unit: "ms".into(),
-            },
-        ));
+        if let Some(delta_t_samples_plot) = &self.delta_t_samples_plot {
+            plots.push(delta_t_samples_plot.clone());
+        }
         if let Some(headings) = &self.headings {
             let mut heading = Vec::with_capacity(headings.len());
             for (t, hdg) in self.timestamps.iter().zip(headings) {
@@ -1068,7 +1083,12 @@ mod tests {
             GeoAltitude::Laser(Altitude::Valid(130.0)),
         ];
 
-        let aux = AuxiliaryGeoSpatialData::new("Altimeter", aux_times).with_altitude(aux_altitude);
+        let aux = AuxiliaryGeoSpatialData::new(
+            "Altimeter",
+            aux_times,
+            RawPlotCommon::new("foo", vec![], DataType::UtmEasting),
+        )
+        .with_altitude(aux_altitude);
 
         primary.merge_auxiliary(&aux, 5.0e9, Color32::WHITE)?;
 
@@ -1115,7 +1135,12 @@ mod tests {
             GeoAltitude::Laser(Altitude::Valid(300.0)),
         ];
 
-        let aux = AuxiliaryGeoSpatialData::new("aux", aux_times).with_altitude(aux_altitude);
+        let aux = AuxiliaryGeoSpatialData::new(
+            "aux",
+            aux_times,
+            RawPlotCommon::new("foo", vec![], DataType::UtmEasting),
+        )
+        .with_altitude(aux_altitude);
 
         primary.merge_auxiliary(&aux, 1.0e8, Color32::WHITE)?;
 
@@ -1169,7 +1194,12 @@ mod tests {
             GeoAltitude::Laser(Altitude::Valid(250.)),
             GeoAltitude::Laser(Altitude::Valid(300.)),
         ];
-        let aux = AuxiliaryGeoSpatialData::new("aux", aux_times).with_altitude(aux_altitude);
+        let aux = AuxiliaryGeoSpatialData::new(
+            "aux",
+            aux_times,
+            RawPlotCommon::new("foo", vec![], DataType::UtmEasting),
+        )
+        .with_altitude(aux_altitude);
 
         primary.merge_auxiliary(&aux, 1.0e8, Color32::WHITE)?;
 
@@ -1225,6 +1255,7 @@ mod tests {
         let aux = AuxiliaryGeoSpatialData {
             name: "Aux".to_owned(),
             timestamps: aux_times,
+            delta_t_samples_plot: None,
             altitudes: Some(aux_altitude),
             invalid_altitudes_count: None,
             speeds: None,
@@ -1308,8 +1339,12 @@ mod tests {
             GeoAltitude::Laser(Altitude::Valid(301.)),
         ];
 
-        let aux_laser1 = AuxiliaryGeoSpatialData::new("Aux-laser-1", aux_times.clone())
-            .with_altitude(aux_altitude_laser1);
+        let aux_laser1 = AuxiliaryGeoSpatialData::new(
+            "Aux-laser-1",
+            aux_times.clone(),
+            RawPlotCommon::new("foo", vec![], DataType::UtmEasting),
+        )
+        .with_altitude(aux_altitude_laser1);
         primary.merge_auxiliary(&aux_laser1, 1.0e9, Color32::WHITE)?;
 
         // Before range: picks first
@@ -1337,8 +1372,12 @@ mod tests {
             })
         );
 
-        let aux_laser2 = AuxiliaryGeoSpatialData::new("Aux-laser-2", aux_times)
-            .with_altitude(aux_altitude_laser2);
+        let aux_laser2 = AuxiliaryGeoSpatialData::new(
+            "Aux-laser-2",
+            aux_times,
+            RawPlotCommon::new("foo", vec![], DataType::UtmEasting),
+        )
+        .with_altitude(aux_altitude_laser2);
 
         assert!(aux_laser2.is_compatible_with(&primary, 1.0e9));
 
