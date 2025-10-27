@@ -1,8 +1,10 @@
+use std::fmt;
+
 use anyhow::{Context as _, ensure};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
 use plotinator_log_if::{
     prelude::RawPlotCommon,
-    rawplot::{DataType, RawPlot},
+    rawplot::{DataType, RawPlot, RawPlotBuilder},
 };
 use plotinator_ui_util::ExpectedPlotRange;
 use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
@@ -14,11 +16,28 @@ struct SubDivStrideNs(f64);
 pub(crate) struct LastGateOn(pub usize);
 struct GateCount(usize);
 
-pub(crate) struct ZCoilZeroPositions(pub Vec<[f64; 2]>);
-pub(crate) struct AllZCoilZeroPositions(pub Vec<Vec<[f64; 2]>>);
+pub(crate) struct CoilZeroPositions(pub Vec<[f64; 2]>);
+pub(crate) struct AllCoilZeroPositions(pub Vec<Vec<[f64; 2]>>);
 
-pub(crate) struct ZCoilBField(pub Vec<[f64; 2]>);
-pub(crate) struct AllZCoilBField(pub Vec<Vec<[f64; 2]>>);
+pub(crate) struct CoilBField(pub Vec<[f64; 2]>);
+pub(crate) struct AllCoilBField(pub Vec<Vec<[f64; 2]>>);
+
+#[derive(Clone, Copy)]
+pub(crate) enum Coil {
+    X = 3,
+    Y = 5,
+    Z = 1,
+}
+
+impl fmt::Display for Coil {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Coil::X => write!(f, "X"),
+            Coil::Y => write!(f, "Y"),
+            Coil::Z => write!(f, "Z"),
+        }
+    }
+}
 
 /// Helper function to calculate the cumulative sum of a 1D array view.
 fn cumulative_sum_f64(array: &ArrayView1<f64>) -> Array1<f64> {
@@ -40,7 +59,7 @@ fn calc_subdivided_bfields(
     LastGateOn(last_gate_on): LastGateOn,
     SubDivStrideNs(subdiv_stride_ns): SubDivStrideNs,
     CountTeslaVal(cnt_tesla_val): CountTeslaVal,
-) -> anyhow::Result<(ZCoilZeroPositions, ZCoilBField)> {
+) -> anyhow::Result<(CoilZeroPositions, CoilBField)> {
     // mean over Axis(1) (the sign axis) -> shape [n_subdivisions, widths_len]
     let avg_per_subdiv = signed_data_slice
         .mean_axis(Axis(1))
@@ -81,8 +100,8 @@ fn calc_subdivided_bfields(
         points_all_subdiv.extend(subdiv_points);
     }
     Ok((
-        ZCoilZeroPositions(zero_positions_this_t_idx),
-        ZCoilBField(points_all_subdiv),
+        CoilZeroPositions(zero_positions_this_t_idx),
+        CoilBField(points_all_subdiv),
     ))
 }
 
@@ -237,15 +256,15 @@ impl<'h5> HmData<'h5> {
     #[plotinator_proc_macros::log_time]
     pub fn calculate_b_field(
         &self,
-        channel: usize,
+        channel: Coil,
         box_idx: usize,
         last_gate_on: usize,
-    ) -> anyhow::Result<(AllZCoilZeroPositions, AllZCoilBField)> {
+    ) -> anyhow::Result<(AllCoilZeroPositions, AllCoilBField)> {
         // Read 'widths' from ".../hm_gate_samples"
         let gate_samples = HmGateSamples::parse_from_hm_h5(self.h5file)?;
 
         let hm_vm2 = HmVm2::parse_from_h5(self.h5file)?;
-        let cnt_tesla_val = hm_vm2.cnt_testa_val(channel)?;
+        let cnt_tesla_val = hm_vm2.cnt_testa_val(channel as usize)?;
 
         // Read 'sign' data from ".../hm_sign"
         // purposefully converted to f64 to prevent doing that in the hot loop
@@ -276,7 +295,7 @@ impl<'h5> HmData<'h5> {
             .collect::<Vec<_>>()
             .par_chunks(CHUNK_SIZE)
             .map(
-                |time_chunk| -> anyhow::Result<Vec<(ZCoilZeroPositions, ZCoilBField)>> {
+                |time_chunk| -> anyhow::Result<Vec<(CoilZeroPositions, CoilBField)>> {
                     let start_idx = time_chunk
                         .first()
                         .ok_or_else(|| anyhow::anyhow!("Empty time chunk"))?;
@@ -287,7 +306,14 @@ impl<'h5> HmData<'h5> {
 
                     // Read one large 4D chunk from HDF5 to reduce I/O sys calls
                     let data_chunk_4d: Array4<f64> = hm_dataset
-                        .read_slice(s![*start_idx..end_idx, .., .., .., channel, box_idx])
+                        .read_slice(s![
+                            *start_idx..end_idx,
+                            ..,
+                            ..,
+                            ..,
+                            channel as usize,
+                            box_idx
+                        ])
                         .with_context(|| {
                             format!("Failed to read chunk for t_idx {start_idx}..{end_idx}")
                         })?;
@@ -320,12 +346,12 @@ impl<'h5> HmData<'h5> {
         // Unpack results
         let (all_zero_positions, all_points): (Vec<_>, Vec<_>) = results
             .into_iter()
-            .map(|(ZCoilZeroPositions(z), ZCoilBField(b))| (z, b))
+            .map(|(CoilZeroPositions(z), CoilBField(b))| (z, b))
             .unzip();
 
         Ok((
-            AllZCoilZeroPositions(all_zero_positions),
-            AllZCoilBField(all_points),
+            AllCoilZeroPositions(all_zero_positions),
+            AllCoilBField(all_points),
         ))
     }
 
@@ -359,11 +385,11 @@ impl<'h5> HmData<'h5> {
             ("GPS length".to_owned(), gps_len.to_string()),
         ];
 
-        let (AllZCoilZeroPositions(zero_positions_nested), AllZCoilBField(bfield_samples_nested)) =
-            self.calculate_b_field(1, 1, root_metadata.last_gate_on_index())?;
+        let (AllCoilZeroPositions(zero_positions_nested), AllCoilBField(bfield_samples_nested)) =
+            self.calculate_b_field(Coil::Z, 1, root_metadata.last_gate_on_index())?;
 
-        let mut final_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
-        let mut final_zero_points = Vec::with_capacity(zero_positions_nested.len());
+        let mut final_z_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
+        let mut final_z_zero_points = Vec::with_capacity(zero_positions_nested.len());
 
         for ((mut b_samples, mut z_samples), gps_ts) in bfield_samples_nested
             .into_iter()
@@ -374,42 +400,121 @@ impl<'h5> HmData<'h5> {
             for sample in &mut b_samples {
                 sample[0] += gps_ts;
             }
-            final_bfield_points.append(&mut b_samples);
+            final_z_bfield_points.append(&mut b_samples);
 
             // Apply timestamp to zero-position points for this GPS mark
             for sample in &mut z_samples {
                 sample[0] += gps_ts;
             }
-            final_zero_points.append(&mut z_samples);
+            final_z_zero_points.append(&mut z_samples);
         }
 
-        Ok((
-            vec![
-                RawPlotCommon::new(
-                    TSC_LEGEND_NAME,
-                    final_zero_points,
-                    DataType::Other {
-                        name: "0-position (Z)".into(),
-                        unit: Some("nT".into()),
-                        plot_range: ExpectedPlotRange::Thousands,
-                        default_hidden: false,
-                    },
-                )
-                .into(),
-                RawPlotCommon::new(
-                    TSC_LEGEND_NAME,
-                    final_bfield_points,
-                    DataType::Other {
-                        name: "B-field (Z)".into(),
-                        unit: Some("nT".into()),
-                        plot_range: ExpectedPlotRange::Thousands,
-                        default_hidden: false,
-                    },
-                )
-                .into(),
-            ],
-            metadata,
-        ))
+        let (AllCoilZeroPositions(zero_positions_nested), AllCoilBField(bfield_samples_nested)) =
+            self.calculate_b_field(Coil::Y, 1, root_metadata.last_gate_on_index())?;
+
+        let mut final_y_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
+        let mut final_y_zero_points = Vec::with_capacity(zero_positions_nested.len());
+
+        for ((mut b_samples, mut z_samples), gps_ts) in bfield_samples_nested
+            .into_iter()
+            .zip(zero_positions_nested.into_iter())
+            .zip(gps_timestamps.iter())
+        {
+            // Apply timestamp to b-field points for this GPS mark
+            for sample in &mut b_samples {
+                sample[0] += gps_ts;
+            }
+            final_y_bfield_points.append(&mut b_samples);
+
+            // Apply timestamp to zero-position points for this GPS mark
+            for sample in &mut z_samples {
+                sample[0] += gps_ts;
+            }
+            final_y_zero_points.append(&mut z_samples);
+        }
+
+        let (AllCoilZeroPositions(zero_positions_nested), AllCoilBField(bfield_samples_nested)) =
+            self.calculate_b_field(Coil::X, 1, root_metadata.last_gate_on_index())?;
+
+        let mut final_x_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
+        let mut final_x_zero_points = Vec::with_capacity(zero_positions_nested.len());
+
+        for ((mut b_samples, mut z_samples), gps_ts) in bfield_samples_nested
+            .into_iter()
+            .zip(zero_positions_nested.into_iter())
+            .zip(gps_timestamps.iter())
+        {
+            // Apply timestamp to b-field points for this GPS mark
+            for sample in &mut b_samples {
+                sample[0] += gps_ts;
+            }
+            final_x_bfield_points.append(&mut b_samples);
+
+            // Apply timestamp to zero-position points for this GPS mark
+            for sample in &mut z_samples {
+                sample[0] += gps_ts;
+            }
+            final_x_zero_points.append(&mut z_samples);
+        }
+
+        let plots = RawPlotBuilder::new(TSC_LEGEND_NAME)
+            .add(
+                final_z_zero_points,
+                DataType::Other {
+                    name: "0-position (Z)".into(),
+                    unit: Some("nT".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: false,
+                },
+            )
+            .add(
+                final_z_bfield_points,
+                DataType::Other {
+                    name: "B-field (Z)".into(),
+                    unit: Some("nT".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: false,
+                },
+            )
+            .add(
+                final_y_zero_points,
+                DataType::Other {
+                    name: "0-position (Y)".into(),
+                    unit: Some("nT".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: false,
+                },
+            )
+            .add(
+                final_y_bfield_points,
+                DataType::Other {
+                    name: "B-field (Y)".into(),
+                    unit: Some("nT".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: false,
+                },
+            )
+            .add(
+                final_x_zero_points,
+                DataType::Other {
+                    name: "0-position (X)".into(),
+                    unit: Some("nT".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: false,
+                },
+            )
+            .add(
+                final_x_bfield_points,
+                DataType::Other {
+                    name: "B-field (X)".into(),
+                    unit: Some("nT".into()),
+                    plot_range: ExpectedPlotRange::Thousands,
+                    default_hidden: false,
+                },
+            )
+            .build();
+
+        Ok((plots, metadata))
     }
 }
 
@@ -466,11 +571,10 @@ mod tests {
         let hm = HmData::from_hdf5(&h5file)?;
 
         // Define channel and box_idx for the test
-        let channel = 1;
         let box_idx = 1;
 
-        let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
-            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
+        let (AllCoilZeroPositions(zero_positions), _b_field_points) =
+            hm.calculate_b_field(Coil::Z, box_idx, root_metadata.last_gate_on_index())?;
 
         let first_zvec = zero_positions.first().unwrap();
         assert_eq!(first_zvec.len(), 413);
@@ -488,12 +592,10 @@ mod tests {
         let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
         let hm_data = HmData::from_hdf5(&h5file)?;
 
-        // Define channel and box_idx for the test
-        let channel = 1;
         let box_idx = 1;
 
-        let (_zero_positions, AllZCoilBField(b_field_points)) =
-            hm_data.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
+        let (_zero_positions, AllCoilBField(b_field_points)) =
+            hm_data.calculate_b_field(Coil::Z, box_idx, root_metadata.last_gate_on_index())?;
 
         // Assert that the function produced a result
         assert!(
@@ -517,11 +619,10 @@ mod tests {
         let root_metadata = RootMetadata::parse_from_tsc(&h5file)?;
         let hm = HmData::from_hdf5(&h5file)?;
 
-        let channel = 1;
         let box_idx = 1;
 
-        let (AllZCoilZeroPositions(zero_positions), _b_field_points) =
-            hm.calculate_b_field(channel, box_idx, root_metadata.last_gate_on_index())?;
+        let (AllCoilZeroPositions(zero_positions), _b_field_points) =
+            hm.calculate_b_field(Coil::Z, box_idx, root_metadata.last_gate_on_index())?;
 
         assert_eq!(zero_positions.len(), 0); // It's a stub file
         Ok(())
