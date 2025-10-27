@@ -3968,6 +3968,8 @@ dependencies = [
  "chrono",
  "egui",
  "log",
+ "ndarray",
+ "num-traits",
  "plotinator-ui-util",
  "serde",
  "test-log",

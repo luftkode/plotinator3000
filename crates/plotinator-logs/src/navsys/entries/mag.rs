@@ -19,10 +19,10 @@ impl MagSensor {
         self.timestamp
     }
 
-    pub(crate) fn timestamp_ns(&self) -> f64 {
+    pub(crate) fn timestamp_ns(&self) -> i64 {
         self.timestamp
             .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range") as f64
+            .expect("timestamp as nanoseconds out of range")
     }
 }
 

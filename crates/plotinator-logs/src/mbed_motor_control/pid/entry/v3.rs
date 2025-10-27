@@ -69,8 +69,8 @@ impl LogEntry for PidLogEntryV3 {
         ))
     }
 
-    fn timestamp_ns(&self) -> f64 {
-        (self.timestamp_ms as u64 * 1_000_000) as f64
+    fn timestamp_ns(&self) -> i64 {
+        self.timestamp_ms as i64 * 1_000_000
     }
 }
 
@@ -157,6 +157,6 @@ mod tests {
         let display_output = format!("{entry}");
         assert_eq!(display_output, "1: 1 1 1 0 1 false 1");
 
-        assert_eq!(entry.timestamp_ns(), 1_000_000.0); // 1 ms in nanoseconds
+        assert_eq!(entry.timestamp_ns(), 1_000_000); // 1 ms in nanoseconds
     }
 }

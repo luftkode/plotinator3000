@@ -19,7 +19,7 @@ pub(crate) mod header;
 // Helper struct to collect GPS data during iteration
 #[derive(Default)]
 pub(crate) struct GpsDataCollector {
-    timestamps: Vec<f64>,
+    timestamps: Vec<i64>,
     latitude: Vec<f64>,
     longitude: Vec<f64>,
     altitude: Vec<f64>,

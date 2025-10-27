@@ -62,10 +62,10 @@ impl Gps {
         self.timestamp
     }
 
-    pub(crate) fn timestamp_ns(&self) -> f64 {
+    pub(crate) fn timestamp_ns(&self) -> i64 {
         self.timestamp
             .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range") as f64
+            .expect("timestamp as nanoseconds out of range")
     }
 
     /// Returns the difference between the entry timestamp (system time) and the timestamp received
@@ -373,8 +373,8 @@ GP2 2024 10 03 12 52 43 025 5347.57764 933.01312 12:52:43.000 17 WGS84 0.0 0.9 1
     #[test]
     fn test_timestamp_ns() -> TestResult {
         let gp1 = Gps::from_str(TEST_ENTRY_GP1)?;
-        let expected_ns = (gp1.timestamp.timestamp() as f64) * 1e9
-            + (gp1.timestamp.timestamp_subsec_nanos() as f64);
+        let expected_ns = (gp1.timestamp.timestamp()) * 1_000_000_000
+            + (gp1.timestamp.timestamp_subsec_nanos() as i64);
         assert_eq!(gp1.timestamp_ns(), expected_ns);
         Ok(())
     }

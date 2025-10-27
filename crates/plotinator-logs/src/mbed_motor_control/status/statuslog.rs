@@ -28,7 +28,7 @@ const LEGEND: &str = "MBED Status";
 pub struct StatusLog {
     header: StatusLogHeader,
     entries: Vec<StatusLogEntry>,
-    timestamp_ns: Vec<f64>,
+    timestamp_ns: Vec<i64>,
     labels: Vec<PlotLabels>,
     all_plots_raw: Vec<RawPlot>,
     startup_timestamp: DateTime<Utc>,
@@ -36,7 +36,7 @@ pub struct StatusLog {
 
 impl StatusLog {
     // helper function build all the plots that can be made from a statuslog
-    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
+    fn build_raw_plots(startup_timestamp_ns: i64, entries: &[StatusLogEntry]) -> Vec<RawPlot> {
         let entry_count = entries.len();
         let mut engine_temp_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut fan_on_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -46,79 +46,43 @@ impl StatusLog {
         let mut runtime_h_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
 
         for e in entries {
+            let ts = (e.timestamp_ns() + startup_timestamp_ns) as f64;
             match e {
                 StatusLogEntry::V1(e) => {
-                    engine_temp_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        e.engine_temp as f64,
-                    ]);
-                    fan_on_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.fan_on as u8) as f64,
-                    ]);
-                    vbat_plot_raw.push([e.timestamp_ns() + startup_timestamp_ns, e.vbat as f64]);
-                    setpoint_plot_raw
-                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+                    engine_temp_plot_raw.push([ts, e.engine_temp as f64]);
+                    fan_on_plot_raw.push([ts, (e.fan_on as u8) as f64]);
+                    vbat_plot_raw.push([ts, e.vbat as f64]);
+                    setpoint_plot_raw.push([ts, e.setpoint as f64]);
 
-                    motor_state_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.motor_state as u8) as f64,
-                    ]);
+                    motor_state_plot_raw.push([ts, (e.motor_state as u8) as f64]);
                 }
                 StatusLogEntry::V2(e) => {
-                    engine_temp_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        e.engine_temp as f64,
-                    ]);
-                    fan_on_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.fan_on as u8) as f64,
-                    ]);
-                    vbat_plot_raw.push([e.timestamp_ns() + startup_timestamp_ns, e.vbat as f64]);
-                    setpoint_plot_raw
-                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+                    engine_temp_plot_raw.push([ts, e.engine_temp as f64]);
+                    fan_on_plot_raw.push([ts, (e.fan_on as u8) as f64]);
+                    vbat_plot_raw.push([ts, e.vbat as f64]);
+                    setpoint_plot_raw.push([ts, e.setpoint as f64]);
 
-                    motor_state_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.motor_state as u8) as f64,
-                    ]);
+                    motor_state_plot_raw.push([ts, (e.motor_state as u8) as f64]);
                 }
                 StatusLogEntry::V3(e) => {
-                    engine_temp_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        e.engine_temp as f64,
-                    ]);
-                    fan_on_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.fan_on as u8) as f64,
-                    ]);
-                    vbat_plot_raw.push([e.timestamp_ns() + startup_timestamp_ns, e.vbat as f64]);
-                    setpoint_plot_raw
-                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+                    engine_temp_plot_raw.push([ts, e.engine_temp as f64]);
+                    fan_on_plot_raw.push([ts, (e.fan_on as u8) as f64]);
+                    vbat_plot_raw.push([ts, e.vbat as f64]);
+                    setpoint_plot_raw.push([ts, e.setpoint as f64]);
 
-                    motor_state_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.motor_state as u8) as f64,
-                    ]);
+                    motor_state_plot_raw.push([ts, (e.motor_state as u8) as f64]);
                     runtime_h_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
+                        ts,
                         (e.runtime_s as f64) / 3600., // Convert from seconds to hours
                     ]);
                 }
                 StatusLogEntry::V4(e) => {
-                    engine_temp_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        e.engine_temp as f64,
-                    ]);
-                    setpoint_plot_raw
-                        .push([e.timestamp_ns() + startup_timestamp_ns, e.setpoint as f64]);
+                    engine_temp_plot_raw.push([ts, e.engine_temp as f64]);
+                    setpoint_plot_raw.push([ts, e.setpoint as f64]);
 
-                    motor_state_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
-                        (e.motor_state as u8) as f64,
-                    ]);
+                    motor_state_plot_raw.push([ts, (e.motor_state as u8) as f64]);
                     runtime_h_plot_raw.push([
-                        e.timestamp_ns() + startup_timestamp_ns,
+                        ts,
                         (e.runtime_s as f64) / 3600., // Convert from seconds to hours
                     ]);
                 }
@@ -234,9 +198,8 @@ impl Parseable for StatusLog {
         .and_utc();
         let startup_timestamp_ns = startup_timestamp
             .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range")
-            as f64;
-        let timestamp_ns: Vec<f64> = vec_of_entries
+            .expect("timestamp as nanoseconds out of range");
+        let timestamp_ns: Vec<i64> = vec_of_entries
             .iter()
             .map(|e| startup_timestamp_ns + e.timestamp_ns())
             .collect();
@@ -390,7 +353,7 @@ impl fmt::Display for StatusLog {
 
 fn parse_timestamps_with_state_changes(
     entries: &[StatusLogEntry],
-    startup_timestamp_ns: f64,
+    startup_timestamp_ns: i64,
 ) -> Vec<([f64; 2], String)> {
     let mut result = Vec::new();
     let mut last_state = None;
@@ -406,7 +369,7 @@ fn parse_timestamps_with_state_changes(
             };
             result.push((
                 [
-                    entry.timestamp_ns() + startup_timestamp_ns,
+                    (entry.timestamp_ns() + startup_timestamp_ns) as f64,
                     (entry.motor_state()) as f64 + offset,
                 ],
                 entry.motor_state_string(),
@@ -467,7 +430,7 @@ mod tests {
         let last_entry = status_log.entries.last().expect("Empty entries vec");
         match last_entry {
             StatusLogEntry::V1(last_entry) => {
-                assert_eq!(last_entry.timestamp_ns(), 930624.0 * 1_000_000.0);
+                assert_eq!(last_entry.timestamp_ns(), 930624 * 1_000_000);
                 assert_eq!(last_entry.engine_temp, 77.31132);
                 assert!(!last_entry.fan_on);
                 assert_eq!(last_entry.vbat, 11.996582);
@@ -536,7 +499,7 @@ mod tests {
                 panic!("Expected status log entry v1")
             }
         };
-        assert_eq!(last_entry.timestamp_ns(), 687042000000.0);
+        assert_eq!(last_entry.timestamp_ns(), 687042000000);
         assert_eq!(last_entry.engine_temp, 76.5566);
         assert!(!last_entry.fan_on);
         assert_eq!(last_entry.vbat, 13.868547);
@@ -600,7 +563,7 @@ mod tests {
             }
             StatusLogEntry::V2(status_log_entry_v2) => status_log_entry_v2,
         };
-        assert_eq!(last_entry.timestamp_ns(), 14300000000.0);
+        assert_eq!(last_entry.timestamp_ns(), 14300000000);
         assert_eq!(last_entry.engine_temp, 40.964912);
         assert!(!last_entry.fan_on);
         assert_eq!(last_entry.vbat, 12.552309);
@@ -652,7 +615,7 @@ mod tests {
             }
             StatusLogEntry::V3(status_log_entry_v3) => status_log_entry_v3,
         };
-        assert_eq!(last_entry.timestamp_ns(), 906388000000.0);
+        assert_eq!(last_entry.timestamp_ns(), 906388000000);
         assert_eq!(last_entry.engine_temp, 78.820755);
         assert!(last_entry.fan_on);
         assert_eq!(last_entry.vbat, 12.236411);
@@ -700,7 +663,7 @@ mod tests {
             }
             StatusLogEntry::V4(status_log_entry_v4) => status_log_entry_v4,
         };
-        assert_eq!(last_entry.timestamp_ns(), 79568000000.0);
+        assert_eq!(last_entry.timestamp_ns(), 79568000000);
         assert_eq!(last_entry.engine_temp, 64.07643);
         assert_eq!(last_entry.setpoint, 2500.0);
         assert_eq!(last_entry.motor_state, v4::MotorState::WAIT_TIME_SHUTDOWN);
@@ -746,7 +709,7 @@ mod tests {
             }
             StatusLogEntry::V4(status_log_entry_v4) => status_log_entry_v4,
         };
-        assert_eq!(last_entry.timestamp_ns(), 35070000000.0);
+        assert_eq!(last_entry.timestamp_ns(), 35070000000);
         assert_eq!(last_entry.engine_temp, 23.131672);
         assert_eq!(last_entry.setpoint, 1234.0);
         assert_eq!(last_entry.motor_state, v4::MotorState::CONFIGURING);

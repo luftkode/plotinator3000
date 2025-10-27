@@ -21,10 +21,10 @@ impl InclinometerEntry {
         self.timestamp
     }
 
-    pub(crate) fn timestamp_ns(&self) -> f64 {
+    pub(crate) fn timestamp_ns(&self) -> i64 {
         self.timestamp
             .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range") as f64
+            .expect("timestamp as nanoseconds out of range")
     }
 }
 
@@ -172,8 +172,8 @@ TL2 2024 10 03 12 52 42 542 2.34 0.58
     #[test]
     fn test_timestamp_ns() -> TestResult {
         let tl1 = InclinometerEntry::from_str(TEST_ENTRY_TL1)?;
-        let expected_ns = (tl1.timestamp.timestamp() as f64) * 1e9
-            + (tl1.timestamp.timestamp_subsec_nanos() as f64);
+        let expected_ns = (tl1.timestamp.timestamp()) * 1_000_000_000
+            + (tl1.timestamp.timestamp_subsec_nanos() as i64);
         assert_eq!(tl1.timestamp_ns(), expected_ns);
         Ok(())
     }

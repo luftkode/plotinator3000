@@ -79,7 +79,7 @@ impl LogEntry for InclinometerEntry {
         Ok((entry, bytes_read))
     }
 
-    fn timestamp_ns(&self) -> f64 {
+    fn timestamp_ns(&self) -> i64 {
         self.timestamp_ns()
     }
 }
@@ -120,39 +120,49 @@ impl Parseable for InclinometerSps {
         bytes_read += bytes_read_entries;
 
         // Group entries by sensor ID
-        type PitchRollTuple = (Vec<[f64; 2]>, Vec<[f64; 2]>);
+        type PitchRollTuple = (Vec<[f64; 2]>, Vec<[f64; 2]>, Vec<i64>);
         let mut sensor_groups: HashMap<u8, PitchRollTuple> = HashMap::new();
-
         for entry in &entries {
             let sensor_id = entry.id;
-            let (pitch_points, roll_points) = sensor_groups
+            let (pitch_points, roll_points, timestamps) = sensor_groups
                 .entry(sensor_id)
-                .or_insert_with(|| (Vec::new(), Vec::new()));
+                .or_insert_with(|| (Vec::new(), Vec::new(), Vec::new()));
 
-            pitch_points.push([entry.timestamp_ns(), entry.pitch_angle_degrees()]);
-            roll_points.push([entry.timestamp_ns(), entry.roll_angle_degrees()]);
+            pitch_points.push([entry.timestamp_ns() as f64, entry.pitch_angle_degrees()]);
+            roll_points.push([entry.timestamp_ns() as f64, entry.roll_angle_degrees()]);
+            timestamps.push(entry.timestamp_ns());
         }
 
         // Create plots for each sensor
         let mut raw_plots = Vec::new();
-        for (sensor_id, (pitch_points, roll_points)) in sensor_groups {
+        for (sensor_id, (pitch_points, roll_points, timestamps)) in sensor_groups {
+            let mut builder = RawPlotBuilder::new(format!("{LEGEND}{sensor_id}"))
+                .add(pitch_points, DataType::Pitch);
             // Create pitch plot for this sensor
             if !pitch_points.is_empty() {
-                raw_plots.push(RawPlotCommon::new(
-                    format!("{LEGEND}{sensor_id}"),
-                    pitch_points,
-                    DataType::Pitch,
-                ));
+                raw_plots.push(
+                    RawPlotCommon::new(
+                        format!("{LEGEND}{sensor_id}"),
+                        pitch_points,
+                        DataType::Pitch,
+                    )
+                    .into(),
+                );
             }
 
             // Create roll plot for this sensor
             if !roll_points.is_empty() {
-                raw_plots.push(RawPlotCommon::new(
-                    format!("{LEGEND}{sensor_id}"),
-                    roll_points,
-                    DataType::Roll,
-                ));
+                raw_plots.push(
+                    RawPlotCommon::new(format!("{LEGEND}{sensor_id}"), roll_points, DataType::Roll)
+                        .into(),
+                );
             }
+
+            raw_plots.append(
+                &mut RawPlotBuilder::new(format!("{LEGEND}{sensor_id}"))
+                    .add_timestamp_delta(&timestamps)
+                    .build(),
+            );
         }
 
         // Filter out empty plots and log warnings

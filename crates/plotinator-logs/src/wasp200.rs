@@ -60,8 +60,8 @@ impl LogEntry for AltimeterEntry {
         Ok((entry, bytes_read))
     }
 
-    fn timestamp_ns(&self) -> f64 {
-        self.timestamp_ns()
+    fn timestamp_ns(&self) -> i64 {
+        self.timestamp_ns() as i64
     }
 }
 

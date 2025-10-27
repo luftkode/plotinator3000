@@ -119,7 +119,7 @@ impl NavSysSpsKitchenSink {
         for entry in entries {
             match entry {
                 NavSysSpsEntry::HE1(e) => {
-                    he1.add_entry(e.timestamp_ns(), e.altitude_m());
+                    he1.add_entry(e.timestamp_ns() as f64, e.altitude_m());
                 }
                 NavSysSpsEntry::HE2(e) => {
                     he2.add_entry(e.timestamp_ns(), e.altitude_m());

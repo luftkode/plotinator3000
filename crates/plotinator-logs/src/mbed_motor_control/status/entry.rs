@@ -35,7 +35,7 @@ impl fmt::Display for StatusLogEntry {
 }
 
 impl StatusLogEntry {
-    pub(crate) fn timestamp_ns(&self) -> f64 {
+    pub(crate) fn timestamp_ns(&self) -> i64 {
         match self {
             Self::V1(e) => e.timestamp_ns(),
             Self::V2(e) => e.timestamp_ns(),

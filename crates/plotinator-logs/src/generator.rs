@@ -90,7 +90,7 @@ impl Parseable for GeneratorLog {
 
         let mut timestamps_ns: Vec<f64> = Vec::with_capacity(entries.len());
         for entry in &entries {
-            timestamps_ns.push(entry.timestamp_ns());
+            timestamps_ns.push(entry.timestamp_ns() as f64);
         }
 
         let all_plots_raw = build_all_plots(&entries);
@@ -152,26 +152,32 @@ impl GitMetadata for GeneratorLog {
 
 // Helper function to keep all the boiler plate of building each plot
 fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
+    let timestamps: Vec<i64> = entries.iter().map(|e| e.timestamp_ns()).collect();
     RawPlotBuilder::new(LEGEND)
+        .add_timestamp_delta(&timestamps)
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.r_rotor.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.r_rotor.into()),
             DataType::ElectricalResistance {
                 name: "Rotor".into(),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.rpm.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.rpm.into()),
             DataType::other_unitless("RPM", ExpectedPlotRange::Thousands, false),
         )
         .add(
             // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.pwm / 100.0).into()),
+            plot_points_from_log_entry(
+                entries,
+                |e| e.timestamp_ns() as f64,
+                |e| (e.pwm / 100.0).into(),
+            ),
             DataType::Percentage { name: "PWM".into() },
         )
         .add(
             plot_points_from_log_entry(
                 entries,
-                |e| e.timestamp_ns(),
+                |e| e.timestamp_ns() as f64,
                 |e| f64::from(e.vout) * f64::from(e.i_in),
             ),
             DataType::Power {
@@ -180,49 +186,53 @@ fn build_all_plots(entries: &[GeneratorLogEntry]) -> Vec<RawPlot> {
         )
         .add(
             // Load is percentage but in the log it is represented as 0-100 so we divide by 100 to normalize to [0.0,1.0]
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| (e.load / 100.0).into()),
+            plot_points_from_log_entry(
+                entries,
+                |e| e.timestamp_ns() as f64,
+                |e| (e.load / 100.0).into(),
+            ),
             DataType::Percentage {
                 name: "Load".into(),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_rotor.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.i_rotor.into()),
             DataType::Current {
                 suffix: Some("Rotor".into()),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp1.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.temp1.into()),
             DataType::Temperature {
                 name: "Temp1".into(),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.temp2.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.temp2.into()),
             DataType::Temperature {
                 name: "Temp2".into(),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_in.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.i_in.into()),
             DataType::Current {
                 suffix: Some("in".into()),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.i_out.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.i_out.into()),
             DataType::Current {
                 suffix: Some("out".into()),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vbat.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.vbat.into()),
             DataType::Voltage {
                 name: "Battery".into(),
             },
         )
         .add(
-            plot_points_from_log_entry(entries, |e| e.timestamp_ns(), |e| e.vout.into()),
+            plot_points_from_log_entry(entries, |e| e.timestamp_ns() as f64, |e| e.vout.into()),
             DataType::Voltage { name: "out".into() },
         )
         .build()
@@ -307,11 +317,11 @@ impl LogEntry for GeneratorLogEntry {
     }
 
     /// Timestamp in nanoseconds since the epoch
-    fn timestamp_ns(&self) -> f64 {
+    fn timestamp_ns(&self) -> i64 {
         self.timestamp
             .and_utc()
             .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range") as f64
+            .expect("timestamp as nanoseconds out of range")
     }
 }
 
@@ -413,7 +423,7 @@ mod tests {
                 .expect("Invalid arguments")
                 .and_utc()
                 .timestamp_nanos_opt()
-                .expect("timestamp as nanoseconds out of range") as f64
+                .expect("timestamp as nanoseconds out of range")
         );
         assert_eq!(
             first_entry.timestamp,

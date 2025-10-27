@@ -23,14 +23,14 @@ const LEGEND: &str = "MBED PID";
 pub struct PidLog {
     header: PidLogHeader,
     entries: Vec<PidLogEntry>,
-    timestamps_ns: Vec<f64>,
+    timestamps_ns: Vec<i64>,
     all_plots_raw: Vec<RawPlot>,
     startup_timestamp: DateTime<Utc>,
 }
 
 impl PidLog {
     // helper function build all the plots that can be made from a pidlog
-    fn build_raw_plots(startup_timestamp_ns: f64, entries: &[PidLogEntry]) -> Vec<RawPlot> {
+    fn build_raw_plots(startup_timestamp_ns: i64, entries: &[PidLogEntry]) -> Vec<RawPlot> {
         let entry_count = entries.len();
         let mut rpm_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
         let mut pid_output_plot_raw: Vec<[f64; 2]> = Vec::with_capacity(entry_count);
@@ -43,7 +43,7 @@ impl PidLog {
         for e in entries {
             match e {
                 PidLogEntry::V1(e) => {
-                    let ts: f64 = e.timestamp_ns() + startup_timestamp_ns;
+                    let ts: f64 = (e.timestamp_ns() + startup_timestamp_ns) as f64;
                     rpm_plot_raw.push([ts, e.rpm.into()]);
                     pid_output_plot_raw.push([ts, e.pid_output.into()]);
                     servo_duty_cycle_plot_raw.push([ts, e.servo_duty_cycle.into()]);
@@ -51,7 +51,7 @@ impl PidLog {
                     first_valid_rpm_count_plot_raw.push([ts, e.first_valid_rpm_count as f64]);
                 }
                 PidLogEntry::V2(e) => {
-                    let ts: f64 = e.timestamp_ns() + startup_timestamp_ns;
+                    let ts: f64 = (e.timestamp_ns() + startup_timestamp_ns) as f64;
                     rpm_plot_raw.push([ts, e.rpm.into()]);
                     pid_output_plot_raw.push([ts, e.pid_output.into()]);
                     servo_duty_cycle_plot_raw.push([ts, e.servo_duty_cycle.into()]);
@@ -61,7 +61,7 @@ impl PidLog {
                     vbat_plot_raw.push([ts, e.vbat as f64]);
                 }
                 PidLogEntry::V3(e) => {
-                    let ts: f64 = e.timestamp_ns() + startup_timestamp_ns;
+                    let ts: f64 = (e.timestamp_ns() + startup_timestamp_ns) as f64;
                     rpm_plot_raw.push([ts, e.rpm.into()]);
                     pid_output_plot_raw.push([ts, e.pid_output.into()]);
                     servo_duty_cycle_plot_raw.push([ts, e.servo_duty_cycle.into()]);
@@ -184,9 +184,8 @@ impl Parseable for PidLog {
         .and_utc();
         let startup_timestamp_ns = startup_timestamp
             .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range")
-            as f64;
-        let timestamps_ns: Vec<f64> = vec_of_entries
+            .expect("timestamp as nanoseconds out of range");
+        let timestamps_ns: Vec<i64> = vec_of_entries
             .iter()
             .map(|e| startup_timestamp_ns + e.timestamp_ns())
             .collect();

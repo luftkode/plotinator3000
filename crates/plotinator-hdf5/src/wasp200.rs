@@ -132,7 +132,7 @@ impl Wasp200 {
 
     fn extract_timestamps(
         timestamp_dataset: &hdf5::Dataset,
-    ) -> anyhow::Result<(Vec<f64>, DateTime<Utc>, Option<RawPlotCommon>)> {
+    ) -> anyhow::Result<(Vec<i64>, DateTime<Utc>, Option<RawPlotCommon>)> {
         let timestamps_raw: Vec<i64> = read_timestamps(timestamp_dataset)?;
         let first_timestamp: DateTime<Utc> = chrono::Utc
             .timestamp_nanos(*timestamps_raw.first().expect("Empty timestamps"))
@@ -142,7 +142,7 @@ impl Wasp200 {
 
         let mut timestamps = vec![];
         for t in timestamps_raw {
-            timestamps.push(t as f64);
+            timestamps.push(t);
         }
 
         Ok((timestamps, first_timestamp, delta_t_samples))

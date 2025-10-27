@@ -232,8 +232,8 @@ impl FrameGpsDatasets {
         let mut alt_nan_cnt: u64 = 0;
 
         for entry in gps_data.iter() {
+            timestamps.push(*entry.timestamp);
             let ts = *entry.timestamp as f64;
-            timestamps.push(ts);
 
             let hdop_sample = *entry.hdop;
             if !hdop_sample.is_nan() {

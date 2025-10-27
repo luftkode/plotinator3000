@@ -133,3 +133,9 @@ fn get_terrain_safe_color(i: usize) -> Color32 {
 
     egui::epaint::Hsva::new(h, s, v, 1.0).into()
 }
+
+/// Color for invalid/error data - purple for visibility
+#[must_use]
+pub fn invalid_data_color() -> Color32 {
+    Color32::from_rgb(200, 100, 255)
+}

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Added B-field and zero position plots for X and Y-coil high-moment
+
 ## [2.6.0]
 
 - Cargo update

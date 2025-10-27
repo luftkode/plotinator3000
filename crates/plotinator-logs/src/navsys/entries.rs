@@ -124,7 +124,7 @@ impl LogEntry for NavSysSpsEntry {
         Ok((entry, bytes_read))
     }
 
-    fn timestamp_ns(&self) -> f64 {
+    fn timestamp_ns(&self) -> i64 {
         match self {
             Self::HE1(he) | Self::HE2(he) | Self::HE3(he) | Self::HEx(he) => he.timestamp_ns(),
             Self::TL1(tl) | Self::TL2(tl) | Self::TL3(tl) | Self::TLx(tl) => tl.timestamp_ns(),

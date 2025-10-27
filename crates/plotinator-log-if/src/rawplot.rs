@@ -1,6 +1,11 @@
+use std::marker::PhantomData;
+
+use ndarray::{ArrayBase, Ix1};
+use num_traits::{AsPrimitive, PrimInt};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    algorithms,
     prelude::DataType,
     rawplot::{
         path_data::{AuxiliaryGeoSpatialData, GeoSpatialDataset, PrimaryGeoSpatialData},
@@ -11,6 +16,10 @@ use crate::{
 pub mod data_type;
 pub mod path_data;
 pub mod rawplot_common;
+
+pub trait TimeStampPrimitive: PrimInt + AsPrimitive<f64> + AsPrimitive<u64> {}
+impl TimeStampPrimitive for i64 {}
+impl TimeStampPrimitive for u64 {}
 
 /// Helper builder to build generic [`RawPlot`] with less boilerplate
 pub struct RawPlotBuilder {
@@ -30,6 +39,31 @@ impl RawPlotBuilder {
         self.raw_plots
             .push(RawPlotCommon::new(self.dataset_name.clone(), points, ty));
         self
+    }
+
+    pub fn add_timestamp_delta(mut self, timestamps: &[impl TimeStampPrimitive]) -> Self {
+        self.add_timestamp_delta_rawplot(algorithms::timestamp_distances(timestamps));
+        self
+    }
+
+    pub fn add_timestamp_delta_ndarray<T, S>(mut self, timestamps: &ArrayBase<S, Ix1>) -> Self
+    where
+        T: TimeStampPrimitive,
+        S: ndarray::Data<Elem = T>,
+    {
+        self.add_timestamp_delta_rawplot(algorithms::timestamp_distances_ndarray(timestamps));
+        self
+    }
+
+    fn add_timestamp_delta_rawplot(&mut self, timestamp_delta: Vec<[f64; 2]>) {
+        self.raw_plots.push(RawPlotCommon::new(
+            self.dataset_name.clone(),
+            timestamp_delta,
+            DataType::TimeDelta {
+                name: "Sample".into(),
+                unit: "ms".into(),
+            },
+        ));
     }
 
     pub fn build(mut self) -> Vec<RawPlot> {

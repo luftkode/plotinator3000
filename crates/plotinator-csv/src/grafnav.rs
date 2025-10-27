@@ -119,8 +119,8 @@ impl LogEntry for GrafNavPPPRow {
         ))
     }
 
-    fn timestamp_ns(&self) -> f64 {
-        self.timestamp.timestamp_nanos_opt().expect("time overflow") as f64
+    fn timestamp_ns(&self) -> i64 {
+        self.timestamp.timestamp_nanos_opt().expect("time overflow")
     }
 }
 
@@ -236,54 +236,58 @@ impl Parseable for GrafNavPPP {
 
         let mut raw_plots = RawPlotBuilder::new(LEGEND_NAME)
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_msl),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.h_msl),
                 DataType::AltitudeMSL,
             )
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.h_ell),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.h_ell),
                 DataType::AltitudeEllipsoidal,
             )
             // UTM Coordinates
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.northing),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.northing),
                 DataType::UtmNorthing,
             )
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.easting),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.easting),
                 DataType::UtmEasting,
             )
             // Velocity
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_east),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.v_east),
                 DataType::other_velocity("East", true),
             )
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_north),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.v_north),
                 DataType::other_velocity("North", true),
             )
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.v_up),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.v_up),
                 DataType::other_velocity("Up", true),
             )
             // Quality indicators
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.quality as f64),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.quality as f64,
+                ),
                 DataType::other_unitless("Quality Factor", ExpectedPlotRange::Hundreds, false),
             )
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pdop),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.pdop),
                 DataType::other_unitless("PDOP", ExpectedPlotRange::Hundreds, true),
             )
             .add(
                 plot_points_from_log_entry(
                     &entries,
-                    |e| e.timestamp_ns(),
+                    |e| e.timestamp_ns() as f64,
                     |e| e.num_satellites as f64,
                 ),
                 DataType::other_unitless("Satellites", ExpectedPlotRange::Hundreds, false),
             )
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.undulation),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.undulation),
                 DataType::Other {
                     name: "Undulation".into(),
                     unit: Some("m".into()),
@@ -292,7 +296,11 @@ impl Parseable for GrafNavPPP {
                 },
             )
             .add(
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.seq_num as f64),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.seq_num as f64,
+                ),
                 DataType::other_unitless("Sequence Number", ExpectedPlotRange::Hundreds, true),
             )
             .build();
