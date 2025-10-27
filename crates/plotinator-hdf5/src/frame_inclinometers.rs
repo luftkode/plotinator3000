@@ -3,7 +3,7 @@ use std::io;
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
-use plotinator_log_if::{hdf5::SkytemHdf5, prelude::*, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -44,90 +44,23 @@ impl SkytemHdf5 for FrameInclinometers {
         let timestamps2: Array2<i64> = timestamp2_dataset.read_2d()?;
 
         let mut raw_plots = vec![];
-
         let mut total_starting_timestamp = None;
-        if let Some((timestamps1, first_timestamp1)) = Self::process_timestamps(&timestamps1) {
-            total_starting_timestamp = Some(first_timestamp1);
-
-            let data_len = angles1.nrows();
-
-            let mut pitch1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-            let mut old_roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-            let mut roll1_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-
-            for ((angles_row, attitudes_row), timestamp) in angles1
-                .outer_iter()
-                .zip(attitudes1.outer_iter())
-                .zip(timestamps1.iter())
-            {
-                let pitch = attitudes_row[0];
-                let roll = attitudes_row[1];
-
-                // The old roll that is incorrectly calculated
-                let old_roll = angles_row[1];
-
-                pitch1_with_ts.push([*timestamp, pitch as f64]);
-                roll1_with_ts.push([*timestamp, roll as f64]);
-                old_roll1_with_ts.push([*timestamp, old_roll as f64]);
-            }
-
-            let pitch1_rawplot =
-                RawPlotCommon::new(format!("{LEGEND_NAME}1"), pitch1_with_ts, DataType::Pitch);
-            let roll1_rawplot =
-                RawPlotCommon::new(format!("{LEGEND_NAME}1"), roll1_with_ts, DataType::Roll);
-            let old_roll1_rawplot = RawPlotCommon::new(
-                format!(" (Old) ({LEGEND_NAME}1)"),
-                old_roll1_with_ts,
-                DataType::Roll,
-            );
-            raw_plots.push(pitch1_rawplot.into());
-            raw_plots.push(roll1_rawplot.into());
-            raw_plots.push(old_roll1_rawplot.into());
-        }
-
-        if let Some((timestamps2, first_timestamp2)) = Self::process_timestamps(&timestamps2) {
-            if let Some(total_starting_ts) = total_starting_timestamp {
-                total_starting_timestamp = Some(first_timestamp2.min(total_starting_ts));
-            } else {
-                total_starting_timestamp = Some(first_timestamp2);
-            }
-
-            let data_len = angles2.nrows();
-            let mut pitch2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-            let mut old_roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-            let mut roll2_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
-
-            for ((angles_row, attitudes_row), timestamp) in angles2
-                .outer_iter()
-                .zip(attitudes2.outer_iter())
-                .zip(timestamps2.iter())
-            {
-                let pitch = attitudes_row[0];
-                let roll = attitudes_row[1];
-
-                // The old roll that is incorrectly calculated
-                let old_roll = angles_row[1];
-
-                pitch2_with_ts.push([*timestamp, pitch as f64]);
-                roll2_with_ts.push([*timestamp, roll as f64]);
-                old_roll2_with_ts.push([*timestamp, old_roll as f64]);
-            }
-
-            let pitch2_rawplot =
-                RawPlotCommon::new(format!("{LEGEND_NAME}2"), pitch2_with_ts, DataType::Pitch);
-
-            let roll2_rawplot =
-                RawPlotCommon::new(format!("{LEGEND_NAME}2"), roll2_with_ts, DataType::Roll);
-            let old_roll2_rawplot = RawPlotCommon::new(
-                format!(" (Old) ({LEGEND_NAME}2"),
-                old_roll2_with_ts,
-                DataType::Roll,
-            );
-
-            raw_plots.push(pitch2_rawplot.into());
-            raw_plots.push(roll2_rawplot.into());
-            raw_plots.push(old_roll2_rawplot.into());
-        }
+        Self::build_plots(
+            1,
+            &mut total_starting_timestamp,
+            &mut raw_plots,
+            &timestamps1,
+            &angles1,
+            &attitudes1,
+        );
+        Self::build_plots(
+            2,
+            &mut total_starting_timestamp,
+            &mut raw_plots,
+            &timestamps2,
+            &angles2,
+            &attitudes2,
+        );
 
         let metadata = Self::extract_metadata(
             &angle1_dataset,
@@ -211,13 +144,65 @@ impl FrameInclinometers {
         ))
     }
 
-    fn process_timestamps(timestamp_data: &Array2<i64>) -> Option<(Vec<f64>, DateTime<Utc>)> {
+    fn build_plots(
+        sensor_id: u8,
+        total_starting_timestamp: &mut Option<DateTime<Utc>>,
+        rawplots: &mut Vec<RawPlot>,
+        timestamps: &Array2<i64>,
+        angles: &Array2<f32>,
+        attitudes: &Array2<f32>,
+    ) {
+        if let Some((timestamps, first_timestamp)) = Self::process_timestamps(timestamps) {
+            if let Some(total_starting_ts) = total_starting_timestamp {
+                *total_starting_timestamp = Some(first_timestamp.min(*total_starting_ts));
+            } else {
+                *total_starting_timestamp = Some(first_timestamp);
+            }
+
+            let data_len = angles.nrows();
+
+            let mut pitch_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+            let mut old_roll_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+            let mut roll_with_ts: Vec<[f64; 2]> = Vec::with_capacity(data_len);
+
+            for ((angles_row, attitudes_row), timestamp) in angles
+                .outer_iter()
+                .zip(attitudes.outer_iter())
+                .zip(timestamps.iter())
+            {
+                let pitch = attitudes_row[0];
+                let roll = attitudes_row[1];
+
+                // The old roll that is incorrectly calculated
+                let old_roll = angles_row[1];
+
+                let ts_float = *timestamp as f64;
+                pitch_with_ts.push([ts_float, pitch as f64]);
+                roll_with_ts.push([ts_float, roll as f64]);
+                old_roll_with_ts.push([ts_float, old_roll as f64]);
+            }
+
+            rawplots.append(
+                &mut RawPlotBuilder::new(format!("{LEGEND_NAME}{sensor_id}"))
+                    .add_timestamp_delta(&timestamps)
+                    .add(pitch_with_ts, DataType::Pitch)
+                    .add(roll_with_ts, DataType::Roll)
+                    .add(
+                        old_roll_with_ts,
+                        DataType::other_degrees("(Old) Roll".to_owned(), true),
+                    )
+                    .build(),
+            );
+        }
+    }
+
+    fn process_timestamps(timestamp_data: &Array2<i64>) -> Option<(Vec<i64>, DateTime<Utc>)> {
         let first = timestamp_data.first()?;
         let first_timestamp: DateTime<Utc> = chrono::Utc.timestamp_nanos(*first).to_utc();
 
-        let mut timestamps = vec![];
+        let mut timestamps = Vec::with_capacity(timestamp_data.nrows());
         for t in timestamp_data {
-            timestamps.push(*t as f64);
+            timestamps.push(*t);
         }
 
         Some((timestamps, first_timestamp))
@@ -272,12 +257,19 @@ mod tests {
     #[test]
     fn test_read_frame_inclinometers() -> TestResult {
         let frame_inclinometers = FrameInclinometers::from_path(frame_inclinometers())?;
-        assert_eq!(frame_inclinometers.metadata.len(), 72);
-        assert_eq!(frame_inclinometers.raw_plots.len(), 6);
-        match &frame_inclinometers.raw_plots[0] {
-            RawPlot::Generic { common } => assert_eq!(common.points().len(), 32),
+        let metadata_count = frame_inclinometers.metadata.len();
+        let raw_plot_count = frame_inclinometers.raw_plots.len();
+        let first_raw_plot_points_count = match &frame_inclinometers.raw_plots[0] {
+            RawPlot::Generic { common } => common.points().len(),
             RawPlot::GeoSpatialDataset(_) => unreachable!(),
-        }
+        };
+
+        let counts = vec![
+            ("metadata_count", metadata_count),
+            ("raw_plot_count", raw_plot_count),
+            ("first_raw_plot_points_count", first_raw_plot_points_count),
+        ];
+        insta::assert_debug_snapshot!(counts);
 
         Ok(())
     }

@@ -89,8 +89,8 @@ impl LogEntry for StatusLogEntryV3 {
         ))
     }
 
-    fn timestamp_ns(&self) -> f64 {
-        (self.timestamp_ms as u64 * 1_000_000) as f64
+    fn timestamp_ns(&self) -> i64 {
+        self.timestamp_ms as i64 * 1_000_000
     }
 }
 

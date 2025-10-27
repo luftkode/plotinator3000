@@ -2,7 +2,7 @@ use anyhow::bail;
 use chrono::{TimeZone as _, Utc};
 use egui_plot::PlotPoint;
 use pilot_display::{PilotDisplayCoordinates, PilotDisplayRemainingDistance};
-use plotinator_log_if::{prelude::GeoPoint, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::Deserialize;
 use strum_macros::{Display, EnumString};

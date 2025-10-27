@@ -7,7 +7,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use plotinator_log_if::{parseable::Parseable, prelude::*, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::navsys::entries::mag::MagSensor;
@@ -72,7 +72,7 @@ impl LogEntry for MagSensor {
         Ok((entry, bytes_read))
     }
 
-    fn timestamp_ns(&self) -> f64 {
+    fn timestamp_ns(&self) -> i64 {
         self.timestamp_ns()
     }
 }
@@ -107,7 +107,7 @@ impl Parseable for MagSps {
         for entry in &entries {
             let sensor_id = entry.id; // ID is a u8
             let mag_points = sensor_groups.entry(sensor_id).or_default();
-            mag_points.push([entry.timestamp_ns(), entry.field_nanotesla()]);
+            mag_points.push([entry.timestamp_ns() as f64, entry.field_nanotesla()]);
         }
 
         // Create plots for each sensor

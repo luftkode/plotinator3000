@@ -186,8 +186,7 @@ fn fill_log_plots(
             if plot_settings.highlight(ptype) {
                 plotinator_ui_util::highlight_plot_rect(plot_ui);
             }
-
-            if reset_plot_bounds {
+            if plot_ui.response().double_clicked() || reset_plot_bounds {
                 let filter_plots = plot_settings.apply_filters(plot.plots());
                 let mut max_bounds: Option<PlotBounds> = None;
                 for fp in filter_plots {
@@ -204,6 +203,7 @@ fn fill_log_plots(
                     max_bounds.add_relative_margin_x(margin_fraction);
                     max_bounds.add_relative_margin_y(margin_fraction);
                     plot_ui.set_plot_bounds(max_bounds);
+                    log::info!("Manually resetting plot bounds to: {max_bounds:?}");
                 }
                 plot_ui
                     .ctx()

@@ -1,10 +1,7 @@
 use chrono::{DateTime, Utc};
 use hdf5::H5Type;
 use ndarray::Array1;
-use plotinator_log_if::{
-    prelude::GeoSpatialDataBuilder,
-    rawplot::{DataType, RawPlot, RawPlotBuilder},
-};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 
 use crate::tsc::TSC_LEGEND_NAME;
@@ -25,11 +22,8 @@ impl GpsPvtRecords {
 
     // Return a vector of timestamps (unix UTC nanoseconds)
     //
-    pub fn timestamps(&self) -> Vec<Option<f64>> {
-        self.inner
-            .iter()
-            .map(|g| g.unix_timestamp_ns().map(|ts| ts as f64))
-            .collect()
+    pub fn timestamps(&self) -> Vec<Option<i64>> {
+        self.inner.iter().map(|g| g.unix_timestamp_ns()).collect()
     }
 
     #[allow(clippy::too_many_lines, reason = "Long but simple")]
@@ -99,6 +93,7 @@ impl GpsPvtRecords {
                 continue;
             };
             timestamps.push(t);
+            let t = t as f64;
             height.push(e.height_meters());
             gspeed.push(e.ground_speed_kmh());
             heading.push(e.head_mot as f64 * 1e-5); // degrees

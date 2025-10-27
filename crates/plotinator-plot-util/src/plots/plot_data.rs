@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
-use plotinator_log_if::{prelude::RawPlotCommon, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::auto_color_plot_area;
 use serde::{Deserialize, Serialize};
 

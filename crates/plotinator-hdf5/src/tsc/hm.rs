@@ -2,7 +2,7 @@ use std::fmt;
 
 use anyhow::{Context as _, ensure};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
-use plotinator_log_if::rawplot::{DataType, RawPlot, RawPlotBuilder};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use rayon::{
     iter::{IntoParallelIterator as _, ParallelIterator as _},

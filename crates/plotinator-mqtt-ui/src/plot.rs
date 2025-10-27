@@ -3,10 +3,7 @@ use std::mem;
 use chrono::DateTime;
 use egui::Color32;
 use egui_plot::PlotPoint;
-use plotinator_log_if::{
-    prelude::RawPlotCommon,
-    rawplot::{DataType, RawPlot},
-};
+use plotinator_log_if::prelude::*;
 use plotinator_mqtt::data::listener::{
     GeoData, MqttData, MqttDevice, MqttGeoData, MqttTopicData, MqttTopicDataWrapper, TopicPayload,
 };

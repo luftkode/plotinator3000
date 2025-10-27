@@ -7,11 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use entries::NavSysSpsEntry;
 use header::NavSysSpsHeader;
-use plotinator_log_if::{
-    parseable::Parseable,
-    prelude::*,
-    rawplot::{DataType, RawPlotBuilder},
-};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +19,7 @@ pub(crate) mod header;
 // Helper struct to collect GPS data during iteration
 #[derive(Default)]
 pub(crate) struct GpsDataCollector {
-    timestamps: Vec<f64>,
+    timestamps: Vec<i64>,
     latitude: Vec<f64>,
     longitude: Vec<f64>,
     altitude: Vec<f64>,
@@ -54,17 +50,17 @@ impl GpsDataCollector {
         }
 
         // Additional plots
-        self.time_delta.push([ts, e.gps_time_delta_ms()]);
-        self.satellites.push([ts, e.num_satellites().into()]);
+        self.time_delta.push([ts as f64, e.gps_time_delta_ms()]);
+        self.satellites.push([ts as f64, e.num_satellites().into()]);
 
         if !e.hdop().is_nan() {
-            self.hdop.push([ts, e.hdop().into()]);
+            self.hdop.push([ts as f64, e.hdop().into()]);
         }
         if !e.vdop().is_nan() {
-            self.vdop.push([ts, e.vdop().into()]);
+            self.vdop.push([ts as f64, e.vdop().into()]);
         }
         if !e.pdop().is_nan() {
-            self.pdop.push([ts, e.pdop().into()]);
+            self.pdop.push([ts as f64, e.pdop().into()]);
         }
     }
 
@@ -121,20 +117,13 @@ impl GpsDataCollector {
 #[derive(Default)]
 pub(crate) struct HeightDataCollector {
     altitudes: Vec<f64>,
-    timestamps: Vec<f64>,
-    invalid: Vec<[f64; 2]>,
-    invalid_count: u64,
+    timestamps: Vec<i64>,
 }
 
 impl HeightDataCollector {
-    pub(crate) fn add_entry(&mut self, ts: f64, altitude: Option<f64>) {
-        if let Some(alt) = altitude {
-            self.altitudes.push(alt);
-            self.timestamps.push(ts);
-        } else {
-            self.invalid_count += 1;
-            self.invalid.push([ts, self.invalid_count as f64]);
-        }
+    pub(crate) fn add_entry(&mut self, ts: i64, altitude: Option<f64>) {
+        self.altitudes.push(altitude.unwrap_or(-1.));
+        self.timestamps.push(ts);
     }
 
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
@@ -146,58 +135,62 @@ impl HeightDataCollector {
         {
             raw_plots.push(geo_data.into());
         }
-        if !self.invalid.is_empty() {
-            raw_plots.push(
-                RawPlotCommon::new(
-                    sensor_name,
-                    self.invalid,
-                    DataType::other_unitless("Invalid Count", ExpectedPlotRange::Thousands, false),
-                )
-                .into(),
-            );
-        }
     }
 }
 
 // Helper struct for tilt sensor data
 #[derive(Default)]
 pub(crate) struct TiltDataCollector {
+    timestamps: Vec<i64>,
     pitch: Vec<[f64; 2]>,
     roll: Vec<[f64; 2]>,
 }
 
 impl TiltDataCollector {
-    pub(crate) fn add_entry(&mut self, ts: f64, pitch: f64, roll: f64) {
-        self.pitch.push([ts, pitch]);
-        self.roll.push([ts, roll]);
+    pub(crate) fn add_entry(&mut self, ts: i64, pitch: f64, roll: f64) {
+        self.timestamps.push(ts);
+        self.pitch.push([ts as f64, pitch]);
+        self.roll.push([ts as f64, roll]);
     }
 
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
-        if !self.pitch.is_empty() {
-            raw_plots.push(RawPlotCommon::new(sensor_name, self.pitch, DataType::Pitch).into());
-        }
-        if !self.roll.is_empty() {
-            raw_plots.push(RawPlotCommon::new(sensor_name, self.roll, DataType::Roll).into());
-        }
+        let Self {
+            timestamps,
+            pitch,
+            roll,
+        } = self;
+        raw_plots.append(
+            &mut RawPlotBuilder::new(sensor_name)
+                .add_timestamp_delta(&timestamps)
+                .add(roll, DataType::Roll)
+                .add(pitch, DataType::Pitch)
+                .build(),
+        );
     }
 }
 
 // Helper struct for magnetometer data
 #[derive(Default)]
 pub(crate) struct MagDataCollector {
+    timestamps: Vec<i64>,
     values: Vec<[f64; 2]>,
 }
 
 impl MagDataCollector {
-    pub(crate) fn add_entry(&mut self, ts: f64, field: f64) {
-        self.values.push([ts, field]);
+    pub(crate) fn add_entry(&mut self, ts: i64, field: f64) {
+        self.timestamps.push(ts);
+        self.values.push([ts as f64, field]);
     }
 
     pub(crate) fn build_plots(self, sensor_name: &str, raw_plots: &mut Vec<RawPlot>) {
-        if self.values.len() > 1 {
-            raw_plots
-                .push(RawPlotCommon::new(sensor_name, self.values, DataType::MagneticFlux).into());
-        }
+        let Self { timestamps, values } = self;
+
+        raw_plots.append(
+            &mut RawPlotBuilder::new(sensor_name)
+                .add_timestamp_delta(&timestamps)
+                .add(values, DataType::MagneticFlux)
+                .build(),
+        );
     }
 }
 

@@ -4,7 +4,7 @@ use hdf5::{
     Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
-use plotinator_log_if::{prelude::RawPlotCommon, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 
 /// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {

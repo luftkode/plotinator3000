@@ -5,7 +5,6 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use hdf5::Dataset;
 use num_traits::ToPrimitive as _;
 use plotinator_log_if::prelude::*;
-use plotinator_log_if::rawplot::DataType;
 use serde::{Deserialize, Serialize};
 use std::{io, path::Path};
 

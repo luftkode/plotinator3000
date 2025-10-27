@@ -10,7 +10,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 #[derive(strum_macros::Display)]
 pub enum MapCommand {
     /// Geo spatial data from a loaded dataset
-    AddGeoData(GeoSpatialDataset),
+    AddGeoData(Box<GeoSpatialDataset>),
     /// Geo spatial data received over MQTT continuously
     MQTTGeoData(Box<SmallVec<[MqttGeoData; 10]>>),
     /// Laser altitudes received over MQTT, which will be attempted to be associated with existing [`MqttGeoData`]
@@ -113,7 +113,7 @@ impl MapUiCommander {
         if geo_data.is_primary() && !geo_data.is_empty() {
             self.any_primary_data_received = true;
         }
-        self.send_cmd(MapCommand::AddGeoData(geo_data));
+        self.send_cmd(MapCommand::AddGeoData(Box::new(geo_data)));
     }
 
     pub fn add_mqtt_geo_points(&mut self, mqtt_points: SmallVec<[MqttGeoData; 10]>) {

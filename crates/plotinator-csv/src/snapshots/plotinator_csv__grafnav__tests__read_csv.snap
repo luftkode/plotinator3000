@@ -45,6 +45,26 @@ GrafNavPPP {
                             ),
                         },
                     ],
+                    delta_t_samples_plot: Some(
+                        RawPlotCommon {
+                            legend_name: "Sample Δ [ms] (GrafNav-PPP)",
+                            points: [
+                                [
+                                    1.757435842e18,
+                                    0.0,
+                                ],
+                                [
+                                    1.757435843e18,
+                                    1000.0,
+                                ],
+                            ],
+                            ty: TimeDelta {
+                                name: "Sample",
+                                unit: "ms",
+                            },
+                            color: None,
+                        },
+                    ),
                     color: [RANDOMIZED COLOR]
                     cached: CachedValues {
                         lat_min_max: (

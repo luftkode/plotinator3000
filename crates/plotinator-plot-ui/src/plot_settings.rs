@@ -12,7 +12,7 @@ use egui_plot::PlotBounds;
 use mipmap_settings::MipMapSettings;
 use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
-use plotinator_log_if::rawplot::DataType;
+use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{CookedPlot, MipMapConfiguration, Plots};
 use plotinator_ui_util::{ExpectedPlotRange, theme_color};
 use serde::{Deserialize, Serialize};

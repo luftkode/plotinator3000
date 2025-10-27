@@ -1,0 +1,18 @@
+---
+source: crates/plotinator-hdf5/src/njord_ins.rs
+expression: counts
+---
+[
+    (
+        "metadata_count",
+        44,
+    ),
+    (
+        "raw_plot_count",
+        30,
+    ),
+    (
+        "first_raw_plot_points_count",
+        4840,
+    ),
+]

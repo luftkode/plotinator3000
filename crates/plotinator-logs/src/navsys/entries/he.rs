@@ -17,10 +17,10 @@ impl AltimeterEntry {
     /// This value is placeholder for an invalid reading
     pub(crate) const INVALID_VALUE: &str = "99999.99";
 
-    pub(crate) fn timestamp_ns(&self) -> f64 {
+    pub(crate) fn timestamp_ns(&self) -> i64 {
         self.timestamp
             .timestamp_nanos_opt()
-            .expect("timestamp as nanoseconds out of range") as f64
+            .expect("timestamp as nanoseconds out of range")
     }
 
     pub(crate) fn timestamp(&self) -> DateTime<Utc> {

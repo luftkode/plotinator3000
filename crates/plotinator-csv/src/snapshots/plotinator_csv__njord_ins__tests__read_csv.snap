@@ -531,6 +531,26 @@ NjordInsPPP {
                             ),
                         },
                     ],
+                    delta_t_samples_plot: Some(
+                        RawPlotCommon {
+                            legend_name: "Sample Δ [ms] (NjordInsPPP)",
+                            points: [
+                                [
+                                    1.757435852060122e18,
+                                    0.0,
+                                ],
+                                [
+                                    1.757435852080242e18,
+                                    20.12,
+                                ],
+                            ],
+                            ty: TimeDelta {
+                                name: "Sample",
+                                unit: "ms",
+                            },
+                            color: None,
+                        },
+                    ),
                     color: [RANDOMIZED COLOR]
                     cached: CachedValues {
                         lat_min_max: (

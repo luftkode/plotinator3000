@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use plotinator_log_if::{prelude::*, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct SerializableMqttPlotData {

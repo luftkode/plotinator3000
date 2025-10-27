@@ -1,6 +1,6 @@
 use egui::RichText;
 use egui_phosphor::regular::DATABASE;
-use plotinator_log_if::rawplot::DataType;
+use plotinator_log_if::prelude::*;
 use plotinator_plot_util::CookedPlot;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

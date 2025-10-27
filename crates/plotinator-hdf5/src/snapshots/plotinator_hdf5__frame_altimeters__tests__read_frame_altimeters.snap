@@ -1,0 +1,18 @@
+---
+source: crates/plotinator-hdf5/src/frame_altimeters.rs
+expression: counts
+---
+[
+    (
+        "metadata_count",
+        48,
+    ),
+    (
+        "raw_plot_count",
+        2,
+    ),
+    (
+        "first_raw_plot_points_count",
+        1091,
+    ),
+]

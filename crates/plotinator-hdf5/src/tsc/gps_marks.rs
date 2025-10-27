@@ -3,7 +3,7 @@ use hdf5::H5Type;
 use ndarray::{ArrayBase, Dim, OwnedRepr};
 use plotinator_log_if::{
     leap_seconds::{GpsWeek, TowMs, TowSubMs, gps_to_unix_ns},
-    rawplot::{DataType, RawPlot, RawPlotBuilder},
+    prelude::*,
 };
 use plotinator_ui_util::ExpectedPlotRange;
 

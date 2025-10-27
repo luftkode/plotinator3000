@@ -15,7 +15,7 @@ pub trait LogEntry: Sized + Send + Sync {
     fn from_reader(reader: &mut impl io::BufRead) -> io::Result<(Self, usize)>;
 
     /// Timestamp in nanoseconds
-    fn timestamp_ns(&self) -> f64;
+    fn timestamp_ns(&self) -> i64;
 }
 
 /// A given log header should implement this

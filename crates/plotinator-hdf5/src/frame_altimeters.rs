@@ -4,19 +4,12 @@ use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::Dataset;
 use ndarray::Array2;
-use plotinator_log_if::{
-    hdf5::SkytemHdf5,
-    prelude::*,
-    rawplot::{DataType, RawPlotBuilder},
-};
-use plotinator_ui_util::ExpectedPlotRange;
+use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     stream_descriptor::StreamDescriptor,
-    util::{
-        self, assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute,
-    },
+    util::{assert_description_in_attrs, log_all_attributes, open_dataset, read_string_attribute},
 };
 
 const LEGEND_NAME_1: &str = "HE1";
@@ -24,7 +17,7 @@ const LEGEND_NAME_2: &str = "HE2";
 
 impl SkytemHdf5 for FrameAltimeters {
     #[allow(clippy::too_many_lines, reason = "long but simple")]
-    fn from_path(path: impl AsRef<std::path::Path>) -> anyhow::Result<Self> {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let (height1_dataset, timestamp1_dataset, height2_dataset, timestamp2_dataset) =
             Self::open_datasets(path)?;
         log_all_attributes(&height1_dataset);
@@ -48,33 +41,19 @@ impl SkytemHdf5 for FrameAltimeters {
         let timestamp1_data: Vec<i64> = timestamp1_dataset.read_raw()?;
         let timestamp2_data: Vec<i64> = timestamp2_dataset.read_raw()?;
 
-        let (timestamps1, first_timestamp1_opt, delta_t_sample_opt1) =
-            Self::process_timestamps(&timestamp1_data, LEGEND_NAME_1);
-        let (timestamps2, first_timestamp2_opt, delta_t_sample_opt2) =
-            Self::process_timestamps(&timestamp2_data, LEGEND_NAME_2);
+        let first_timestamp_1 = timestamp1_data
+            .first()
+            .map(|ts| chrono::Utc.timestamp_nanos(*ts).to_utc());
 
-        let total_starting_timestamp = match (first_timestamp1_opt, first_timestamp2_opt) {
+        let first_timestamp_2 = timestamp2_data
+            .first()
+            .map(|ts| chrono::Utc.timestamp_nanos(*ts).to_utc());
+
+        let total_starting_timestamp = match (first_timestamp_1, first_timestamp_2) {
             (None, None) => bail!("Both timestamp datasets are empty"),
             (Some(ts), None) | (None, Some(ts)) => ts,
             (Some(ts1), Some(ts2)) => ts1.min(ts2),
         };
-
-        let mut height1_invalid_values_count: u64 = 0;
-        let mut height1_invalid_values: Vec<[f64; 2]> = Vec::new();
-        for (height, ts) in heights1.iter().zip(&timestamps1) {
-            if *height > Self::INVALID_VALUE_THRESHOLD {
-                height1_invalid_values_count += 1;
-                height1_invalid_values.push([*ts, height1_invalid_values_count as f64]);
-            }
-        }
-        let mut height2_invalid_values_count: u64 = 0;
-        let mut height2_invalid_values: Vec<[f64; 2]> = Vec::new();
-        for (height, ts) in heights2.iter().zip(&timestamps2) {
-            if *height > Self::INVALID_VALUE_THRESHOLD {
-                height2_invalid_values_count += 1;
-                height2_invalid_values.push([*ts, height2_invalid_values_count as f64]);
-            }
-        }
 
         let metadata = Self::extract_metadata(
             &height1_dataset,
@@ -83,27 +62,14 @@ impl SkytemHdf5 for FrameAltimeters {
             &timestamp2_dataset,
         )?;
 
-        let mut raw_plots = RawPlotBuilder::new(LEGEND_NAME_1)
-            .add(
-                height1_invalid_values,
-                DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
-            )
-            .build();
-        raw_plots.append(
-            &mut RawPlotBuilder::new(LEGEND_NAME_2)
-                .add(
-                    height2_invalid_values,
-                    DataType::other_unitless("Invalid Count", ExpectedPlotRange::Hundreds, false),
-                )
-                .build(),
-        );
+        let mut raw_plots = vec![];
 
         let geo_data_builder1 = GeoSpatialDataBuilder::new(LEGEND_NAME_1)
-            .timestamp(&timestamps1)
+            .timestamp(&timestamp1_data)
             .altitude_from_laser(heights1)
             .altitude_valid_range((0., Self::INVALID_VALUE_THRESHOLD));
         let geo_data_builder2 = GeoSpatialDataBuilder::new(LEGEND_NAME_2)
-            .timestamp(&timestamps2)
+            .timestamp(&timestamp2_data)
             .altitude_from_laser(heights2)
             .altitude_valid_range((0., Self::INVALID_VALUE_THRESHOLD));
 
@@ -113,17 +79,6 @@ impl SkytemHdf5 for FrameAltimeters {
 
         if let Ok(Some(geo_data2)) = geo_data_builder2.build_into_rawplot() {
             raw_plots.push(geo_data2);
-        }
-
-        if let Some(delta_t_sample1) = delta_t_sample_opt1
-            && delta_t_sample1.points().len() > 2
-        {
-            raw_plots.push(delta_t_sample1.into());
-        }
-        if let Some(delta_t_sample2) = delta_t_sample_opt2
-            && delta_t_sample2.points().len() > 2
-        {
-            raw_plots.push(delta_t_sample2.into());
         }
 
         Ok(Self {
@@ -200,24 +155,6 @@ impl FrameAltimeters {
         ))
     }
 
-    fn process_timestamps(
-        timestamp_data: &[i64],
-        legend_name: &str,
-    ) -> (Vec<f64>, Option<DateTime<Utc>>, Option<RawPlotCommon>) {
-        let first_timestamp = timestamp_data
-            .first()
-            .map(|ts| chrono::Utc.timestamp_nanos(*ts).to_utc());
-
-        let delta_t_samples = util::gen_time_between_samples_rawplot(timestamp_data, legend_name);
-
-        let mut timestamps = vec![];
-        for t in timestamp_data {
-            timestamps.push(*t as f64);
-        }
-
-        (timestamps, first_timestamp, delta_t_samples)
-    }
-
     fn extract_metadata(
         height1_dataset: &Dataset,
         time1_dataset: &Dataset,
@@ -273,12 +210,19 @@ mod tests {
     #[test]
     fn test_read_frame_altimeters() -> TestResult {
         let frame_altimeters = FrameAltimeters::from_path(frame_altimeters())?;
-        assert_eq!(frame_altimeters.metadata.len(), 48);
-        assert_eq!(frame_altimeters.raw_plots.len(), 4);
-        match &frame_altimeters.raw_plots[0] {
+        let metadata_count = frame_altimeters.metadata.len();
+        let raw_plot_count = frame_altimeters.raw_plots.len();
+        let first_raw_plot_points_count = match &frame_altimeters.raw_plots[0] {
             RawPlot::Generic { .. } => unreachable!(),
-            RawPlot::GeoSpatialDataset(geo_data) => assert_eq!(geo_data.len(), 1091),
+            RawPlot::GeoSpatialDataset(geo_data) => geo_data.len(),
         };
+
+        let counts = vec![
+            ("metadata_count", metadata_count),
+            ("raw_plot_count", raw_plot_count),
+            ("first_raw_plot_points_count", first_raw_plot_points_count),
+        ];
+        insta::assert_debug_snapshot!(counts);
 
         Ok(())
     }

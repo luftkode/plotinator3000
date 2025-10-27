@@ -4,11 +4,7 @@ use anyhow::{Context as _, ensure};
 use chrono::{DateTime, TimeZone as _, Utc};
 use hdf5::types::FixedAscii;
 use ndarray::Array2;
-use plotinator_log_if::{
-    hdf5::SkytemHdf5,
-    prelude::{GeoSpatialDataBuilder, PlotLabels, Plotable, RawPlotCommon},
-    rawplot::{DataType, RawPlot},
-};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
@@ -236,8 +232,8 @@ impl FrameGpsDatasets {
         let mut alt_nan_cnt: u64 = 0;
 
         for entry in gps_data.iter() {
+            timestamps.push(*entry.timestamp);
             let ts = *entry.timestamp as f64;
-            timestamps.push(ts);
 
             let hdop_sample = *entry.hdop;
             if !hdop_sample.is_nan() {

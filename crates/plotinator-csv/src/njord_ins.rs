@@ -1,6 +1,6 @@
 use anyhow::bail;
 use chrono::{DateTime, TimeZone as _, Utc};
-use plotinator_log_if::{prelude::*, rawplot::DataType};
+use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use std::io::{self, BufRead as _};
 
@@ -156,8 +156,8 @@ impl LogEntry for NjordInsPPPRow {
         ))
     }
 
-    fn timestamp_ns(&self) -> f64 {
-        self.timestamp.timestamp_nanos_opt().expect("time overflow") as f64
+    fn timestamp_ns(&self) -> i64 {
+        self.timestamp.timestamp_nanos_opt().expect("time overflow")
     }
 }
 
@@ -239,20 +239,24 @@ impl Parseable for NjordInsPPP {
             // Attitude
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pitch),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.pitch),
                 DataType::Pitch,
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.roll),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.roll),
                 DataType::Roll,
             )
             .into(),
             // Velocity
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_n * 3.6),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.vel_n * 3.6,
+                ),
                 DataType::Other {
                     name: "Velocity North".into(),
                     unit: Some("km/h".into()),
@@ -263,7 +267,11 @@ impl Parseable for NjordInsPPP {
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_e * 3.6),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.vel_e * 3.6,
+                ),
                 DataType::Other {
                     name: "Velocity East".into(),
                     unit: Some("km/h".into()),
@@ -274,7 +282,11 @@ impl Parseable for NjordInsPPP {
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.vel_d * 3.6),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.vel_d * 3.6,
+                ),
                 DataType::Other {
                     name: "Velocity Down".into(),
                     unit: Some("km/h".into()),
@@ -286,7 +298,7 @@ impl Parseable for NjordInsPPP {
             // Standard Deviations
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.lat_sd),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.lat_sd),
                 DataType::Other {
                     name: "Latitude SD".into(),
                     unit: Some("m".into()),
@@ -297,7 +309,7 @@ impl Parseable for NjordInsPPP {
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.lon_sd),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.lon_sd),
                 DataType::Other {
                     name: "Longitude SD".into(),
                     unit: Some("m".into()),
@@ -308,7 +320,7 @@ impl Parseable for NjordInsPPP {
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.height_sd),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.height_sd),
                 DataType::Other {
                     name: "Height SD".into(),
                     unit: Some("m".into()),
@@ -319,7 +331,7 @@ impl Parseable for NjordInsPPP {
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.roll_sd),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.roll_sd),
                 DataType::Other {
                     name: "Roll SD°".into(),
                     unit: None,
@@ -330,7 +342,7 @@ impl Parseable for NjordInsPPP {
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.pitch_sd),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.pitch_sd),
                 DataType::Other {
                     name: "Pitch SD°".into(),
                     unit: None,
@@ -341,7 +353,7 @@ impl Parseable for NjordInsPPP {
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.heading_sd),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.heading_sd),
                 DataType::Other {
                     name: "Heading SD°".into(),
                     unit: None,
@@ -353,68 +365,92 @@ impl Parseable for NjordInsPPP {
             // Biases
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_x),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.acc_bias_x),
                 DataType::other_unitless("Accelerometer Bias X", ExpectedPlotRange::Hundreds, true),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_y),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.acc_bias_y),
                 DataType::other_unitless("Accelerometer Bias Y", ExpectedPlotRange::Hundreds, true),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.acc_bias_z),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.acc_bias_z),
                 DataType::other_unitless("Accelerometer Bias Z", ExpectedPlotRange::Hundreds, true),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_x),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.gyro_bias_x,
+                ),
                 DataType::other_unitless("Gyroscope Bias X", ExpectedPlotRange::Hundreds, true),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_y),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.gyro_bias_y,
+                ),
                 DataType::other_unitless("Gyroscope Bias Y", ExpectedPlotRange::Hundreds, true),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gyro_bias_z),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.gyro_bias_z,
+                ),
                 DataType::other_unitless("Gyroscope Bias Z", ExpectedPlotRange::Hundreds, true),
             )
             .into(),
             // GNSS
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.fix_type),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.fix_type),
                 DataType::other_unitless("Fix Type", ExpectedPlotRange::Hundreds, false),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.gps_sats),
+                plot_points_from_log_entry(&entries, |e| e.timestamp_ns() as f64, |e| e.gps_sats),
                 DataType::other_unitless("GPS Satellites", ExpectedPlotRange::Hundreds, false),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.glonass_sats),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.glonass_sats,
+                ),
                 DataType::other_unitless("GLONASS Satellites", ExpectedPlotRange::Hundreds, false),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.beidou_sats),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.beidou_sats,
+                ),
                 DataType::other_unitless("BeiDou Satellites", ExpectedPlotRange::Hundreds, false),
             )
             .into(),
             RawPlotCommon::new(
                 LEGEND_NAME,
-                plot_points_from_log_entry(&entries, |e| e.timestamp_ns(), |e| e.galileo_sats),
+                plot_points_from_log_entry(
+                    &entries,
+                    |e| e.timestamp_ns() as f64,
+                    |e| e.galileo_sats,
+                ),
                 DataType::other_unitless("Galileo Satellites", ExpectedPlotRange::Hundreds, false),
             )
             .into(),
