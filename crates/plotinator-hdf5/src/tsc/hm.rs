@@ -2,12 +2,12 @@ use std::fmt;
 
 use anyhow::{Context as _, ensure};
 use ndarray::{Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, Axis, s};
-use plotinator_log_if::{
-    prelude::RawPlotCommon,
-    rawplot::{DataType, RawPlot, RawPlotBuilder},
-};
+use plotinator_log_if::rawplot::{DataType, RawPlot, RawPlotBuilder};
 use plotinator_ui_util::ExpectedPlotRange;
-use rayon::{iter::ParallelIterator as _, slice::ParallelSlice as _};
+use rayon::{
+    iter::{IntoParallelIterator as _, ParallelIterator as _},
+    slice::ParallelSlice as _,
+};
 
 use crate::tsc::{TSC_LEGEND_NAME, metadata::RootMetadata};
 
@@ -24,17 +24,20 @@ pub(crate) struct AllCoilBField(pub Vec<Vec<[f64; 2]>>);
 
 #[derive(Clone, Copy)]
 pub(crate) enum Coil {
+    /// X Coil channel number
     X = 3,
+    /// Y Coil channel number
     Y = 5,
+    /// Z Coil channel number
     Z = 1,
 }
 
 impl fmt::Display for Coil {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Coil::X => write!(f, "X"),
-            Coil::Y => write!(f, "Y"),
-            Coil::Z => write!(f, "Z"),
+            Self::X => write!(f, "X"),
+            Self::Y => write!(f, "Y"),
+            Self::Z => write!(f, "Z"),
         }
     }
 }
@@ -254,7 +257,7 @@ impl<'h5> HmData<'h5> {
     /// * `box_idx` - The box index to use for the calculation
     /// * `last_gate_on` - is the gate number for the last gate of on time
     #[plotinator_proc_macros::log_time]
-    pub fn calculate_b_field(
+    fn calculate_b_field(
         &self,
         channel: Coil,
         box_idx: usize,
@@ -367,26 +370,14 @@ impl<'h5> HmData<'h5> {
         dataset.read_slice_1d(s![.., dim1, dim2, dim3, dim4, dim5])
     }
 
-    // Build metadata without loading full data
-    #[allow(
-        clippy::type_complexity,
-        reason = "Lint is mostly triggered due to the metadata vector of tuple strings, which isn't that complex"
-    )]
-    #[plotinator_proc_macros::log_time]
-    pub fn build_plots_and_metadata(
+    fn build_b_field_plots_for_coil(
         &self,
+        coil: Coil,
         gps_timestamps: &[f64],
-        root_metadata: &RootMetadata,
-    ) -> anyhow::Result<(Vec<RawPlot>, Vec<(String, String)>)> {
-        let hm_len = self.shape()[0];
-        let gps_len = gps_timestamps.len();
-        let metadata = vec![
-            ("HM length".to_owned(), hm_len.to_string()),
-            ("GPS length".to_owned(), gps_len.to_string()),
-        ];
-
+        last_gate_on: usize,
+    ) -> anyhow::Result<Vec<RawPlot>> {
         let (AllCoilZeroPositions(zero_positions_nested), AllCoilBField(bfield_samples_nested)) =
-            self.calculate_b_field(Coil::Z, 1, root_metadata.last_gate_on_index())?;
+            self.calculate_b_field(coil, 1, last_gate_on)?;
 
         let mut final_z_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
         let mut final_z_zero_points = Vec::with_capacity(zero_positions_nested.len());
@@ -409,59 +400,11 @@ impl<'h5> HmData<'h5> {
             final_z_zero_points.append(&mut z_samples);
         }
 
-        let (AllCoilZeroPositions(zero_positions_nested), AllCoilBField(bfield_samples_nested)) =
-            self.calculate_b_field(Coil::Y, 1, root_metadata.last_gate_on_index())?;
-
-        let mut final_y_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
-        let mut final_y_zero_points = Vec::with_capacity(zero_positions_nested.len());
-
-        for ((mut b_samples, mut z_samples), gps_ts) in bfield_samples_nested
-            .into_iter()
-            .zip(zero_positions_nested.into_iter())
-            .zip(gps_timestamps.iter())
-        {
-            // Apply timestamp to b-field points for this GPS mark
-            for sample in &mut b_samples {
-                sample[0] += gps_ts;
-            }
-            final_y_bfield_points.append(&mut b_samples);
-
-            // Apply timestamp to zero-position points for this GPS mark
-            for sample in &mut z_samples {
-                sample[0] += gps_ts;
-            }
-            final_y_zero_points.append(&mut z_samples);
-        }
-
-        let (AllCoilZeroPositions(zero_positions_nested), AllCoilBField(bfield_samples_nested)) =
-            self.calculate_b_field(Coil::X, 1, root_metadata.last_gate_on_index())?;
-
-        let mut final_x_bfield_points = Vec::with_capacity(bfield_samples_nested.len());
-        let mut final_x_zero_points = Vec::with_capacity(zero_positions_nested.len());
-
-        for ((mut b_samples, mut z_samples), gps_ts) in bfield_samples_nested
-            .into_iter()
-            .zip(zero_positions_nested.into_iter())
-            .zip(gps_timestamps.iter())
-        {
-            // Apply timestamp to b-field points for this GPS mark
-            for sample in &mut b_samples {
-                sample[0] += gps_ts;
-            }
-            final_x_bfield_points.append(&mut b_samples);
-
-            // Apply timestamp to zero-position points for this GPS mark
-            for sample in &mut z_samples {
-                sample[0] += gps_ts;
-            }
-            final_x_zero_points.append(&mut z_samples);
-        }
-
         let plots = RawPlotBuilder::new(TSC_LEGEND_NAME)
             .add(
                 final_z_zero_points,
                 DataType::Other {
-                    name: "0-position (Z)".into(),
+                    name: format!("0-position ({coil})"),
                     unit: Some("nT".into()),
                     plot_range: ExpectedPlotRange::Thousands,
                     default_hidden: false,
@@ -470,49 +413,57 @@ impl<'h5> HmData<'h5> {
             .add(
                 final_z_bfield_points,
                 DataType::Other {
-                    name: "B-field (Z)".into(),
-                    unit: Some("nT".into()),
-                    plot_range: ExpectedPlotRange::Thousands,
-                    default_hidden: false,
-                },
-            )
-            .add(
-                final_y_zero_points,
-                DataType::Other {
-                    name: "0-position (Y)".into(),
-                    unit: Some("nT".into()),
-                    plot_range: ExpectedPlotRange::Thousands,
-                    default_hidden: false,
-                },
-            )
-            .add(
-                final_y_bfield_points,
-                DataType::Other {
-                    name: "B-field (Y)".into(),
-                    unit: Some("nT".into()),
-                    plot_range: ExpectedPlotRange::Thousands,
-                    default_hidden: false,
-                },
-            )
-            .add(
-                final_x_zero_points,
-                DataType::Other {
-                    name: "0-position (X)".into(),
-                    unit: Some("nT".into()),
-                    plot_range: ExpectedPlotRange::Thousands,
-                    default_hidden: false,
-                },
-            )
-            .add(
-                final_x_bfield_points,
-                DataType::Other {
-                    name: "B-field (X)".into(),
+                    name: format!("B-field ({coil})"),
                     unit: Some("nT".into()),
                     plot_range: ExpectedPlotRange::Thousands,
                     default_hidden: false,
                 },
             )
             .build();
+        Ok(plots)
+    }
+
+    // Build metadata without loading full data
+    #[allow(
+        clippy::type_complexity,
+        reason = "Lint is mostly triggered due to the metadata vector of tuple strings, which isn't that complex"
+    )]
+    #[plotinator_proc_macros::log_time]
+    pub fn build_plots_and_metadata(
+        &self,
+        gps_timestamps: &[f64],
+        root_metadata: &RootMetadata,
+    ) -> anyhow::Result<(Vec<RawPlot>, Vec<(String, String)>)> {
+        let hm_len = self.shape()[0];
+        let gps_len = gps_timestamps.len();
+        let metadata = vec![
+            ("HM length".to_owned(), hm_len.to_string()),
+            ("GPS length".to_owned(), gps_len.to_string()),
+        ];
+
+        // Collect only the coils we actually have data for
+        let mut coils = vec![Coil::Z];
+        if root_metadata.has_y_data() {
+            coils.push(Coil::Y);
+        }
+        if root_metadata.has_x_data() {
+            coils.push(Coil::X);
+        }
+
+        // Parallelize coil computations
+        let results: Result<Vec<_>, _> = coils
+            .into_par_iter()
+            .map(|coil| {
+                self.build_b_field_plots_for_coil(
+                    coil,
+                    gps_timestamps,
+                    root_metadata.last_gate_on_index(),
+                )
+            })
+            .collect();
+
+        // Flatten Vec<Vec<RawPlot>> into Vec<RawPlot>
+        let plots = results?.into_iter().flatten().collect::<Vec<_>>();
 
         Ok((plots, metadata))
     }

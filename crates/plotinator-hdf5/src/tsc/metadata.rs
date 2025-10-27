@@ -6,6 +6,8 @@ pub(crate) struct RootMetadata {
     kickin_usec: f64,
     hm_ontime_usec: f64,
     gates_pr_decade_on: f64,
+    drop_x_data: bool,
+    drop_y_data: bool,
     metadata: Vec<(String, String)>,
 }
 
@@ -22,12 +24,22 @@ impl RootMetadata {
         let kickin_usec = h5.attr("kickin_usec")?.read_scalar::<f64>()?;
         let hm_ontime_usec = h5.attr("hm_ontime_usec")?.read_scalar::<f64>()?;
         let gates_pr_decade_on = h5.attr("gates_pr_decade_on")?.read_scalar()?;
+        let drop_x_data = h5
+            .attr("drop_x_data")
+            .map(|attr| attr.read_scalar::<bool>().unwrap_or(false))
+            .unwrap_or(false);
+        let drop_y_data = h5
+            .attr("drop_y_data")
+            .map(|attr| attr.read_scalar::<bool>().unwrap_or(false))
+            .unwrap_or(false);
 
         Ok(Self {
             linear_time,
             kickin_usec,
             hm_ontime_usec,
             gates_pr_decade_on,
+            drop_x_data,
+            drop_y_data,
             metadata,
         })
     }
@@ -55,6 +67,14 @@ impl RootMetadata {
 
     pub(crate) fn metadata_strings(&self) -> Vec<(String, String)> {
         self.metadata.clone()
+    }
+
+    pub(crate) fn has_x_data(&self) -> bool {
+        !self.drop_x_data
+    }
+
+    pub(crate) fn has_y_data(&self) -> bool {
+        !self.drop_y_data
     }
 }
 

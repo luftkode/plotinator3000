@@ -24,15 +24,26 @@ pub fn add_plot_data_to_plot_collections(
     ));
 
     const PARALLEL_THRESHOLD: usize = 200_000;
-    // We just check the first one, usually formats will have the same number of points for all the data series
-    let first_plot_points_count: usize = data.raw_plots().first().map_or(0, |p| match p {
-        RawPlot::Generic { common } => common.points().len(),
-        RawPlot::GeoSpatialDataset(geo) => geo.len(),
-    });
 
-    if first_plot_points_count > PARALLEL_THRESHOLD {
+    // Compute the average number of points across all plots
+    let plot_point_counts: Vec<usize> = data
+        .raw_plots()
+        .iter()
+        .map(|p| match p {
+            RawPlot::Generic { common } => common.points().len(),
+            RawPlot::GeoSpatialDataset(geo) => geo.len(),
+        })
+        .collect();
+
+    let avg_plot_points_count = if plot_point_counts.is_empty() {
+        0
+    } else {
+        plot_point_counts.iter().sum::<usize>() / plot_point_counts.len()
+    };
+
+    if avg_plot_points_count > PARALLEL_THRESHOLD {
         log::info!(
-            "Processing new plots in parallel (point count {first_plot_points_count} exceeds threshold {PARALLEL_THRESHOLD})"
+            "Processing new plots in parallel (average point count {avg_plot_points_count} exceeds threshold {PARALLEL_THRESHOLD})"
         );
         add_plot_points_to_collections_par(plots, data, log_id);
     } else {
