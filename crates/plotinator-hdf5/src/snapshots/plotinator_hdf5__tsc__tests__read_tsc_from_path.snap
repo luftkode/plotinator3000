@@ -1,0 +1,5 @@
+---
+source: crates/plotinator-hdf5/src/tsc.rs
+expression: tsc.first_timestamp()
+---
+2025-08-19T13:08:12.452380049Z

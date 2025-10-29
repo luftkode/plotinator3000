@@ -159,6 +159,21 @@ impl GeoPoint {
         self.speed = Some(speed);
         self
     }
+
+    #[inline]
+    pub fn has_speed(&self) -> bool {
+        self.speed.is_some()
+    }
+
+    #[inline]
+    pub fn has_altitude(&self) -> bool {
+        !self.altitude.is_empty()
+    }
+
+    #[inline]
+    pub fn has_heading(&self) -> bool {
+        self.heading.is_some()
+    }
 }
 
 #[derive(Default)]

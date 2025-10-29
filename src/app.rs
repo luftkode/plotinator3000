@@ -22,13 +22,22 @@ impl GlobalApp {
     }
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
-    fn open_map_viewport(&mut self, ctx: &egui::Context) {
+    fn open_map_viewport(&mut self) {
         if self.map_view.open {
             return;
         }
 
-        if let (Some(cmd_send), Some(plot_msg_recv)) = self.map_view.open(ctx) {
+        if let (Some(cmd_send), Some(plot_msg_recv)) = self.map_view.open() {
             self.app.map_commander.init(cmd_send, plot_msg_recv);
+        }
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    fn toggle_open_map_viewport(&mut self) {
+        if self.map_view.open {
+            self.map_view.close();
+        } else {
+            self.open_map_viewport();
         }
     }
 }
@@ -36,22 +45,18 @@ impl GlobalApp {
 impl eframe::App for GlobalApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
-        self.map_view.show(ctx);
+        self.map_view.update(ctx);
         self.app.update(ctx, frame);
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
         {
             if !self.has_map_opened && self.app.map_commander.any_primary_data_received {
                 self.has_map_opened = true;
-                self.open_map_viewport(ctx);
+                self.open_map_viewport();
             }
             if self.app.map_commander.map_button_clicked {
                 self.app.map_commander.map_button_clicked = false;
-                if self.map_view.open {
-                    self.map_view.close();
-                } else {
-                    self.open_map_viewport(ctx);
-                }
+                self.toggle_open_map_viewport();
             }
             self.app.map_commander.sync_open(self.map_view.open);
         }

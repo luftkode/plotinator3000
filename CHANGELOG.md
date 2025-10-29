@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Fixed drawing empty map telemetry labels when geo points had neither speed or altimeter values
+- Added snapshot tests for the map viewport
+
 ## [2.8.0]
 
 - Added support for Njord Altimeter SF20

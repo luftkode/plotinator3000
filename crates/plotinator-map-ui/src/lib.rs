@@ -102,14 +102,7 @@ impl MapViewPort {
     ///
     /// if it's the first time it's opened, it will start loading map tiles and
     /// return a [Sender<MapCommand>] for interacting with the Map from other contexts
-    pub fn open(
-        &mut self,
-        ctx: &egui::Context,
-    ) -> (Option<Sender<MapCommand>>, Option<Receiver<PlotMessage>>) {
-        if self.map_state.tile_state.is_none() {
-            egui_extras::install_image_loaders(ctx);
-            self.map_state.init(ctx.clone());
-        }
+    pub fn open(&mut self) -> (Option<Sender<MapCommand>>, Option<Receiver<PlotMessage>>) {
         let mut maybe_map_tx = None;
         let mut maybe_plot_rx = None;
         if self.cmd_rx.is_none() {
@@ -323,11 +316,10 @@ impl MapViewPort {
 
     /// Shows the map viewport and handles its UI.
     /// This is the primary drawing method to be called from your main app's update loop.
-    pub fn show(&mut self, ctx: &egui::Context) {
+    pub fn update(&mut self, ctx: &egui::Context) {
         if !self.open {
             return;
         }
-
         let mut is_still_open = true;
 
         ctx.show_viewport_immediate(
@@ -342,34 +334,7 @@ impl MapViewPort {
                     is_still_open = false;
                 }
 
-                self.poll_commands();
-
-                TopBottomPanel::top("map_top_panel").show(ctx, |ui| {
-                    self.show_menu_bar(ui);
-                });
-
-                CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
-                    self.pointer_hovered_pos = if ui.ui_contains_pointer() {
-                        ctx.pointer_hover_pos()
-                    } else {
-                        None
-                    };
-                    let new_is_map_hovered = self.pointer_hovered_pos.is_some();
-                    // Was hovered -> Not hovered any longer
-                    if self.map_hovered && !new_is_map_hovered {
-                        self.map_hovered_point = None;
-                        self.send_map_pointer_pos(None);
-                        self.map_hovered = false;
-                    }
-                    // Not hovered -> Now hovered
-                    else if !self.map_hovered && new_is_map_hovered {
-                        self.plot_time_pointer_pos = None;
-                        self.map_hovered = true;
-                    }
-                    self.show_map_panel(ui);
-                });
-
-                self.show_legend_window(ctx);
+                self.update_direct(ctx);
             },
         );
 
@@ -377,6 +342,40 @@ impl MapViewPort {
         if !is_still_open {
             self.close();
         }
+    }
+
+    /// method that renders directly without viewport indirection
+    pub fn update_direct(&mut self, ctx: &egui::Context) {
+        if self.map_state.tile_state.is_none() {
+            egui_extras::install_image_loaders(ctx);
+            self.map_state.init(ctx.clone());
+        }
+
+        self.poll_commands();
+
+        TopBottomPanel::top("map_top_panel").show(ctx, |ui| {
+            self.show_menu_bar(ui);
+        });
+
+        CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
+            self.pointer_hovered_pos = if ui.ui_contains_pointer() {
+                ctx.pointer_hover_pos()
+            } else {
+                None
+            };
+            let new_is_map_hovered = self.pointer_hovered_pos.is_some();
+            if self.map_hovered && !new_is_map_hovered {
+                self.map_hovered_point = None;
+                self.send_map_pointer_pos(None);
+                self.map_hovered = false;
+            } else if !self.map_hovered && new_is_map_hovered {
+                self.plot_time_pointer_pos = None;
+                self.map_hovered = true;
+            }
+            self.show_map_panel(ui);
+        });
+
+        self.show_legend_window(ctx);
     }
 
     // Sending `None` clear the cached value of the receiver
