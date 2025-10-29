@@ -9,9 +9,11 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+plotinator-log-if = { workspace = true }
 plotinator-supported-formats = { workspace = true }
 plotinator-plot-ui = { workspace = true }
 plotinator-plot-util = { workspace = true }
+plotinator-file-io-ui = { workspace = true }
 egui = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

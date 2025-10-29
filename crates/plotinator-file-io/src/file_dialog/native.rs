@@ -1,5 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, sync::mpsc::Sender};
 
+use plotinator_file_io_ui::ParseUpdate;
+use plotinator_log_if::prelude::*;
 use plotinator_plot_ui::LogPlotUi;
 use plotinator_plot_util::CookedPlot;
 use plotinator_supported_formats::SupportedFormat;
@@ -124,11 +126,26 @@ impl NativeFileDialog {
     pub fn parse_picked_files(
         &mut self,
         loaded_files: &mut LoadedFiles,
+        tx: Sender<ParseUpdate>,
     ) -> anyhow::Result<Option<Box<LogPlotUi>>> {
         for pf in self.picked_files.drain(..) {
+            let tx = tx.clone();
+            tx.send(ParseUpdate::Started { path: pf.clone() }).unwrap();
             match try_parse_custom_file(&pf)? {
                 Some(CustomFileContent::PlotData(plot_data)) => {
                     log::info!("Loading {} plot data files from {pf:?}", plot_data.len());
+                    tx.send(ParseUpdate::Completed {
+                        path: pf.clone(),
+                        final_format: format!(
+                            "Custom file content: {}",
+                            plot_data
+                                .iter()
+                                .map(|p| p.descriptive_name().to_owned())
+                                .collect::<Vec<String>>()
+                                .join("\n")
+                        ),
+                    })
+                    .unwrap();
                     loaded_files.loaded.extend(plot_data);
                 }
                 Some(CustomFileContent::PlotUi(plot_ui)) => {

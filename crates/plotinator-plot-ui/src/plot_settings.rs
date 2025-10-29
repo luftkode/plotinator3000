@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
 pub mod date_settings;
-mod loaded_logs;
+pub mod loaded_logs;
 mod log_groups;
 pub mod mipmap_settings;
 mod plot_filter;
@@ -78,7 +78,7 @@ pub struct PlotSettings {
 }
 
 impl PlotSettings {
-    pub fn show(
+    pub(crate) fn show(
         &mut self,
         ui: &mut egui::Ui,
         axis_cfg: &mut AxisConfig,

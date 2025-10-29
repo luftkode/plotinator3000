@@ -3918,6 +3918,7 @@ dependencies = [
  "anyhow",
  "egui",
  "log",
+ "plotinator-file-io-ui",
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-mqtt",
@@ -3933,6 +3934,17 @@ dependencies = [
  "testresult",
  "wasm-bindgen-futures",
  "zip",
+]
+
+[[package]]
+name = "plotinator-file-io-ui"
+version = "2.8.1"
+dependencies = [
+ "anyhow",
+ "eframe",
+ "egui",
+ "egui-phosphor",
+ "env_logger",
 ]
 
 [[package]]
@@ -4220,6 +4232,7 @@ dependencies = [
  "mimalloc",
  "plotinator-download",
  "plotinator-file-io",
+ "plotinator-file-io-ui",
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-logs",

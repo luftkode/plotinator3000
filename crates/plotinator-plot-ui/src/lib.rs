@@ -19,7 +19,7 @@ mod click_delta;
 mod plot_graphics;
 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
 pub mod plot_mqtt;
-mod plot_settings;
+pub mod plot_settings;
 mod plot_ui;
 mod util;
 mod x_axis_formatter;

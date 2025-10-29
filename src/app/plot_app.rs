@@ -1,12 +1,16 @@
+use std::sync::mpsc::{self, Receiver, Sender};
+
 #[cfg(not(target_arch = "wasm32"))]
 use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN};
+use plotinator_file_io_ui::{ParseStatusWindow, ParseUpdate};
 use plotinator_plot_ui::LogPlotUi;
 
 use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
 
+pub mod loaded_format;
 mod misc;
 mod supported_formats_table;
 
@@ -55,10 +59,18 @@ pub struct PlotApp {
     // will definitely not notice it, even on low performing devices.
     #[serde(skip)]
     disable_app_state_storage: bool,
+
+    #[serde(skip)]
+    parse_update_tx: Sender<ParseUpdate>,
+    #[serde(skip)]
+    parse_update_rx: Receiver<ParseUpdate>,
+    #[serde(skip)]
+    status_window: ParseStatusWindow,
 }
 
 impl Default for PlotApp {
     fn default() -> Self {
+        let (tx, rx) = mpsc::channel();
         Self {
             first_frame: true,
             toasts: Toasts::default(),
@@ -87,6 +99,10 @@ impl Default for PlotApp {
             download_ui: DownloadUi::default(),
 
             disable_app_state_storage: false,
+
+            parse_update_tx: tx,
+            parse_update_rx: rx,
+            status_window: ParseStatusWindow::new(),
         }
     }
 }
@@ -129,7 +145,11 @@ impl eframe::App for PlotApp {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.poll_picked_files();
+        self.poll_picked_files(self.parse_update_tx.clone());
+        while let Ok(update) = self.parse_update_rx.try_recv() {
+            self.status_window.handle_update(update);
+        }
+        self.status_window.draw(ctx);
 
         #[cfg(not(target_arch = "wasm32"))]
         self.download_ui
@@ -214,7 +234,7 @@ impl PlotApp {
         self.plot = *new;
     }
 
-    fn poll_picked_files(&mut self) {
+    fn poll_picked_files(&mut self, tx: Sender<ParseUpdate>) {
         #[cfg(target_arch = "wasm32")]
         match self
             .web_file_dialog
@@ -227,7 +247,7 @@ impl PlotApp {
         #[cfg(not(target_arch = "wasm32"))]
         match self
             .native_file_dialog
-            .parse_picked_files(&mut self.loaded_files)
+            .parse_picked_files(&mut self.loaded_files, tx)
         {
             Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
             Err(e) => self.error_message = Some(e.to_string()),

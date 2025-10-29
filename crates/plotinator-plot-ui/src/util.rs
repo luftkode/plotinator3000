@@ -145,46 +145,40 @@ fn add_plot_points_to_collections_seq(plots: &mut Plots, data: &SupportedFormat,
         match raw_plot {
             RawPlot::Generic { common } => match common.expected_range() {
                 ExpectedPlotRange::Percentage => {
-                    plots.percentage_mut().add_plot_if_not_exists(
-                        common,
-                        data_id,
-                        data.descriptive_name(),
-                    );
+                    plots
+                        .percentage_mut()
+                        .add_plot(common, data_id, data.descriptive_name());
                 }
                 ExpectedPlotRange::Hundreds => {
-                    plots.one_to_hundred_mut().add_plot_if_not_exists(
-                        common,
-                        data_id,
-                        data.descriptive_name(),
-                    );
+                    plots
+                        .one_to_hundred_mut()
+                        .add_plot(common, data_id, data.descriptive_name());
                 }
                 ExpectedPlotRange::Thousands => {
-                    plots.thousands_mut().add_plot_if_not_exists(
-                        common,
-                        data_id,
-                        data.descriptive_name(),
-                    );
+                    plots
+                        .thousands_mut()
+                        .add_plot(common, data_id, data.descriptive_name());
                 }
             },
             RawPlot::GeoSpatialDataset(geo_data) => {
                 for common in geo_data.raw_plots_common() {
                     match common.expected_range() {
                         ExpectedPlotRange::Percentage => {
-                            plots.percentage_mut().add_plot_if_not_exists(
+                            plots.percentage_mut().add_plot(
                                 &common,
                                 data_id,
                                 data.descriptive_name(),
                             );
                         }
                         ExpectedPlotRange::Hundreds => {
-                            plots.one_to_hundred_mut().add_plot_if_not_exists(
+                            plots.one_to_hundred_mut().add_plot(
                                 &common,
                                 data_id,
                                 data.descriptive_name(),
                             );
                         }
                         ExpectedPlotRange::Thousands => {
-                            plots.thousands_mut().add_plot_if_not_exists(
+                            plots.thousands_mut().add_plot(
                                 &common,
                                 data_id,
                                 data.descriptive_name(),
@@ -202,17 +196,27 @@ fn add_plot_labels_to_collections(plots: &mut Plots, data: &SupportedFormat, dat
         for labels in plot_labels {
             let owned_label_points = labels.label_points().to_owned();
             match labels.expected_range() {
-                ExpectedPlotRange::Percentage => plots
-                    .percentage_mut()
-                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, data_id)),
+                ExpectedPlotRange::Percentage => {
+                    plots
+                        .percentage_mut()
+                        .add_plot_labels(StoredPlotLabels::new(
+                            owned_label_points,
+                            data_id,
+                            labels.expected_range(),
+                        ))
+                }
                 ExpectedPlotRange::Hundreds => {
                     plots
                         .one_to_hundred_mut()
-                        .add_plot_labels(StoredPlotLabels::new(owned_label_points, data_id));
+                        .add_plot_labels(StoredPlotLabels::new(
+                            owned_label_points,
+                            data_id,
+                            labels.expected_range(),
+                        ));
                 }
-                ExpectedPlotRange::Thousands => plots
-                    .thousands_mut()
-                    .add_plot_labels(StoredPlotLabels::new(owned_label_points, data_id)),
+                ExpectedPlotRange::Thousands => plots.thousands_mut().add_plot_labels(
+                    StoredPlotLabels::new(owned_label_points, data_id, labels.expected_range()),
+                ),
             }
         }
     }

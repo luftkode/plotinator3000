@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use egui::Color32;
 use egui_plot::{PlotBounds, PlotPoint};
 use plotinator_log_if::prelude::*;
-use plotinator_ui_util::auto_color_plot_area;
+use plotinator_ui_util::{ExpectedPlotRange, auto_color_plot_area};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -63,12 +63,7 @@ impl PlotData {
 
     /// Adds a plot to the [`PlotData`] collection if another plot with the same label doesn't already exist
     #[plotinator_proc_macros::log_time]
-    pub fn add_plot_if_not_exists(
-        &mut self,
-        raw_plot: &RawPlotCommon,
-        log_id: u16,
-        descriptive_name: &str,
-    ) {
+    pub fn add_plot(&mut self, raw_plot: &RawPlotCommon, log_id: u16, descriptive_name: &str) {
         // Crash in development but just emit an error message in release mode
         debug_assert!(
             raw_plot.points().len() > 1,
@@ -81,12 +76,15 @@ impl PlotData {
             return;
         }
 
-        if !self.contains_plot(&raw_plot.label_from_id(log_id)) {
-            self.add_plot(raw_plot, log_id, descriptive_name);
-        }
+        self.inner_add_plot(raw_plot, log_id, descriptive_name);
     }
 
-    pub fn add_plot(&mut self, raw_plot: &RawPlotCommon, log_id: u16, descriptive_name: &str) {
+    pub fn inner_add_plot(
+        &mut self,
+        raw_plot: &RawPlotCommon,
+        log_id: u16,
+        descriptive_name: &str,
+    ) {
         let new_plot = CookedPlot::new(raw_plot, log_id, descriptive_name.to_owned());
         log::info!("Adding plot: {}", new_plot.name());
         self.plots.push(new_plot);
@@ -134,6 +132,7 @@ pub struct CookedPlot {
     color: Color32,
     highlight: bool,
     ty: DataType,
+    expected_range: ExpectedPlotRange,
 }
 
 type PointList<'pl> = &'pl [[f64; 2]];
@@ -180,6 +179,7 @@ impl CookedPlot {
             associated_descriptive_name,
             color,
             highlight: false,
+            expected_range: raw_plot.expected_range(),
         }
     }
 
