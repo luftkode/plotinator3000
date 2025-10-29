@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed drawing empty map telemetry labels when geo points had neither speed or altimeter values
 - Added snapshot tests for the map viewport
+- Update walkers to 0.48.0
 
 ## [2.8.0]
 
