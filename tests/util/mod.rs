@@ -1,4 +1,12 @@
 #![allow(
+    dead_code,
+    reason = "It's flagged as dead because the test_snapshot modules bring them in but some of the code is only used by one of them - TODO: Fix that"
+)]
+#![allow(
+    unused_imports,
+    reason = "It's flagged as unused because the test_snapshot modules bring them in but some of the code is only used by one of them - TODO: Fix that"
+)]
+#![allow(
     clippy::disallowed_types,
     reason = "This is test utilities so things like PathBuf is fine, we won't deploy this code anywhere"
 )]

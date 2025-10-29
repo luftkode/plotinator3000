@@ -8,7 +8,9 @@ use std::{
     time::Duration,
 };
 
-use egui::{Color32, Context, RichText, ScrollArea, mutex::Mutex};
+use egui::{
+    Color32, Context, Key, RichText, ScrollArea, Ui, ViewportBuilder, ViewportCommand, mutex::Mutex,
+};
 use semver::Version;
 
 pub(super) mod error_window;
@@ -135,7 +137,7 @@ fn perform_update(
         sender
             .send(UpdateStep::WaitingForCountdown(prev_val - 1))
             .expect("Failed sending update to gui");
-        std::thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_secs(1));
     }
     if update_cancelled.load(Ordering::SeqCst) {
         sender
@@ -186,7 +188,7 @@ fn perform_update(
 
 pub(super) fn show_simple_update_window(version: Version) -> eframe::Result<bool> {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
+        viewport: ViewportBuilder::default()
             .with_inner_size([400.0, 300.0])
             .with_icon(
                 eframe::icon_data::from_png_bytes(crate::APP_ICON).expect("Failed to load icon"),
@@ -315,9 +317,9 @@ fn ui_show_update_window_central_panel(
                     if ui
                         .button(RichText::new("Continue...").strong().size(18.0))
                         .clicked()
-                        || ui.input(|i| i.key_pressed(egui::Key::Enter))
+                        || ui.input(|i| i.key_pressed(Key::Enter))
                     {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        ctx.send_viewport_cmd(ViewportCommand::Close);
                     }
                 } else {
                     // Show the countdown or disable updates button
@@ -330,7 +332,9 @@ fn ui_show_update_window_central_panel(
                                 RichText::new(format!("Updating in {countdown_val}s...")).strong(),
                             );
                             ui.add_space(5.0);
-                            if ui.button(RichText::new("Update now!").strong()).clicked() {
+                            if ui.button(RichText::new("Update now!").strong()).clicked()
+                                || ui.input(|i| i.key_pressed(Key::Enter))
+                            {
                                 update_now_clicked.store(true, Ordering::SeqCst);
                             }
                             ui.add_space(10.0);
@@ -364,7 +368,7 @@ fn ui_show_update_window_central_panel(
     });
 }
 
-fn ui_show_update_done_close_button(ctx: &Context, ui: &mut egui::Ui) {
+fn ui_show_update_done_close_button(ctx: &Context, ui: &mut Ui) {
     ui.label(RichText::new("Restart to use the new version").strong());
     ui.add_space(10.0);
     if ui

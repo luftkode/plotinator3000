@@ -128,42 +128,48 @@ impl LabelPlacer {
             if !self.padded_screen_rect.contains(*screen_pos) {
                 continue;
             }
-            // Check if this point is far enough from the last labeled point
-            let should_place = if let Some(last_pos) = last_label_pos {
-                let distance = (*screen_pos - last_pos).length();
-                distance >= min_screen_distance
-            } else {
-                true
-            };
 
-            if should_place {
-                let mut altitudes: Vec<GeoAltitude> = vec![];
-                for a in &geo_point.altitude {
-                    match a {
-                        GeoAltitude::Gnss(_) | GeoAltitude::Laser(_) => {
-                            if settings.draw_altitude() {
-                                altitudes.push(*a);
-                            }
+            // Nothing to draw if we don't have either altitude or speed
+            if !geo_point.has_altitude() && !geo_point.has_speed() {
+                continue;
+            }
+
+            // Check if this point is far enough from the last labeled point
+            if let Some(last_pos) = last_label_pos {
+                let distance = (*screen_pos - last_pos).length();
+                if distance < min_screen_distance {
+                    continue;
+                }
+            }
+
+            let mut altitudes: Vec<GeoAltitude> = vec![];
+            for a in &geo_point.altitude {
+                match a {
+                    GeoAltitude::Gnss(_) | GeoAltitude::Laser(_) => {
+                        if settings.draw_altitude() {
+                            altitudes.push(*a);
                         }
-                        GeoAltitude::MergedLaser { source_index, .. } => {
-                            if settings.draw_merged_altitude(*source_index) {
-                                altitudes.push(*a);
-                            }
+                    }
+                    GeoAltitude::MergedLaser { source_index, .. } => {
+                        if settings.draw_merged_altitude(*source_index) {
+                            altitudes.push(*a);
                         }
                     }
                 }
-                self.candidate_buffer.push(CandidatePoint {
-                    pos: *screen_pos,
-                    altitude: altitudes,
-                    speed: if settings.draw_speed() {
-                        geo_point.speed
-                    } else {
-                        None
-                    },
-                    color: path_color,
-                });
-                last_label_pos = Some(*screen_pos);
             }
+            let point = CandidatePoint {
+                pos: *screen_pos,
+                altitude: altitudes,
+                speed: if settings.draw_speed() {
+                    geo_point.speed
+                } else {
+                    None
+                },
+                color: path_color,
+            };
+
+            self.candidate_buffer.push(point);
+            last_label_pos = Some(*screen_pos);
         }
     }
 

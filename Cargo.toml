@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "2.8.0"
+version = "2.8.1"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -60,7 +60,7 @@ egui_plot = { version = "0.34", features = ["serde"] }
 egui_extras = "0.33"
 # TODO: Move back to main repo once the update PR is merged
 egui-phosphor = { git = "https://github.com/ItsEthra/egui-phosphor.git", branch = "egui-0.33" }
-walkers = { version = "0.47.0", features = ["serde"] }
+walkers = { version = "0.48.0", features = ["serde"] }
 rayon = "1.11.0"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }

@@ -135,7 +135,9 @@ impl Plotable for Tsc {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::tsc::{gps_marks::GpsMarkRecords, hm::HmData, metadata::RootMetadata};
+    use insta::assert_debug_snapshot;
     use plotinator_log_if::rawplot::RawPlot;
     use plotinator_test_util::test_file_defs::tsc::*;
     use testresult::TestResult;
@@ -175,6 +177,14 @@ mod tests {
         insta::assert_debug_snapshot!(zero_pos_first_10);
         insta::assert_debug_snapshot!(bfield_first_10);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_tsc_from_path() -> TestResult {
+        let tsc = Tsc::from_path(tsc())?;
+
+        assert_debug_snapshot!(tsc.first_timestamp());
         Ok(())
     }
 }
