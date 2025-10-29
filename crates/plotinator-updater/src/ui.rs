@@ -332,9 +332,9 @@ fn ui_show_update_window_central_panel(
                                 RichText::new(format!("Updating in {countdown_val}s...")).strong(),
                             );
                             ui.add_space(5.0);
-                            if ui.button(RichText::new("Update now!").strong()).clicked()
-                                || ui.input(|i| i.key_pressed(Key::Enter))
-                            {
+                            let update_now_btn = ui.button(RichText::new("Update now!").strong());
+                            update_now_btn.request_focus();
+                            if update_now_btn.clicked() || ui.input(|i| i.key_pressed(Key::Enter)) {
                                 update_now_clicked.store(true, Ordering::SeqCst);
                             }
                             ui.add_space(10.0);
