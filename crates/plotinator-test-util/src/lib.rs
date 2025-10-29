@@ -8,7 +8,8 @@ pub use {
     std::fs,
     std::io,
     test_file_defs::{
-        bifrost_current::*, legacy_generator::*, mbed_motor_control::*, njord_ins::*, wasp200::*,
+        bifrost_current::*, legacy_generator::*, mbed_motor_control::*, njord_altimeter::*,
+        njord_ins::*,
     },
     testresult::TestResult,
 };

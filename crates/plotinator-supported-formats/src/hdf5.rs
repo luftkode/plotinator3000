@@ -73,7 +73,7 @@ macro_rules! define_supported_hdf5_formats {
 
 define_supported_hdf5_formats! {
     BifrostLoopCurrent => plotinator_hdf5::bifrost::BifrostLoopCurrent,
-    Wasp200Height => plotinator_hdf5::wasp200::Wasp200,
+    NjordAltimeter => plotinator_hdf5::NjordAltimeter,
     FrameAltimeters => plotinator_hdf5::frame_altimeters::FrameAltimeters,
     FrameInclinometers => plotinator_hdf5::frame_inclinometers::FrameInclinometers,
     FrameMagnetometer => plotinator_hdf5::frame_magnetometer::FrameMagnetometer,

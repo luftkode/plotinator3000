@@ -11,14 +11,12 @@ plotinator_macros::non_wasm_modules!(
     pub mod tsc;
 );
 
-pub use bifrost::BifrostLoopCurrent;
-pub use frame_altimeters::FrameAltimeters;
-pub use frame_gps::FrameGps;
-pub use frame_inclinometers::FrameInclinometers;
-pub use frame_magnetometer::FrameMagnetometer;
-pub use njord_altimeter::wasp200;
-pub use njord_ins::NjordIns;
-pub use tsc::Tsc;
+#[cfg(not(target_arch = "wasm32"))]
+pub use {
+    bifrost::BifrostLoopCurrent, frame_altimeters::FrameAltimeters, frame_gps::FrameGps,
+    frame_inclinometers::FrameInclinometers, frame_magnetometer::FrameMagnetometer,
+    njord_altimeter::NjordAltimeter, njord_ins::NjordIns, tsc::Tsc,
+};
 
 // File extensions we recognize as hdf5 files.
 const POSSIBLE_HDF5_EXTENSIONS_CASE_INSENSITIVE: [&str; 3] = ["h5", "hdf5", "hdf"];

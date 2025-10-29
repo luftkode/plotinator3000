@@ -4199,7 +4199,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "2.7.0"
+version = "2.8.0"
 dependencies = [
  "anyhow",
  "chrono",
