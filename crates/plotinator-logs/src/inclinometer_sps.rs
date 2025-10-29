@@ -214,8 +214,8 @@ impl Plotable for InclinometerSps {
 mod tests {
     use super::*;
     use plotinator_test_util::{
+        njord_altimeter_wasp200_sps,
         test_file_defs::{frame_inclinometers::*, frame_magnetometer::frame_magnetometer},
-        wasp200_sps,
     };
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_wasp_sps_file_is_not_valid() {
-        let is_valid = InclinometerSps::is_file_valid(&wasp200_sps());
+        let is_valid = InclinometerSps::is_file_valid(&njord_altimeter_wasp200_sps());
         assert!(!is_valid);
     }
 

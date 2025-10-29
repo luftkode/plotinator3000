@@ -73,7 +73,16 @@ const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
         title: "Njord Altimeter",
         description: "Height measurements from the Njord Altimeter.",
         link: "https://github.com/luftkode/njord-altimeter",
-        subitems: None,
+        subitems: Some(&[
+            SubLogFormat {
+                title: "WASP200",
+                description: "Range samples from the WASP200",
+            },
+            SubLogFormat {
+                title: "SF20",
+                description: "Range samples from the SF20",
+            },
+        ]),
     },
     LogFormat {
         title: "Njord INS",

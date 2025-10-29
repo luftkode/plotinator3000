@@ -1,7 +1,9 @@
 #![cfg(not(target_arch = "wasm32"))]
 mod util;
 use egui_kittest::kittest::Queryable as _;
-use plotinator_test_util::{bifrost_current, mbed_pid_v6_regular, mbed_status_v6_regular};
+use plotinator_test_util::{
+    bifrost_current, mbed_pid_v6_regular, mbed_status_v6_regular, njord_altimeter_wasp200_sf20,
+};
 use util::*;
 
 /// This doesn't work super well since the harness cannot render 2 native windows/viewports
@@ -151,4 +153,14 @@ fn test_snapshot_open_loaded_files_open_log_window() {
     harness.step();
 
     harness.save_snapshot_with_threshold(CiThreshold(7.0));
+}
+
+#[test]
+fn test_snapshot_drop_load_hdf5_njord_altimeter_wasp200_sf20() {
+    let mut harness = PlotAppHarnessWrapper::new("dropped_hdf5_njord_altimeter_wasp200_sf20");
+    harness.drop_file(njord_altimeter_wasp200_sf20());
+    harness.run();
+    // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
+    // a higher diff from GPU to GPU
+    harness.save_snapshot_with_threshold(CiThreshold(4.0));
 }

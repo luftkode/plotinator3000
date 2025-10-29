@@ -4,7 +4,6 @@ use hdf5::{
     Attribute, Dataset,
     types::{IntSize, TypeDescriptor, VarLenAscii, VarLenUnicode},
 };
-use plotinator_log_if::prelude::*;
 
 /// Helper to check if the 'description' key is in the dataset attributes and error with informative error message if it is not
 pub(crate) fn assert_description_in_attrs(ds: &Dataset) -> io::Result<()> {
@@ -173,34 +172,6 @@ pub(crate) fn open_dataset(
         ));
     }
     Ok(dataset)
-}
-
-pub(crate) fn gen_time_between_samples_rawplot(
-    timestamps: &[i64],
-    legend_name: &str,
-) -> Option<RawPlotCommon> {
-    calc_time_between_samples(timestamps)
-        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, legend_name))
-}
-
-#[allow(dead_code, reason = "probably useful again soon")]
-pub(crate) fn gen_time_between_samples_rawplot_2d(
-    timestamps: &ndarray::Array2<i64>,
-    legend_name: &str,
-) -> Option<RawPlotCommon> {
-    calc_time_between_samples_2d(timestamps)
-        .map(|points: Vec<[f64; 2]>| delta_t_samples_rawplot(points, legend_name))
-}
-
-fn delta_t_samples_rawplot(points: Vec<[f64; 2]>, legend_name: &str) -> RawPlotCommon {
-    RawPlotCommon::new(
-        legend_name,
-        points,
-        DataType::TimeDelta {
-            name: "Sample".into(),
-            unit: "ms".into(),
-        },
-    )
 }
 
 /// Calculate the time difference between points in a slice of unix nanosecond timestamps
