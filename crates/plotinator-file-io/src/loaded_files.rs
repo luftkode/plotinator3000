@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{self},
+    mem,
     path::Path,
 };
 
@@ -20,7 +21,7 @@ impl LoadedFiles {
 
     /// Take all the `loaded_files` currently stored and return them as a list
     pub fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
-        self.loaded.drain(..).collect()
+        mem::take(&mut self.loaded)
     }
 
     pub fn parse_path(&mut self, path: &Path) -> anyhow::Result<()> {
