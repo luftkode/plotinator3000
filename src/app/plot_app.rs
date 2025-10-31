@@ -1,16 +1,18 @@
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::{
+    path::PathBuf,
+    sync::mpsc::{self, Receiver, Sender},
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN};
-use plotinator_file_io_ui::{ParseStatusWindow, ParseUpdate};
+use plotinator_background_parser::ParserThreads;
 use plotinator_plot_ui::LogPlotUi;
+use plotinator_ui_file_io::{ParseStatusWindow, ParseUpdate};
 
 use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
-
-pub mod loaded_format;
 mod misc;
 mod supported_formats_table;
 
@@ -61,7 +63,7 @@ pub struct PlotApp {
     disable_app_state_storage: bool,
 
     #[serde(skip)]
-    parse_update_tx: Sender<ParseUpdate>,
+    background_parser: ParserThreads,
     #[serde(skip)]
     parse_update_rx: Receiver<ParseUpdate>,
     #[serde(skip)]
@@ -100,8 +102,8 @@ impl Default for PlotApp {
 
             disable_app_state_storage: false,
 
-            parse_update_tx: tx,
             parse_update_rx: rx,
+            background_parser: ParserThreads::new(tx),
             status_window: ParseStatusWindow::new(),
         }
     }
@@ -132,20 +134,12 @@ impl PlotApp {
 impl eframe::App for PlotApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        plotinator_macros::profile_function!();
-        self.disable_app_state_storage =
-            self.plot.total_data_points() > Self::DISABLE_STORAGE_THRESHOLD;
-
-        if self.disable_app_state_storage {
-            log::debug!("Saving app state is disabled - skipping");
-        } else {
-            eframe::set_value(storage, eframe::APP_KEY, self);
-        }
+        eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.poll_picked_files(self.parse_update_tx.clone());
+        self.poll_picked_files();
         while let Ok(update) = self.parse_update_rx.try_recv() {
             self.status_window.handle_update(update);
         }
@@ -174,6 +168,7 @@ impl eframe::App for PlotApp {
                 &mut self.map_commander,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.mqtt,
+                None,
             );
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
@@ -208,15 +203,8 @@ impl eframe::App for PlotApp {
                 supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown
             }
 
-            match plotinator_file_io::dropped_files::handle_dropped_files(
-                ctx,
-                &mut self.loaded_files,
-            ) {
-                Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
-                Err(e) => self.error_message = Some(e.to_string()),
-                Ok(None) => (),
-            }
-
+            let mut dropped_files = plotinator_file_io::dropped_files::take_dropped_files(ctx);
+            self.handle_input_files(dropped_files);
             misc::show_error(ui, self);
             misc::show_warn_on_debug_build(ui);
         });
@@ -234,24 +222,30 @@ impl PlotApp {
         self.plot = *new;
     }
 
-    fn poll_picked_files(&mut self, tx: Sender<ParseUpdate>) {
-        #[cfg(target_arch = "wasm32")]
-        match self
-            .web_file_dialog
-            .poll_received_files(&mut self.loaded_files)
-        {
-            Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
+    fn poll_picked_files(&mut self) {
+        let picked_files = self.native_file_dialog.take_picked_files();
+        self.handle_input_files(picked_files);
+    }
+
+    fn handle_input_files(&mut self, mut input_files: SmallVec<[PathBuf; 1]>) {
+        match NativeFileDialog::try_parse_custom_files(&mut input_files) {
+            Ok(custom_files) => {
+                for cf in custom_files {
+                    match cf {
+                        CustomFileContent::PlotData(pd) => {
+                            log::info!("Loading {} plot data files from {pf:?}", pd.len());
+                            self.loaded_files.loaded.extend(plot_data);
+                        }
+                        CustomFileContent::PlotUi(new_plot_ui_state) => {
+                            self.load_new_plot_ui_state(new_plot_ui_state);
+                        }
+                    }
+                }
+            }
             Err(e) => self.error_message = Some(e.to_string()),
-            Ok(None) => (),
         }
-        #[cfg(not(target_arch = "wasm32"))]
-        match self
-            .native_file_dialog
-            .parse_picked_files(&mut self.loaded_files, tx)
-        {
-            Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
-            Err(e) => self.error_message = Some(e.to_string()),
-            Ok(None) => (),
+        for p in input_files {
+            self.background_parser.parse_path(p);
         }
     }
 }

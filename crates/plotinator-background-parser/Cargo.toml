@@ -1,0 +1,25 @@
+[package]
+name = "plotinator-background-parser"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+plotinator-supported-formats.workspace = true
+plotinator-ui-file-io.workspace = true
+plotinator-ui-log-settings.workspace = true
+plotinator-log-if.workspace = true
+plotinator-plot-util.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+rayon.workspace = true
+log.workspace = true
+smallvec.workspace = true
+
+
+[lints]
+workspace = true

@@ -1,13 +1,15 @@
 use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
 
 use plotinator_log_if::prelude::*;
-use plotinator_plot_ui::plot_settings::date_settings::LoadedLogSettings;
 use plotinator_plot_util::{CookedPlot, StoredPlotLabels};
 use plotinator_supported_formats::SupportedFormat;
+use plotinator_ui_log_settings::LoadedLogSettings;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 /// Get the next unique ID for a log
+///
+// This is how all logs get their log_id, and how each plot for each log gets their log_id
 #[must_use]
 fn next_log_id() -> u16 {
     static LOG_ID_COUNTER: AtomicU16 = AtomicU16::new(1);

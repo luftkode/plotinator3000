@@ -1,10 +1,13 @@
 use eframe::egui;
 use egui::{Color32, Id, RichText, Ui};
+use egui_phosphor::regular::{CHECK_CIRCLE, WARNING_CIRCLE};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::mpsc::Sender;
+use std::time::{Duration, Instant};
 
 /// Enum for messages sent from parser threads to the UI.
-/// This is the API contract you requested.
+#[derive(Debug, Clone)]
 pub enum ParseUpdate {
     /// Sent when a file is first discovered.
     Started { path: PathBuf },
@@ -20,11 +23,26 @@ pub enum ParseUpdate {
     Failed { path: PathBuf, error_msg: String },
 }
 
+#[derive(Debug, Clone)]
+pub struct UpdateChannel {
+    tx: Sender<ParseUpdate>,
+}
+
+impl UpdateChannel {
+    pub fn new(tx: Sender<ParseUpdate>) -> Self {
+        Self { tx }
+    }
+
+    pub fn send(&self, update: ParseUpdate) {
+        self.tx.send(update).expect("receiver dropped channel");
+    }
+}
+
 /// The final status of a parse, stored in the UI.
 #[derive(Clone, Debug)]
 enum FinalStatus {
-    Succeeded(String), // format_name
-    Failed(String),    // error_msg
+    Succeeded(String), // name of the format e.g. `Njord Altimeter`
+    Failed(String),    // error message
 }
 
 /// Struct to hold the UI state for a single file.
@@ -35,6 +53,17 @@ struct FileParseStatus {
     current_activity: String,
     progress: f32, // 0.0 - 1.0
     final_status: Option<FinalStatus>,
+    time_started: Instant,
+}
+
+impl FileParseStatus {
+    fn time_elapsed(&self) -> Duration {
+        self.time_started.elapsed()
+    }
+
+    fn time_elapsed_seconds(&self) -> String {
+        format!("{:.1?}s", self.time_elapsed())
+    }
 }
 
 /// Encapsulates the state and UI for the parsing window.
@@ -52,12 +81,12 @@ impl ParseStatusWindow {
         }
     }
 
-    /// Public method to tell the window to open.
+    /// Open the window.
     pub fn show(&mut self) {
         self.show_parsing_window = true;
     }
 
-    /// Public method to clear all parsing statuses.
+    /// Clear all parsing statuses.
     pub fn clear_statuses(&mut self) {
         self.parse_statuses.clear();
     }
@@ -81,6 +110,7 @@ impl ParseStatusWindow {
                         current_activity: "Queued...".to_string(),
                         progress: 0.0,
                         final_status: None,
+                        time_started: Instant::now(),
                     },
                 );
             }
@@ -225,11 +255,11 @@ impl ParseStatusWindow {
                             ui.add(egui::Spinner::new().size(16.0));
                         }
                         Some(FinalStatus::Succeeded(_)) => {
-                            let icon = egui_phosphor::regular::CHECK_CIRCLE;
+                            let icon = CHECK_CIRCLE;
                             ui.label(RichText::new(icon).color(Color32::GREEN).size(16.0));
                         }
                         Some(FinalStatus::Failed(_)) => {
-                            let icon = egui_phosphor::regular::WARNING_CIRCLE;
+                            let icon = WARNING_CIRCLE;
                             ui.label(RichText::new(icon).color(Color32::RED).size(16.0));
                         }
                     };
@@ -241,9 +271,10 @@ impl ParseStatusWindow {
                     // --- Column 3: Status ---
                     if let Some(final_status) = &status.final_status {
                         let (msg, color) = match final_status {
-                            FinalStatus::Succeeded(fmt) => {
-                                (format!("Success: {fmt}"), Color32::GREEN)
-                            }
+                            FinalStatus::Succeeded(fmt) => (
+                                format!("Success: {fmt} in {}", status.time_elapsed_seconds()),
+                                Color32::GREEN,
+                            ),
                             FinalStatus::Failed(_) => ("Error".to_string(), Color32::RED),
                         };
                         let label = ui.label(RichText::new(msg).color(color));
@@ -259,7 +290,11 @@ impl ParseStatusWindow {
                                 egui::ProgressBar::new(status.progress)
                                     .show_percentage()
                                     .desired_width(200.0)
-                                    .text(format!("{}%", (status.progress * 100.0) as u32)),
+                                    .text(format!(
+                                        "{}% - {}",
+                                        (status.progress * 100.0) as u32,
+                                        status.time_elapsed_seconds()
+                                    )),
                             );
                         });
                     }

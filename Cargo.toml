@@ -45,9 +45,11 @@ plotinator-updater.path = "crates/plotinator-updater"
 plotinator-download.path = "crates/plotinator-download"
 plotinator-strfmt.path = "crates/plotinator-strfmt"
 plotinator-file-io.path = "crates/plotinator-file-io"
-plotinator-file-io-ui.path = "crates/plotinator-file-io-ui"
+plotinator-ui-file-io.path = "crates/plotinator-ui-file-io"
 plotinator-csv.path = "crates/plotinator-csv"
 plotinator-map-ui.path = "crates/plotinator-map-ui"
+plotinator-ui-log-settings.path = "crates/plotinator-ui-log-settings"
+plotinator-background-parser.path = "crates/plotinator-background-parser"
 egui = { version = "0.33", features = ["rayon", "callstack"] }
 egui-notify = "0.21.0"
 eframe = { version = "0.33", default-features = false, features = [
@@ -124,7 +126,9 @@ plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-file-io.workspace = true
-plotinator-file-io-ui.workspace = true
+plotinator-ui-file-io.workspace = true
+plotinator-ui-log-settings.workspace = true
+plotinator-background-parser.workspace = true
 walkers.workspace = true
 egui.workspace = true
 eframe.workspace = true
@@ -139,6 +143,7 @@ semver.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
 rayon.workspace = true
+smallvec.workspace = true
 
 
 # native:

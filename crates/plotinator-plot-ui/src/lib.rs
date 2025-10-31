@@ -10,6 +10,8 @@ use plotinator_supported_formats::SupportedFormat;
 use plotinator_ui_util::{box_selection::BoxSelection, format_large_number};
 use serde::{Deserialize, Serialize};
 
+use plotinator_background_parser::loaded_format::LoadedSupportedFormat;
+
 use axis_config::AxisConfig;
 use egui::{Id, Response};
 use egui_plot::Legend;
@@ -42,11 +44,14 @@ pub enum PlotMode<'a> {
 #[derive(Default, Deserialize, Serialize)]
 pub struct LogPlotUi {
     // We also store the raw files so they are easy to export
+    #[serde(skip)]
     stored_plot_files: Vec<SupportedFormat>,
     legend_cfg: Legend,
     axis_config: AxisConfig,
+    #[serde(skip)]
     plots: Plots,
     plot_settings: PlotSettings,
+    #[serde(skip)]
     max_bounds: MaxPlotBounds, // The maximum bounds for the plot, used for resetting zoom
     link_group: Option<Id>,
     click_delta: ClickDelta,
@@ -85,9 +90,12 @@ impl LogPlotUi {
         map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
         mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
+        loaded_format: Option<LoadedSupportedFormat>,
     ) -> Response {
         #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
         puffin::profile_scope!("Plot_UI");
+
+        let loaded_format = loaded_format.unwrap();
 
         let Self {
             legend_cfg,

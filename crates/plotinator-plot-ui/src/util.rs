@@ -1,10 +1,11 @@
 use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{CookedPlot, Plots, StoredPlotLabels};
 use plotinator_supported_formats::SupportedFormat;
+use plotinator_ui_log_settings::LoadedLogSettings;
 use plotinator_ui_util::ExpectedPlotRange;
 use rayon::prelude::*;
 
-use super::plot_settings::{PlotSettings, date_settings::LoadedLogSettings};
+use super::plot_settings::PlotSettings;
 
 #[plotinator_proc_macros::log_time]
 pub fn add_plot_data_to_plot_collections(

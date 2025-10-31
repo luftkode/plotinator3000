@@ -17,7 +17,7 @@ pub fn max_custom_header_len() -> usize {
 }
 
 /// Represents the content parsed from a custom Plotinator3000 file.
-pub(crate) enum CustomFileContent {
+pub enum CustomFileContent {
     PlotData(Vec<SupportedFormat>),
     PlotUi(Box<LogPlotUi>),
 }

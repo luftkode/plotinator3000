@@ -1,10 +1,13 @@
 use plotinator_supported_formats::SupportedFormat;
+use plotinator_ui_file_io::{ParseUpdate, UpdateChannel};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{self},
     mem,
-    path::Path,
+    path::{Path, PathBuf},
+    sync::mpsc::Sender,
+    thread,
 };
 
 /// Contains all supported logs in a single vector.
@@ -24,14 +27,15 @@ impl LoadedFiles {
         mem::take(&mut self.loaded)
     }
 
-    pub fn parse_path(&mut self, path: &Path) -> anyhow::Result<()> {
+    pub fn parse_path(&mut self, path: &Path, tx: UpdateChannel) -> anyhow::Result<()> {
         if path.is_dir() {
-            self.parse_directory(path)?;
+            self.parse_directory(path, tx)?;
         } else if is_zip_file(path) {
             #[cfg(not(target_arch = "wasm32"))]
-            self.parse_zip_file(path)?;
+            self.parse_zip_file(path, tx)?;
         } else {
-            self.loaded.push(SupportedFormat::parse_from_path(path)?);
+            self.loaded
+                .push(SupportedFormat::parse_from_path(path, tx)?);
         }
         Ok(())
     }
@@ -41,19 +45,19 @@ impl LoadedFiles {
         Ok(())
     }
 
-    fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
+    fn parse_directory(&mut self, path: &Path, tx: UpdateChannel) -> io::Result<()> {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
-                if let Err(e) = self.parse_directory(&path) {
+                if let Err(e) = self.parse_directory(&path, tx.clone()) {
                     log::warn!("{e}");
                 }
             } else if is_zip_file(&path) {
                 #[cfg(not(target_arch = "wasm32"))]
-                self.parse_zip_file(&path)?;
+                self.parse_zip_file(&path, tx.clone())?;
             } else {
-                match SupportedFormat::parse_from_path(&path) {
+                match SupportedFormat::parse_from_path(&path, tx.clone()) {
                     Ok(l) => self.loaded.push(l),
                     Err(e) => log::warn!("{e}"),
                 }
@@ -63,14 +67,14 @@ impl LoadedFiles {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
+    fn parse_zip_file(&mut self, path: &Path, tx: UpdateChannel) -> io::Result<()> {
         let file = fs::File::open(path)?;
         let mut archive = zip::ZipArchive::new(file)?;
 
         // Create a temporary directory for extracting HDF5 files
         let temp_dir = tempfile::tempdir()?;
 
-        self.parse_zip_entries(&mut archive, "", 0, temp_dir.path())?;
+        self.parse_zip_entries(&mut archive, "", 0, temp_dir.path(), tx)?;
         Ok(())
     }
 
@@ -81,6 +85,7 @@ impl LoadedFiles {
         path_prefix: &str,
         depth: usize,
         temp_dir: &Path,
+        tx: UpdateChannel,
     ) -> io::Result<()> {
         use super::custom_files;
         use custom_files::CustomFileContent;
@@ -156,7 +161,7 @@ impl LoadedFiles {
                     drop(temp_file); // Close the file before parsing
 
                     // Parse from the temporary file path
-                    match SupportedFormat::parse_from_path(&temp_file_path) {
+                    match SupportedFormat::parse_from_path(&temp_file_path, tx.clone()) {
                         Ok(supported_format) => self.loaded.push(supported_format),
                         Err(e) => log::error!("Failed to parse HDF5 file {file_name}: {e}"),
                     }
@@ -187,7 +192,7 @@ impl LoadedFiles {
 
         // Recursively process subdirectories
         for subdir_path in subdirectories {
-            self.parse_zip_entries(archive, &subdir_path, depth + 1, temp_dir)?;
+            self.parse_zip_entries(archive, &subdir_path, depth + 1, temp_dir, tx.clone())?;
         }
 
         Ok(())
@@ -207,6 +212,7 @@ mod tests {
     use plotinator_test_util::test_file_defs::frame_altimeters::*;
     use plotinator_test_util::test_file_defs::mbed_motor_control::*;
     use std::io::Write as _;
+    use std::sync::mpsc::channel;
     use tempfile::TempDir;
     use testresult::TestResult;
     use zip::write::ExtendedFileOptions;
@@ -254,7 +260,9 @@ mod tests {
 
         // Test parsing the zip file
         let mut loaded_files = LoadedFiles::default();
-        loaded_files.parse_zip_file(&zip_path)?;
+        let (tx, _rx) = channel();
+        let update_chan = UpdateChannel::new(tx);
+        loaded_files.parse_zip_file(&zip_path, update_chan)?;
 
         let loaded = loaded_files.loaded();
 
