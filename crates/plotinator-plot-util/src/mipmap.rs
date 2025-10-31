@@ -205,14 +205,18 @@ impl MipMap2DPlotPoints {
             let count_within_bounds = end_idx.saturating_sub(start_idx);
 
             if count_within_bounds > target_point_count {
+                // add one point on each side when possible, so that the lines
+                // are drawn correctly to the next point outside of the screen
+                let extended_start_idx = start_idx.saturating_sub(1);
+                let extended_end_idx = (end_idx + 1).min(lvl.len());
                 let new_cached = LevelLookupCached {
                     pixel_width,
                     x_bounds: (x_min, x_max),
-                    result_span: Some((start_idx, end_idx)),
+                    result_span: Some((extended_start_idx, extended_end_idx)),
                     result_idx: lvl_idx,
                 };
                 self.most_recent_lookup.set(new_cached);
-                return (lvl_idx, Some((start_idx, end_idx)));
+                return (lvl_idx, Some((extended_start_idx, extended_end_idx)));
             }
         }
         self.most_recent_lookup.set(LevelLookupCached {
@@ -306,7 +310,7 @@ mod tests {
             (1usize, 3usize, Some((0, 2))),
             (2, 2, Some((0, 4))),
             (4, 1, Some((0, 8))),
-            (8, 0, Some((0, 15))),
+            (8, 0, Some((0, 16))),
             (16, 0, None),
         ] {
             let (lvl, range_res) = mipmap.get_level_match(pixel_width, 0.0..=15.);
@@ -333,10 +337,10 @@ mod tests {
         let x_bounds = UNIX_TS_NS + 300.0..=UNIX_TS_NS + 1500.;
 
         for (pixel_width, expected_lvl, expected_range) in [
-            (100usize, 3usize, Some((17, 176))),
-            (200, 2, Some((33, 352))),
-            (400, 1, Some((65, 704))),
-            (800, 0, Some((129, 1408))),
+            (100usize, 3usize, Some((16, 177))),
+            (200, 2, Some((32, 353))),
+            (400, 1, Some((64, 705))),
+            (800, 0, Some((128, 1409))),
             (1600, 0, None),
         ] {
             let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds.clone());
