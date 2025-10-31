@@ -1,3 +1,4 @@
+use smallvec::SmallVec;
 use std::{
     path::PathBuf,
     sync::mpsc::{self, Receiver, Sender},
@@ -12,7 +13,10 @@ use plotinator_background_parser::ParserThreads;
 use plotinator_plot_ui::LogPlotUi;
 use plotinator_ui_file_io::{ParseStatusWindow, ParseUpdate};
 
-use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
+use plotinator_file_io::{
+    file_dialog::{self as fd, native::NativeFileDialog},
+    loaded_files::LoadedFiles,
+};
 mod misc;
 mod supported_formats_table;
 
