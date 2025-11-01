@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use plotinator_ui_util::ExpectedPlotRange;
 
 /// Represents all the plotlabels from a given log
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -6,13 +7,19 @@ pub struct StoredPlotLabels {
     pub log_id: u16,
     pub label_points: Vec<PlotLabel>,
     pub highlight: bool,
+    pub expected_range: ExpectedPlotRange,
 }
 
 impl StoredPlotLabels {
-    pub fn new(label_points: Vec<([f64; 2], String)>, log_id: u16) -> Self {
+    pub fn new(
+        label_points: Vec<([f64; 2], String)>,
+        log_id: u16,
+        expected_range: ExpectedPlotRange,
+    ) -> Self {
         Self {
             label_points: label_points.into_iter().map(PlotLabel::from).collect(),
             log_id,
+            expected_range,
             highlight: false,
         }
     }

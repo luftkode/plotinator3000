@@ -2,10 +2,9 @@ use egui::{Color32, Key, RichText};
 use egui_phosphor::regular;
 use egui_plot::PlotBounds;
 use plotinator_strfmt::format_data_size;
+use plotinator_ui_log_settings::LoadedLogSettings;
 
 use crate::WARN_ON_UNPARSED_BYTES_THRESHOLD;
-
-use super::date_settings::LoadedLogSettings;
 
 fn ui_button_toggle_visibility(ui: &mut egui::Ui, loaded_log: &mut LoadedLogSettings) {
     let show_toggle_txt = if loaded_log.show_log() {
@@ -103,7 +102,7 @@ fn log_settings_window(
                         ui.label(format!("original date: {}", settings.original_start_date));
                         ui.label(RichText::new("YYYY-mm-dd HH:MM:SS.ms").strong());
                         let date_txt_input_resp = settings.start_date_editor.show(ui);
-                        if !settings.log_points_cutter.clicked {
+                        if !settings.log_points_cutter_clicked() {
                             date_txt_input_resp.request_focus();
                         }
 
@@ -127,7 +126,7 @@ fn log_settings_window(
             });
 
             if ui.button("Cut Points").clicked() {
-                settings.log_points_cutter.clicked = true;
+                settings.set_log_points_cutter_clicked(true);
             }
             if let Some(log_metadata) = settings.log_metadata() {
                 ui.separator();
@@ -143,15 +142,13 @@ fn log_settings_window(
             }
         });
 
-    if settings.log_points_cutter.clicked {
-        settings
-            .log_points_cutter
-            .show(ui, log_name_date, selected_box);
+    if settings.log_points_cutter_clicked() {
+        settings.show_log_points_cutter(ui, log_name_date, selected_box);
     }
 
     if !open || ui.ctx().input(|i| i.key_pressed(Key::Escape)) {
         *settings.clicked_mut() = false;
-        settings.log_points_cutter.clicked = false;
+        settings.set_log_points_cutter_clicked(false);
     }
 }
 

@@ -1,0 +1,22 @@
+[package]
+name = "plotinator-ui-log-settings"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+plotinator-plot-util.workspace = true
+plotinator-supported-formats.workspace = true
+plotinator-ui-util.workspace = true
+egui.workspace = true
+egui_plot.workspace = true
+serde.workspace = true
+chrono.workspace = true
+log.workspace = true
+
+[lints]
+workspace = true

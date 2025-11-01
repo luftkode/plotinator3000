@@ -1,6 +1,7 @@
 use logs::SupportedLog;
 use plotinator_log_if::{prelude::*, rawplot::path_data::GeoSpatialDataset};
 use plotinator_mqtt_ui::serializable::SerializableMqttPlotData;
+use plotinator_ui_file_io::{ParseUpdate, UpdateChannel};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -68,11 +69,15 @@ impl SupportedFormat {
     /// Attempts to parse a log from a file path.
     ///
     /// This is how it is made available on native.
-    pub fn parse_from_path(path: &Path) -> anyhow::Result<Self> {
+    pub fn parse_from_path(path: &Path, tx: UpdateChannel) -> anyhow::Result<Self> {
         plotinator_macros::profile_function!();
         let file = fs::File::open(path)?;
 
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
+            tx.send(ParseUpdate::Attempting {
+                path: path.to_path_buf(),
+                format_name: "hdf5".to_string(),
+            });
             Self::parse_hdf5_from_path(path)?
         } else if let Some(ext) = path.extension()
             && (ext == "csv"
@@ -81,12 +86,24 @@ impl SupportedFormat {
                         .file_name()
                         .is_some_and(|name| name.to_string_lossy().contains("PPP"))))
         {
+            tx.send(ParseUpdate::Attempting {
+                path: path.to_path_buf(),
+                format_name: "csv".to_string(),
+            });
             let mmap = mmap_file(&file)?;
             Self::parse_csv_from_buf(&mmap[..])?
         } else {
+            tx.send(ParseUpdate::Attempting {
+                path: path.to_path_buf(),
+                format_name: "regular file".to_string(),
+            });
             let mmap = mmap_file(&file)?;
             Self::parse_from_buf(&mmap[..])?
         };
+        tx.send(ParseUpdate::Progress {
+            path: path.to_path_buf(),
+            progress: 50.,
+        });
         log::debug!("Got: {}", log.descriptive_name());
         Ok(log)
     }

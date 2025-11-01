@@ -3,7 +3,7 @@ use egui_phosphor::regular;
 use egui_phosphor::regular::GEAR;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
-pub struct AxisConfig {
+pub(crate) struct AxisConfig {
     link_x: bool,
     link_cursor_x: bool,
     show_axes: bool,

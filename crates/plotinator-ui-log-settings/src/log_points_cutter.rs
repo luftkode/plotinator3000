@@ -63,6 +63,10 @@ impl LogPointsCutter {
             }
         }
     }
+
+    pub fn clicked(&self) -> bool {
+        self.clicked
+    }
 }
 
 impl LogPointsCutter {
