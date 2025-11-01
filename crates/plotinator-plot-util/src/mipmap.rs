@@ -47,28 +47,14 @@ impl MipMap2DPlotPoints {
     const MIPMAP_MIN_ELEMENTS: usize = 512;
 
     pub fn minmax(points: &[[f64; 2]]) -> Self {
-        let mipmap_max_pp = MipMap2DPlotPoints::without_base(
-            points,
-            MipMapStrategy::Max,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
-            points,
-            MipMapStrategy::Min,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        mipmap_min_pp.join(&mipmap_max_pp);
-        mipmap_min_pp
-    }
-
-    fn new(source: &[[f64; 2]], strategy: MipMapStrategy, min_elements: usize) -> Self {
-        let base: Vec<PlotPoint> = source.iter().map(|&p| PlotPoint::from(p)).collect();
+        let base: Vec<PlotPoint> = points.iter().map(|&p| PlotPoint::from(p)).collect();
         let mut data: Vec<Vec<PlotPoint>> =
-            Vec::with_capacity(estimate_levels(base.len(), min_elements));
+            Vec::with_capacity(estimate_levels(base.len(), Self::MIPMAP_MIN_ELEMENTS));
+
         data.push(base);
 
-        while data.last().expect("unsound condition").len() > min_elements {
-            let next = Self::downsample(data.last().expect("unsound condition"), strategy);
+        while data.last().expect("unsound condition").len() > Self::MIPMAP_MIN_ELEMENTS {
+            let next = Self::downsample_minmax(data.last().expect("unsound condition"));
             data.push(next);
         }
 
@@ -78,65 +64,42 @@ impl MipMap2DPlotPoints {
         }
     }
 
-    /// Create a [`MipMap2DPlotPoints`] but don't include the base level. Retrieving level 0 will then return an empty vec.
-    ///
-    /// Useful to avoid multiple redundant copies of the source if creating multiple [`MipMap2DPlotPoints`] from the same source.
-    pub fn without_base(
-        source: &[[f64; 2]],
-        strategy: MipMapStrategy,
-        min_elements: usize,
-    ) -> Self {
-        // Reserve +1 for the empty base placeholder
-        let mut data: Vec<Vec<PlotPoint>> =
-            Vec::with_capacity(estimate_levels(source.len(), min_elements) + 1);
-        data.push(Vec::new()); // level 0 is empty by design
-
-        // First real level
-        let first: Vec<PlotPoint> = source.iter().map(|&p| PlotPoint::from(p)).collect();
-        let mut lvl = Self::downsample(&first, strategy);
-        data.push(lvl);
-
-        while data.last().expect("unsound condition").len() > min_elements {
-            lvl = Self::downsample(data.last().expect("unsound condition"), strategy);
-            data.push(lvl);
-        }
-
-        Self {
-            data,
-            most_recent_lookup: Cell::new(LevelLookupCached::default()),
-        }
-    }
-
-    /// Downsample a vector to `ceil(len / 2)` elements with the chosen [`MipMapStrategy`]
-    fn downsample(source: &[PlotPoint], strategy: MipMapStrategy) -> Vec<PlotPoint> {
-        let pairs = source.len() / 2;
-        let rem = source.len() % 2;
-
-        let mut out = Vec::with_capacity(pairs + rem);
-        for pair in source.chunks_exact(2) {
-            out.push(Self::pick(pair[0], pair[1], strategy));
-        }
-        if rem == 1 {
-            out.push(*source.last().expect("unsound condition"));
-        }
-        out
-    }
-
     #[inline(always)]
-    fn pick(p0: PlotPoint, p1: PlotPoint, strategy: MipMapStrategy) -> PlotPoint {
-        // branchless, don't touch unless you understand it
-        match strategy {
-            MipMapStrategy::Min => {
-                // choose lower y
-                let idx: usize = (p0.y > p1.y) as usize;
-                [p0, p1][idx]
+    fn downsample_minmax(source: &[PlotPoint]) -> Vec<PlotPoint> {
+        let chunks = source.len() / 4;
+        let rem = source.len() % 4;
+
+        let mut out = Vec::with_capacity(chunks * 2 + rem);
+
+        for chunk in source.chunks_exact(4) {
+            let mut min_point = chunk[0];
+            let mut max_point = chunk[0];
+
+            for &point in &chunk[1..] {
+                if point.y < min_point.y {
+                    min_point = point;
+                }
+                if point.y > max_point.y {
+                    max_point = point;
+                }
             }
-            MipMapStrategy::Max => {
-                // choose higher y
-                let idx: usize = (p0.y < p1.y) as usize;
-                [p0, p1][idx]
+
+            if min_point.x < max_point.x {
+                out.push(min_point);
+                out.push(max_point);
+            } else {
+                out.push(max_point);
+                out.push(min_point);
             }
         }
+
+        // Handle remainder
+        if rem > 0 {
+            let remainder = &source[chunks * 4..];
+            out.extend_from_slice(remainder);
+        }
+
+        out
     }
 
     /// Returns the total number of downsampled levels.
@@ -270,138 +233,13 @@ mod tests {
     const UNIX_TS_NS: f64 = 1_728_470_564_000_000_000.0;
 
     #[test]
-    fn test_mipmap_strategy_max() {
-        let source: Vec<[f64; 2]> = vec![[1.1, 2.2], [3.3, 4.4], [5.5, 1.1], [7.7, 3.3]];
-        let mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Max, 1);
-
-        // Level 1 should keep the points with higher y-values from each pair
-        let expected_level_1: Vec<PlotPoint> = vec![source[1].into(), source[3].into()];
-        assert_eq!(mipmap.get_level(1), Some(expected_level_1.as_slice()));
-
-        // Level 2 should keep the point with the higher y-value from level 1
-        let expected_level_2 = vec![PlotPoint::new(3.3, 4.4)];
-        assert_eq!(mipmap.get_level(2), Some(expected_level_2.as_slice()));
-    }
-
-    #[test]
-    fn test_mipmap_strategy_min() {
-        let source: Vec<[f64; 2]> = vec![[1.1, 2.2], [3.3, 4.4], [5.5, 1.1], [7.7, 3.3]];
-        let mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Min, 1);
-
-        // Level 1 should keep the points with lower y-values from each pair
-        let expected_level_1: Vec<PlotPoint> = vec![source[0].into(), source[2].into()];
-        assert_eq!(mipmap.get_level(1), Some(expected_level_1.as_slice()));
-
-        // Level 2 should keep the point with the lower y-value from level 1
-        let expected_level_2: Vec<_> = vec![source[2].into()];
-        assert_eq!(mipmap.get_level(2), Some(expected_level_2.as_slice()));
-    }
-
-    #[test]
-    fn test_different_strategies() {
-        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 8.0], [5.0, 4.0], [7.0, 10.0]];
-
-        let min_mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Min, 1);
-        let max_mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Max, 1);
-
-        // Test level 1 for each strategy
-        let expected_min: Vec<PlotPoint> = vec![source[0].into(), source[2].into()];
-        let expected_max: Vec<PlotPoint> = vec![source[1].into(), source[3].into()];
-
-        assert_eq!(min_mipmap.get_level(1), Some(expected_min.as_slice()));
-        assert_eq!(max_mipmap.get_level(1), Some(expected_max.as_slice()));
-    }
-
-    #[test]
-    fn test_level_match() {
-        // Length of 16 will yield 5 levels of length:
-        // - [0]: 16
-        // - [1]: 8
-        // - [2]: 4
-        // - [3]: 2
-        // - [4]: 1
-        let source_len = 16;
-        let source: Vec<[f64; 2]> = (0..source_len).map(|i| [i as f64, i as f64]).collect();
-        let mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Min, 1);
-
-        for (pixel_width, expected_lvl, expected_range) in [
-            (1usize, 3usize, Some((0, 2))),
-            (2, 2, Some((0, 4))),
-            (4, 1, Some((0, 8))),
-            (8, 0, Some((0, 16))),
-            (16, 0, None),
-        ] {
-            let (lvl, range_res) = mipmap.get_level_match(pixel_width, 0.0..=15.);
-            assert_eq!(
-                lvl, expected_lvl,
-                "Expected lvl {expected_lvl} for width: {pixel_width}"
-            );
-            assert_eq!(
-                range_res, expected_range,
-                "Expected range {expected_range:?} for width: {pixel_width}"
-            );
-        }
-    }
-
-    /// Test for: `<https://github.com/luftkode/plotinator3000/issues/62>`
-    #[test]
-    fn test_level_match_large_timestamps() {
-        let source_len = 1600;
-        let source: Vec<[f64; 2]> = (0..source_len)
-            .map(|i| [i as f64 + UNIX_TS_NS, i as f64 + UNIX_TS_NS])
-            .collect();
-        let mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Min, 1);
-
-        let x_bounds = UNIX_TS_NS + 300.0..=UNIX_TS_NS + 1500.;
-
-        for (pixel_width, expected_lvl, expected_range) in [
-            (100usize, 3usize, Some((16, 177))),
-            (200, 2, Some((32, 353))),
-            (400, 1, Some((64, 705))),
-            (800, 0, Some((128, 1409))),
-            (1600, 0, None),
-        ] {
-            let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds.clone());
-            assert_eq!(
-                lvl, expected_lvl,
-                "Expected lvl {expected_lvl} for width: {pixel_width}"
-            );
-
-            assert_eq!(
-                range_res, expected_range,
-                "Expected range {expected_range:?} for width: {pixel_width}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_out_of_bounds_level() {
-        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 4.0]];
-        let mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Min, 1);
-
-        assert_eq!(mipmap.get_level(2), None);
-    }
-
-    #[test]
-    fn test_single_element_source() {
-        let source: Vec<[f64; 2]> = vec![[1.0, 2.0]];
-        let mipmap = MipMap2DPlotPoints::new(&source, MipMapStrategy::Max, 1);
-
-        assert_eq!(mipmap.num_levels(), 1);
-        assert_eq!(
-            mipmap.get_level(0),
-            Some(vec![PlotPoint::from(source[0])].as_slice())
-        );
-    }
-
-    #[test]
     fn test_minmax_basic() {
         let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 8.0], [5.0, 4.0], [7.0, 10.0]];
         let mipmap = MipMap2DPlotPoints::minmax(&source);
 
-        let level_1 = mipmap.get_level(1).unwrap();
-        assert_eq!(mipmap.num_levels(), 2);
-        assert_eq!(level_1.len(), 4);
+        let lvl0 = mipmap.get_level(0).unwrap();
+        assert_eq!(mipmap.num_levels(), 1);
+        assert_eq!(lvl0.len(), 4);
     }
 
     #[test]
@@ -409,9 +247,9 @@ mod tests {
         let source: Vec<[f64; 2]> = vec![[1.0, 5.0], [2.0, 1.0], [3.0, 9.0], [4.0, 2.0]];
         let mipmap = MipMap2DPlotPoints::minmax(&source);
 
-        let level_1 = mipmap.get_level(1).unwrap();
-        assert_eq!(mipmap.num_levels(), 2);
-        let y_values: Vec<f64> = level_1.iter().map(|p| p.y).collect();
+        let lvl0 = mipmap.get_level(0).unwrap();
+        assert_eq!(mipmap.num_levels(), 1);
+        let y_values: Vec<f64> = lvl0.iter().map(|p| p.y).collect();
 
         insta::assert_debug_snapshot!(y_values);
     }
@@ -422,8 +260,14 @@ mod tests {
         let mipmap = MipMap2DPlotPoints::minmax(&source);
 
         assert_eq!(mipmap.num_levels(), 5);
+        let mut level_sizes = vec![];
+        for i in 0..mipmap.num_levels() {
+            level_sizes.push(mipmap.get_level(i).unwrap().len());
+        }
+
         let first_5_elements: Vec<_> = mipmap.get_max_level().iter().take(5).collect();
-        insta::assert_debug_snapshot!(first_5_elements);
+
+        insta::assert_debug_snapshot!((level_sizes, first_5_elements));
     }
 
     #[test]
@@ -431,9 +275,88 @@ mod tests {
         let source: Vec<[f64; 2]> = vec![[1.0, 5.0], [2.0, 1.0], [3.0, 9.0], [4.0, 2.0]];
         let mipmap = MipMap2DPlotPoints::minmax(&source);
 
-        let level_1 = mipmap.get_level(1).unwrap();
+        let level_1 = mipmap.get_level(0).unwrap();
         for i in 1..level_1.len() {
             assert!(level_1[i - 1].x <= level_1[i].x);
         }
+    }
+
+    #[test]
+    fn test_level_match() {
+        let source_len = 2048;
+        let source: Vec<[f64; 2]> = (0..source_len).map(|i| [i as f64, i as f64]).collect();
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        // Test various pixel widths
+        for pixel_width in [100, 200, 400, 800, 1600] {
+            let (lvl, range_res) =
+                mipmap.get_level_match(pixel_width, 0.0..=(source_len as f64 - 1.0));
+
+            assert!(lvl < mipmap.num_levels());
+
+            // If a range is returned, verify it's within bounds
+            if let Some((start, end)) = range_res {
+                let level_data = mipmap.get_level(lvl).unwrap();
+                assert!(start < end);
+                assert!(end <= level_data.len());
+            }
+        }
+    }
+
+    /// Test for: `<https://github.com/luftkode/plotinator3000/issues/62>`
+    #[test]
+    fn test_level_match_large_timestamps() {
+        let source_len = 1600;
+        let source: Vec<[f64; 2]> = (0..source_len)
+            .map(|i| [i as f64 + UNIX_TS_NS, i as f64 + UNIX_TS_NS])
+            .collect();
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        let x_bounds = UNIX_TS_NS + 300.0..=UNIX_TS_NS + 1500.0;
+
+        for pixel_width in [100, 200, 400, 800, 1600] {
+            let (lvl, range_res) = mipmap.get_level_match(pixel_width, x_bounds.clone());
+
+            assert!(lvl < mipmap.num_levels());
+
+            // If a range is returned, verify it's within bounds
+            if let Some((start, end)) = range_res {
+                let level_data = mipmap.get_level(lvl).unwrap();
+                assert!(start < end);
+                assert!(end <= level_data.len());
+            }
+        }
+    }
+
+    #[test]
+    fn test_out_of_bounds_level() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 4.0]];
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        assert_eq!(mipmap.get_level(10), None);
+    }
+
+    #[test]
+    fn test_single_element_source() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0]];
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        assert_eq!(mipmap.num_levels(), 1);
+        assert_eq!(
+            mipmap.get_level(0),
+            Some(vec![PlotPoint::from(source[0])].as_slice())
+        );
+    }
+
+    #[test]
+    fn test_get_level_or_max() {
+        let source: Vec<[f64; 2]> = (0..100).map(|i| [i as f64, i as f64]).collect();
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        let max_level = mipmap.get_max_level();
+        let result = mipmap.get_level_or_max(999);
+
+        assert_eq!(result.len(), max_level.len());
+        assert_eq!(result, max_level);
     }
 }

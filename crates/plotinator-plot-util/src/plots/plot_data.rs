@@ -7,10 +7,7 @@ use plotinator_log_if::prelude::*;
 use plotinator_ui_util::auto_color_plot_area;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    mipmap::{MipMap2DPlotPoints, MipMapStrategy},
-    plots::plot_data::plot_labels::StoredPlotLabels,
-};
+use crate::{mipmap::MipMap2DPlotPoints, plots::plot_data::plot_labels::StoredPlotLabels};
 
 use super::util;
 
@@ -120,8 +117,6 @@ impl PlotData {
 pub struct CookedPlot {
     raw_points: Vec<[f64; 2]>,
     #[serde(skip)]
-    raw_plot_points: Option<Vec<PlotPoint>>,
-    #[serde(skip)]
     mipmap_minmax_plot_points: Option<MipMap2DPlotPoints>,
     #[serde(skip)]
     max_bounds: Option<PlotBounds>,
@@ -139,14 +134,10 @@ pub struct CookedPlot {
 type PointList<'pl> = &'pl [[f64; 2]];
 
 impl CookedPlot {
-    // Don't mipmap/downsample to more than this amount of elements
-    const MIPMAP_MIN_ELEMENTS: usize = 512;
-
     #[plotinator_proc_macros::log_time]
     pub fn new(raw_plot: &RawPlotCommon, log_id: u16, associated_descriptive_name: String) -> Self {
         plotinator_macros::profile_function!();
         let label = raw_plot.label_from_id(log_id);
-        let raw_plot_points = Some(raw_plot.points().iter().map(|p| (*p).into()).collect());
 
         let raw_points = raw_plot.points().to_owned();
 
@@ -160,7 +151,6 @@ impl CookedPlot {
 
         Self {
             raw_points,
-            raw_plot_points,
             mipmap_minmax_plot_points: Some(mipmap),
             max_bounds: Some(max_bounds),
             name: raw_plot.legend_name().to_owned(),
@@ -225,7 +215,6 @@ impl CookedPlot {
     /// Apply an offset to the plot based on the difference to the supplied [`DateTime<Utc>`]
     pub fn offset_plot(&mut self, new_start_date: DateTime<Utc>) {
         util::offset_data_iter(self.raw_points.iter_mut(), new_start_date);
-        self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
         self.recalc_mipmaps_plot_points();
     }
 
@@ -239,7 +228,6 @@ impl CookedPlot {
         let end_count = self.raw_points.len();
         let removed_count = begin_count - end_count;
         log::info!("Removed {removed_count} points");
-        self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
         self.recalc_mipmaps_plot_points();
     }
 
@@ -260,27 +248,16 @@ impl CookedPlot {
         let end_count = self.raw_points.len();
         let removed_count = begin_count - end_count;
         log::info!("Removed {removed_count} points");
-        self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
         self.recalc_mipmaps_plot_points();
     }
 
     fn recalc_mipmaps_plot_points(&mut self) {
-        let mipmap_max_pp = MipMap2DPlotPoints::without_base(
-            &self.raw_points,
-            MipMapStrategy::Max,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
-            &self.raw_points,
-            MipMapStrategy::Min,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        mipmap_min_pp.join(&mipmap_max_pp);
+        let mipmap = MipMap2DPlotPoints::minmax(&self.raw_points);
         self.max_bounds = Some(Self::calc_max_bounds(
             &self.raw_points,
-            mipmap_min_pp.get_max_level(),
+            mipmap.get_max_level(),
         ));
-        self.mipmap_minmax_plot_points = Some(mipmap_min_pp);
+        self.mipmap_minmax_plot_points = Some(mipmap);
     }
 
     fn calc_max_bounds(raw_plot: &[[f64; 2]], mipmap_joined_max_lvl: &[PlotPoint]) -> PlotBounds {
@@ -332,16 +309,7 @@ impl CookedPlot {
     /// necessary because the raw plot points are not serializable
     /// so they are skipped and initialized as None at start up.
     pub fn build_raw_plot_points(&mut self) {
-        if self.raw_plot_points.is_none() {
-            self.raw_plot_points = Some(self.raw_points.iter().map(|p| (*p).into()).collect());
-            self.recalc_mipmaps_plot_points();
-        }
-    }
-
-    pub fn raw_plot_points(&self) -> &[PlotPoint] {
-        self.raw_plot_points
-            .as_deref()
-            .expect("Attempted to retrieve raw plot points without first generating it")
+        self.recalc_mipmaps_plot_points();
     }
 
     /// The descriptive name of the log the plot values are associated with, e.g. `Navsys` or `frame-altimeter`
