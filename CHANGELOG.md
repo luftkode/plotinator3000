@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Tweak time labels to better support micro and nanosecond time scales
+
 ## [2.9.0]
 
 - Hefty optimization to mipmap (downsampling) implementation, speeding it up ~5x and reducing memory usage by ~20%

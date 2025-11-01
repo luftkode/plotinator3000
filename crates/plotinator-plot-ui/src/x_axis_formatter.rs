@@ -154,8 +154,8 @@ enum AxisRange {
     Over2Days,
     Over10Minutes,
     Over4Seconds,
-    Over10MilliSeconds,
-    Over10MicroSeconds,
+    Over50MilliSeconds,
+    Over30MicroSeconds,
     Under,
 }
 
@@ -167,8 +167,8 @@ impl AxisRange {
         * 2.0;
     const TEN_MINUTES: f64 = NANOS_PER_SEC as f64 * SECONDS_PER_MINUTE as f64 * 10.0;
     const THREE_SECONDS: f64 = NANOS_PER_SEC as f64 * 4.0;
-    const TEN_MILLISECONDS: f64 = NANOS_PER_MILLI as f64 * 10.0;
-    const TEN_MICROSECONDS: f64 = NANOS_PER_MICRO as f64 * 10.0;
+    const FIFTY_MILLISECONDS: f64 = NANOS_PER_MILLI as f64 * 50.0;
+    const THIRTY_MICROSECONDS: f64 = NANOS_PER_MICRO as f64 * 30.0;
 
     fn from_ns(range_ns: f64) -> Self {
         if range_ns > Self::TWO_DAYS {
@@ -177,10 +177,10 @@ impl AxisRange {
             Self::Over10Minutes
         } else if range_ns > Self::THREE_SECONDS {
             Self::Over4Seconds
-        } else if range_ns > Self::TEN_MILLISECONDS {
-            Self::Over10MilliSeconds
-        } else if range_ns > Self::TEN_MICROSECONDS {
-            Self::Over10MicroSeconds
+        } else if range_ns > Self::FIFTY_MILLISECONDS {
+            Self::Over50MilliSeconds
+        } else if range_ns > Self::THIRTY_MICROSECONDS {
+            Self::Over30MicroSeconds
         } else {
             Self::Under
         }
@@ -226,8 +226,8 @@ pub fn format_time(mark: GridMark, range: &RangeInclusive<f64>) -> String {
                 dt.format("%H:%M:%S")
             }
         }
-        AxisRange::Over10MilliSeconds => dt.format("%H:%M:%S.%3fms"),
-        AxisRange::Over10MicroSeconds => dt.format("%S.%6fus"),
+        AxisRange::Over50MilliSeconds => dt.format("%H:%M:%S.%3fms"),
+        AxisRange::Over30MicroSeconds => dt.format("%S.%6fus"),
         AxisRange::Under => dt.format(".%9fns"),
     }
     .to_string()
