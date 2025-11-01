@@ -1,0 +1,10 @@
+---
+source: crates/plotinator-plot-util/src/mipmap.rs
+expression: y_values
+---
+[
+    5.0,
+    1.0,
+    9.0,
+    2.0,
+]

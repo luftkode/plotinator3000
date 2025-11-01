@@ -30,6 +30,7 @@ rayon.workspace = true
 [dev-dependencies]
 testresult.workspace = true
 pretty_assertions.workspace = true
+insta.workspace = true
 
 [features]
 default = []

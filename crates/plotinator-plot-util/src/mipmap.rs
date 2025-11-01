@@ -393,4 +393,47 @@ mod tests {
             Some(vec![PlotPoint::from(source[0])].as_slice())
         );
     }
+
+    #[test]
+    fn test_minmax_basic() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 2.0], [3.0, 8.0], [5.0, 4.0], [7.0, 10.0]];
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        let level_1 = mipmap.get_level(1).unwrap();
+        assert_eq!(mipmap.num_levels(), 2);
+        assert_eq!(level_1.len(), 4);
+    }
+
+    #[test]
+    fn test_minmax_contains_both_extremes() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 5.0], [2.0, 1.0], [3.0, 9.0], [4.0, 2.0]];
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        let level_1 = mipmap.get_level(1).unwrap();
+        assert_eq!(mipmap.num_levels(), 2);
+        let y_values: Vec<f64> = level_1.iter().map(|p| p.y).collect();
+
+        insta::assert_debug_snapshot!(y_values);
+    }
+
+    #[test]
+    fn test_minmax_level_count() {
+        let source: Vec<[f64; 2]> = (0..8096).map(|i| [i as f64, i as f64]).collect();
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        assert_eq!(mipmap.num_levels(), 5);
+        let first_5_elements: Vec<_> = mipmap.get_max_level().iter().take(5).collect();
+        insta::assert_debug_snapshot!(first_5_elements);
+    }
+
+    #[test]
+    fn test_minmax_sorted_by_x() {
+        let source: Vec<[f64; 2]> = vec![[1.0, 5.0], [2.0, 1.0], [3.0, 9.0], [4.0, 2.0]];
+        let mipmap = MipMap2DPlotPoints::minmax(&source);
+
+        let level_1 = mipmap.get_level(1).unwrap();
+        for i in 1..level_1.len() {
+            assert!(level_1[i - 1].x <= level_1[i].x);
+        }
+    }
 }

@@ -1,0 +1,26 @@
+---
+source: crates/plotinator-plot-util/src/mipmap.rs
+expression: first_5_elements
+---
+[
+    PlotPoint {
+        x: 0.0,
+        y: 0.0,
+    },
+    PlotPoint {
+        x: 15.0,
+        y: 15.0,
+    },
+    PlotPoint {
+        x: 16.0,
+        y: 16.0,
+    },
+    PlotPoint {
+        x: 31.0,
+        y: 31.0,
+    },
+    PlotPoint {
+        x: 32.0,
+        y: 32.0,
+    },
+]

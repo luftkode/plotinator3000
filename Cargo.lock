@@ -4110,6 +4110,7 @@ dependencies = [
  "chrono",
  "egui",
  "egui_plot",
+ "insta",
  "log",
  "num-traits",
  "plotinator-log-if",
