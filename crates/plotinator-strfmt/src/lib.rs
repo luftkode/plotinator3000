@@ -57,8 +57,10 @@ pub fn format_delta_xy(delta_x_time_s: f64, delta_y: f64) -> String {
     )
 }
 
-/// Formats seconds to a human readable strings from milliseconds up to days.
+/// Formats seconds to a human readable string from nanoseconds up to days.
 fn format_time_s(time_s: f64) -> String {
+    const MICROSECOND: f64 = 1e-6;
+    const MILLISECOND: f64 = 1e-3;
     const SECOND: f64 = 1.0;
     const MINUTE: f64 = 60.0;
     const HOUR: f64 = 3600.0;
@@ -66,6 +68,8 @@ fn format_time_s(time_s: f64) -> String {
     const WEEK: f64 = 604_800.0;
 
     match time_s {
+        t if t < MICROSECOND => format!("{:.2}ns", t * 1e9),
+        t if t < MILLISECOND => format!("{:.3}µs", t * 1e6),
         t if t < SECOND => format!("{:.4}ms", t * 1000.0),
         t if t < MINUTE => format!("{t:.3}s"),
         t if t < HOUR => {
