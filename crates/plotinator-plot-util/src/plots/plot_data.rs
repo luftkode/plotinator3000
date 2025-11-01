@@ -150,18 +150,8 @@ impl CookedPlot {
 
         let raw_points = raw_plot.points().to_owned();
 
-        let mipmap_max_pp = MipMap2DPlotPoints::without_base(
-            &raw_points,
-            MipMapStrategy::Max,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
-            &raw_points,
-            MipMapStrategy::Min,
-            Self::MIPMAP_MIN_ELEMENTS,
-        );
-        mipmap_min_pp.join(&mipmap_max_pp);
-        let max_bounds = Self::calc_max_bounds(&raw_points, mipmap_min_pp.get_max_level());
+        let mipmap = MipMap2DPlotPoints::minmax(&raw_points);
+        let max_bounds = Self::calc_max_bounds(&raw_points, mipmap.get_max_level());
 
         let color = match raw_plot.color() {
             Some(c) => c,
@@ -171,7 +161,7 @@ impl CookedPlot {
         Self {
             raw_points,
             raw_plot_points,
-            mipmap_minmax_plot_points: Some(mipmap_min_pp),
+            mipmap_minmax_plot_points: Some(mipmap),
             max_bounds: Some(max_bounds),
             name: raw_plot.legend_name().to_owned(),
             log_id,

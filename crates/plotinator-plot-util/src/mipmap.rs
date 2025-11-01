@@ -43,7 +43,25 @@ pub struct MipMap2DPlotPoints {
 }
 
 impl MipMap2DPlotPoints {
-    pub fn new(source: &[[f64; 2]], strategy: MipMapStrategy, min_elements: usize) -> Self {
+    // Don't mipmap/downsample to more than this amount of elements
+    const MIPMAP_MIN_ELEMENTS: usize = 512;
+
+    pub fn minmax(points: &[[f64; 2]]) -> Self {
+        let mipmap_max_pp = MipMap2DPlotPoints::without_base(
+            points,
+            MipMapStrategy::Max,
+            Self::MIPMAP_MIN_ELEMENTS,
+        );
+        let mut mipmap_min_pp = MipMap2DPlotPoints::without_base(
+            points,
+            MipMapStrategy::Min,
+            Self::MIPMAP_MIN_ELEMENTS,
+        );
+        mipmap_min_pp.join(&mipmap_max_pp);
+        mipmap_min_pp
+    }
+
+    fn new(source: &[[f64; 2]], strategy: MipMapStrategy, min_elements: usize) -> Self {
         let base: Vec<PlotPoint> = source.iter().map(|&p| PlotPoint::from(p)).collect();
         let mut data: Vec<Vec<PlotPoint>> =
             Vec::with_capacity(estimate_levels(base.len(), min_elements));
