@@ -16,6 +16,7 @@ use crate::util::{
 const LEGEND_PREFIX: &str = "Njord";
 
 impl SkytemHdf5 for NjordAltimeter {
+    const DESCRIPTIVE_NAME: &str = "Njord Altimeter";
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let file = hdf5::File::open(&path)?;
         let mut raw_plots = vec![];

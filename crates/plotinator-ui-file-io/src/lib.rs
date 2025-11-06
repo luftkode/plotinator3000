@@ -1,5 +1,5 @@
 use eframe::egui;
-use egui::{Color32, Id, RichText, Ui};
+use egui::{Color32, Id, ProgressBar, RichText, Ui};
 use egui_phosphor::regular::{CHECK_CIRCLE, WARNING_CIRCLE};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -54,6 +54,7 @@ struct FileParseStatus {
     progress: f32, // 0.0 - 1.0
     final_status: Option<FinalStatus>,
     time_started: Instant,
+    total_parse_time: Option<Duration>,
 }
 
 impl FileParseStatus {
@@ -62,11 +63,22 @@ impl FileParseStatus {
     }
 
     fn time_elapsed_seconds(&self) -> String {
-        format!("{:.1?}s", self.time_elapsed())
+        format!("{:.1?}s", self.time_elapsed().as_secs_f32())
+    }
+
+    fn total_parse_time_seconds(&self) -> String {
+        debug_assert_ne!(self.total_parse_time, None);
+        if let Some(total_time) = self.total_parse_time.as_ref() {
+            format!("{total_time:.1?}s")
+        } else {
+            log::error!("Got parse time when completed parsing time was not assigned");
+            String::new()
+        }
     }
 }
 
 /// Encapsulates the state and UI for the parsing window.
+#[derive(Debug)]
 pub struct ParseStatusWindow {
     parse_statuses: HashMap<PathBuf, FileParseStatus>,
     show_parsing_window: bool,
@@ -93,6 +105,7 @@ impl ParseStatusWindow {
 
     /// Handles a single update message from a parser thread.
     pub fn handle_update(&mut self, update: ParseUpdate) {
+        log::info!("Received Parser update: {update:?}");
         // Any update should show the window
         self.show_parsing_window = true;
 
@@ -111,6 +124,7 @@ impl ParseStatusWindow {
                         progress: 0.0,
                         final_status: None,
                         time_started: Instant::now(),
+                        total_parse_time: None,
                     },
                 );
             }
@@ -140,6 +154,7 @@ impl ParseStatusWindow {
             }
             ParseUpdate::Completed { path, final_format } => {
                 if let Some(status) = self.parse_statuses.get_mut(&path) {
+                    status.total_parse_time = Some(status.time_elapsed());
                     status.final_status = Some(FinalStatus::Succeeded(final_format));
                     status.current_activity = "Completed".to_string();
                     status.progress = 1.0;
@@ -147,6 +162,7 @@ impl ParseStatusWindow {
             }
             ParseUpdate::Failed { path, error_msg } => {
                 if let Some(status) = self.parse_statuses.get_mut(&path) {
+                    status.total_parse_time = Some(status.time_elapsed());
                     status.final_status = Some(FinalStatus::Failed(error_msg));
                     status.current_activity = "Failed".to_string();
                     status.progress = 0.0;
@@ -230,10 +246,6 @@ impl ParseStatusWindow {
             });
 
         self.show_parsing_window = is_open;
-        if !is_open {
-            // If window is closed, clear all statuses
-            self.parse_statuses.clear();
-        }
     }
 
     /// Helper function to render a grid of statuses.
@@ -272,7 +284,7 @@ impl ParseStatusWindow {
                     if let Some(final_status) = &status.final_status {
                         let (msg, color) = match final_status {
                             FinalStatus::Succeeded(fmt) => (
-                                format!("Success: {fmt} in {}", status.time_elapsed_seconds()),
+                                format!("{fmt} in {}", status.total_parse_time_seconds()),
                                 Color32::GREEN,
                             ),
                             FinalStatus::Failed(_) => ("Error".to_string(), Color32::RED),
@@ -287,7 +299,7 @@ impl ParseStatusWindow {
                             ui.label(&status.current_activity)
                                 .on_hover_text(&status.current_activity);
                             ui.add(
-                                egui::ProgressBar::new(status.progress)
+                                ProgressBar::new(status.progress)
                                     .show_percentage()
                                     .desired_width(200.0)
                                     .text(format!(

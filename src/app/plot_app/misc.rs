@@ -1,13 +1,12 @@
 use egui_phosphor::regular::{self, TRASH};
-use plotinator_file_io::loaded_files::LoadedFiles;
-use plotinator_log_if::prelude::Plotable as _;
+use plotinator_background_parser::loaded_format::LoadedSupportedFormat;
 use plotinator_plot_ui::WARN_ON_UNPARSED_BYTES_THRESHOLD;
+use smallvec::SmallVec;
 use std::time::Duration;
 
 use egui::{Color32, RichText, TextStyle, ThemePreference};
 use egui_notify::Toasts;
 use plotinator_strfmt::format_data_size;
-use plotinator_supported_formats::SupportedFormat;
 
 use crate::PlotApp;
 
@@ -24,13 +23,16 @@ pub(super) fn show_theme_toggle_buttons(ui: &mut egui::Ui) {
 }
 
 /// Displays a toasts notification if logs are added with the names of all added logs
-pub(super) fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]) {
+pub(super) fn notify_if_logs_added(
+    toasts: &mut Toasts,
+    logs: &SmallVec<[LoadedSupportedFormat; 1]>,
+) {
     if !logs.is_empty() {
         let mut log_names_str = String::new();
         for l in logs {
             log_names_str.push('\n');
             log_names_str.push('\t');
-            log_names_str.push_str(l.descriptive_name());
+            log_names_str.push_str(l.format_name());
         }
         toasts
             .info(format!(
@@ -44,7 +46,7 @@ pub(super) fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]
                 log::debug!(
                     "Unparsed bytes for {log_name}: {remainder}",
                     remainder = parse_info.remainder_bytes(),
-                    log_name = l.descriptive_name()
+                    log_name = l.format_name()
                 );
                 if parse_info.remainder_bytes() > WARN_ON_UNPARSED_BYTES_THRESHOLD {
                     toasts
@@ -52,7 +54,7 @@ pub(super) fn notify_if_logs_added(toasts: &mut Toasts, logs: &[SupportedFormat]
                     "Could only parse {parsed}/{total} for {log_name}\n{remainder} remain unparsed",
                     parsed = format_data_size(parse_info.parsed_bytes()),
                     total = format_data_size(parse_info.total_bytes()),
-                    log_name = l.descriptive_name(),
+                    log_name = l.format_name(),
                     remainder = format_data_size(parse_info.remainder_bytes())
                 ))
                         .duration(Some(Duration::from_secs(30)));
@@ -132,7 +134,6 @@ pub(super) fn show_app_reset_button(ui: &mut egui::Ui, app: &mut PlotApp) {
                 .info("All loaded logs removed...")
                 .duration(Some(std::time::Duration::from_secs(3)));
         }
-        app.loaded_files = LoadedFiles::default();
         app.plot = plotinator_plot_ui::LogPlotUi::default();
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]

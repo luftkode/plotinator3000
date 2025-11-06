@@ -1,4 +1,5 @@
 use egui_plot::PlotBounds;
+use plotinator_ui_util::ExpectedPlotRange;
 use serde::{Deserialize, Serialize};
 
 pub mod plot_data;
@@ -6,7 +7,7 @@ mod util;
 
 use plot_data::PlotData;
 
-use crate::CookedPlot;
+use crate::{CookedPlot, StoredPlotLabels};
 
 #[derive(Default, Debug, PartialEq, Deserialize, Serialize, Clone, Copy)]
 pub struct MaxPlotBounds {
@@ -39,6 +40,26 @@ impl Plots {
             .plots_as_mut()
             .iter_mut()
             .for_each(|p| p.build_raw_plot_points());
+    }
+
+    pub fn add_plots(&mut self, plots: Vec<CookedPlot>) {
+        for p in plots {
+            match p.expected_range() {
+                ExpectedPlotRange::Percentage => self.percentage.add_cooked(p),
+                ExpectedPlotRange::Hundreds => self.one_to_hundred.add_cooked(p),
+                ExpectedPlotRange::Thousands => self.thousands.add_cooked(p),
+            }
+        }
+    }
+
+    pub fn add_plot_labels(&mut self, plot_labels: Vec<StoredPlotLabels>) {
+        for l in plot_labels {
+            match l.expected_range {
+                ExpectedPlotRange::Percentage => self.percentage.add_plot_labels(l),
+                ExpectedPlotRange::Hundreds => self.one_to_hundred.add_plot_labels(l),
+                ExpectedPlotRange::Thousands => self.thousands.add_plot_labels(l),
+            }
+        }
     }
 
     pub fn total_data_points(&self) -> u64 {

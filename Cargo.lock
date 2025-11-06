@@ -3887,14 +3887,19 @@ version = "2.8.1"
 dependencies = [
  "anyhow",
  "log",
+ "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-plot-util",
  "plotinator-supported-formats",
+ "plotinator-test-util",
  "plotinator-ui-file-io",
  "plotinator-ui-log-settings",
  "rayon",
  "serde",
  "smallvec",
+ "tempfile",
+ "testresult",
+ "zip",
 ]
 
 [[package]]
@@ -3910,6 +3915,17 @@ dependencies = [
  "plotinator-test-util",
  "plotinator-ui-util",
  "serde",
+]
+
+[[package]]
+name = "plotinator-custom-files"
+version = "2.8.1"
+dependencies = [
+ "anyhow",
+ "log",
+ "plotinator-plot-ui",
+ "plotinator-supported-formats",
+ "serde_json",
 ]
 
 [[package]]
@@ -4202,7 +4218,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui-phosphor",
- "env_logger",
+ "log",
 ]
 
 [[package]]

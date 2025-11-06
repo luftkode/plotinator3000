@@ -79,8 +79,12 @@ impl PlotData {
         descriptive_name: &str,
     ) {
         let new_plot = CookedPlot::new(raw_plot, log_id, descriptive_name.to_owned());
-        log::info!("Adding plot: {}", new_plot.name());
-        self.plots.push(new_plot);
+        self.add_cooked(new_plot);
+    }
+
+    pub fn add_cooked(&mut self, plot: CookedPlot) {
+        log::info!("Adding plot: {}", plot.name());
+        self.plots.push(plot);
         self.calc_max_bounds();
     }
 

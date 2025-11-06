@@ -1,5 +1,5 @@
 [package]
-name = "plotinator-ui-file-io"
+name = "plotinator-custom-files"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true
@@ -9,11 +9,11 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+plotinator-plot-ui.workspace = true
+plotinator-supported-formats.workspace = true
 anyhow.workspace = true
-eframe.workspace = true
-egui.workspace = true
-egui-phosphor.workspace = true
 log.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

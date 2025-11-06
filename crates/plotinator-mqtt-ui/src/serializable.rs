@@ -1,3 +1,5 @@
+use std::fmt;
+
 use chrono::{DateTime, Utc};
 use plotinator_log_if::prelude::*;
 
@@ -6,6 +8,12 @@ pub struct SerializableMqttPlotData {
     pub(crate) descriptive_name: String,
     pub(crate) first_timestamp: DateTime<Utc>,
     pub(crate) mqtt_plot_data: Vec<RawPlot>,
+}
+
+impl fmt::Display for SerializableMqttPlotData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.descriptive_name)
+    }
 }
 
 // A helper struct that *can* derive Serialize and Deserialize

@@ -10,7 +10,7 @@ use crate::{loaded_log_metadata::LoadedLogMetadata, log_points_cutter::LogPoints
 pub mod loaded_log_metadata;
 pub mod log_points_cutter;
 
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct LoadedLogSettings {
     log_id: u16,
     log_descriptive_name: String,

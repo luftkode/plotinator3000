@@ -11,7 +11,7 @@ use crate::mipmap::{MipMap2DPlotPoints, MipMapStrategy};
 
 use super::util;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct CookedPlot {
     raw_points: Vec<[f64; 2]>,
     #[serde(skip)]
@@ -269,6 +269,10 @@ impl CookedPlot {
     /// Label of the plot which includes the log id ie. `"<name> #<log_id>"`
     pub fn label(&self) -> &str {
         &self.label
+    }
+
+    pub fn expected_range(&self) -> ExpectedPlotRange {
+        self.expected_range
     }
 
     pub fn ty(&self) -> &DataType {

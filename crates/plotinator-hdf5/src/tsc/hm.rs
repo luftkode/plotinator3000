@@ -22,7 +22,7 @@ pub(crate) struct AllCoilZeroPositions(pub Vec<Vec<[f64; 2]>>);
 pub(crate) struct CoilBField(pub Vec<[f64; 2]>);
 pub(crate) struct AllCoilBField(pub Vec<Vec<[f64; 2]>>);
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum Coil {
     /// X Coil channel number
     X = 3,
@@ -287,7 +287,7 @@ impl<'h5> HmData<'h5> {
         let hm_dataset = self.h5file.dataset(&self.dataset_name)?;
 
         log::debug!(
-            "Processing {n_time} periods of 1.1s HM data ({:.0}s)",
+            "Processing coil {channel} with {n_time} periods of 1.1s HM data ({:.0}s)",
             n_time as f64 * 1.1
         );
         // Use chunked parallelism: process multiple iterations per thread
@@ -449,6 +449,8 @@ impl<'h5> HmData<'h5> {
         if root_metadata.has_x_data() {
             coils.push(Coil::X);
         }
+
+        log::info!("TSC has data on coils: {coils:?}");
 
         // Parallelize coil computations
         let results: Result<Vec<_>, _> = coils

@@ -1,10 +1,8 @@
 use std::{fs, mem, path::PathBuf, sync::mpsc::Sender};
 
-use plotinator_log_if::prelude::*;
 use plotinator_plot_ui::LogPlotUi;
 use plotinator_plot_util::CookedPlot;
 use plotinator_supported_formats::SupportedFormat;
-use plotinator_ui_file_io::{ParseUpdate, UpdateChannel};
 use serde::Serialize;
 use smallvec::{SmallVec, smallvec};
 
@@ -14,7 +12,6 @@ use crate::{
         try_parse_custom_file,
     },
     file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
-    loaded_files::LoadedFiles,
 };
 
 #[derive(Debug, Default)]
@@ -127,7 +124,7 @@ impl NativeFileDialog {
     }
 
     pub fn try_parse_custom_files(
-        files: &mut Vec<PathBuf>,
+        files: &mut SmallVec<[PathBuf; 1]>,
     ) -> anyhow::Result<SmallVec<[CustomFileContent; 1]>> {
         let tmp_files: Vec<PathBuf> = files.drain(..).collect();
         let mut custom_file_contents = smallvec![];

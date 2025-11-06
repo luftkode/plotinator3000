@@ -4,9 +4,9 @@ use plotinator_mqtt_ui::serializable::SerializableMqttPlotData;
 use plotinator_ui_file_io::{ParseUpdate, UpdateChannel};
 use serde::{Deserialize, Serialize};
 use std::{
-    fs,
+    fmt, fs,
     io::{self},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 pub(crate) mod csv;
@@ -37,6 +37,19 @@ pub enum SupportedFormat {
     MqttData(SerializableMqttPlotData),
 }
 
+impl fmt::Display for SupportedFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SupportedFormat::Log(supported_log) => write!(f, "{supported_log}"),
+            SupportedFormat::Csv(supported_csv) => write!(f, "{supported_csv}"),
+            SupportedFormat::HDF5(supported_hdf5_format) => write!(f, "{supported_hdf5_format}"),
+            SupportedFormat::MqttData(serializable_mqtt_plot_data) => {
+                write!(f, "{serializable_mqtt_plot_data}")
+            }
+        }
+    }
+}
+
 fn mmap_file(file: &fs::File) -> io::Result<memmap2::Mmap> {
     #[allow(
         unsafe_code,
@@ -53,16 +66,20 @@ fn mmap_file(file: &fs::File) -> io::Result<memmap2::Mmap> {
 
 impl SupportedFormat {
     /// Attempts to parse a log from raw content.
-    pub fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
-        let log = SupportedLog::parse_from_buf(content)?;
+    pub fn parse_from_buf(content: &[u8], path: PathBuf, tx: UpdateChannel) -> io::Result<Self> {
+        let log = SupportedLog::parse_from_buf(content, path, tx)?;
         Ok(Self::Log(log))
     }
 
     /// Parse a buffer of file contents known to be a csv file.
     ///
     /// Callers must check that it's a .csv file first
-    pub fn parse_csv_from_buf(content: &[u8]) -> io::Result<Self> {
-        let log = SupportedCsv::parse_from_buf(content)?;
+    pub fn parse_csv_from_buf(
+        content: &[u8],
+        path: PathBuf,
+        tx: UpdateChannel,
+    ) -> io::Result<Self> {
+        let log = SupportedCsv::parse_from_buf(content, path, tx)?;
         Ok(Self::Csv(log))
     }
 
@@ -71,6 +88,11 @@ impl SupportedFormat {
     /// This is how it is made available on native.
     pub fn parse_from_path(path: &Path, tx: UpdateChannel) -> anyhow::Result<Self> {
         plotinator_macros::profile_function!();
+
+        tx.send(ParseUpdate::Started {
+            path: path.to_path_buf(),
+        });
+
         let file = fs::File::open(path)?;
 
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
@@ -78,7 +100,7 @@ impl SupportedFormat {
                 path: path.to_path_buf(),
                 format_name: "hdf5".to_string(),
             });
-            Self::parse_hdf5_from_path(path)?
+            Self::parse_hdf5_from_path(path, tx)?
         } else if let Some(ext) = path.extension()
             && (ext == "csv"
                 || (ext == "txt"
@@ -91,19 +113,16 @@ impl SupportedFormat {
                 format_name: "csv".to_string(),
             });
             let mmap = mmap_file(&file)?;
-            Self::parse_csv_from_buf(&mmap[..])?
+            Self::parse_csv_from_buf(&mmap[..], path.to_path_buf(), tx)?
         } else {
             tx.send(ParseUpdate::Attempting {
                 path: path.to_path_buf(),
                 format_name: "regular file".to_string(),
             });
             let mmap = mmap_file(&file)?;
-            Self::parse_from_buf(&mmap[..])?
+            Self::parse_from_buf(&mmap[..], path.to_path_buf(), tx)?
         };
-        tx.send(ParseUpdate::Progress {
-            path: path.to_path_buf(),
-            progress: 50.,
-        });
+
         log::debug!("Got: {}", log.descriptive_name());
         Ok(log)
     }
@@ -111,8 +130,8 @@ impl SupportedFormat {
     #[cfg(feature = "hdf5")]
     #[cfg(not(target_arch = "wasm32"))]
     #[plotinator_proc_macros::log_time]
-    fn parse_hdf5_from_path(path: &Path) -> anyhow::Result<Self> {
-        let h5file = hdf5::SupportedHdf5Format::from_path(path)?;
+    fn parse_hdf5_from_path(path: &Path, tx: UpdateChannel) -> anyhow::Result<Self> {
+        let h5file = hdf5::SupportedHdf5Format::from_path(path, tx)?;
         Ok(Self::HDF5(h5file))
     }
 
@@ -155,11 +174,11 @@ impl SupportedFormat {
         }
     }
 
-    /// Consumes self and returns all the [`GeoSpatialData`] contained within, if any
+    /// Returns all the [`GeoSpatialData`] contained within, if any
     ///
     /// This is meant for after the regular plots have already been processed and the geo data can be sent
     /// to the map view
-    pub fn geo_spatial_data(self) -> Vec<GeoSpatialDataset> {
+    pub fn geo_spatial_data(&self) -> Vec<GeoSpatialDataset> {
         let mut geo_spatial_data: Vec<GeoSpatialDataset> = vec![];
         match self {
             Self::Log(supported_log) => {

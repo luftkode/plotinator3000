@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use plotinator_log_if::prelude::*;
+use plotinator_ui_file_io::{ParseUpdate, UpdateChannel};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -13,6 +14,14 @@ macro_rules! define_supported_hdf5_formats {
             $( $variant($ty), )*
         }
 
+        impl std::fmt::Display for SupportedHdf5Format {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $( Self::$variant(supported_hdf5_format) => write!(f, "{}", supported_hdf5_format.descriptive_name()), )*
+                }
+            }
+        }
+
         $(
             impl From<$ty> for SupportedHdf5Format {
                 fn from(value: $ty) -> Self {
@@ -21,13 +30,21 @@ macro_rules! define_supported_hdf5_formats {
             }
         )*
 
-        impl SkytemHdf5 for SupportedHdf5Format {
-            fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        impl SupportedHdf5Format {
+            pub fn from_path(path: impl AsRef<Path>, tx: UpdateChannel) -> anyhow::Result<Self> {
                 let path = path.as_ref();
 
                 // Try each supported format in order
                 $(
+                    tx.send(ParseUpdate::Attempting {
+                        path: path.to_path_buf(),
+                        format_name: <$ty>::DESCRIPTIVE_NAME.to_owned(),
+                    });
                     if let Ok(format_data) = <$ty>::from_path(path) {
+                        tx.send(ParseUpdate::Confirmed {
+                            path: path.to_path_buf(),
+                            format_name: <$ty>::DESCRIPTIVE_NAME.to_owned(),
+                        });
                         return Ok(SupportedHdf5Format::$variant(format_data));
                     }
                 )*

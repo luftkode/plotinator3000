@@ -50,6 +50,7 @@ plotinator-csv.path = "crates/plotinator-csv"
 plotinator-map-ui.path = "crates/plotinator-map-ui"
 plotinator-ui-log-settings.path = "crates/plotinator-ui-log-settings"
 plotinator-background-parser.path = "crates/plotinator-background-parser"
+plotinator-custom-files.path = "crates/plotinator-custom-files"
 egui = { version = "0.33", features = ["rayon", "callstack"] }
 egui-notify = "0.21.0"
 eframe = { version = "0.33", default-features = false, features = [

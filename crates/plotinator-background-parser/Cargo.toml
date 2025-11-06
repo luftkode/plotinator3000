@@ -14,12 +14,18 @@ plotinator-ui-file-io.workspace = true
 plotinator-ui-log-settings.workspace = true
 plotinator-log-if.workspace = true
 plotinator-plot-util.workspace = true
+plotinator-hdf5.workspace = true
 anyhow.workspace = true
 serde.workspace = true
 rayon.workspace = true
 log.workspace = true
 smallvec.workspace = true
+tempfile = { workspace = true }
+zip = { workspace = true }
 
+[dev-dependencies]
+plotinator-test-util.workspace = true
+testresult.workspace = true
 
 [lints]
 workspace = true

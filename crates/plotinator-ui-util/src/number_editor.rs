@@ -1,7 +1,7 @@
 use egui::TextEdit;
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct NumberEditor {
     tmp_value: String,
     value: Option<f64>,

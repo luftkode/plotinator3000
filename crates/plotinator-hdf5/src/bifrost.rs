@@ -15,6 +15,8 @@ use crate::util::{
 const LEGEND_NAME: &str = "TX Bifrost";
 
 impl SkytemHdf5 for BifrostLoopCurrent {
+    const DESCRIPTIVE_NAME: &str = LEGEND_NAME;
+
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let current_dataset = Self::open_bifrost_current_dataset(path)?;
 

@@ -1,11 +1,10 @@
-use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU16, Ordering};
 
-use plotinator_log_if::prelude::*;
+use plotinator_log_if::{prelude::*, rawplot::path_data::GeoSpatialDataset};
 use plotinator_plot_util::{CookedPlot, StoredPlotLabels};
-use plotinator_supported_formats::SupportedFormat;
+use plotinator_supported_formats::{ParseInfo, SupportedFormat};
 use plotinator_ui_log_settings::LoadedLogSettings;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use serde::{Deserialize, Serialize};
 
 /// Get the next unique ID for a log
 ///
@@ -16,36 +15,113 @@ fn next_log_id() -> u16 {
     LOG_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug)]
 pub struct LoadedSupportedFormat {
     id: u16,
-    format: SupportedFormat,
+    format: Option<SupportedFormat>,
+    cooked_plots: Option<Vec<CookedPlot>>,
+    cooked_labels: Option<Vec<StoredPlotLabels>>,
+    settings: Option<LoadedLogSettings>,
+    // This is for the map
+    geo_spatial_data: Option<Vec<GeoSpatialDataset>>,
 }
 
 impl LoadedSupportedFormat {
     pub fn new(format: SupportedFormat) -> Self {
         Self {
             id: next_log_id(),
-            format,
+            format: Some(format),
+            cooked_plots: None,
+            cooked_labels: None,
+            settings: None,
+            geo_spatial_data: None,
         }
     }
 
-    pub fn make_loaded_log_settings(&self) -> LoadedLogSettings {
+    pub fn format_name(&self) -> &str {
+        self.format
+            .as_ref()
+            .expect("unsound condition")
+            .descriptive_name()
+    }
+
+    pub fn parse_info(&self) -> Option<ParseInfo> {
+        self.format
+            .as_ref()
+            .expect("unsound condition")
+            .parse_info()
+    }
+
+    pub fn take_supported_format(&mut self) -> SupportedFormat {
+        self.format
+            .take()
+            .expect("attempted to take support format tiwce")
+    }
+
+    pub fn take_settings(&mut self) -> LoadedLogSettings {
+        self.settings
+            .take()
+            .expect("attempted to take settings twice")
+    }
+
+    pub fn take_cooked_plots(&mut self) -> Vec<CookedPlot> {
+        self.cooked_plots
+            .take()
+            .expect("attempted to take cooked plots twice")
+    }
+
+    pub fn take_cooked_labels(&mut self) -> Vec<StoredPlotLabels> {
+        self.cooked_labels
+            .take()
+            .expect("attempted to take plot labels twice")
+    }
+
+    pub fn take_geo_spatial_data(&mut self) -> Vec<GeoSpatialDataset> {
+        self.geo_spatial_data
+            .take()
+            .expect("attempted to take geospatial data twice")
+    }
+
+    pub fn cook_all(&mut self) {
+        self.cooked_plots = Some(self.cook_plots());
+        self.cooked_labels = Some(self.cook_labels());
+        self.settings = Some(self.make_loaded_log_settings());
+        self.geo_spatial_data = Some(
+            self.format
+                .as_ref()
+                .expect("unsound condition")
+                .geo_spatial_data(),
+        );
+    }
+
+    fn make_loaded_log_settings(&self) -> LoadedLogSettings {
         LoadedLogSettings::new(
             self.id,
-            self.format.descriptive_name().to_owned(),
-            self.format.first_timestamp(),
-            self.format.metadata(),
-            self.format.parse_info(),
+            self.format
+                .as_ref()
+                .expect("unsound condition")
+                .descriptive_name()
+                .to_owned(),
+            self.format
+                .as_ref()
+                .expect("unsound condition")
+                .first_timestamp(),
+            self.format.as_ref().expect("unsound condition").metadata(),
+            self.format
+                .as_ref()
+                .expect("unsound condition")
+                .parse_info(),
         )
     }
 
-    pub fn cook_plots(&self) -> Vec<CookedPlot> {
+    fn cook_plots(&self) -> Vec<CookedPlot> {
         const PARALLEL_THRESHOLD: usize = 200_000;
 
         // Compute the average number of points across all plots
         let plot_point_counts: Vec<usize> = self
             .format
+            .as_ref()
+            .expect("unsound condition")
             .raw_plots()
             .iter()
             .map(|p| match p {
@@ -64,16 +140,16 @@ impl LoadedSupportedFormat {
             log::info!(
                 "Processing new plots in parallel (average point count {avg_plot_points_count} exceeds threshold {PARALLEL_THRESHOLD})"
             );
-            cook_plots_par(&self.format, self.id)
+            cook_plots_par(self.format.as_ref().expect("unsound condition"), self.id)
         } else {
-            cook_plots_seq(&self.format, self.id)
+            cook_plots_seq(self.format.as_ref().expect("unsound condition"), self.id)
         }
     }
 
     pub fn cook_labels(&self) -> Vec<StoredPlotLabels> {
         let mut labels = vec![];
 
-        if let Some(plot_labels) = self.format.labels() {
+        if let Some(plot_labels) = self.format.as_ref().expect("unsound condition").labels() {
             for l in plot_labels {
                 let owned_label_points = l.label_points().to_owned();
                 let stored_labels =

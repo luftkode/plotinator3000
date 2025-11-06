@@ -1,7 +1,9 @@
+use plotinator_supported_formats::SupportedFormat;
 use smallvec::SmallVec;
 use std::{
     path::PathBuf,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::mpsc::{self, Receiver},
+    time::Duration,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -9,14 +11,12 @@ use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
 use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN};
-use plotinator_background_parser::ParserThreads;
+use plotinator_background_parser::{ParserThreads, loaded_format::LoadedSupportedFormat};
 use plotinator_plot_ui::LogPlotUi;
 use plotinator_ui_file_io::{ParseStatusWindow, ParseUpdate};
 
-use plotinator_file_io::{
-    file_dialog::{self as fd, native::NativeFileDialog},
-    loaded_files::LoadedFiles,
-};
+use plotinator_file_io::file_dialog::{self as fd, native::NativeFileDialog};
+mod handle_input;
 mod misc;
 mod supported_formats_table;
 
@@ -35,7 +35,6 @@ pub struct PlotApp {
     #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
     pub(crate) map_commander: plotinator_map_ui::commander::MapUiCommander,
 
-    loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
     font_size_init: bool,
@@ -72,6 +71,8 @@ pub struct PlotApp {
     parse_update_rx: Receiver<ParseUpdate>,
     #[serde(skip)]
     status_window: ParseStatusWindow,
+    #[serde(skip)]
+    loaded_custom_files: Vec<SupportedFormat>,
 }
 
 impl Default for PlotApp {
@@ -80,7 +81,6 @@ impl Default for PlotApp {
         Self {
             first_frame: true,
             toasts: Toasts::default(),
-            loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
             font_size_init: false,
@@ -109,13 +109,13 @@ impl Default for PlotApp {
             parse_update_rx: rx,
             background_parser: ParserThreads::new(tx),
             status_window: ParseStatusWindow::new(),
+            loaded_custom_files: vec![],
         }
     }
 }
 
 impl PlotApp {
     const DEFAULT_FONT_SIZE: f32 = 16.0;
-    const DISABLE_STORAGE_THRESHOLD: u32 = 100_000; // Disable saving app state if we have over 100k loaded data points
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -160,27 +160,28 @@ impl eframe::App for PlotApp {
         show_top_panel(self, ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            misc::notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
-            let new_loaded_files = self.loaded_files.take_loaded_files();
+            let mut new_loaded_files = self.background_parser.poll();
+            for custom_loaded_file in self.loaded_custom_files.drain(..) {
+                new_loaded_files.push(LoadedSupportedFormat::new(custom_loaded_file));
+            }
+
+            misc::notify_if_logs_added(&mut self.toasts, &new_loaded_files);
 
             self.plot.ui(
                 ui,
                 &mut self.first_frame,
-                &new_loaded_files,
+                &mut new_loaded_files,
                 &mut self.toasts,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
                 &mut self.map_commander,
                 #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                 &mut self.mqtt,
-                None,
             );
 
             #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
             {
-                for file in new_loaded_files {
-                    log::info!("Received dataset {}", file.descriptive_name());
-                    use plotinator_log_if::plotable::Plotable as _;
-                    for geo_data in file.geo_spatial_data() {
+                for mut file in new_loaded_files {
+                    for geo_data in file.take_geo_spatial_data() {
                         self.map_commander.add_geo_data(geo_data);
                     }
                 }
@@ -207,7 +208,7 @@ impl eframe::App for PlotApp {
                 supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown
             }
 
-            let mut dropped_files = plotinator_file_io::dropped_files::take_dropped_files(ctx);
+            let dropped_files = plotinator_file_io::dropped_files::take_dropped_files(ctx);
             self.handle_input_files(dropped_files);
             misc::show_error(ui, self);
             misc::show_warn_on_debug_build(ui);
@@ -217,6 +218,10 @@ impl eframe::App for PlotApp {
         self.download_ui.show_download_window(ctx);
 
         self.toasts.show(ctx);
+
+        if self.background_parser.active_threads() {
+            ctx.request_repaint_after(Duration::from_millis(100));
+        }
     }
 }
 
@@ -228,17 +233,21 @@ impl PlotApp {
 
     fn poll_picked_files(&mut self) {
         let picked_files = self.native_file_dialog.take_picked_files();
-        self.handle_input_files(picked_files);
+        if !picked_files.is_empty() {
+            log::debug!("Got picked file: {picked_files:?}");
+        }
+        self.handle_input_files(picked_files.into());
     }
 
-    fn handle_input_files(&mut self, mut input_files: SmallVec<[PathBuf; 1]>) {
-        match NativeFileDialog::try_parse_custom_files(&mut input_files) {
+    fn handle_input_files(&mut self, mut input_paths: SmallVec<[PathBuf; 1]>) {
+        use plotinator_file_io::custom_files::CustomFileContent;
+        match NativeFileDialog::try_parse_custom_files(&mut input_paths) {
             Ok(custom_files) => {
                 for cf in custom_files {
                     match cf {
-                        CustomFileContent::PlotData(pd) => {
-                            log::info!("Loading {} plot data files from {pf:?}", pd.len());
-                            self.loaded_files.loaded.extend(plot_data);
+                        CustomFileContent::PlotData(mut pd) => {
+                            log::info!("Loading {} plot data files from", pd.len());
+                            self.loaded_custom_files.append(&mut pd);
                         }
                         CustomFileContent::PlotUi(new_plot_ui_state) => {
                             self.load_new_plot_ui_state(new_plot_ui_state);
@@ -248,7 +257,7 @@ impl PlotApp {
             }
             Err(e) => self.error_message = Some(e.to_string()),
         }
-        for p in input_files {
+        for p in input_paths {
             self.background_parser.parse_path(p);
         }
     }

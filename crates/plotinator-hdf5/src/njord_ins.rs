@@ -17,6 +17,7 @@ use crate::{
 const LEGEND_NAME: &str = "Njord-INS";
 
 impl SkytemHdf5 for NjordIns {
+    const DESCRIPTIVE_NAME: &str = "Njord INS";
     #[allow(
         clippy::too_many_lines,
         reason = "Just adding quick Njord INS support... This needs a refactor, when the dataformat is more stable for example"

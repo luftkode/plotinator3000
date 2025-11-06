@@ -4,7 +4,7 @@ use egui_plot::PlotBounds;
 use plotinator_ui_util::{date_editor::DateEditor, number_editor::NumberEditor};
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub(crate) struct CutOutsideMinMaxRange {
     pub(crate) x_range: (f64, f64),
     pub(crate) y_min_max: (f64, f64),
@@ -22,7 +22,7 @@ impl CutOutsideMinMaxRange {
     }
 }
 
-#[derive(PartialEq, Default, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Default, Deserialize, Serialize)]
 pub(crate) struct LogPointsCutter {
     pub(crate) clicked: bool,
     pub(crate) selected_box: Option<PlotBounds>,
