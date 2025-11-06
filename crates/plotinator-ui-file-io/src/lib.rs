@@ -69,7 +69,7 @@ impl FileParseStatus {
     fn total_parse_time_seconds(&self) -> String {
         debug_assert_ne!(self.total_parse_time, None);
         if let Some(total_time) = self.total_parse_time.as_ref() {
-            format!("{total_time:.1?}s")
+            format!("{total_time:.1?}")
         } else {
             log::error!("Got parse time when completed parsing time was not assigned");
             String::new()
@@ -88,6 +88,10 @@ impl ParseStatusWindow {
     /// Open the window.
     pub fn show(&mut self) {
         self.show_parsing_window = true;
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.show_parsing_window
     }
 
     /// Clear all parsing statuses.
@@ -122,7 +126,7 @@ impl ParseStatusWindow {
             }
             ParseUpdate::Attempting { path, format_name } => {
                 if let Some(status) = self.parse_statuses.get_mut(&path) {
-                    status.current_activity = format!("Trying: {format_name}...");
+                    status.current_activity = format!("Parsing: {format_name}...");
                     status.progress = 0.0;
                 }
             }
@@ -176,7 +180,7 @@ impl ParseStatusWindow {
         egui::Window::new("File Parsing Status")
             .id(window_id)
             .open(&mut is_open)
-            .resizable(true)
+            .auto_sized()
             .show(ctx, |ui| {
                 // --- Separate active and completed tasks ---
                 let mut active = Vec::new();
@@ -194,23 +198,19 @@ impl ParseStatusWindow {
                 let active_count = active.len();
                 let completed_count = completed.len();
 
-                // --- Header with controls ---
                 ui.horizontal(|ui| {
                     ui.label(format!(
                         "Active: {active_count} | Completed: {completed_count}"
                     ));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Clear Completed").clicked() {
-                            clear_completed = true;
-                        }
-                    });
+                    ui.add_space(40.);
+                    if ui.button("Clear Completed").clicked() {
+                        clear_completed = true;
+                    }
                 });
-
-                ui.separator();
 
                 // --- Content Area ---
                 egui::ScrollArea::vertical()
-                    .auto_shrink([false, false])
+                    .auto_shrink([true, true])
                     .show(ui, |ui| {
                         if !active.is_empty() {
                             ui.heading("Active Tasks");

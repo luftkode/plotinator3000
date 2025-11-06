@@ -11,7 +11,7 @@ use std::{
 use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
-use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN};
+use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN, SPINNER_BALL};
 use plotinator_background_parser::{ParserThreads, loaded_format::LoadedSupportedFormat};
 use plotinator_plot_ui::LogPlotUi;
 use plotinator_ui_file_io::{ParseStatusWindow, ParseUpdate};
@@ -272,10 +272,15 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
                 app.native_file_dialog.open();
             }
 
-            if app.background_parser.active_threads() {
-                ui.spinner();
-            }
-            if ui.button(RichText::new("Parsing")).clicked() {
+            let status_btn_txt =
+                if app.background_parser.active_threads() && !app.status_window.is_open() {
+                    ui.spinner();
+                    "Parsing".to_owned()
+                } else {
+                    format!("{SPINNER_BALL} Parsing")
+                };
+
+            if ui.button(RichText::new(status_btn_txt)).clicked() {
                 app.status_window.show();
             }
 

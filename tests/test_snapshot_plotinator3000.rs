@@ -75,7 +75,7 @@ fn test_snapshot_open_mqtt_config_window_connect_disabled() {
 fn test_snapshot_drop_load_mbed_status_regular_v6() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_mbed_status_regular_v6");
     harness.drop_file(mbed_status_v6_regular());
-    harness.run();
+    harness.run_steps(4);
     harness.save_snapshot();
 }
 
