@@ -40,10 +40,10 @@ pub enum SupportedFormat {
 impl fmt::Display for SupportedFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SupportedFormat::Log(supported_log) => write!(f, "{supported_log}"),
-            SupportedFormat::Csv(supported_csv) => write!(f, "{supported_csv}"),
-            SupportedFormat::HDF5(supported_hdf5_format) => write!(f, "{supported_hdf5_format}"),
-            SupportedFormat::MqttData(serializable_mqtt_plot_data) => {
+            Self::Log(supported_log) => write!(f, "{supported_log}"),
+            Self::Csv(supported_csv) => write!(f, "{supported_csv}"),
+            Self::HDF5(supported_hdf5_format) => write!(f, "{supported_hdf5_format}"),
+            Self::MqttData(serializable_mqtt_plot_data) => {
                 write!(f, "{serializable_mqtt_plot_data}")
             }
         }
@@ -98,7 +98,7 @@ impl SupportedFormat {
         let log: Self = if plotinator_hdf5::path_has_hdf5_extension(path) {
             tx.send(ParseUpdate::Attempting {
                 path: path.to_path_buf(),
-                format_name: "hdf5".to_string(),
+                format_name: "hdf5".to_owned(),
             });
             Self::parse_hdf5_from_path(path, tx)?
         } else if let Some(ext) = path.extension()
@@ -110,14 +110,14 @@ impl SupportedFormat {
         {
             tx.send(ParseUpdate::Attempting {
                 path: path.to_path_buf(),
-                format_name: "csv".to_string(),
+                format_name: "csv".to_owned(),
             });
             let mmap = mmap_file(&file)?;
             Self::parse_csv_from_buf(&mmap[..], path.to_path_buf(), tx)?
         } else {
             tx.send(ParseUpdate::Attempting {
                 path: path.to_path_buf(),
-                format_name: "regular file".to_string(),
+                format_name: "regular file".to_owned(),
             });
             let mmap = mmap_file(&file)?;
             Self::parse_from_buf(&mmap[..], path.to_path_buf(), tx)?

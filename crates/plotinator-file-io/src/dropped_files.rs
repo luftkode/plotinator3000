@@ -16,7 +16,9 @@ pub fn take_dropped_files(ctx: &egui::Context) -> SmallVec<[PathBuf; 1]> {
         }
     }) {
         for df in dropped_files {
-            df.path.map(|p| files.push(p));
+            if let Some(p) = df.path {
+                files.push(p);
+            }
         }
     }
 

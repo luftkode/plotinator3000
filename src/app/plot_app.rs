@@ -254,7 +254,7 @@ impl PlotApp {
             Err(e) => self.error_message = Some(e.to_string()),
         }
         for p in input_paths {
-            self.background_parser.parse_path(p)?;
+            self.background_parser.parse_path(&p)?;
         }
         Ok(())
     }

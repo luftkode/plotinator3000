@@ -30,14 +30,14 @@ impl ParserThreads {
         }
     }
 
-    pub fn parse_path(&mut self, path: PathBuf) -> io::Result<()> {
-        if is_zip_file(&path) {
-            self.parse_zip_file(&path)?;
+    pub fn parse_path(&mut self, path: &Path) -> io::Result<()> {
+        if is_zip_file(path) {
+            self.parse_zip_file(path)?;
         } else if path.is_dir() {
-            self.parse_directory(&path)?;
+            self.parse_directory(path)?;
         } else {
             debug_assert!(path.is_file());
-            let new_thread = ParserThread::new(path, self.update_tx.clone());
+            let new_thread = ParserThread::new(path.to_owned(), self.update_tx.clone());
             self.threads.push(new_thread);
         }
         Ok(())
@@ -53,7 +53,7 @@ impl ParserThreads {
                     log::warn!("{e}");
                 }
             } else {
-                self.parse_path(path.to_owned())?;
+                self.parse_path(&path)?;
             }
         }
         Ok(())
@@ -62,14 +62,8 @@ impl ParserThreads {
     fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
         let file = fs::File::open(path)?;
         let mut archive = zip::ZipArchive::new(file)?;
-
-        self.parse_zip_entries(
-            &mut archive,
-            "",
-            0,
-            self.tmp_dir.path().to_owned(),
-            self.update_tx.clone(),
-        )?;
+        let tmp_dir = self.tmp_dir.path().to_owned();
+        self.parse_zip_entries(&mut archive, "", 0, &tmp_dir, &self.update_tx.clone())?;
         Ok(())
     }
 
@@ -78,8 +72,8 @@ impl ParserThreads {
         archive: &mut zip::ZipArchive<fs::File>,
         path_prefix: &str,
         depth: usize,
-        temp_dir: PathBuf,
-        tx: UpdateChannel,
+        temp_dir: &Path,
+        _tx: &UpdateChannel,
     ) -> io::Result<()> {
         const MAX_DEPTH: usize = 5;
 
@@ -149,19 +143,13 @@ impl ParserThreads {
                 temp_file.sync_all()?;
                 drop(temp_file); // Close the file before parsing
 
-                self.parse_path(temp_file_path)?;
+                self.parse_path(&temp_file_path)?;
             }
         }
 
         // Recursively process subdirectories
         for subdir_path in subdirectories {
-            self.parse_zip_entries(
-                archive,
-                &subdir_path,
-                depth + 1,
-                temp_dir.clone(),
-                tx.clone(),
-            )?;
+            self.parse_zip_entries(archive, &subdir_path, depth + 1, temp_dir, _tx)?;
         }
 
         Ok(())
@@ -331,7 +319,7 @@ mod tests {
         // Test parsing the zip file
         let (tx, _rx) = channel();
         let mut parser_threads = ParserThreads::new(tx);
-        parser_threads.parse_path(zip_path)?;
+        parser_threads.parse_path(&zip_path)?;
 
         let mut loaded = vec![];
         while parser_threads.active_threads() {

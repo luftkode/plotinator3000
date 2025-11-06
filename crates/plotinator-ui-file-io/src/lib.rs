@@ -104,7 +104,7 @@ impl ParseStatusWindow {
         match update {
             ParseUpdate::Started { path } => {
                 let file_name = path.file_name().map_or_else(
-                    || "Invalid Path".to_string(),
+                    || "Invalid Path".to_owned(),
                     |s| s.to_string_lossy().to_string(),
                 );
                 self.parse_statuses.insert(
@@ -112,7 +112,7 @@ impl ParseStatusWindow {
                     FileParseStatus {
                         file_name,
                         full_path: path,
-                        current_activity: "Queued...".to_string(),
+                        current_activity: "Queued...".to_owned(),
                         progress: 0.0,
                         final_status: None,
                         time_started: Instant::now(),
@@ -135,12 +135,12 @@ impl ParseStatusWindow {
             ParseUpdate::Progress { path, progress } => {
                 if let Some(status) = self.parse_statuses.get_mut(&path) {
                     status.progress = progress;
-                    if let Some(format_name) = status.current_activity.strip_prefix("Parsing: ") {
-                        if let Some(bracket_pos) = format_name.rfind(" (") {
-                            let name_only = &format_name[..bracket_pos];
-                            status.current_activity =
-                                format!("Parsing: {} ({}%)", name_only, (progress * 100.0) as u8);
-                        }
+                    if let Some(format_name) = status.current_activity.strip_prefix("Parsing: ")
+                        && let Some(bracket_pos) = format_name.rfind(" (")
+                    {
+                        let name_only = &format_name[..bracket_pos];
+                        status.current_activity =
+                            format!("Parsing: {name_only} ({}%)", (progress * 100.0) as u8);
                     }
                 }
             }
@@ -148,7 +148,7 @@ impl ParseStatusWindow {
                 if let Some(status) = self.parse_statuses.get_mut(&path) {
                     status.total_parse_time = Some(status.time_elapsed());
                     status.final_status = Some(FinalStatus::Succeeded(final_format));
-                    status.current_activity = "Completed".to_string();
+                    status.current_activity = "Completed".to_owned();
                     status.progress = 1.0;
                 }
             }
@@ -156,7 +156,7 @@ impl ParseStatusWindow {
                 if let Some(status) = self.parse_statuses.get_mut(&path) {
                     status.total_parse_time = Some(status.time_elapsed());
                     status.final_status = Some(FinalStatus::Failed(error_msg));
-                    status.current_activity = "Failed".to_string();
+                    status.current_activity = "Failed".to_owned();
                     status.progress = 0.0;
                 }
             }
@@ -197,8 +197,7 @@ impl ParseStatusWindow {
                 // --- Header with controls ---
                 ui.horizontal(|ui| {
                     ui.label(format!(
-                        "Active: {} | Completed: {}",
-                        active_count, completed_count
+                        "Active: {active_count} | Completed: {completed_count}"
                     ));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("Clear Completed").clicked() {
@@ -215,13 +214,13 @@ impl ParseStatusWindow {
                     .show(ui, |ui| {
                         if !active.is_empty() {
                             ui.heading("Active Tasks");
-                            self.render_status_grid(ui, &active, window_id.with("active_grid"));
+                            Self::render_status_grid(ui, &active, window_id.with("active_grid"));
                         }
 
                         if !completed.is_empty() {
                             ui.add_space(10.0);
                             ui.heading("Completed Tasks");
-                            self.render_status_grid(
+                            Self::render_status_grid(
                                 ui,
                                 &completed,
                                 window_id.with("completed_grid"),
@@ -242,12 +241,7 @@ impl ParseStatusWindow {
     }
 
     /// Helper function to render a grid of statuses.
-    fn render_status_grid(
-        &self,
-        ui: &mut Ui,
-        statuses: &Vec<(&PathBuf, &FileParseStatus)>,
-        grid_id: Id,
-    ) {
+    fn render_status_grid(ui: &mut Ui, statuses: &Vec<(&PathBuf, &FileParseStatus)>, grid_id: Id) {
         egui::Grid::new(grid_id)
             .num_columns(3)
             .striped(true)
@@ -280,7 +274,7 @@ impl ParseStatusWindow {
                                 format!("{fmt} in {}", status.total_parse_time_seconds()),
                                 Color32::GREEN,
                             ),
-                            FinalStatus::Failed(_) => ("Error".to_string(), Color32::RED),
+                            FinalStatus::Failed(_) => ("Error".to_owned(), Color32::RED),
                         };
                         let label = ui.label(RichText::new(msg).color(color));
                         if let FinalStatus::Failed(err) = final_status {

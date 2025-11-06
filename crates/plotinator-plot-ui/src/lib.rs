@@ -80,6 +80,10 @@ impl LogPlotUi {
         self.total_data_points
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "Not too bad for the top level plot ui function"
+    )]
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,

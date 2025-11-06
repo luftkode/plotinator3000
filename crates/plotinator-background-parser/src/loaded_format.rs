@@ -4,7 +4,7 @@ use plotinator_log_if::{prelude::*, rawplot::path_data::GeoSpatialDataset};
 use plotinator_plot_util::{CookedPlot, StoredPlotLabels};
 use plotinator_supported_formats::{ParseInfo, SupportedFormat};
 use plotinator_ui_log_settings::LoadedLogSettings;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator as _, ParallelIterator as _};
 
 /// Get the next unique ID for a log
 ///
@@ -168,8 +168,7 @@ fn cook_plots_seq(format: &SupportedFormat, data_id: u16) -> Vec<CookedPlot> {
     for raw_plot in format.raw_plots() {
         match raw_plot {
             RawPlot::Generic { common } => {
-                let cooked =
-                    CookedPlot::new(&common, data_id, format.descriptive_name().to_owned());
+                let cooked = CookedPlot::new(common, data_id, format.descriptive_name().to_owned());
                 cooked_plots.push(cooked);
             }
             RawPlot::GeoSpatialDataset(geo_data) => {
