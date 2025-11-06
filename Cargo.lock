@@ -3883,7 +3883,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plotinator-background-parser"
-version = "2.8.1"
+version = "2.9.0"
 dependencies = [
  "anyhow",
  "log",
@@ -3919,7 +3919,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-custom-files"
-version = "2.8.1"
+version = "2.9.0"
 dependencies = [
  "anyhow",
  "log",
@@ -3950,6 +3950,7 @@ dependencies = [
  "anyhow",
  "egui",
  "log",
+ "plotinator-custom-files",
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-mqtt",
@@ -4146,6 +4147,7 @@ dependencies = [
  "chrono",
  "egui",
  "egui_plot",
+ "insta",
  "log",
  "num-traits",
  "plotinator-log-if",
@@ -4212,7 +4214,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-ui-file-io"
-version = "2.8.1"
+version = "2.9.0"
 dependencies = [
  "anyhow",
  "eframe",
@@ -4223,7 +4225,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-ui-log-settings"
-version = "2.8.1"
+version = "2.9.0"
 dependencies = [
  "chrono",
  "egui",
@@ -4266,7 +4268,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "2.8.1"
+version = "2.9.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4281,6 +4283,7 @@ dependencies = [
  "log",
  "mimalloc",
  "plotinator-background-parser",
+ "plotinator-custom-files",
  "plotinator-download",
  "plotinator-file-io",
  "plotinator-hdf5",

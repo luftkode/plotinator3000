@@ -1,6 +1,8 @@
+use plotinator_custom_files::CustomFileContent;
 use plotinator_supported_formats::SupportedFormat;
 use smallvec::SmallVec;
 use std::{
+    io,
     path::PathBuf,
     sync::mpsc::{self, Receiver},
     time::Duration,
@@ -32,7 +34,7 @@ pub struct PlotApp {
     first_frame: bool,
     #[serde(skip)]
     pub(crate) toasts: Toasts,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    #[cfg(feature = "map")]
     pub(crate) map_commander: plotinator_map_ui::commander::MapUiCommander,
 
     plot: LogPlotUi,
@@ -40,22 +42,16 @@ pub struct PlotApp {
     font_size_init: bool,
     error_message: Option<String>,
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+    #[cfg(feature = "mqtt")]
     #[serde(skip)]
     pub(crate) mqtt: plotinator_mqtt_ui::connection::MqttConnection,
 
-    #[cfg(target_arch = "wasm32")]
-    #[serde(skip)]
-    web_file_dialog: fd::web::WebFileDialog,
-
-    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     native_file_dialog: fd::native::NativeFileDialog,
 
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    #[cfg(feature = "profiling")]
     keep_repainting: bool,
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     download_ui: DownloadUi,
 
@@ -86,22 +82,17 @@ impl Default for PlotApp {
             font_size_init: false,
             error_message: None,
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             map_commander: plotinator_map_ui::commander::MapUiCommander::default(),
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+            #[cfg(feature = "mqtt")]
             mqtt: plotinator_mqtt_ui::connection::MqttConnection::default(),
 
-            #[cfg(target_arch = "wasm32")]
-            web_file_dialog: fd::web::WebFileDialog::default(),
-
-            #[cfg(not(target_arch = "wasm32"))]
             native_file_dialog: fd::native::NativeFileDialog::default(),
 
-            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+            #[cfg(feature = "profiling")]
             keep_repainting: true,
 
-            #[cfg(not(target_arch = "wasm32"))]
             download_ui: DownloadUi::default(),
 
             disable_app_state_storage: false,
@@ -143,7 +134,9 @@ impl eframe::App for PlotApp {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.poll_picked_files();
+        if let Err(e) = self.poll_picked_files() {
+            self.error_message = Some(format!("Error during file loading: {e}"));
+        }
         while let Ok(update) = self.parse_update_rx.try_recv() {
             self.status_window.handle_update(update);
         }
@@ -209,7 +202,11 @@ impl eframe::App for PlotApp {
             }
 
             let dropped_files = plotinator_file_io::dropped_files::take_dropped_files(ctx);
-            self.handle_input_files(dropped_files);
+            if let Err(e) = self.handle_input_files(dropped_files)
+                && self.error_message.is_none()
+            {
+                self.error_message = Some(format!("Error handling input path: {e}"));
+            }
             misc::show_error(ui, self);
             misc::show_warn_on_debug_build(ui);
         });
@@ -231,16 +228,16 @@ impl PlotApp {
         self.plot = *new;
     }
 
-    fn poll_picked_files(&mut self) {
+    fn poll_picked_files(&mut self) -> io::Result<()> {
         let picked_files = self.native_file_dialog.take_picked_files();
         if !picked_files.is_empty() {
             log::debug!("Got picked file: {picked_files:?}");
         }
-        self.handle_input_files(picked_files.into());
+        self.handle_input_files(picked_files.into())?;
+        Ok(())
     }
 
-    fn handle_input_files(&mut self, mut input_paths: SmallVec<[PathBuf; 1]>) {
-        use plotinator_file_io::custom_files::CustomFileContent;
+    fn handle_input_files(&mut self, mut input_paths: SmallVec<[PathBuf; 1]>) -> io::Result<()> {
         match NativeFileDialog::try_parse_custom_files(&mut input_paths) {
             Ok(custom_files) => {
                 for cf in custom_files {
@@ -258,8 +255,9 @@ impl PlotApp {
             Err(e) => self.error_message = Some(e.to_string()),
         }
         for p in input_paths {
-            self.background_parser.parse_path(p);
+            self.background_parser.parse_path(p)?;
         }
+        Ok(())
     }
 }
 

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Tweak time labels to better support micro and nanosecond time scales
+
+## [2.9.0]
+
+- Hefty optimization to mipmap (downsampling) implementation, speeding it up ~5x and reducing memory usage by ~20%
+
+## [2.8.2]
+
+- Fixed an edge case where the downsampled line plot of a dense dataset with large gaps, would not connect the point at each side of plot area, to the next point outside of the view.
+
 ## [2.8.1]
 
 - Fixed drawing empty map telemetry labels when geo points had neither speed or altimeter values

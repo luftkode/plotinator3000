@@ -36,7 +36,15 @@ pub fn plot_lines<'pv>(
     for plot_vals in plots {
         match mipmap_cfg {
             MipMapConfiguration::Disabled => {
-                plot_raw(plot_ui, plot_vals, series_draw_mode, x_plot_bounds.clone());
+                // Disabled is just forcing level 0
+                plot_with_mipmapping(
+                    plot_ui,
+                    plot_vals,
+                    series_draw_mode,
+                    0,
+                    x_plot_bounds.clone(),
+                    None,
+                );
             }
             MipMapConfiguration::Auto => {
                 let (level, idx_range) =
@@ -78,38 +86,15 @@ fn plot_with_mipmapping<'p>(
     plotinator_macros::profile_function!();
 
     let plot_points_minmax = plot_vals.get_level_or_max(mipmap_lvl);
-    if plot_points_minmax.is_empty() {
-        // In this case there was so few samples that downsampling just once was below the minimum threshold, so we just plot all samples
-        plot_raw(plot_ui, plot_vals, series_draw_mode, x_bounds);
-    } else {
-        let plot_points_minmax = match known_idx_range {
-            Some((start, end)) => PlotPoints::Borrowed(&plot_points_minmax[start..end]),
-            None => filter::filter_plot_points(plot_points_minmax, x_bounds),
-        };
 
-        series_draw_mode.draw_series(
-            plot_ui,
-            plot_points_minmax,
-            plot_vals.label(),
-            plot_vals.get_color(),
-            plot_vals.get_highlight(),
-        );
-    }
-}
+    let plot_points_minmax = match known_idx_range {
+        Some((start, end)) => PlotPoints::Borrowed(&plot_points_minmax[start..end]),
+        None => filter::filter_plot_points(plot_points_minmax, x_bounds),
+    };
 
-fn plot_raw<'p>(
-    plot_ui: &mut egui_plot::PlotUi<'p>,
-    plot_vals: &'p CookedPlot,
-
-    series_draw_mode: SeriesDrawMode,
-    x_bounds: RangeInclusive<f64>,
-) {
-    plotinator_macros::profile_function!();
-    let plot_points = plot_vals.raw_plot_points();
-    let filtered_points = filter::filter_plot_points(plot_points, x_bounds);
     series_draw_mode.draw_series(
         plot_ui,
-        filtered_points,
+        plot_points_minmax,
         plot_vals.label(),
         plot_vals.get_color(),
         plot_vals.get_highlight(),

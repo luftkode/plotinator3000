@@ -1,4 +1,4 @@
-use std::{fs, mem, path::PathBuf, sync::mpsc::Sender};
+use std::{fs, mem, path::PathBuf};
 
 use plotinator_plot_ui::LogPlotUi;
 use plotinator_plot_util::CookedPlot;
@@ -6,12 +6,9 @@ use plotinator_supported_formats::SupportedFormat;
 use serde::Serialize;
 use smallvec::{SmallVec, smallvec};
 
-use crate::{
-    custom_files::{
-        CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
-        try_parse_custom_file,
-    },
-    file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
+use crate::file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME};
+use plotinator_custom_files::{
+    CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent, try_parse_custom_file,
 };
 
 #[derive(Debug, Default)]

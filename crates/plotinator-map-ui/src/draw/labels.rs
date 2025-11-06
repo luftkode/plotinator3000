@@ -3,7 +3,6 @@ use plotinator_log_if::{
     prelude::{GeoAltitude, GeoPoint},
     rawplot::path_data::Altitude,
 };
-use plotinator_proc_macros::log_time;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::sync::Arc;
@@ -107,7 +106,6 @@ impl LabelPlacer {
     /// This should be called for each path to gather all candidate labels.
     /// The `min_screen_distance` (in pixels) ensures labels are spaced out regardless of zoom.
     /// Results are accumulated in the internal buffer.
-    #[log_time]
     pub fn collect_label_candidates(
         &mut self,
         screen_points: &[(Pos2, &GeoPoint)],
@@ -176,7 +174,6 @@ impl LabelPlacer {
     /// Calculates and places all labels, handling collisions.
     ///
     /// Call this after collecting all candidates for all paths.
-    #[log_time]
     pub fn place_all_labels(&mut self, painter: &Painter) {
         self.label_buffer.clear();
 

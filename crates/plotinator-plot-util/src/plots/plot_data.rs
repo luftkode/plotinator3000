@@ -2,7 +2,7 @@ use egui_plot::PlotBounds;
 use plotinator_log_if::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::plots::plot_data::{cooked_plot::CookedPlot, plot_labels::StoredPlotLabels};
+use crate::{CookedPlot, plots::plot_data::plot_labels::StoredPlotLabels};
 
 use super::util;
 

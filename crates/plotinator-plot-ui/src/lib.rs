@@ -24,7 +24,6 @@ mod plot_graphics;
 pub mod plot_mqtt;
 pub mod plot_settings;
 mod plot_ui;
-mod util;
 mod x_axis_formatter;
 
 /// if a log is loaded from content that exceeds this many unparsed bytes:
