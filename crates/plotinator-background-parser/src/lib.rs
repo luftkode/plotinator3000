@@ -261,7 +261,6 @@ fn is_zip_file(path: &Path) -> bool {
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use super::*;
     use plotinator_test_util::test_file_defs::frame_altimeters::*;

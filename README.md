@@ -46,22 +46,16 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/luftkode/plotinator3000
 
 Check the [Justfile](Justfile) for recipes to get started, or invoke `just` to list available recipes.
 
-Check if code compiles on native and wasm targets without actually compiling
+Check if code compiles
 
 ```shell
-just check-all # alias `ca` for speed!
+just check
 ```
 
-Run as a native app
+Run
 
 ```shell
 just run
-```
-
-Serve as WASM on a local web server
-
-```shell
-just serve
 ```
 
 ### The code

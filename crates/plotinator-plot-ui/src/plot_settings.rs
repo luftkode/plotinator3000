@@ -227,7 +227,7 @@ impl PlotSettings {
     /// Needs to be called once (and only once!) per frame before querying for plot ui settings, such as
     /// how many plots to paint and more.
     pub fn refresh(&mut self, plots: &mut Plots) {
-        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        #[cfg(feature = "profiling")]
         puffin::profile_scope!("plot_settings.refresh");
         if self.apply_deletions {
             self.remove_if_marked_for_deletion(plots);

@@ -1,17 +1,13 @@
-plotinator_macros::non_wasm_modules!(
-    pub(crate) mod util;
-    pub(crate) mod stream_descriptor;
-    pub mod bifrost;
-    pub mod frame_altimeters;
-    pub mod frame_inclinometers;
-    pub mod frame_magnetometer;
-    pub mod frame_gps;
-    pub mod njord_ins;
-    pub mod njord_altimeter;
-    pub mod tsc;
-);
-
-#[cfg(not(target_arch = "wasm32"))]
+pub mod bifrost;
+pub mod frame_altimeters;
+pub mod frame_gps;
+pub mod frame_inclinometers;
+pub mod frame_magnetometer;
+pub mod njord_altimeter;
+pub mod njord_ins;
+pub(crate) mod stream_descriptor;
+pub mod tsc;
+pub(crate) mod util;
 pub use {
     bifrost::BifrostLoopCurrent, frame_altimeters::FrameAltimeters, frame_gps::FrameGps,
     frame_inclinometers::FrameInclinometers, frame_magnetometer::FrameMagnetometer,

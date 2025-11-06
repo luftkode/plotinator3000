@@ -110,7 +110,6 @@ pub(super) fn show_font_size_drag_value(ui: &mut egui::Ui, ctx: &egui::Context, 
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn not_wasm_show_download_button(ui: &mut egui::Ui, app: &mut PlotApp) {
     if ui
         .button(RichText::new(format!(

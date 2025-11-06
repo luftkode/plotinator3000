@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Remove support for WASM
 - Tweak time labels to better support micro and nanosecond time scales
 
 ## [2.9.0]

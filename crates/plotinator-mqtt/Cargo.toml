@@ -13,6 +13,7 @@ plotinator-log-if.workspace = true
 plotinator-ui-util.workspace = true
 plotinator-macros.workspace = true
 egui_plot.workspace = true
+rumqttc.workspace = true
 
 chrono.workspace = true
 log.workspace = true
@@ -27,9 +28,6 @@ smallvec.workspace = true
 plotinator-test-util.workspace = true
 testresult.workspace = true
 insta.workspace = true
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rumqttc.workspace = true
 
 [lints]
 workspace = true

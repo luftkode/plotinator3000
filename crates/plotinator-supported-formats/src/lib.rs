@@ -11,7 +11,6 @@ use std::{
 
 pub(crate) mod csv;
 #[cfg(feature = "hdf5")]
-#[cfg(not(target_arch = "wasm32"))]
 mod hdf5;
 pub(crate) mod logs;
 pub(crate) mod parse_info;
@@ -31,7 +30,6 @@ pub enum SupportedFormat {
     Log(SupportedLog),
     Csv(SupportedCsv),
     #[cfg(feature = "hdf5")]
-    #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::upper_case_acronyms, reason = "The format is called HDF5")]
     HDF5(hdf5::SupportedHdf5Format),
     MqttData(SerializableMqttPlotData),
@@ -58,7 +56,7 @@ fn mmap_file(file: &fs::File) -> io::Result<memmap2::Mmap> {
     // SAFETY: It's safe as long as the underlying file is not modified before this function returns
     let mmap: memmap2::Mmap = unsafe { memmap2::Mmap::map(file)? };
 
-    #[cfg(not(any(target_os = "windows", target_arch = "wasm32")))]
+    #[cfg(not(target_os = "windows"))]
     mmap.advise(memmap2::Advice::Sequential)?;
 
     Ok(mmap)
@@ -128,7 +126,6 @@ impl SupportedFormat {
     }
 
     #[cfg(feature = "hdf5")]
-    #[cfg(not(target_arch = "wasm32"))]
     #[plotinator_proc_macros::log_time]
     fn parse_hdf5_from_path(path: &Path, tx: UpdateChannel) -> anyhow::Result<Self> {
         let h5file = hdf5::SupportedHdf5Format::from_path(path, tx)?;
@@ -136,23 +133,11 @@ impl SupportedFormat {
     }
 
     #[cfg(not(feature = "hdf5"))]
-    #[cfg(not(target_arch = "wasm32"))]
     fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(
                 "Recognized '{}' as an HDF5 file. But the HDF5 feature is turned off.",
-                path.display()
-            ),
-        ))
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn parse_hdf5_from_path(path: &Path) -> io::Result<Self> {
-        Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!(
-                "Recognized '{}' as an HDF5 file. HDF5 files are only supported on the native version",
                 path.display()
             ),
         ))
@@ -168,7 +153,6 @@ impl SupportedFormat {
             Self::Log(l) => Some(l.parse_info()),
             Self::Csv(c) => Some(c.parse_info()),
             #[cfg(feature = "hdf5")]
-            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(_) => None,
             Self::MqttData(_) => None,
         }
@@ -195,7 +179,6 @@ impl SupportedFormat {
                     }
                 }
             }
-            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(supported_hdf5_format) => {
                 for rp in supported_hdf5_format.raw_plots() {
                     if let RawPlot::GeoSpatialDataset(geo_data) = rp {
@@ -222,7 +205,6 @@ impl Plotable for SupportedFormat {
             Self::Csv(c) => c.raw_plots(),
 
             #[cfg(feature = "hdf5")]
-            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.raw_plots(),
             Self::MqttData(mqtt) => mqtt.raw_plots(),
         }
@@ -233,7 +215,6 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.first_timestamp(),
             Self::Csv(c) => c.first_timestamp(),
             #[cfg(feature = "hdf5")]
-            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.first_timestamp(),
             Self::MqttData(mqtt) => mqtt.first_timestamp(),
         }
@@ -244,7 +225,6 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.descriptive_name(),
             Self::Csv(c) => c.descriptive_name(),
             #[cfg(feature = "hdf5")]
-            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.descriptive_name(),
             Self::MqttData(mqtt) => mqtt.descriptive_name(),
         }
@@ -255,7 +235,6 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.labels(),
             Self::Csv(c) => c.labels(),
             #[cfg(feature = "hdf5")]
-            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.labels(),
             Self::MqttData(mqtt) => mqtt.labels(),
         }
@@ -266,7 +245,6 @@ impl Plotable for SupportedFormat {
             Self::Log(l) => l.metadata(),
             Self::Csv(c) => c.metadata(),
             #[cfg(feature = "hdf5")]
-            #[cfg(not(target_arch = "wasm32"))]
             Self::HDF5(hdf) => hdf.metadata(),
             Self::MqttData(mqtt) => mqtt.metadata(),
         }

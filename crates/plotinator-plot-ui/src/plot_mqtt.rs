@@ -18,8 +18,7 @@ pub fn fill_mqtt_plots(
     set_auto_bounds: &mut bool,
     plot_scroller: &mut PlotScroller,
     box_selection: &mut BoxSelection,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
-    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
+    #[cfg(feature = "map")] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
 ) {
     plotinator_macros::profile_function!();
 
@@ -28,12 +27,12 @@ pub fn fill_mqtt_plots(
         if area_hovered {
             box_selection.record_key_and_pointer_events(plot_ui, ExpectedPlotRange::Hundreds);
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
                 map_cmd.pointer_time_pos(pointer_coord.x);
             }
         } else {
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             {
                 map_cmd.poll_msg();
                 if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {

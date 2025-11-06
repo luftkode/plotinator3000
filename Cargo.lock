@@ -3966,7 +3966,6 @@ dependencies = [
  "smallvec",
  "tempfile",
  "testresult",
- "wasm-bindgen-futures",
  "zip",
 ]
 
@@ -4313,8 +4312,6 @@ dependencies = [
  "tempfile",
  "testresult",
  "walkers",
- "wasm-bindgen-futures",
- "web-sys",
  "winres",
 ]
 

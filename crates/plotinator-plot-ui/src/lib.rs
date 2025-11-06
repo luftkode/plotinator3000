@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use click_delta::ClickDelta;
-#[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+#[cfg(feature = "mqtt")]
 use egui::Color32;
 use egui_notify::Toasts;
 use plot_settings::PlotSettings;
@@ -20,7 +20,7 @@ use smallvec::SmallVec;
 mod axis_config;
 mod click_delta;
 mod plot_graphics;
-#[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+#[cfg(feature = "mqtt")]
 pub mod plot_mqtt;
 pub mod plot_settings;
 mod plot_ui;
@@ -33,7 +33,7 @@ pub const WARN_ON_UNPARSED_BYTES_THRESHOLD: usize = 128;
 
 pub enum PlotMode<'a> {
     Logs(&'a mut Plots),
-    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+    #[cfg(feature = "mqtt")]
     MQTT {
         plots: &'a [(plotinator_mqtt_ui::plot::MqttPlotPoints, Color32)],
         auto_bounds: &'a mut bool,
@@ -90,12 +90,10 @@ impl LogPlotUi {
         first_frame: &mut bool,
         loaded_formats: &mut SmallVec<[LoadedSupportedFormat; 1]>,
         toasts: &mut Toasts,
-        #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
-        map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
-        mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
+        #[cfg(feature = "map")] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
+        #[cfg(feature = "mqtt")] mqtt: &mut plotinator_mqtt_ui::connection::MqttConnection,
     ) -> Response {
-        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        #[cfg(feature = "profiling")]
         puffin::profile_scope!("Plot_UI");
 
         let Self {
@@ -171,7 +169,7 @@ impl LogPlotUi {
 
         plot_settings.refresh(plots);
 
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+        #[cfg(feature = "mqtt")]
         let mode = {
             mqtt.show_waiting_for_initial_data(ui);
             let mqtt_plots =
@@ -186,7 +184,7 @@ impl LogPlotUi {
                 }
             }
         };
-        #[cfg(not(all(not(target_arch = "wasm32"), feature = "mqtt")))]
+        #[cfg(not(feature = "mqtt"))]
         let mode = PlotMode::Logs(plots);
 
         ui.vertical(|ui| {
@@ -199,7 +197,7 @@ impl LogPlotUi {
                 link_group.expect("uninitialized link group id"),
                 click_delta,
                 box_selection,
-                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                #[cfg(feature = "map")]
                 map_cmd,
                 mode,
             );

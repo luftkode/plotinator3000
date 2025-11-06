@@ -8,7 +8,6 @@ use std::{
     time::Duration,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
@@ -141,7 +140,6 @@ impl eframe::App for PlotApp {
         }
         self.status_window.draw(ctx);
 
-        #[cfg(not(target_arch = "wasm32"))]
         self.download_ui
             .poll_download_messages(ctx, &mut self.toasts);
 
@@ -210,7 +208,6 @@ impl eframe::App for PlotApp {
             misc::show_warn_on_debug_build(ui);
         });
 
-        #[cfg(not(target_arch = "wasm32"))]
         self.download_ui.show_download_window(ctx);
 
         self.toasts.show(ctx);
@@ -293,7 +290,7 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
                 if ui.button("Plot Data").clicked() {
                     fd::native::NativeFileDialog::save_plot_data(
                         app.plot.stored_plot_files(),
-                        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+                        #[cfg(feature = "mqtt")]
                         app.mqtt.mqtt_plot_data.as_ref(),
                     );
                     ui.close_kind(UiKind::Menu);
@@ -326,7 +323,7 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
             misc::show_theme_toggle_buttons(ui);
             misc::show_homepage_link(ui);
 
-            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+            #[cfg(feature = "profiling")]
             crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut app.keep_repainting);
 
             #[cfg(feature = "mqtt")]
