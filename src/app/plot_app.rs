@@ -22,7 +22,6 @@ mod handle_input;
 mod misc;
 mod supported_formats_table;
 
-#[cfg(not(target_arch = "wasm32"))]
 mod download;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -99,7 +98,7 @@ impl Default for PlotApp {
 
             parse_update_rx: rx,
             background_parser: ParserThreads::new(tx),
-            status_window: ParseStatusWindow::new(),
+            status_window: ParseStatusWindow::default(),
             loaded_custom_files: vec![],
         }
     }
@@ -165,13 +164,13 @@ impl eframe::App for PlotApp {
                 &mut self.first_frame,
                 &mut new_loaded_files,
                 &mut self.toasts,
-                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                #[cfg(feature = "map")]
                 &mut self.map_commander,
-                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+                #[cfg(feature = "mqtt")]
                 &mut self.mqtt,
             );
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             {
                 for mut file in new_loaded_files {
                     for geo_data in file.take_geo_spatial_data() {
@@ -273,52 +272,45 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
                 .button(RichText::new(format!("{FOLDER_OPEN} Open File")))
                 .clicked()
             {
-                #[cfg(target_arch = "wasm32")]
-                app.web_file_dialog.open(ctx.clone());
-                #[cfg(not(target_arch = "wasm32"))]
                 app.native_file_dialog.open();
+            }
+
+            if app.background_parser.active_threads() {
+                ui.spinner();
+            }
+            if ui.button(RichText::new("Parsing")).clicked() {
+                app.status_window.show();
             }
 
             ui.menu_button(RichText::new(format!("{FLOPPY_DISK} Save")), |ui| {
                 // Option to export the entire UI state for later restoration
                 if ui.button("Plot UI State").clicked() {
-                    #[cfg(not(target_arch = "wasm32"))]
                     fd::native::NativeFileDialog::save_plot_ui(&app.plot);
-                    #[cfg(target_arch = "wasm32")]
-                    fd::web::WebFileDialog::save_plot_ui(&app.plot);
-
                     ui.close_kind(UiKind::Menu);
                 }
 
                 // Option to export just the raw plot data
                 if ui.button("Plot Data").clicked() {
-                    #[cfg(not(target_arch = "wasm32"))]
                     fd::native::NativeFileDialog::save_plot_data(
                         app.plot.stored_plot_files(),
                         #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
                         app.mqtt.mqtt_plot_data.as_ref(),
                     );
-                    #[cfg(target_arch = "wasm32")]
-                    fd::web::WebFileDialog::save_plot_data(app.plot.stored_plot_files());
                     ui.close_kind(UiKind::Menu);
                 }
 
                 // Option to export individual plot data
                 if ui.button("Individual Plot data").clicked() {
-                    #[cfg(not(target_arch = "wasm32"))]
                     fd::native::NativeFileDialog::save_individual_plots(
                         app.plot.individual_plots(),
                     );
-                    #[cfg(target_arch = "wasm32")]
-                    fd::web::WebFileDialog::save_individual_plots(app.plot.individual_plots());
                     ui.close_kind(UiKind::Menu);
                 }
             });
 
-            #[cfg(not(target_arch = "wasm32"))]
             misc::not_wasm_show_download_button(ui, app);
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             {
                 use egui_phosphor::regular::GLOBE_HEMISPHERE_WEST;
                 let mut txt = RichText::new(format!("{GLOBE_HEMISPHERE_WEST} Map"));
@@ -337,11 +329,7 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
             #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
             crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut app.keep_repainting);
 
-            if cfg!(target_arch = "wasm32") {
-                ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
-            }
-
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+            #[cfg(feature = "mqtt")]
             crate::mqtt::show_mqtt_connect_button(app, ctx, ui);
             misc::collapsible_instructions(ui);
         });

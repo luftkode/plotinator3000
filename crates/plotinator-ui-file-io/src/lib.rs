@@ -1,5 +1,5 @@
 use eframe::egui;
-use egui::{Color32, Id, ProgressBar, RichText, Ui};
+use egui::{Color32, Id, Key, ProgressBar, RichText, Ui};
 use egui_phosphor::regular::{CHECK_CIRCLE, WARNING_CIRCLE};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -78,21 +78,13 @@ impl FileParseStatus {
 }
 
 /// Encapsulates the state and UI for the parsing window.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ParseStatusWindow {
     parse_statuses: HashMap<PathBuf, FileParseStatus>,
     show_parsing_window: bool,
 }
 
 impl ParseStatusWindow {
-    /// Creates a new, empty parsing window state.
-    pub fn new() -> Self {
-        Self {
-            parse_statuses: HashMap::new(),
-            show_parsing_window: false,
-        }
-    }
-
     /// Open the window.
     pub fn show(&mut self) {
         self.show_parsing_window = true;
@@ -184,7 +176,6 @@ impl ParseStatusWindow {
         egui::Window::new("File Parsing Status")
             .id(window_id)
             .open(&mut is_open)
-            .default_size([700.0, 400.0])
             .resizable(true)
             .show(ctx, |ui| {
                 // --- Separate active and completed tasks ---
@@ -244,7 +235,9 @@ impl ParseStatusWindow {
                         .retain(|_path, status| status.final_status.is_none());
                 }
             });
-
+        if ctx.input(|i| i.key_pressed(Key::Escape)) {
+            is_open = false;
+        }
         self.show_parsing_window = is_open;
     }
 
