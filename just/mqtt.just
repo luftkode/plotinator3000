@@ -87,7 +87,7 @@ pub-frame-altimeter MINUTES="3" TOPIC="dt/tc/frame-altimeter/1/height/10hz":
     done
 
 [group("MQTT")]
-pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100":
+pub-frame-gps HOST="localhost" MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100":
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -117,7 +117,7 @@ pub-frame-gps MINUTES="3" TOPIC="dt/tc/frame-gps/x/gps" GPS_NUM="1" LAT_ADD="100
 
         JSON="{\"gps_nr\": $GPS_NR, \"timestamp\": $TIMESTAMP, \"mode\": $MODE, \"gps_status\": {\"hdop\": 0.8, \"vdop\": 1.5, \"pdop\": 1.7, \"satellites\": $SATELLITES}, \"position\": {\"lat\": $LAT, \"lon\": $LON, \"alt\": $ALT}, \"speed\": $SPEED, \"gps_time\": \"$GPS_TIME\"}"
 
-        mosquitto_pub -h localhost -t "{{TOPIC}}" -m "$JSON"
+        mosquitto_pub -h {{HOST}} -t "{{TOPIC}}" -m "$JSON"
         sleep 1
     done
 

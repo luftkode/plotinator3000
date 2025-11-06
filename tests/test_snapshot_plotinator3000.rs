@@ -76,6 +76,8 @@ fn test_snapshot_drop_load_mbed_status_regular_v6() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_mbed_status_regular_v6");
     harness.drop_file(mbed_status_v6_regular());
     harness.run_steps(4);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
     harness.save_snapshot();
 }
 
@@ -83,7 +85,9 @@ fn test_snapshot_drop_load_mbed_status_regular_v6() {
 fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_mbed_pid_regular_v6");
     harness.drop_file(mbed_pid_v6_regular());
-    harness.run();
+    harness.run_steps(4);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
 
     // Place the cursor in the middle plot area to see that the cursor "alignment-lines" are present
     // across the plot areas
@@ -103,7 +107,9 @@ fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
 fn test_snapshot_drop_load_hdf5_bifrost_current() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_hdf5_bifrost_current");
     harness.drop_file(bifrost_current());
-    harness.run();
+    harness.run_steps(4);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
     harness.save_snapshot_with_threshold(CiThreshold(2.0));
@@ -114,7 +120,9 @@ fn test_snapshot_open_loaded_files() {
     let mut harness = PlotAppHarnessWrapper::new("open_loaded_files");
     harness.drop_file(mbed_status_v6_regular());
     harness.drop_file(mbed_pid_v6_regular());
-    harness.run();
+    harness.run_steps(4);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
     // Experience shows that another two steps are required before the loaded files button is rendered
     harness.run_steps(2);
 
@@ -133,8 +141,8 @@ fn test_snapshot_open_loaded_files_open_log_window() {
     let mut harness = PlotAppHarnessWrapper::new("open_loaded_files_click_mbed_PID");
     harness.drop_file(mbed_status_v6_regular());
     harness.drop_file(mbed_pid_v6_regular());
-    harness.run();
-    // Experience shows that another two steps are required before the loaded files button is rendered
+    harness.run_steps(4);
+    harness.close_file_parsing_status_window();
     harness.run_steps(2);
     // Check that we can now click the loaded files button
     let loaded_files_button = harness.get_loaded_files_button();
@@ -159,7 +167,10 @@ fn test_snapshot_open_loaded_files_open_log_window() {
 fn test_snapshot_drop_load_hdf5_njord_altimeter_wasp200_sf20() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_hdf5_njord_altimeter_wasp200_sf20");
     harness.drop_file(njord_altimeter_wasp200_sf20());
-    harness.run();
+    harness.run_steps(4);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
+
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
     harness.save_snapshot_with_threshold(CiThreshold(4.0));

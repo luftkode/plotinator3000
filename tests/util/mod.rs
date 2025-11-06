@@ -11,6 +11,7 @@
     reason = "This is test utilities so things like PathBuf is fine, we won't deploy this code anywhere"
 )]
 pub use egui::{DroppedFile, Event, Pos2, Rect, accesskit::Role};
+use egui::{Key, Modifiers};
 pub use egui_kittest::{Harness, kittest::Queryable as _};
 pub use egui_kittest::{
     Node,
@@ -141,6 +142,28 @@ impl PlotAppHarnessWrapper {
     pub fn get_mqtt_configuration_window(&self) -> Node<'_> {
         self.harness
             .get_by_role_and_label(Role::Window, "MQTT Configuration")
+    }
+
+    pub fn get_file_parsing_status_window(&self) -> Node<'_> {
+        self.harness
+            .get_by_role_and_label(Role::Window, "File Parsing Status")
+    }
+
+    pub fn close_file_parsing_status_window(&self) {
+        let win = self.get_file_parsing_status_window();
+        let close_btn = win.get_by_role_and_label(Role::Button, "Close window");
+        close_btn.focus();
+        close_btn.click();
+    }
+
+    pub fn press_escape(&mut self) {
+        self.input_event(Event::Key {
+            key: Key::Escape,
+            physical_key: None,
+            pressed: false,
+            repeat: false,
+            modifiers: Modifiers::NONE,
+        });
     }
 
     pub fn get_loaded_files_button(&self) -> Node<'_> {

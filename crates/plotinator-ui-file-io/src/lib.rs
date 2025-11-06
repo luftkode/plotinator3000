@@ -202,10 +202,6 @@ impl ParseStatusWindow {
                     ui.label(format!(
                         "Active: {active_count} | Completed: {completed_count}"
                     ));
-                    ui.add_space(40.);
-                    if ui.button("Clear Completed").clicked() {
-                        clear_completed = true;
-                    }
                 });
 
                 // --- Content Area ---
@@ -220,6 +216,9 @@ impl ParseStatusWindow {
                         if !completed.is_empty() {
                             ui.add_space(10.0);
                             ui.heading("Completed Tasks");
+                            if ui.button("Clear").clicked() {
+                                clear_completed = true;
+                            }
                             Self::render_status_grid(
                                 ui,
                                 &completed,

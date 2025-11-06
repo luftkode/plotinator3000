@@ -28,19 +28,6 @@ pub(super) fn notify_if_logs_added(
     logs: &SmallVec<[LoadedSupportedFormat; 1]>,
 ) {
     if !logs.is_empty() {
-        let mut log_names_str = String::new();
-        for l in logs {
-            log_names_str.push('\n');
-            log_names_str.push('\t');
-            log_names_str.push_str(l.format_name());
-        }
-        toasts
-            .info(format!(
-                "{} log{} added{log_names_str}",
-                logs.len(),
-                if logs.len() == 1 { "" } else { "s" }
-            ))
-            .duration(Some(Duration::from_secs(2)));
         for l in logs {
             if let Some(parse_info) = l.parse_info() {
                 log::debug!(
