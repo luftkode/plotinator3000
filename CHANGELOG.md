@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.10.0]
+
+- Parse files in the background and show the parsing status in a new "parser status" popup
 - Remove support for WASM
 - Tweak time labels to better support micro and nanosecond time scales
 

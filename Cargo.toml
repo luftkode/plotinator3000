@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "2.9.0"
+version = "2.10.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -51,7 +51,7 @@ plotinator-map-ui.path = "crates/plotinator-map-ui"
 plotinator-ui-log-settings.path = "crates/plotinator-ui-log-settings"
 plotinator-background-parser.path = "crates/plotinator-background-parser"
 plotinator-custom-files.path = "crates/plotinator-custom-files"
-egui = { version = "0.33", features = ["rayon", "callstack"] }
+egui = { version = "0.33", features = ["callstack"] }
 egui-notify = "0.21.0"
 eframe = { version = "0.33", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
