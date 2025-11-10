@@ -202,7 +202,6 @@ jobs:
       - test
       - format
       - lint
-      - trunk
       - build
       - msrv
     runs-on: ubuntu-latest

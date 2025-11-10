@@ -140,6 +140,12 @@ impl PlotAppHarnessWrapper {
     }
 
     pub fn get_mqtt_configuration_window(&self) -> Node<'_> {
+        let nodes = self
+            .harness
+            .get_all_by(|l| l.label().is_some_and(|l| l.contains("MQTT")));
+        for n in nodes {
+            eprintln!("NODE: {n:#?}");
+        }
         self.harness
             .get_by_role_and_label(Role::Window, "MQTT Configuration")
     }
@@ -154,6 +160,7 @@ impl PlotAppHarnessWrapper {
         let close_btn = win.get_by_role_and_label(Role::Button, "Close window");
         close_btn.focus();
         close_btn.click();
+        close_btn.click_accesskit(); // Could be hidden by the popup
     }
 
     pub fn press_escape(&mut self) {
