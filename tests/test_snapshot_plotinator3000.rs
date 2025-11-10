@@ -143,7 +143,7 @@ fn test_snapshot_open_loaded_files_open_log_window() {
     let mut harness = PlotAppHarnessWrapper::new("open_loaded_files_click_mbed_PID");
     harness.drop_file(mbed_status_v6_regular());
     harness.drop_file(mbed_pid_v6_regular());
-    harness.run_steps(4);
+    harness.run_steps(200);
     harness.close_file_parsing_status_window();
     harness.run_steps(2);
     // Check that we can now click the loaded files button
