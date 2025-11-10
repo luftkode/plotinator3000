@@ -1686,7 +1686,6 @@ dependencies = [
  "nohash-hasher",
  "parking_lot",
  "profiling",
- "rayon",
  "serde",
 ]
 
@@ -3882,6 +3881,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "plotinator-background-parser"
+version = "2.10.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "plotinator-hdf5",
+ "plotinator-log-if",
+ "plotinator-plot-util",
+ "plotinator-supported-formats",
+ "plotinator-test-util",
+ "plotinator-ui-file-io",
+ "plotinator-ui-log-settings",
+ "rayon",
+ "serde",
+ "smallvec",
+ "tempfile",
+ "testresult",
+ "zip",
+]
+
+[[package]]
 name = "plotinator-csv"
 version = "0.1.0"
 dependencies = [
@@ -3894,6 +3914,17 @@ dependencies = [
  "plotinator-test-util",
  "plotinator-ui-util",
  "serde",
+]
+
+[[package]]
+name = "plotinator-custom-files"
+version = "2.10.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "plotinator-plot-ui",
+ "plotinator-supported-formats",
+ "serde_json",
 ]
 
 [[package]]
@@ -3918,6 +3949,7 @@ dependencies = [
  "anyhow",
  "egui",
  "log",
+ "plotinator-custom-files",
  "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-mqtt",
@@ -3926,12 +3958,13 @@ dependencies = [
  "plotinator-plot-util",
  "plotinator-supported-formats",
  "plotinator-test-util",
+ "plotinator-ui-file-io",
  "rfd",
  "serde",
  "serde_json",
+ "smallvec",
  "tempfile",
  "testresult",
- "wasm-bindgen-futures",
  "zip",
 ]
 
@@ -4085,6 +4118,7 @@ dependencies = [
  "egui-phosphor",
  "egui_plot",
  "log",
+ "plotinator-background-parser",
  "plotinator-log-if",
  "plotinator-macros",
  "plotinator-map-ui",
@@ -4094,6 +4128,7 @@ dependencies = [
  "plotinator-proc-macros",
  "plotinator-strfmt",
  "plotinator-supported-formats",
+ "plotinator-ui-log-settings",
  "plotinator-ui-util",
  "puffin",
  "rayon",
@@ -4162,6 +4197,7 @@ dependencies = [
  "plotinator-mqtt-ui",
  "plotinator-proc-macros",
  "plotinator-test-util",
+ "plotinator-ui-file-io",
  "puffin",
  "serde",
 ]
@@ -4172,6 +4208,31 @@ version = "0.1.0"
 dependencies = [
  "paste",
  "testresult",
+]
+
+[[package]]
+name = "plotinator-ui-file-io"
+version = "2.10.0"
+dependencies = [
+ "anyhow",
+ "eframe",
+ "egui",
+ "egui-phosphor",
+ "log",
+]
+
+[[package]]
+name = "plotinator-ui-log-settings"
+version = "2.10.0"
+dependencies = [
+ "chrono",
+ "egui",
+ "egui_plot",
+ "log",
+ "plotinator-plot-util",
+ "plotinator-supported-formats",
+ "plotinator-ui-util",
+ "serde",
 ]
 
 [[package]]
@@ -4205,7 +4266,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "2.9.0"
+version = "2.10.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4219,6 +4280,8 @@ dependencies = [
  "env_logger",
  "log",
  "mimalloc",
+ "plotinator-background-parser",
+ "plotinator-custom-files",
  "plotinator-download",
  "plotinator-file-io",
  "plotinator-hdf5",
@@ -4234,6 +4297,8 @@ dependencies = [
  "plotinator-strfmt",
  "plotinator-supported-formats",
  "plotinator-test-util",
+ "plotinator-ui-file-io",
+ "plotinator-ui-log-settings",
  "plotinator-ui-util",
  "plotinator-updater",
  "puffin",
@@ -4242,11 +4307,10 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "smallvec",
  "tempfile",
  "testresult",
  "walkers",
- "wasm-bindgen-futures",
- "web-sys",
  "winres",
 ]
 

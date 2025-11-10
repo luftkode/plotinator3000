@@ -4,7 +4,7 @@ use plotinator_plot_util::MipMapConfiguration;
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]
-pub struct MipMapSettings {
+pub(crate) struct MipMapSettings {
     enabled: bool,
     auto_set: bool,
     level: usize,

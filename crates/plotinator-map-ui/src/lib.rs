@@ -1,4 +1,3 @@
-#![cfg(not(target_arch = "wasm32"))]
 use egui::{
     Align2, CentralPanel, Color32, Frame, Grid, MenuBar, Pos2, RichText, Slider, TopBottomPanel,
     Ui, ViewportBuilder, ViewportId, Window,

@@ -1,16 +1,26 @@
-#[cfg(not(target_arch = "wasm32"))]
+use plotinator_custom_files::CustomFileContent;
+use plotinator_supported_formats::SupportedFormat;
+use smallvec::SmallVec;
+use std::{
+    io,
+    path::PathBuf,
+    sync::mpsc::{self, Receiver},
+    time::Duration,
+};
+
 use crate::app::plot_app::download::DownloadUi;
 use egui::{RichText, UiKind};
 use egui_notify::Toasts;
-use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN};
+use egui_phosphor::regular::{FLOPPY_DISK, FOLDER_OPEN, SPINNER_BALL};
+use plotinator_background_parser::{ParserThreads, loaded_format::LoadedSupportedFormat};
 use plotinator_plot_ui::LogPlotUi;
+use plotinator_ui_file_io::{ParseStatusWindow, ParseUpdate};
 
-use plotinator_file_io::{file_dialog as fd, loaded_files::LoadedFiles};
-
+use plotinator_file_io::file_dialog::{self as fd, native::NativeFileDialog};
+mod handle_input;
 mod misc;
 mod supported_formats_table;
 
-#[cfg(not(target_arch = "wasm32"))]
 mod download;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -22,31 +32,24 @@ pub struct PlotApp {
     first_frame: bool,
     #[serde(skip)]
     pub(crate) toasts: Toasts,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+    #[cfg(feature = "map")]
     pub(crate) map_commander: plotinator_map_ui::commander::MapUiCommander,
 
-    loaded_files: LoadedFiles,
     plot: LogPlotUi,
     font_size: f32,
     font_size_init: bool,
     error_message: Option<String>,
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+    #[cfg(feature = "mqtt")]
     #[serde(skip)]
     pub(crate) mqtt: plotinator_mqtt_ui::connection::MqttConnection,
 
-    #[cfg(target_arch = "wasm32")]
-    #[serde(skip)]
-    web_file_dialog: fd::web::WebFileDialog,
-
-    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     native_file_dialog: fd::native::NativeFileDialog,
 
-    #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+    #[cfg(feature = "profiling")]
     keep_repainting: bool,
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[serde(skip)]
     download_ui: DownloadUi,
 
@@ -55,45 +58,53 @@ pub struct PlotApp {
     // will definitely not notice it, even on low performing devices.
     #[serde(skip)]
     disable_app_state_storage: bool,
+
+    #[serde(skip)]
+    background_parser: ParserThreads,
+    #[serde(skip)]
+    parse_update_rx: Receiver<ParseUpdate>,
+    #[serde(skip)]
+    status_window: ParseStatusWindow,
+    #[serde(skip)]
+    loaded_custom_files: Vec<SupportedFormat>,
 }
 
 impl Default for PlotApp {
     fn default() -> Self {
+        let (tx, rx) = mpsc::channel();
         Self {
             first_frame: true,
             toasts: Toasts::default(),
-            loaded_files: LoadedFiles::default(),
             plot: LogPlotUi::default(),
             font_size: Self::DEFAULT_FONT_SIZE,
             font_size_init: false,
             error_message: None,
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             map_commander: plotinator_map_ui::commander::MapUiCommander::default(),
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+            #[cfg(feature = "mqtt")]
             mqtt: plotinator_mqtt_ui::connection::MqttConnection::default(),
 
-            #[cfg(target_arch = "wasm32")]
-            web_file_dialog: fd::web::WebFileDialog::default(),
-
-            #[cfg(not(target_arch = "wasm32"))]
             native_file_dialog: fd::native::NativeFileDialog::default(),
 
-            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+            #[cfg(feature = "profiling")]
             keep_repainting: true,
 
-            #[cfg(not(target_arch = "wasm32"))]
             download_ui: DownloadUi::default(),
 
             disable_app_state_storage: false,
+
+            parse_update_rx: rx,
+            background_parser: ParserThreads::new(tx),
+            status_window: ParseStatusWindow::default(),
+            loaded_custom_files: vec![],
         }
     }
 }
 
 impl PlotApp {
     const DEFAULT_FONT_SIZE: f32 = 16.0;
-    const DISABLE_STORAGE_THRESHOLD: u32 = 100_000; // Disable saving app state if we have over 100k loaded data points
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -116,22 +127,19 @@ impl PlotApp {
 impl eframe::App for PlotApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        plotinator_macros::profile_function!();
-        self.disable_app_state_storage =
-            self.plot.total_data_points() > Self::DISABLE_STORAGE_THRESHOLD;
-
-        if self.disable_app_state_storage {
-            log::debug!("Saving app state is disabled - skipping");
-        } else {
-            eframe::set_value(storage, eframe::APP_KEY, self);
-        }
+        eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.poll_picked_files();
+        if let Err(e) = self.poll_picked_files() {
+            self.error_message = Some(format!("Error during file loading: {e}"));
+        }
+        while let Ok(update) = self.parse_update_rx.try_recv() {
+            self.status_window.handle_update(update);
+        }
+        self.status_window.draw(ctx);
 
-        #[cfg(not(target_arch = "wasm32"))]
         self.download_ui
             .poll_download_messages(ctx, &mut self.toasts);
 
@@ -142,26 +150,28 @@ impl eframe::App for PlotApp {
         show_top_panel(self, ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            misc::notify_if_logs_added(&mut self.toasts, self.loaded_files.loaded());
-            let new_loaded_files = self.loaded_files.take_loaded_files();
+            let mut new_loaded_files = self.background_parser.poll();
+            for custom_loaded_file in self.loaded_custom_files.drain(..) {
+                new_loaded_files.push(LoadedSupportedFormat::new(custom_loaded_file));
+            }
+
+            misc::notify_if_logs_added(&mut self.toasts, &new_loaded_files);
 
             self.plot.ui(
                 ui,
                 &mut self.first_frame,
-                &new_loaded_files,
+                &mut new_loaded_files,
                 &mut self.toasts,
-                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                #[cfg(feature = "map")]
                 &mut self.map_commander,
-                #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+                #[cfg(feature = "mqtt")]
                 &mut self.mqtt,
             );
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             {
-                for file in new_loaded_files {
-                    log::info!("Received dataset {}", file.descriptive_name());
-                    use plotinator_log_if::plotable::Plotable as _;
-                    for geo_data in file.geo_spatial_data() {
+                for mut file in new_loaded_files {
+                    for geo_data in file.take_geo_spatial_data() {
                         self.map_commander.add_geo_data(geo_data);
                     }
                 }
@@ -188,23 +198,23 @@ impl eframe::App for PlotApp {
                 supported_formats_table::draw_empty_state(ui); // Display the message when no plots are shown
             }
 
-            match plotinator_file_io::dropped_files::handle_dropped_files(
-                ctx,
-                &mut self.loaded_files,
-            ) {
-                Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
-                Err(e) => self.error_message = Some(e.to_string()),
-                Ok(None) => (),
+            let dropped_files = plotinator_file_io::dropped_files::take_dropped_files(ctx);
+            if let Err(e) = self.handle_input_files(dropped_files)
+                && self.error_message.is_none()
+            {
+                self.error_message = Some(format!("Error handling input path: {e}"));
             }
-
             misc::show_error(ui, self);
             misc::show_warn_on_debug_build(ui);
         });
 
-        #[cfg(not(target_arch = "wasm32"))]
         self.download_ui.show_download_window(ctx);
 
         self.toasts.show(ctx);
+
+        if self.background_parser.active_threads() {
+            ctx.request_repaint_after(Duration::from_millis(100));
+        }
     }
 }
 
@@ -214,25 +224,36 @@ impl PlotApp {
         self.plot = *new;
     }
 
-    fn poll_picked_files(&mut self) {
-        #[cfg(target_arch = "wasm32")]
-        match self
-            .web_file_dialog
-            .poll_received_files(&mut self.loaded_files)
-        {
-            Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
-            Err(e) => self.error_message = Some(e.to_string()),
-            Ok(None) => (),
+    fn poll_picked_files(&mut self) -> io::Result<()> {
+        let picked_files = self.native_file_dialog.take_picked_files();
+        if !picked_files.is_empty() {
+            log::debug!("Got picked file: {picked_files:?}");
         }
-        #[cfg(not(target_arch = "wasm32"))]
-        match self
-            .native_file_dialog
-            .parse_picked_files(&mut self.loaded_files)
-        {
-            Ok(Some(new_plot_ui_state)) => self.load_new_plot_ui_state(new_plot_ui_state),
+        self.handle_input_files(picked_files.into())?;
+        Ok(())
+    }
+
+    fn handle_input_files(&mut self, mut input_paths: SmallVec<[PathBuf; 1]>) -> io::Result<()> {
+        match NativeFileDialog::try_parse_custom_files(&mut input_paths) {
+            Ok(custom_files) => {
+                for cf in custom_files {
+                    match cf {
+                        CustomFileContent::PlotData(mut pd) => {
+                            log::info!("Loading {} plot data files from", pd.len());
+                            self.loaded_custom_files.append(&mut pd);
+                        }
+                        CustomFileContent::PlotUi(new_plot_ui_state) => {
+                            self.load_new_plot_ui_state(new_plot_ui_state);
+                        }
+                    }
+                }
+            }
             Err(e) => self.error_message = Some(e.to_string()),
-            Ok(None) => (),
         }
+        for p in input_paths {
+            self.background_parser.parse_path(&p)?;
+        }
+        Ok(())
     }
 }
 
@@ -248,52 +269,50 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
                 .button(RichText::new(format!("{FOLDER_OPEN} Open File")))
                 .clicked()
             {
-                #[cfg(target_arch = "wasm32")]
-                app.web_file_dialog.open(ctx.clone());
-                #[cfg(not(target_arch = "wasm32"))]
                 app.native_file_dialog.open();
+            }
+
+            let status_btn_txt =
+                if app.background_parser.active_threads() && !app.status_window.is_open() {
+                    ui.spinner();
+                    "Parsing".to_owned()
+                } else {
+                    format!("{SPINNER_BALL} Parsing")
+                };
+
+            if ui.button(RichText::new(status_btn_txt)).clicked() {
+                app.status_window.show();
             }
 
             ui.menu_button(RichText::new(format!("{FLOPPY_DISK} Save")), |ui| {
                 // Option to export the entire UI state for later restoration
                 if ui.button("Plot UI State").clicked() {
-                    #[cfg(not(target_arch = "wasm32"))]
                     fd::native::NativeFileDialog::save_plot_ui(&app.plot);
-                    #[cfg(target_arch = "wasm32")]
-                    fd::web::WebFileDialog::save_plot_ui(&app.plot);
-
                     ui.close_kind(UiKind::Menu);
                 }
 
                 // Option to export just the raw plot data
                 if ui.button("Plot Data").clicked() {
-                    #[cfg(not(target_arch = "wasm32"))]
                     fd::native::NativeFileDialog::save_plot_data(
                         app.plot.stored_plot_files(),
-                        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+                        #[cfg(feature = "mqtt")]
                         app.mqtt.mqtt_plot_data.as_ref(),
                     );
-                    #[cfg(target_arch = "wasm32")]
-                    fd::web::WebFileDialog::save_plot_data(app.plot.stored_plot_files());
                     ui.close_kind(UiKind::Menu);
                 }
 
                 // Option to export individual plot data
                 if ui.button("Individual Plot data").clicked() {
-                    #[cfg(not(target_arch = "wasm32"))]
                     fd::native::NativeFileDialog::save_individual_plots(
                         app.plot.individual_plots(),
                     );
-                    #[cfg(target_arch = "wasm32")]
-                    fd::web::WebFileDialog::save_individual_plots(app.plot.individual_plots());
                     ui.close_kind(UiKind::Menu);
                 }
             });
 
-            #[cfg(not(target_arch = "wasm32"))]
             misc::not_wasm_show_download_button(ui, app);
 
-            #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+            #[cfg(feature = "map")]
             {
                 use egui_phosphor::regular::GLOBE_HEMISPHERE_WEST;
                 let mut txt = RichText::new(format!("{GLOBE_HEMISPHERE_WEST} Map"));
@@ -309,14 +328,10 @@ fn show_top_panel(app: &mut PlotApp, ctx: &egui::Context) {
             misc::show_theme_toggle_buttons(ui);
             misc::show_homepage_link(ui);
 
-            #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+            #[cfg(feature = "profiling")]
             crate::profiling::ui_add_keep_repainting_checkbox(ui, &mut app.keep_repainting);
 
-            if cfg!(target_arch = "wasm32") {
-                ui.label(format!("Plotinator3000 v{}", env!("CARGO_PKG_VERSION")));
-            }
-
-            #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+            #[cfg(feature = "mqtt")]
             crate::mqtt::show_mqtt_connect_button(app, ctx, ui);
             misc::collapsible_instructions(ui);
         });

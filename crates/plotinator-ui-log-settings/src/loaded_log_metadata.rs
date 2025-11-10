@@ -1,7 +1,7 @@
 use egui::RichText;
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoadedLogMetadata {
     description: String,
     value: String,

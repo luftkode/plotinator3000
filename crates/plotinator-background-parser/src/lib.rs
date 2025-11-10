@@ -1,46 +1,50 @@
 use plotinator_supported_formats::SupportedFormat;
-use serde::{Deserialize, Serialize};
+use plotinator_ui_file_io::{ParseUpdate, UpdateChannel};
+use smallvec::{SmallVec, smallvec};
 use std::{
-    fs,
-    io::{self},
-    path::Path,
+    fs, io,
+    path::{Path, PathBuf},
+    sync::mpsc::Sender,
+    thread,
 };
+use tempfile::TempDir;
 
-/// Contains all supported logs in a single vector.
-#[derive(Default, Deserialize, Serialize)]
-pub struct LoadedFiles {
-    pub(crate) loaded: Vec<SupportedFormat>,
+use crate::loaded_format::LoadedSupportedFormat;
+
+pub mod loaded_format;
+
+pub struct ParserThreads {
+    update_tx: UpdateChannel,
+    threads: Vec<ParserThread>,
+    tmp_dir: TempDir,
 }
 
-impl LoadedFiles {
-    /// Return a vector of immutable references to all logs
-    pub fn loaded(&self) -> &[SupportedFormat] {
-        &self.loaded
+impl ParserThreads {
+    pub fn new(tx: Sender<ParseUpdate>) -> Self {
+        Self {
+            update_tx: UpdateChannel::new(tx),
+            threads: vec![],
+            tmp_dir: tempfile::tempdir().expect(
+                "Failed creating temporary directory for parsing HDF5 files from zip archives",
+            ),
+        }
     }
 
-    /// Take all the `loaded_files` currently stored and return them as a list
-    pub fn take_loaded_files(&mut self) -> Vec<SupportedFormat> {
-        self.loaded.drain(..).collect()
-    }
-
-    pub fn parse_path(&mut self, path: &Path) -> anyhow::Result<()> {
-        if path.is_dir() {
-            self.parse_directory(path)?;
-        } else if is_zip_file(path) {
-            #[cfg(not(target_arch = "wasm32"))]
+    pub fn parse_path(&mut self, path: &Path) -> io::Result<()> {
+        if is_zip_file(path) {
             self.parse_zip_file(path)?;
+        } else if path.is_dir() {
+            self.parse_directory(path)?;
         } else {
-            self.loaded.push(SupportedFormat::parse_from_path(path)?);
+            debug_assert!(path.is_file());
+            let new_thread = ParserThread::new(path.to_owned(), self.update_tx.clone());
+            self.threads.push(new_thread);
         }
         Ok(())
     }
 
-    pub fn parse_raw_buffer(&mut self, buf: &[u8]) -> io::Result<()> {
-        self.loaded.push(SupportedFormat::parse_from_buf(buf)?);
-        Ok(())
-    }
-
     fn parse_directory(&mut self, path: &Path) -> io::Result<()> {
+        debug_assert!(path.is_dir());
         for entry in fs::read_dir(path)? {
             let entry = entry?;
             let path = entry.path();
@@ -48,43 +52,30 @@ impl LoadedFiles {
                 if let Err(e) = self.parse_directory(&path) {
                     log::warn!("{e}");
                 }
-            } else if is_zip_file(&path) {
-                #[cfg(not(target_arch = "wasm32"))]
-                self.parse_zip_file(&path)?;
             } else {
-                match SupportedFormat::parse_from_path(&path) {
-                    Ok(l) => self.loaded.push(l),
-                    Err(e) => log::warn!("{e}"),
-                }
+                self.parse_path(&path)?;
             }
         }
         Ok(())
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn parse_zip_file(&mut self, path: &Path) -> io::Result<()> {
         let file = fs::File::open(path)?;
         let mut archive = zip::ZipArchive::new(file)?;
-
-        // Create a temporary directory for extracting HDF5 files
-        let temp_dir = tempfile::tempdir()?;
-
-        self.parse_zip_entries(&mut archive, "", 0, temp_dir.path())?;
+        let tmp_dir = self.tmp_dir.path().to_owned();
+        self.parse_zip_entries(&mut archive, "", 0, &tmp_dir, &self.update_tx.clone())?;
         Ok(())
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn parse_zip_entries(
         &mut self,
         archive: &mut zip::ZipArchive<fs::File>,
         path_prefix: &str,
         depth: usize,
         temp_dir: &Path,
+        _tx: &UpdateChannel,
     ) -> io::Result<()> {
-        use super::custom_files;
-        use custom_files::CustomFileContent;
-
-        const MAX_DEPTH: usize = 3;
+        const MAX_DEPTH: usize = 5;
 
         if depth > MAX_DEPTH {
             log::warn!("Reached recursion limit (max depth = {MAX_DEPTH}) for zip parsing");
@@ -140,56 +131,127 @@ impl LoadedFiles {
                 let file_name = file.name().to_owned();
                 let file_path = Path::new(&file_name);
 
-                // Check if this is an HDF5 file
-                if plotinator_hdf5::path_has_hdf5_extension(file_path) {
-                    // Extract to temporary file and parse from path
-                    let temp_file_name = file_path.file_name().ok_or_else(|| {
-                        io::Error::new(io::ErrorKind::InvalidInput, "Invalid file name")
-                    })?;
-                    let temp_file_path = temp_dir.join(temp_file_name);
+                // Extract to temporary file and parse from path
+                let temp_file_name = file_path.file_name().ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidInput, "Invalid file name")
+                })?;
+                let temp_file_path = temp_dir.join(temp_file_name);
 
-                    // Extract the file
-                    let mut temp_file = fs::File::create(&temp_file_path)?;
-                    io::copy(&mut file, &mut temp_file)?;
-                    temp_file.sync_all()?;
-                    drop(temp_file); // Close the file before parsing
+                // Extract the file
+                let mut temp_file = fs::File::create(&temp_file_path)?;
+                io::copy(&mut file, &mut temp_file)?;
+                temp_file.sync_all()?;
+                drop(temp_file); // Close the file before parsing
 
-                    // Parse from the temporary file path
-                    match SupportedFormat::parse_from_path(&temp_file_path) {
-                        Ok(supported_format) => self.loaded.push(supported_format),
-                        Err(e) => log::error!("Failed to parse HDF5 file {file_name}: {e}"),
-                    }
-
-                    // Clean up the temporary file
-                    if let Err(e) = fs::remove_file(&temp_file_path) {
-                        log::warn!("Failed to clean up temporary file {temp_file_path:?}: {e}");
-                    }
-                } else {
-                    // Parse from buffer for non-HDF5 files
-                    let mut contents = Vec::new();
-                    io::Read::read_to_end(&mut file, &mut contents)?;
-
-                    match super::custom_files::try_parse_custom_file_from_buf(&contents) {
-                        Some(CustomFileContent::PlotUi(_)) => log::warn!(
-                            "Ignoring custom Plot UI file found in Zip file, this would override all current loaded logs..."
-                        ),
-                        Some(CustomFileContent::PlotData(plotdata)) => self.loaded.extend(plotdata),
-                        None => {
-                            if let Ok(log) = SupportedFormat::parse_from_buf(&contents) {
-                                self.loaded.push(log);
-                            }
-                        }
-                    }
-                }
+                self.parse_path(&temp_file_path)?;
             }
         }
 
         // Recursively process subdirectories
         for subdir_path in subdirectories {
-            self.parse_zip_entries(archive, &subdir_path, depth + 1, temp_dir)?;
+            self.parse_zip_entries(archive, &subdir_path, depth + 1, temp_dir, _tx)?;
         }
 
         Ok(())
+    }
+
+    pub fn poll(&mut self) -> SmallVec<[LoadedSupportedFormat; 1]> {
+        let mut loaded_formats = smallvec![];
+        let running_threads: Vec<_> = self.threads.drain(..).collect();
+        for t in running_threads {
+            if t.is_finished() {
+                if let Some(lf) = t.finish() {
+                    loaded_formats.push(lf);
+                }
+            } else {
+                self.threads.push(t);
+            }
+        }
+        loaded_formats
+    }
+
+    pub fn active_threads(&self) -> bool {
+        !self.threads.is_empty()
+    }
+}
+
+pub struct ParserThread {
+    path: PathBuf,
+    update_tx: UpdateChannel,
+    handle: Option<thread::JoinHandle<anyhow::Result<LoadedSupportedFormat>>>,
+}
+
+impl ParserThread {
+    pub fn new(path: PathBuf, update_tx: UpdateChannel) -> Self {
+        let thread_name = path.to_string_lossy().into_owned();
+        log::debug!("Starting parser thread: {thread_name}");
+        let handle = thread::Builder::new()
+            .name(thread_name)
+            .spawn({
+                let p = path.clone();
+                let update_tx = update_tx.clone();
+                move || {
+                    let parsed_format = SupportedFormat::parse_from_path(&p, update_tx.clone())?;
+                    update_tx.send(ParseUpdate::Progress {
+                        path: p.clone(),
+                        progress: 0.8,
+                    });
+                    let mut loaded_format = LoadedSupportedFormat::new(parsed_format);
+                    loaded_format.cook_all();
+                    update_tx.send(ParseUpdate::Progress {
+                        path: p.clone(),
+                        progress: 0.99,
+                    });
+
+                    Ok(loaded_format)
+                }
+            })
+            .expect("Failed spawning parser thread");
+        Self {
+            path,
+            update_tx,
+            handle: Some(handle),
+        }
+    }
+
+    pub fn is_finished(&self) -> bool {
+        debug_assert!(
+            self.handle.is_some(),
+            "called is_finished on a parser thread that should've been finished/consumed"
+        );
+        self.handle.as_ref().is_some_and(|h| h.is_finished())
+    }
+
+    pub fn finish(mut self) -> Option<LoadedSupportedFormat> {
+        let h = self
+            .handle
+            .take()
+            .expect("tried finishing a thread that was already finished");
+
+        match h.join() {
+            Ok(parse_res) => match parse_res {
+                Ok(s) => {
+                    self.update_tx.send(ParseUpdate::Completed {
+                        path: self.path.clone(),
+                        final_format: s.format_name().to_owned(),
+                    });
+                    return Some(s);
+                }
+                Err(e) => self.update_tx.send(ParseUpdate::Failed {
+                    path: self.path.clone(),
+                    error_msg: format!("Not valid: {e}"),
+                }),
+            },
+            Err(e) => {
+                self.update_tx.send(ParseUpdate::Failed {
+                    path: self.path.clone(),
+                    error_msg: format!(
+                        "Unexpected crash: {e:?}, please file an issue on the github page"
+                    ),
+                });
+            }
+        }
+        None
     }
 }
 
@@ -199,13 +261,12 @@ fn is_zip_file(path: &Path) -> bool {
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use super::*;
-    use plotinator_log_if::plotable::Plotable as _;
     use plotinator_test_util::test_file_defs::frame_altimeters::*;
     use plotinator_test_util::test_file_defs::mbed_motor_control::*;
     use std::io::Write as _;
+    use std::sync::mpsc::channel;
     use tempfile::TempDir;
     use testresult::TestResult;
     use zip::write::ExtendedFileOptions;
@@ -238,8 +299,11 @@ mod tests {
         zip_writer.start_file("level1/level2/level3/another_pid.bin", options.clone())?;
         zip_writer.write_all(MBED_PID_V1_BYTES)?;
 
-        // Level 5: Fourth subdirectory (should be ignored, beyond max depth)
-        zip_writer.start_file("level1/level2/level3/level4/ignored.pid", options.clone())?;
+        // Level 7: Fourth subdirectory (should be ignored, beyond max depth)
+        zip_writer.start_file(
+            "level1/level2/level3/level4/level5/level6/level7/ignored.pid",
+            options.clone(),
+        )?;
         zip_writer.write_all(MBED_PID_V1_BYTES)?;
 
         // Additional nested structure to test directory traversal
@@ -252,10 +316,16 @@ mod tests {
         zip_writer.finish()?;
 
         // Test parsing the zip file
-        let mut loaded_files = LoadedFiles::default();
-        loaded_files.parse_zip_file(&zip_path)?;
+        let (tx, _rx) = channel();
+        let mut parser_threads = ParserThreads::new(tx);
+        parser_threads.parse_path(&zip_path)?;
 
-        let loaded = loaded_files.loaded();
+        let mut loaded = vec![];
+        while parser_threads.active_threads() {
+            for loaded_format in parser_threads.poll() {
+                loaded.push(loaded_format);
+            }
+        }
 
         // Verify we got the expected number of files
         // Should parse 6 files total:
@@ -265,11 +335,11 @@ mod tests {
         // - level1/level2/level3/another_pid.pid (level 3)
         // - another_branch/data.status (level 2)
         // - another_branch/deep/nested/file.pid (level 3)
-        // Should NOT parse level4/ignored.pid (level 4, beyond max depth)
+        // Should NOT parse level4/ignored.pid (level 7, beyond max depth)
         assert_eq!(
             loaded.len(),
             6,
-            "Expected 6 files to be parsed from zip archive, got: {loaded:?}"
+            "Expected 6 files to be parsed from zip archive"
         );
 
         // Verify we have different types of files
@@ -278,7 +348,7 @@ mod tests {
         let mut hdf5_count = 0;
 
         for format in loaded {
-            let name = format.descriptive_name();
+            let name = format.format_name();
             eprintln!("{name}");
             match name {
                 "Mbed PID v1" => pid_count += 1,

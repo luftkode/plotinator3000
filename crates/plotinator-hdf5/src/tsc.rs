@@ -32,6 +32,8 @@ impl Tsc {
 }
 
 impl SkytemHdf5 for Tsc {
+    const DESCRIPTIVE_NAME: &str = "TSC";
+
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let total_start = Instant::now();
         let start_reading = Instant::now();

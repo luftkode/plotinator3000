@@ -10,7 +10,9 @@ use plotinator_logs::{
     navsys::NavSysSps,
     navsys_kitchen_sink::NavSysSpsKitchenSink,
 };
+use plotinator_ui_file_io::{ParseUpdate, UpdateChannel};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Represents a supported log format, which can be any of the supported log format types.
 ///
@@ -23,6 +25,14 @@ macro_rules! define_supported_log_formats {
             $( $variant($ty, ParseInfo), )*
         }
 
+        impl std::fmt::Display for SupportedLog {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $( Self::$variant(supported_log, _) => write!(f, "{}", supported_log.descriptive_name()), )*
+                }
+            }
+        }
+
         impl SupportedLog {
             pub(crate) fn parse_info(&self) -> ParseInfo {
                 match self {
@@ -30,12 +40,16 @@ macro_rules! define_supported_log_formats {
                 }
             }
 
-            pub(crate) fn parse_from_buf(content: &[u8]) -> io::Result<Self> {
+            pub(crate) fn parse_from_buf(content: &[u8], path: PathBuf, tx: UpdateChannel) -> io::Result<Self> {
                 let total_bytes = content.len();
                 log::debug!("Parsing content of length: {total_bytes}");
 
                 $(
                     log::debug!("Attempting to parse as {}", stringify!($ty));
+                    tx.send(ParseUpdate::Attempting {
+                        path: path.to_owned(),
+                        format_name: <$ty>::DESCRIPTIVE_NAME.to_owned(),
+                    });
                     match <$ty>::try_from_buf(content) {
                         Ok((log_data, read_bytes)) => {
                             log::debug!("Successfully parsed as {}", stringify!($ty));
@@ -46,6 +60,10 @@ macro_rules! define_supported_log_formats {
                             );
                             let log = Self::$variant(log_data, parse_info);
                             log::debug!("Got: {}", log.descriptive_name());
+                            tx.send(ParseUpdate::Confirmed {
+                                path: path.to_owned(),
+                                format_name: <$ty>::DESCRIPTIVE_NAME.to_owned(),
+                            });
                             return Ok(log);
                         }
                         Err(e) => {

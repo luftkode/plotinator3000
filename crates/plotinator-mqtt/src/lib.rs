@@ -1,12 +1,9 @@
-plotinator_macros::non_wasm_modules!(
-    pub mod broker_validator;
-    pub mod topic_discoverer;
-    pub(crate) mod parse_packet;
-    pub(crate) mod util;
-    pub mod data_receiver;
-    pub mod data;
-    pub mod client;
-);
+pub mod broker_validator;
+pub mod client;
+pub mod data;
+pub mod data_receiver;
+pub(crate) mod parse_packet;
+pub mod topic_discoverer;
+pub(crate) mod util;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub use crate::broker_validator::BrokerStatus;

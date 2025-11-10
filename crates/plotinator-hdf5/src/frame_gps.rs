@@ -27,6 +27,7 @@ pub struct FrameGps {
 }
 
 impl SkytemHdf5 for FrameGps {
+    const DESCRIPTIVE_NAME: &str = "Frame GPS";
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let datasets = FrameGpsDatasets::open(path)?;
 

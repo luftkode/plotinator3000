@@ -139,3 +139,10 @@ fn get_terrain_safe_color(i: usize) -> Color32 {
 pub fn invalid_data_color() -> Color32 {
     Color32::from_rgb(200, 100, 255)
 }
+
+/// Get the next unique ID for a log
+#[must_use]
+pub fn next_log_id() -> usize {
+    static LOG_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
+    LOG_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
+}

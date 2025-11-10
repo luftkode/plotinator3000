@@ -34,12 +34,6 @@ jobs:
             # so that all features are checked and can be build by someone cloning your repository.
             # If you build natively it will be a binary, the default binary will have the entrypoint "src/main.rs".
             flags: "--all-features --bins"
-          - TARGET: wasm32-unknown-unknown
-            # With the current trunk setup, if you add features, the webpage will have the default features.
-            # You could test for all features too, however that might require a lot of conditional compilation annotations.
-            # Thus we only test for the default features by default.
-            # Since we build with trunk the entrypoint will also be the "src/main.rs" file.
-            flags: "--bin ${{ github.event.repository.name }}"
           - TARGET: x86_64-unknown-linux-gnu
             flags: "--no-default-features"
     runs-on: ubuntu-latest
@@ -110,26 +104,8 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Lint native
+      - name: Lint
         run: cargo clippy --workspace --all-features -- -D warnings -W clippy::all
-      - name: Lint WASM
-        run: |
-          export CLIPPY_CONF_DIR="$(pwd)/lint/wasm/clippy.toml"
-          cargo clippy --workspace --no-default-features --target wasm32-unknown-unknown -- -D warnings -W clippy::all
-
-  trunk:
-    name: trunk
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
-      - name: Download and install Trunk binary
-        run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-      - name: Build
-        run: ./trunk build
 
   build:
     runs-on: ${{ matrix.os }}
@@ -226,7 +202,6 @@ jobs:
       - test
       - format
       - lint
-      - trunk
       - build
       - msrv
     runs-on: ubuntu-latest

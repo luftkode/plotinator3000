@@ -25,6 +25,7 @@ plotinator-mqtt = { workspace = true }
 plotinator-mqtt-ui = { workspace = true }
 plotinator-macros = { workspace = true }
 plotinator-proc-macros = { workspace = true }
+plotinator-ui-file-io = { workspace = true }
 puffin = { workspace = true, optional = true }
 anyhow = { workspace = true }
 serde = { workspace = true }

@@ -1,17 +1,16 @@
 use chrono::{DateTime, Datelike as _, Timelike as _, Utc};
+use egui_plot::PlotBounds;
 use plotinator_plot_util::{PlotData, Plots};
 use plotinator_supported_formats::ParseInfo;
 use plotinator_ui_util::date_editor::DateEditor;
 use serde::{Deserialize, Serialize};
 
-use crate::plot_settings::date_settings::{
-    loaded_log_metadata::LoadedLogMetadata, log_points_cutter::LogPointsCutter,
-};
+use crate::{loaded_log_metadata::LoadedLogMetadata, log_points_cutter::LogPointsCutter};
 
 pub mod loaded_log_metadata;
 pub mod log_points_cutter;
 
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct LoadedLogSettings {
     log_id: u16,
     log_descriptive_name: String,
@@ -59,15 +58,15 @@ impl LoadedLogSettings {
     }
 
     /// Name of the log such as `Navsys` or `frame-magnetometer`
-    pub(crate) fn descriptive_name(&self) -> &str {
+    pub fn descriptive_name(&self) -> &str {
         &self.log_descriptive_name
     }
 
-    pub(crate) fn start_date(&self) -> DateTime<Utc> {
+    pub fn start_date(&self) -> DateTime<Utc> {
         self.start_date
     }
 
-    pub(crate) fn starte_date_formatted(&self) -> String {
+    pub fn starte_date_formatted(&self) -> String {
         let y = self.start_date.year();
         let m = self.start_date.month();
         let d = self.start_date.day();
@@ -141,6 +140,23 @@ impl LoadedLogSettings {
 
     pub fn cursor_hovering_on_mut(&mut self) -> &mut bool {
         &mut self.is_hovered
+    }
+
+    pub fn log_points_cutter_clicked(&self) -> bool {
+        self.log_points_cutter.clicked()
+    }
+
+    pub fn set_log_points_cutter_clicked(&mut self, clicked: bool) {
+        self.log_points_cutter.clicked = clicked;
+    }
+
+    pub fn show_log_points_cutter(
+        &mut self,
+        ui: &egui::Ui,
+        log_name_date: &str,
+        selected_box: Option<PlotBounds>,
+    ) {
+        self.log_points_cutter.show(ui, log_name_date, selected_box);
     }
 }
 

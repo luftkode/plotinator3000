@@ -14,6 +14,8 @@ use crate::{
 const LEGEND_NAME: &str = "frame-TL";
 
 impl SkytemHdf5 for FrameInclinometers {
+    const DESCRIPTIVE_NAME: &str = "Frame Inclinometer";
+
     #[allow(
         clippy::too_many_lines,
         reason = "It's simple code that goes through all the datasets"

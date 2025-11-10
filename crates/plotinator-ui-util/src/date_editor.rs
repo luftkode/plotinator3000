@@ -2,7 +2,7 @@ use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use egui::{Response, TextEdit};
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct DateEditor {
     tmp_date: String,
     current_date: Option<DateTime<Utc>>,

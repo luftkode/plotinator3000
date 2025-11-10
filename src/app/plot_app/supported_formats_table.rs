@@ -61,7 +61,6 @@ const CSV_FORMATS: &[LogFormat<'_>] = &[
     },
 ];
 
-#[cfg(not(target_arch = "wasm32"))]
 const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
     LogFormat {
         title: "Bifrost TX Loop Current",

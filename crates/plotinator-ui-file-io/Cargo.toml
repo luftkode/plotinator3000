@@ -1,0 +1,19 @@
+[package]
+name = "plotinator-ui-file-io"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+eframe.workspace = true
+egui.workspace = true
+egui-phosphor.workspace = true
+log.workspace = true
+
+[lints]
+workspace = true

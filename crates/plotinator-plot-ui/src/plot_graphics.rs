@@ -25,8 +25,7 @@ pub fn paint_plots(
     link_group: egui::Id,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
-    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
+    #[cfg(feature = "map")] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
     mode: PlotMode<'_>,
 ) {
     plotinator_macros::profile_function!();
@@ -103,11 +102,11 @@ pub fn paint_plots(
                 plot_settings,
                 click_delta,
                 box_selection,
-                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                #[cfg(feature = "map")]
                 map_cmd,
             );
         }
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+        #[cfg(feature = "mqtt")]
         PlotMode::MQTT {
             plots,
             auto_bounds,
@@ -131,7 +130,7 @@ pub fn paint_plots(
                 auto_bounds,
                 plot_scroller,
                 box_selection,
-                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                #[cfg(feature = "map")]
                 map_cmd,
             );
         }
@@ -154,8 +153,7 @@ fn fill_log_plots(
     plot_settings: &PlotSettings,
     click_delta: &mut ClickDelta,
     box_selection: &mut BoxSelection,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
-    map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
+    #[cfg(feature = "map")] map_cmd: &mut plotinator_map_ui::commander::MapUiCommander,
 ) {
     plotinator_macros::profile_function!();
 
@@ -165,12 +163,12 @@ fn fill_log_plots(
             if area_hovered {
                 box_selection.record_key_and_pointer_events(plot_ui, ptype);
 
-                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                #[cfg(feature = "map")]
                 if let Some(pointer_coord) = plot_ui.pointer_coordinate() {
                     map_cmd.pointer_time_pos(pointer_coord.x);
                 }
             } else {
-                #[cfg(all(not(target_arch = "wasm32"), feature = "map"))]
+                #[cfg(feature = "map")]
                 {
                     map_cmd.poll_msg();
                     if let Some((ts, color)) = map_cmd.map_pointer_timestamp() {

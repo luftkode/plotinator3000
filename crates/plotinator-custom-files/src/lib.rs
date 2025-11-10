@@ -17,27 +17,13 @@ pub fn max_custom_header_len() -> usize {
 }
 
 /// Represents the content parsed from a custom Plotinator3000 file.
-pub(crate) enum CustomFileContent {
+pub enum CustomFileContent {
     PlotData(Vec<SupportedFormat>),
     PlotUi(Box<LogPlotUi>),
 }
 
 /// Attempts to parse a file that might contain a Plotinator3000 custom header.
-pub(crate) fn try_parse_custom_file_from_buf(raw_contents: &[u8]) -> Option<CustomFileContent> {
-    let (custom_header_len, is_plot_ui) = parse_custom_header_from_bytes(raw_contents)?;
-
-    let raw_contents_without_header = &raw_contents[custom_header_len..];
-    match deserialize_custom_content_from_bytes(raw_contents_without_header, is_plot_ui) {
-        Ok(content) => Some(content),
-        Err(e) => {
-            log::error!("Failed to deserialize custom file content from buffer: {e}");
-            None
-        }
-    }
-}
-
-/// Attempts to parse a file that might contain a Plotinator3000 custom header.
-pub(crate) fn try_parse_custom_file(path: &Path) -> io::Result<Option<CustomFileContent>> {
+pub fn try_parse_custom_file(path: &Path) -> io::Result<Option<CustomFileContent>> {
     if !path.is_file() {
         return Ok(None);
     }

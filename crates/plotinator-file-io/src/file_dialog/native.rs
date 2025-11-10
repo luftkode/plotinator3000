@@ -1,17 +1,14 @@
-use std::{fs, path::PathBuf};
+use std::{fs, mem, path::PathBuf};
 
 use plotinator_plot_ui::LogPlotUi;
 use plotinator_plot_util::CookedPlot;
 use plotinator_supported_formats::SupportedFormat;
 use serde::Serialize;
+use smallvec::{SmallVec, smallvec};
 
-use crate::{
-    custom_files::{
-        CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent,
-        try_parse_custom_file,
-    },
-    file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME},
-    loaded_files::LoadedFiles,
+use crate::file_dialog::{FILE_FILTER_EXTENSIONS, FILE_FILTER_NAME};
+use plotinator_custom_files::{
+    CUSTOM_HEADER_PLOT_DATA, CUSTOM_HEADER_PLOT_UI_STATE, CustomFileContent, try_parse_custom_file,
 };
 
 #[derive(Debug, Default)]
@@ -43,9 +40,7 @@ impl NativeFileDialog {
     /// Saves the plot data to a file.
     pub fn save_plot_data(
         plot_files: &[SupportedFormat],
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))] mqtt_plots: Option<
-            &plotinator_mqtt_ui::plot::MqttPlotData,
-        >,
+        #[cfg(feature = "mqtt")] mqtt_plots: Option<&plotinator_mqtt_ui::plot::MqttPlotData>,
     ) {
         let title = "Save Plot Data";
 
@@ -59,7 +54,7 @@ impl NativeFileDialog {
             return;
         }
 
-        #[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+        #[cfg(feature = "mqtt")]
         if mqtt_plots.is_some()
             && let Some(mqtt_plot_data) = mqtt_plots
         {
@@ -119,28 +114,60 @@ impl NativeFileDialog {
         }
     }
 
-    /// Parses all picked files and loads them into the application.
-    /// Returns an `Option<LogPlotUi>` if a plot UI state file was loaded.
-    pub fn parse_picked_files(
-        &mut self,
-        loaded_files: &mut LoadedFiles,
-    ) -> anyhow::Result<Option<Box<LogPlotUi>>> {
-        for pf in self.picked_files.drain(..) {
-            match try_parse_custom_file(&pf)? {
-                Some(CustomFileContent::PlotData(plot_data)) => {
-                    log::info!("Loading {} plot data files from {pf:?}", plot_data.len());
-                    loaded_files.loaded.extend(plot_data);
-                }
-                Some(CustomFileContent::PlotUi(plot_ui)) => {
-                    log::info!("Loading plot UI state from {pf:?}");
-                    return Ok(Some(plot_ui));
-                }
-                None => {
-                    log::info!("Parsing regular file: {pf:?}");
-                    loaded_files.parse_path(&pf)?;
-                }
+    pub fn take_picked_files(&mut self) -> Vec<PathBuf> {
+        mem::take(&mut self.picked_files)
+    }
+
+    pub fn try_parse_custom_files(
+        files: &mut SmallVec<[PathBuf; 1]>,
+    ) -> anyhow::Result<SmallVec<[CustomFileContent; 1]>> {
+        let tmp_files: Vec<PathBuf> = files.drain(..).collect();
+        let mut custom_file_contents = smallvec![];
+        for f in tmp_files {
+            match try_parse_custom_file(&f)? {
+                Some(cfc) => custom_file_contents.push(cfc),
+                None => files.push(f),
             }
         }
-        Ok(None)
+        Ok(custom_file_contents)
     }
+
+    // /// Parses all picked files and loads them into the application.
+    // /// Returns an `Option<LogPlotUi>` if a plot UI state file was loaded.
+    // pub fn parse_picked_files(
+    //     &mut self,
+    //     loaded_files: &mut LoadedFiles,
+    //     tx: UpdateChannel,
+    // ) -> anyhow::Result<Option<Box<LogPlotUi>>> {
+    //     for pf in self.picked_files.drain(..) {
+    //         let tx = tx.clone();
+    //         tx.send(ParseUpdate::Started { path: pf.clone() });
+    //         match try_parse_custom_file(&pf)? {
+    //             Some(CustomFileContent::PlotData(plot_data)) => {
+    //                 log::info!("Loading {} plot data files from {pf:?}", plot_data.len());
+    //                 tx.send(ParseUpdate::Completed {
+    //                     path: pf.clone(),
+    //                     final_format: format!(
+    //                         "Custom file content: {}",
+    //                         plot_data
+    //                             .iter()
+    //                             .map(|p| p.descriptive_name().to_owned())
+    //                             .collect::<Vec<String>>()
+    //                             .join("\n")
+    //                     ),
+    //                 });
+    //                 loaded_files.loaded.extend(plot_data);
+    //             }
+    //             Some(CustomFileContent::PlotUi(plot_ui)) => {
+    //                 log::info!("Loading plot UI state from {pf:?}");
+    //                 return Ok(Some(plot_ui));
+    //             }
+    //             None => {
+    //                 log::info!("Parsing regular file: {pf:?}");
+    //                 loaded_files.parse_path(&pf)?;
+    //             }
+    //         }
+    //     }
+    //     Ok(None)
+    // }
 }

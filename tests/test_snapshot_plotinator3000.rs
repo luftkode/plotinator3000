@@ -1,4 +1,3 @@
-#![cfg(not(target_arch = "wasm32"))]
 mod util;
 use egui_kittest::kittest::Queryable as _;
 use plotinator_test_util::{
@@ -57,8 +56,11 @@ fn test_snapshot_open_mqtt_config_window_connect_disabled() {
     let mut harness = PlotAppHarnessWrapper::new("default_mqtt_config_window");
     let mqtt_button = harness.get_mqtt_connect_button();
 
-    mqtt_button.click();
+    // Click with accesskit because the window is so small that the MQTT connect button is not visible
+    // accesskit can still click it though
+    mqtt_button.click_accesskit();
     harness.run();
+    harness.run_steps(10);
 
     let mqtt_cfg_window = harness.get_mqtt_configuration_window();
 
@@ -75,7 +77,9 @@ fn test_snapshot_open_mqtt_config_window_connect_disabled() {
 fn test_snapshot_drop_load_mbed_status_regular_v6() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_mbed_status_regular_v6");
     harness.drop_file(mbed_status_v6_regular());
-    harness.run();
+    harness.run_steps(200);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
     harness.save_snapshot();
 }
 
@@ -83,7 +87,9 @@ fn test_snapshot_drop_load_mbed_status_regular_v6() {
 fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_mbed_pid_regular_v6");
     harness.drop_file(mbed_pid_v6_regular());
-    harness.run();
+    harness.run_steps(200);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
 
     // Place the cursor in the middle plot area to see that the cursor "alignment-lines" are present
     // across the plot areas
@@ -103,7 +109,9 @@ fn test_snapshot_drop_load_mbed_status_pid_v6_with_cursor_on_plot_window() {
 fn test_snapshot_drop_load_hdf5_bifrost_current() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_hdf5_bifrost_current");
     harness.drop_file(bifrost_current());
-    harness.run();
+    harness.run_steps(200);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
     harness.save_snapshot_with_threshold(CiThreshold(2.0));
@@ -114,7 +122,9 @@ fn test_snapshot_open_loaded_files() {
     let mut harness = PlotAppHarnessWrapper::new("open_loaded_files");
     harness.drop_file(mbed_status_v6_regular());
     harness.drop_file(mbed_pid_v6_regular());
-    harness.run();
+    harness.run_steps(200);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(20);
     // Experience shows that another two steps are required before the loaded files button is rendered
     harness.run_steps(2);
 
@@ -133,20 +143,20 @@ fn test_snapshot_open_loaded_files_open_log_window() {
     let mut harness = PlotAppHarnessWrapper::new("open_loaded_files_click_mbed_PID");
     harness.drop_file(mbed_status_v6_regular());
     harness.drop_file(mbed_pid_v6_regular());
-    harness.run();
-    // Experience shows that another two steps are required before the loaded files button is rendered
+    harness.run_steps(200);
+    harness.close_file_parsing_status_window();
     harness.run_steps(2);
     // Check that we can now click the loaded files button
     let loaded_files_button = harness.get_loaded_files_button();
 
     // Click and render the loaded files window
     loaded_files_button.click();
-    harness.run_steps(2);
+    harness.run_steps(200); // Takes a while to load the pidlog in the background
 
     // Get the Mbed PID button from the loaded logs window and click it
     let loaded_files_window = harness.get_loaded_files_window();
     let loaded_mbed_pid_button = loaded_files_window.get_by(|n| {
-        n.role() == Role::Button && n.label().is_some_and(|l| l.contains("Mbed PID v6 #"))
+        n.role() == Role::Button && n.label().is_some_and(|l| l.contains("Mbed PID v6"))
     });
 
     loaded_mbed_pid_button.click();
@@ -159,7 +169,10 @@ fn test_snapshot_open_loaded_files_open_log_window() {
 fn test_snapshot_drop_load_hdf5_njord_altimeter_wasp200_sf20() {
     let mut harness = PlotAppHarnessWrapper::new("dropped_hdf5_njord_altimeter_wasp200_sf20");
     harness.drop_file(njord_altimeter_wasp200_sf20());
-    harness.run();
+    harness.run_steps(200);
+    harness.close_file_parsing_status_window();
+    harness.run_steps(2);
+
     // We allow a larger diff threshold because this has a lot of narrow lines, which will give rise to
     // a higher diff from GPU to GPU
     harness.save_snapshot_with_threshold(CiThreshold(4.0));

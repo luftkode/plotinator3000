@@ -5,7 +5,6 @@ use crate::{
         series_plot_settings::SeriesPlotSettings,
     },
 };
-use date_settings::LoadedLogSettings;
 use egui::{Button, Color32, Frame, Grid, Key, Response, RichText, ScrollArea, Window};
 use egui_phosphor::regular::{self, EYE, EYE_SLASH};
 use egui_plot::PlotBounds;
@@ -14,12 +13,12 @@ use plot_filter::{PlotNameFilter, PlotNameShow};
 use plot_visibility_config::PlotVisibilityConfig;
 use plotinator_log_if::prelude::*;
 use plotinator_plot_util::{CookedPlot, MipMapConfiguration, Plots};
+use plotinator_ui_log_settings::LoadedLogSettings;
 use plotinator_ui_util::{ExpectedPlotRange, theme_color};
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
-pub mod date_settings;
-mod loaded_logs;
+pub mod loaded_logs;
 mod log_groups;
 pub mod mipmap_settings;
 mod plot_filter;
@@ -68,6 +67,7 @@ pub struct PlotSettings {
     // Plot names and whether or not they should be shown (painted)
     plot_name_filter: PlotNameFilter,
     ps_ui: PlotSettingsUi,
+    #[serde(skip)]
     loaded_log_settings: Vec<LoadedLogSettings>,
     mipmap_settings: MipMapSettings,
     series_plot_settings: SeriesPlotSettings,
@@ -78,7 +78,7 @@ pub struct PlotSettings {
 }
 
 impl PlotSettings {
-    pub fn show(
+    pub(crate) fn show(
         &mut self,
         ui: &mut egui::Ui,
         axis_cfg: &mut AxisConfig,
@@ -227,7 +227,7 @@ impl PlotSettings {
     /// Needs to be called once (and only once!) per frame before querying for plot ui settings, such as
     /// how many plots to paint and more.
     pub fn refresh(&mut self, plots: &mut Plots) {
-        #[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+        #[cfg(feature = "profiling")]
         puffin::profile_scope!("plot_settings.refresh");
         if self.apply_deletions {
             self.remove_if_marked_for_deletion(plots);
@@ -338,7 +338,11 @@ impl PlotSettings {
 
     fn update_plot_dates(&mut self, plots: &mut Plots) {
         for settings in &mut self.loaded_log_settings {
-            date_settings::update_plot_dates(&mut self.invalidate_plot, plots, settings);
+            plotinator_ui_log_settings::update_plot_dates(
+                &mut self.invalidate_plot,
+                plots,
+                settings,
+            );
         }
     }
 

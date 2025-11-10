@@ -37,6 +37,7 @@ impl LevelLookupCached {
     }
 }
 
+#[derive(Debug)]
 pub struct MipMap2DPlotPoints {
     data: Vec<Vec<PlotPoint>>,
     most_recent_lookup: Cell<LevelLookupCached>,

@@ -10,7 +10,6 @@ mod app;
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 pub const APP_OWNER: &str = "luftkode";
 
-#[cfg(not(target_arch = "wasm32"))]
 pub const APP_ICON: &[u8] = include_bytes!("../assets/skytem-icon-256.png");
 
 pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
@@ -28,7 +27,7 @@ pub fn get_app_version() -> &'static Version {
     })
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "mqtt"))]
+#[cfg(feature = "mqtt")]
 pub mod mqtt;
-#[cfg(all(feature = "profiling", not(target_arch = "wasm32")))]
+#[cfg(feature = "profiling")]
 pub mod profiling;

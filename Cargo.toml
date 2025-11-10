@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "2.9.0"
+version = "2.10.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -45,9 +45,13 @@ plotinator-updater.path = "crates/plotinator-updater"
 plotinator-download.path = "crates/plotinator-download"
 plotinator-strfmt.path = "crates/plotinator-strfmt"
 plotinator-file-io.path = "crates/plotinator-file-io"
+plotinator-ui-file-io.path = "crates/plotinator-ui-file-io"
 plotinator-csv.path = "crates/plotinator-csv"
 plotinator-map-ui.path = "crates/plotinator-map-ui"
-egui = { version = "0.33", features = ["rayon", "callstack"] }
+plotinator-ui-log-settings.path = "crates/plotinator-ui-log-settings"
+plotinator-background-parser.path = "crates/plotinator-background-parser"
+plotinator-custom-files.path = "crates/plotinator-custom-files"
+egui = { version = "0.33", features = ["callstack"] }
 egui-notify = "0.21.0"
 eframe = { version = "0.33", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
@@ -96,7 +100,6 @@ quote = "1.0.41"
 syn = { version = "2.0", features = ["full"] }
 hdf5 = { package = "hdf5-metno", version = "0.10.2", features = ["static"] }
 axoupdater = { version = "0.9.0", features = ["blocking"] }
-wasm-bindgen-futures = "0.4"
 
 # Dependencies for profiling the app
 profiling = { version = "1.0.17", default-features = false, features = [
@@ -123,6 +126,10 @@ plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-file-io.workspace = true
+plotinator-ui-file-io.workspace = true
+plotinator-ui-log-settings.workspace = true
+plotinator-background-parser.workspace = true
+plotinator-custom-files.workspace = true
 walkers.workspace = true
 egui.workspace = true
 eframe.workspace = true
@@ -137,6 +144,7 @@ semver.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
 rayon.workspace = true
+smallvec.workspace = true
 
 
 # native:
@@ -154,11 +162,6 @@ env_logger.workspace = true
 # native (except aarch64-linux):
 [target.'cfg(all(not(target_arch = "wasm32"), not(all(target_arch = "aarch64", target_os = "linux"))))'.dependencies]
 mimalloc = "0.1.47"
-
-# web:
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures.workspace = true
-web-sys = "0.3.70"
 
 [dev-dependencies]
 testresult.workspace = true

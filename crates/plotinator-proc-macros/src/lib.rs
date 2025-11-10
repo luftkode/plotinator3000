@@ -7,23 +7,14 @@ pub fn log_time(
     // This function will be replaced by one of the two modules below,
     // depending on whether the `profiling` feature is enabled for the
     // crate that USES this macro.
-    #[cfg(all(
-        any(feature = "profiling", feature = "log_time"),
-        not(target_arch = "wasm32")
-    ))]
+    #[cfg(any(feature = "profiling", feature = "log_time"))]
     return timed_impl(item);
 
-    #[cfg(not(all(
-        any(feature = "profiling", feature = "log_time"),
-        not(target_arch = "wasm32")
-    )))]
+    #[cfg(not(any(feature = "profiling", feature = "log_time")))]
     return item; // If not profiling, return the original function unchanged.
 }
 
-#[cfg(all(
-    any(feature = "profiling", feature = "log_time"),
-    not(target_arch = "wasm32")
-))]
+#[cfg(any(feature = "profiling", feature = "log_time"))]
 fn timed_impl(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     use quote::quote;
     use syn::{ItemFn, parse_macro_input};

@@ -40,6 +40,8 @@ pub struct GpsTimestamph5 {
 }
 
 impl SkytemHdf5 for FrameMagnetometer {
+    const DESCRIPTIVE_NAME: &str = "Frame Magnetometer";
+
     #[allow(
         clippy::too_many_lines,
         reason = "It's simple code that goes through all the datasets"

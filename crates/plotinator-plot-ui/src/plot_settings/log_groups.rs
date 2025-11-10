@@ -1,7 +1,8 @@
-use super::{date_settings::LoadedLogSettings, loaded_logs};
+use super::loaded_logs;
 use egui::{Color32, RichText, Ui};
 use egui_phosphor::regular;
 use egui_plot::PlotBounds;
+use plotinator_ui_log_settings::LoadedLogSettings;
 
 // One shot flags for modifying all logs and/or log groups
 #[derive(PartialEq)]

@@ -16,6 +16,8 @@ const LEGEND_NAME_1: &str = "HE1";
 const LEGEND_NAME_2: &str = "HE2";
 
 impl SkytemHdf5 for FrameAltimeters {
+    const DESCRIPTIVE_NAME: &str = "Frame Altimeter";
+
     #[allow(clippy::too_many_lines, reason = "long but simple")]
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let (height1_dataset, timestamp1_dataset, height2_dataset, timestamp2_dataset) =

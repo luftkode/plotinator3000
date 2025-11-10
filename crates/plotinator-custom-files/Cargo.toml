@@ -1,0 +1,19 @@
+[package]
+name = "plotinator-custom-files"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+plotinator-plot-ui.workspace = true
+plotinator-supported-formats.workspace = true
+anyhow.workspace = true
+log.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
