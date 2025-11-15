@@ -6114,9 +6114,9 @@ dependencies = [
 
 [[package]]
 name = "walkers"
-version = "0.48.0"
+version = "0.49.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06e889bd9e9d72050f93a6bb141baf61f1c03fadb327dbfcb9d3d12af8cf3f14"
+checksum = "86e2066acbb5d5588a1cd14480254b57a6734ee99970b28e6b03ba0f5988c19b"
 dependencies = [
  "egui",
  "egui_extras",
