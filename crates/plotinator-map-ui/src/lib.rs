@@ -481,7 +481,7 @@ impl MapViewPort {
         )
         .double_click_to_zoom(true);
 
-        map.show(ui, |ui, projector, _map_rect| {
+        map.show(ui, |ui, _, projector, _map_rect| {
             let draw_heading = zoom_level > self.heading_arrow_threshold;
             let draw_telemetry_label = zoom_level > self.telemetry_label_threshold;
 
