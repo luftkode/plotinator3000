@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 6 ([#395](https://github.com/luftkode/plotinator3000/pull/395))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.16.2 ([#395](https://github.com/luftkode/plotinator3000/pull/395))
+- `actions/upload-artifact`: 4 → 5 ([#395](https://github.com/luftkode/plotinator3000/pull/395))
+- `crambl/dependabot-changelog-writer`: 1.3.0 → 1.3.1 ([#395](https://github.com/luftkode/plotinator3000/pull/395))
+- `actions/download-artifact`: 4 → 6 ([#395](https://github.com/luftkode/plotinator3000/pull/395))
+
 ## [2.10.0]
 
 - Parse files in the background and show the parsing status in a new "parser status" popup
