@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `walkers`: 0.49.0 → 0.50.0 ([#396](https://github.com/luftkode/plotinator3000/pull/396))
+- `rumqttc`: 0.25.0 → 0.25.1 ([#396](https://github.com/luftkode/plotinator3000/pull/396))
+- `rfd`: 0.15.4 → 0.16.0 ([#396](https://github.com/luftkode/plotinator3000/pull/396))
+- `test-log`: 0.2.18 → 0.2.19 ([#396](https://github.com/luftkode/plotinator3000/pull/396))
+- `syn`: 2.0.110 → 2.0.111 ([#396](https://github.com/luftkode/plotinator3000/pull/396))
+- `insta`: 1.43.2 → 1.44.3 ([#396](https://github.com/luftkode/plotinator3000/pull/396))
+
 ## [2.10.0]
 
 - Parse files in the background and show the parsing status in a new "parser status" popup
