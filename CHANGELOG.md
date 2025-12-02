@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.10.1]
+
+- Ensure loaded files are properly cooked before adding them to the plot areas
+
 ## [2.10.0]
 
 - Parse files in the background and show the parsing status in a new "parser status" popup

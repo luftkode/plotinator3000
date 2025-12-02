@@ -125,6 +125,12 @@ impl LogPlotUi {
         );
 
         for format in loaded_formats.iter_mut() {
+            if !format.is_cooked() {
+                // It might become unresponsive, and the OS/desktop environment might ask the user if they want
+                // to kill the app, but it's guaranteed to become responsive again after loading completes
+                log::warn!("Uncooked format, cooking on UI thread, might cause unresponsive UI!");
+                format.cook_all();
+            }
             plot_settings.add_log_setting(format.take_settings());
             let cooked_plots = format.take_cooked_plots();
             for plot in &cooked_plots {

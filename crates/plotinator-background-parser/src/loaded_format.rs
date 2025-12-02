@@ -18,6 +18,7 @@ fn next_log_id() -> u16 {
 #[derive(Debug)]
 pub struct LoadedSupportedFormat {
     id: u16,
+    cooked: bool,
     format: Option<SupportedFormat>,
     cooked_plots: Option<Vec<CookedPlot>>,
     cooked_labels: Option<Vec<StoredPlotLabels>>,
@@ -30,6 +31,7 @@ impl LoadedSupportedFormat {
     pub fn new(format: SupportedFormat) -> Self {
         Self {
             id: next_log_id(),
+            cooked: false,
             format: Some(format),
             cooked_plots: None,
             cooked_labels: None,
@@ -82,7 +84,17 @@ impl LoadedSupportedFormat {
             .expect("attempted to take geospatial data twice")
     }
 
+    pub fn is_cooked(&self) -> bool {
+        self.cooked
+    }
+
     pub fn cook_all(&mut self) {
+        if self.cooked {
+            log::error!("Attempted to cook twice");
+            return;
+        } else {
+            log::debug!("Cooking loaded file with id: {}", self.id);
+        }
         self.cooked_plots = Some(self.cook_plots());
         self.cooked_labels = Some(self.cook_labels());
         self.settings = Some(self.make_loaded_log_settings());
@@ -92,6 +104,7 @@ impl LoadedSupportedFormat {
                 .expect("unsound condition")
                 .geo_spatial_data(),
         );
+        self.cooked = true;
     }
 
     fn make_loaded_log_settings(&self) -> LoadedLogSettings {
