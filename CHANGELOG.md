@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
+- Update `hdf5` to `0.11.0` and enable the `zlib` feature
 - `log`: 0.4.28 → 0.4.29 ([#398](https://github.com/luftkode/plotinator3000/pull/398))
 - `derive_more`: 2.0.1 → 2.1.0 ([#398](https://github.com/luftkode/plotinator3000/pull/398))
 
