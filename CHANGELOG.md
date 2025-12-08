@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `log`: 0.4.28 → 0.4.29 ([#398](https://github.com/luftkode/plotinator3000/pull/398))
+- `derive_more`: 2.0.1 → 2.1.0 ([#398](https://github.com/luftkode/plotinator3000/pull/398))
+
 ## [2.10.1]
 
 - Ensure loaded files are properly cooked before adding them to the plot areas
