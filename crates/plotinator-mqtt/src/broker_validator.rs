@@ -50,7 +50,7 @@ impl BrokerValidator {
         self.status
     }
 
-    pub fn poll_broker_status(&mut self, ip: &str, port: &str) {
+    pub fn poll_broker_status(&mut self, ip: &str, port: &str, use_websocket: bool) {
         let current_broker_input = format!("{ip}{port}");
 
         // Detect input changes
@@ -70,7 +70,7 @@ impl BrokerValidator {
             self.status = ValidatorStatus::Connecting;
             self.last_input_change = None;
 
-            spawn_validation_thread((ip, port), tx);
+            spawn_validation_thread((ip, port), use_websocket, tx);
         }
 
         // Check for validation results, if we got a result we store the result and reset the check status
@@ -92,13 +92,17 @@ impl BrokerValidator {
     }
 }
 
-fn spawn_validation_thread((ip, port): (&str, &str), tx: Sender<BrokerStatus>) {
+fn spawn_validation_thread(
+    (ip, port): (&str, &str),
+    use_websocket: bool,
+    tx: Sender<BrokerStatus>,
+) {
     // Spawn validation thread
     let (cp_host, cp_port) = (ip.to_owned(), port.to_owned());
     if let Err(e) = std::thread::Builder::new()
         .name("broker-validator".into())
         .spawn(move || {
-            match validate_broker(&cp_host, &cp_port) {
+            match validate_broker(&cp_host, &cp_port, use_websocket) {
                 Ok(addr) => {
                     // First send that it's reachable
                     if let Err(e) = tx.send(BrokerStatus::Reachable) {
@@ -132,7 +136,7 @@ fn spawn_validation_thread((ip, port): (&str, &str), tx: Sender<BrokerStatus>) {
     }
 }
 
-fn validate_broker(host: &str, port: &str) -> Result<SocketAddr, String> {
+fn validate_broker(host: &str, port: &str, use_websocket: bool) -> Result<SocketAddr, String> {
     // Validate port first
     let port: u16 = port.parse().map_err(|e| format!("Invalid port: {e}"))?;
 

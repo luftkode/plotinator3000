@@ -18,6 +18,7 @@ use crate::{
 
 pub struct MqttConfigWindow {
     pub is_open: bool,
+    pub use_websockets: bool,
     broker_host: String,
     broker_port: String,
     text_input_topic: String,
@@ -31,6 +32,7 @@ impl MqttConfigWindow {
     pub fn ui(&mut self, ui: &mut egui::Ui) -> Option<MqttDataReceiver> {
         let Self {
             is_open,
+            use_websockets,
             broker_host,
             broker_port,
             text_input_topic,
@@ -44,11 +46,13 @@ impl MqttConfigWindow {
         let mut connect_clicked = false;
         egui::Window::new("MQTT Configuration")
             .open(is_open)
+            .min_width(900.)
             .scroll([false, true])
             .show(ui.ctx(), |ui| {
                 ui.columns(2, |columns| {
                     show_broker_config_column(
                         &mut columns[0],
+                        use_websockets,
                         broker_host,
                         broker_port,
                         text_input_topic,
@@ -58,8 +62,10 @@ impl MqttConfigWindow {
                     );
                     let broker_reachable_and_some_selected_topics =
                         broker_validator.broker_status().reachable() && !selected_topics.is_empty();
+
                     show_subscribed_topics_column(
                         &mut columns[1],
+                        *use_websockets,
                         broker_reachable_and_some_selected_topics,
                         &mut connect_clicked,
                         &mut data_receiver,
@@ -187,8 +193,11 @@ impl MqttConfigWindow {
     }
 
     pub fn poll_broker_status(&mut self) {
-        self.broker_validator
-            .poll_broker_status(&self.broker_host, &self.broker_port);
+        self.broker_validator.poll_broker_status(
+            &self.broker_host,
+            &self.broker_port,
+            self.use_websockets,
+        );
     }
 }
 
@@ -196,6 +205,7 @@ impl Default for MqttConfigWindow {
     fn default() -> Self {
         Self {
             is_open: true,
+            use_websockets: false,
             broker_host: "127.0.0.1".into(),
             broker_port: "1883".into(),
             selected_topics: Default::default(),

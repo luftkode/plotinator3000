@@ -1,3 +1,4 @@
+use rumqttc::Transport;
 use rumqttc::v5::mqttbytes::QoS;
 use rumqttc::v5::mqttbytes::v5::{ConnectReturnCode, Packet, Publish};
 use rumqttc::v5::{Client, Connection, ConnectionError, Event, MqttOptions};
@@ -11,12 +12,25 @@ use crate::data::listener::MqttData;
 use crate::data_receiver::{ConnectionState, MqttMessage};
 use crate::util::timestamped_client_id;
 
-fn setup_client(broker_host: String, broker_port: u16) -> (Client, Connection) {
+fn setup_client(
+    broker_host: String,
+    broker_port: u16,
+    use_websocket: bool,
+) -> (Client, Connection) {
+    let broker_host = if use_websocket {
+        format!("ws://{broker_host}:{broker_port}/mqtt/")
+    } else {
+        broker_host
+    };
     let mut mqttoptions = MqttOptions::new(
         timestamped_client_id("plotinator3000"),
         broker_host,
-        broker_port,
+        broker_port, // ignored if websockets
     );
+
+    if use_websocket {
+        mqttoptions.set_transport(Transport::Ws);
+    }
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
     Client::new(mqttoptions, 10000)
@@ -47,10 +61,11 @@ impl MqttClient {
         stop_flag: Arc<AtomicBool>,
         broker_host: String,
         broker_port: u16,
+        use_websocket: bool,
         topics: Vec<String>,
         tx: Sender<MqttMessage>,
     ) -> Self {
-        let (client, connection) = setup_client(broker_host, broker_port);
+        let (client, connection) = setup_client(broker_host, broker_port, use_websocket);
 
         Self {
             client,

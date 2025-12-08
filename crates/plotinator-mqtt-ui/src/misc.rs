@@ -12,6 +12,7 @@ use crate::data_receiver::{MqttDataReceiver, spawn_mqtt_listener};
 
 pub(crate) fn show_broker_config_column(
     ui: &mut Ui,
+    use_websockets: &mut bool,
     broker_host: &mut String,
     broker_port: &mut String,
     text_input_topic: &mut String,
@@ -28,6 +29,7 @@ pub(crate) fn show_broker_config_column(
             ui.text_edit_singleline(broker_port)
                 .on_hover_text("1883 is the default MQTT broker port");
         });
+        ui.checkbox(use_websockets, "use websocket protocol");
 
         match broker_validator.status() {
             ValidatorStatus::Inactive => show_broker_status(ui, broker_validator.broker_status()),
@@ -45,7 +47,7 @@ pub(crate) fn show_broker_config_column(
             }
         }
 
-        broker_validator.poll_broker_status(broker_host, broker_port);
+        broker_validator.poll_broker_status(broker_host, broker_port, *use_websockets);
 
         ui.label("Topics:");
         ui.horizontal(|ui| {
@@ -76,6 +78,7 @@ pub(crate) fn show_broker_config_column(
 )]
 pub(crate) fn show_subscribed_topics_column(
     ui: &mut Ui,
+    use_websockets: bool,
     broker_reachable_and_some_selected_topics: bool,
     connect_clicked: &mut bool,
     data_receiver: &mut Option<MqttDataReceiver>,
@@ -88,7 +91,7 @@ pub(crate) fn show_subscribed_topics_column(
         ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
             if ui
                 .add_enabled(
-                    broker_reachable_and_some_selected_topics,
+                    true,
                     egui::Button::new(RichText::new("Connect").strong())
                         .min_size([120.0, 30.0].into()),
                 )
@@ -99,6 +102,7 @@ pub(crate) fn show_subscribed_topics_column(
                     stop_flag,
                     broker_host.to_owned(),
                     broker_port.parse().expect("invalid port"),
+                    use_websockets,
                     selected_topics,
                 );
                 *data_receiver = Some(data_receiver_instance);

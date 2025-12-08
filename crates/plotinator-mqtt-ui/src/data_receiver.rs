@@ -11,6 +11,7 @@ pub fn spawn_mqtt_listener(
     stop_flag: &Arc<AtomicBool>,
     broker_host: String,
     broker_port: u16,
+    use_websockets: bool,
     topics: &[String],
 ) -> MqttDataReceiver {
     let (tx, rx) = std::sync::mpsc::channel();
@@ -18,6 +19,7 @@ pub fn spawn_mqtt_listener(
         Arc::clone(stop_flag),
         broker_host.clone(),
         broker_port,
+        use_websockets,
         topics.to_owned(),
         tx.clone(),
     );
