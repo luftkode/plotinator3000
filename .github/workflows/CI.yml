@@ -114,15 +114,7 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            # macos-latest seems to already run on arm64(=aarch64):
-            # https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job#standard-github-hosted-runners-for-public-repositories
             TARGET: aarch64-apple-darwin
-
-          - os: macos-15
-            TARGET: x86_64-apple-darwin
-            # even though the runner uses arm64, MacOS on arm64 seems to support building for amd64.
-            # which makes sense, would be bad for devs otherwise.
-            cross: false
 
           - os: ubuntu-latest
             TARGET: aarch64-unknown-linux-gnu
@@ -154,7 +146,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.TARGET }}
-          override: true
 
       - uses: Swatinem/rust-cache@v2
         with:
