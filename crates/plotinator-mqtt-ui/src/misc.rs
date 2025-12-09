@@ -10,8 +10,13 @@ use plotinator_ui_util::theme_color;
 
 use crate::data_receiver::{MqttDataReceiver, spawn_mqtt_listener};
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "A lot of mutable references, we could group them in a struct but this is fine too"
+)]
 pub(crate) fn show_broker_config_column(
     ui: &mut Ui,
+    use_websockets: &mut bool,
     broker_host: &mut String,
     broker_port: &mut String,
     text_input_topic: &mut String,
@@ -28,6 +33,7 @@ pub(crate) fn show_broker_config_column(
             ui.text_edit_singleline(broker_port)
                 .on_hover_text("1883 is the default MQTT broker port");
         });
+        ui.checkbox(use_websockets, "use websocket protocol");
 
         match broker_validator.status() {
             ValidatorStatus::Inactive => show_broker_status(ui, broker_validator.broker_status()),
@@ -45,7 +51,7 @@ pub(crate) fn show_broker_config_column(
             }
         }
 
-        broker_validator.poll_broker_status(broker_host, broker_port);
+        broker_validator.poll_broker_status(broker_host, broker_port, *use_websockets);
 
         ui.label("Topics:");
         ui.horizontal(|ui| {
@@ -66,6 +72,7 @@ pub(crate) fn show_broker_config_column(
             selected_topics,
             broker_host,
             broker_port,
+            *use_websockets,
         );
     });
 }
@@ -76,6 +83,7 @@ pub(crate) fn show_broker_config_column(
 )]
 pub(crate) fn show_subscribed_topics_column(
     ui: &mut Ui,
+    use_websockets: bool,
     broker_reachable_and_some_selected_topics: bool,
     connect_clicked: &mut bool,
     data_receiver: &mut Option<MqttDataReceiver>,
@@ -99,6 +107,7 @@ pub(crate) fn show_subscribed_topics_column(
                     stop_flag,
                     broker_host.to_owned(),
                     broker_port.parse().expect("invalid port"),
+                    use_websockets,
                     selected_topics,
                 );
                 *data_receiver = Some(data_receiver_instance);
@@ -217,6 +226,7 @@ fn show_discovered_topics_section(
     selected_topics: &mut Vec<String>,
     broker_host: &str,
     broker_port: &str,
+    use_websocket: bool,
 ) {
     let discover_enabled =
         broker_validator.broker_status().reachable() && !topic_discoverer.active();
@@ -233,7 +243,7 @@ fn show_discovered_topics_section(
             .clicked()
         && let Ok(port) = broker_port.parse::<u16>()
     {
-        topic_discoverer.start(broker_host.to_owned(), port);
+        topic_discoverer.start(broker_host.to_owned(), port, use_websocket);
     }
 
     if topic_discoverer.active() {

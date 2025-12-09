@@ -21,7 +21,7 @@ members = ["crates/*"]
 
 [workspace.package]
 authors = ["SkyTEM Surveys", "Marc Beck König"]
-version = "2.10.1"
+version = "2.11.0"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -83,7 +83,7 @@ semver = "1.0.26"
 elevated-command = "1.1"
 paste = "1.0.15"
 anyhow = "1.0.100"
-rumqttc = { version = "0.25.1", default-features = false}
+rumqttc = { version = "0.25.1", default-features = false, features = ["websocket"]}
 memmap2 = "0.9.9"
 tokio = "1.48"
 reqwest = { version = "0.12", default-features = false }
@@ -334,7 +334,6 @@ string_add_assign = "warn"
 string_add = "warn"
 string_lit_as_bytes = "warn"
 string_lit_chars_any = "warn"
-string_to_string = "warn"
 suspicious_command_arg_space = "warn"
 suspicious_xor_used_as_pow = "warn"
 todo = "warn"

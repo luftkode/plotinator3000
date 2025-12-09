@@ -1,5 +1,5 @@
 use crate::util::timestamped_client_id;
-use rumqttc::{Client, Event, MqttOptions, Packet};
+use rumqttc::{Client, Event, MqttOptions, Packet, Transport};
 use std::{
     net::{Ipv6Addr, SocketAddr, TcpStream, ToSocketAddrs as _},
     sync::mpsc::{self, Sender},
@@ -50,7 +50,7 @@ impl BrokerValidator {
         self.status
     }
 
-    pub fn poll_broker_status(&mut self, ip: &str, port: &str) {
+    pub fn poll_broker_status(&mut self, ip: &str, port: &str, use_websocket: bool) {
         let current_broker_input = format!("{ip}{port}");
 
         // Detect input changes
@@ -70,7 +70,7 @@ impl BrokerValidator {
             self.status = ValidatorStatus::Connecting;
             self.last_input_change = None;
 
-            spawn_validation_thread((ip, port), tx);
+            spawn_validation_thread((ip, port), use_websocket, tx);
         }
 
         // Check for validation results, if we got a result we store the result and reset the check status
@@ -92,7 +92,11 @@ impl BrokerValidator {
     }
 }
 
-fn spawn_validation_thread((ip, port): (&str, &str), tx: Sender<BrokerStatus>) {
+fn spawn_validation_thread(
+    (ip, port): (&str, &str),
+    use_websocket: bool,
+    tx: Sender<BrokerStatus>,
+) {
     // Spawn validation thread
     let (cp_host, cp_port) = (ip.to_owned(), port.to_owned());
     if let Err(e) = std::thread::Builder::new()
@@ -107,7 +111,7 @@ fn spawn_validation_thread((ip, port): (&str, &str), tx: Sender<BrokerStatus>) {
                     }
 
                     // Then try to get the version
-                    match get_broker_version(addr) {
+                    match get_broker_version(addr, use_websocket) {
                         Ok(version) => {
                             if let Err(e) = tx.send(BrokerStatus::ReachableVersion(version)) {
                                 log::error!("{e}");
@@ -166,9 +170,17 @@ fn validate_broker(host: &str, port: &str) -> Result<SocketAddr, String> {
     ))
 }
 
-fn get_broker_version(addr: SocketAddr) -> Result<String, String> {
+fn get_broker_version(addr: SocketAddr, use_websocket: bool) -> Result<String, String> {
     let client_id = timestamped_client_id("version-check");
-    let mut mqttoptions = MqttOptions::new(client_id, addr.ip().to_string(), addr.port());
+    let ip_str = addr.ip().to_string();
+    let port = addr.port();
+    let host = if use_websocket {
+        format!("ws://{ip_str}:{port}/mqtt/")
+    } else {
+        ip_str
+    };
+    let mut mqttoptions = MqttOptions::new(client_id, host, port);
+    mqttoptions.set_transport(Transport::Ws);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
     let (client, mut connection) = Client::new(mqttoptions, 100);
 

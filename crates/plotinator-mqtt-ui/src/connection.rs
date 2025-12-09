@@ -65,6 +65,8 @@ pub struct MqttConnection {
     pub set_auto_bounds: bool,
     /// Scroll the plot to follow the incoming data,
     pub plot_scroller: PlotScroller,
+
+    pub use_websockets: bool,
 }
 
 impl MqttConnection {
