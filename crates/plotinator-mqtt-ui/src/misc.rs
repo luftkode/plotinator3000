@@ -10,6 +10,10 @@ use plotinator_ui_util::theme_color;
 
 use crate::data_receiver::{MqttDataReceiver, spawn_mqtt_listener};
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "A lot of mutable references, we could group them in a struct but this is fine too"
+)]
 pub(crate) fn show_broker_config_column(
     ui: &mut Ui,
     use_websockets: &mut bool,
