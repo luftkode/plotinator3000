@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.11.0]
+
+### Added
+
+- MQTT connect allows selecting websocket as transport protocol
+
 ### Dependencies
 
 - Update `hdf5` to `0.11.0` and enable the `zlib` feature

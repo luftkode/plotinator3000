@@ -164,7 +164,8 @@ impl MqttConfigWindow {
 
     pub fn start_topic_discovery(&mut self) {
         if let Ok(port) = self.broker_port.parse::<u16>() {
-            self.topic_discoverer.start(self.broker_host.clone(), port);
+            self.topic_discoverer
+                .start(self.broker_host.clone(), port, self.use_websockets);
         }
     }
 

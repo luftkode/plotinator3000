@@ -68,6 +68,7 @@ pub(crate) fn show_broker_config_column(
             selected_topics,
             broker_host,
             broker_port,
+            *use_websockets,
         );
     });
 }
@@ -91,7 +92,7 @@ pub(crate) fn show_subscribed_topics_column(
         ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
             if ui
                 .add_enabled(
-                    true,
+                    broker_reachable_and_some_selected_topics,
                     egui::Button::new(RichText::new("Connect").strong())
                         .min_size([120.0, 30.0].into()),
                 )
@@ -221,6 +222,7 @@ fn show_discovered_topics_section(
     selected_topics: &mut Vec<String>,
     broker_host: &str,
     broker_port: &str,
+    use_websocket: bool,
 ) {
     let discover_enabled =
         broker_validator.broker_status().reachable() && !topic_discoverer.active();
@@ -237,7 +239,7 @@ fn show_discovered_topics_section(
             .clicked()
         && let Ok(port) = broker_port.parse::<u16>()
     {
-        topic_discoverer.start(broker_host.to_owned(), port);
+        topic_discoverer.start(broker_host.to_owned(), port, use_websocket);
     }
 
     if topic_discoverer.active() {

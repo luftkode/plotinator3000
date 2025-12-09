@@ -1,4 +1,10 @@
-use rumqttc::{Client, Event, MqttOptions, Packet};
+use rumqttc::{
+    Transport,
+    v5::{
+        Client, Event, MqttOptions,
+        mqttbytes::{QoS, v5::Packet},
+    },
+};
 use std::{
     collections::HashSet,
     sync::{
@@ -53,7 +59,7 @@ impl TopicDiscoverer {
         Ok(())
     }
 
-    pub fn start(&mut self, broker_host: String, broker_port: u16) {
+    pub fn start(&mut self, broker_host: String, broker_port: u16, use_websocket: bool) {
         self.reset();
         self.active = true;
 
@@ -63,6 +69,7 @@ impl TopicDiscoverer {
         self.discovery_handle = Some(start_discovery(
             broker_host,
             broker_port,
+            use_websocket,
             self.get_stop_flag(),
             tx,
         ));
@@ -98,6 +105,7 @@ pub(crate) enum DiscoveryMsg {
 pub(crate) fn start_discovery(
     host: String,
     port: u16,
+    use_websocket: bool,
     stop_flag: Arc<AtomicBool>,
     tx: mpsc::Sender<DiscoveryMsg>,
 ) -> std::thread::JoinHandle<()> {
@@ -105,15 +113,22 @@ pub(crate) fn start_discovery(
         .name("mqtt-topic-discoverer".into())
         .spawn(move || {
             let client_id = timestamped_client_id("discover");
-
             log::info!(
                 "Subscribing for discovery with id={client_id}, broker address={host}:{port}"
             );
-            let mut mqttoptions = MqttOptions::new(client_id, host, port);
+            let broker_host = if use_websocket {
+                format!("ws://{host}:{port}/mqtt/")
+            } else {
+                host
+            };
+            let mut mqttoptions = MqttOptions::new(client_id, broker_host, port);
+            if use_websocket {
+                mqttoptions.set_transport(Transport::Ws);
+            }
             mqttoptions.set_keep_alive(Duration::from_secs(5));
             let (client, mut connection) = Client::new(mqttoptions, 100);
 
-            if let Err(e) = client.subscribe("#", rumqttc::QoS::AtMostOnce) {
+            if let Err(e) = client.subscribe("#", QoS::AtMostOnce) {
                 log::error!("Subscribe err={e}");
                 if let Err(e) = tx.send(DiscoveryMsg::Err(e.to_string())) {
                     log::error!("{e}");
@@ -121,7 +136,7 @@ pub(crate) fn start_discovery(
                 return;
             }
 
-            if let Err(e) = client.subscribe("$SYS/#", rumqttc::QoS::AtMostOnce) {
+            if let Err(e) = client.subscribe("$SYS/#", QoS::AtMostOnce) {
                 log::error!("Subscribe err={e}");
                 if let Err(e) = tx.send(DiscoveryMsg::Err(e.to_string())) {
                     log::error!("{e}");
@@ -138,11 +153,12 @@ pub(crate) fn start_discovery(
                 match notification {
                     Ok(event) => {
                         if let Event::Incoming(Packet::Publish(p)) = event {
-                            log::info!("Discovered topic={}", p.topic);
-                            let msg = if p.topic.starts_with("$SYS") {
-                                DiscoveryMsg::SysTopic(p.topic)
+                            let topic = String::from_utf8_lossy(&p.topic);
+                            log::info!("Discovered topic={topic}");
+                            let msg = if topic.starts_with("$SYS") {
+                                DiscoveryMsg::SysTopic(topic.into_owned())
                             } else {
-                                DiscoveryMsg::Topic(p.topic)
+                                DiscoveryMsg::Topic(topic.into_owned())
                             };
                             if let Err(e) = tx.send(msg) {
                                 log::error!("{e}");

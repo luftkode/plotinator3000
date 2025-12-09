@@ -1,5 +1,5 @@
 use crate::util::timestamped_client_id;
-use rumqttc::{Client, Event, MqttOptions, Packet};
+use rumqttc::{Client, Event, MqttOptions, Packet, Transport};
 use std::{
     net::{Ipv6Addr, SocketAddr, TcpStream, ToSocketAddrs as _},
     sync::mpsc::{self, Sender},
@@ -102,7 +102,7 @@ fn spawn_validation_thread(
     if let Err(e) = std::thread::Builder::new()
         .name("broker-validator".into())
         .spawn(move || {
-            match validate_broker(&cp_host, &cp_port, use_websocket) {
+            match validate_broker(&cp_host, &cp_port) {
                 Ok(addr) => {
                     // First send that it's reachable
                     if let Err(e) = tx.send(BrokerStatus::Reachable) {
@@ -111,7 +111,7 @@ fn spawn_validation_thread(
                     }
 
                     // Then try to get the version
-                    match get_broker_version(addr) {
+                    match get_broker_version(addr, use_websocket) {
                         Ok(version) => {
                             if let Err(e) = tx.send(BrokerStatus::ReachableVersion(version)) {
                                 log::error!("{e}");
@@ -136,7 +136,7 @@ fn spawn_validation_thread(
     }
 }
 
-fn validate_broker(host: &str, port: &str, use_websocket: bool) -> Result<SocketAddr, String> {
+fn validate_broker(host: &str, port: &str) -> Result<SocketAddr, String> {
     // Validate port first
     let port: u16 = port.parse().map_err(|e| format!("Invalid port: {e}"))?;
 
@@ -170,9 +170,17 @@ fn validate_broker(host: &str, port: &str, use_websocket: bool) -> Result<Socket
     ))
 }
 
-fn get_broker_version(addr: SocketAddr) -> Result<String, String> {
+fn get_broker_version(addr: SocketAddr, use_websocket: bool) -> Result<String, String> {
     let client_id = timestamped_client_id("version-check");
-    let mut mqttoptions = MqttOptions::new(client_id, addr.ip().to_string(), addr.port());
+    let ip_str = addr.ip().to_string();
+    let port = addr.port();
+    let host = if use_websocket {
+        format!("ws://{ip_str}:{port}/mqtt/")
+    } else {
+        ip_str
+    };
+    let mut mqttoptions = MqttOptions::new(client_id, host, port);
+    mqttoptions.set_transport(Transport::Ws);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
     let (client, mut connection) = Client::new(mqttoptions, 100);
 
