@@ -40,12 +40,15 @@ macro_rules! define_supported_hdf5_formats {
                         path: path.to_path_buf(),
                         format_name: <$ty>::DESCRIPTIVE_NAME.to_owned(),
                     });
-                    if let Ok(format_data) = <$ty>::from_path(path) {
-                        tx.send(ParseUpdate::Confirmed {
-                            path: path.to_path_buf(),
-                            format_name: <$ty>::DESCRIPTIVE_NAME.to_owned(),
-                        });
-                        return Ok(SupportedHdf5Format::$variant(format_data));
+                    match <$ty>::from_path(path) {
+                        Ok(format_data) => {
+                            tx.send(ParseUpdate::Confirmed {
+                                path: path.to_path_buf(),
+                                format_name: <$ty>::DESCRIPTIVE_NAME.to_owned(),
+                            });
+                            return Ok(SupportedHdf5Format::$variant(format_data));
+                        }
+                        Err(e) => log::debug!("Not '{}' compatible: {e}", <$ty>::DESCRIPTIVE_NAME),
                     }
                 )*
 
@@ -97,4 +100,5 @@ define_supported_hdf5_formats! {
     FrameGps => plotinator_hdf5::frame_gps::FrameGps,
     NjordIns => plotinator_hdf5::njord_ins::NjordIns,
     Tsc => plotinator_hdf5::tsc::Tsc,
+    Altimeter => plotinator_hdf5::altimeter::Altimeter,
 }

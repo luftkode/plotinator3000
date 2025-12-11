@@ -1,3 +1,4 @@
+pub mod altimeter;
 pub mod bifrost;
 pub mod frame_altimeters;
 pub mod frame_gps;
