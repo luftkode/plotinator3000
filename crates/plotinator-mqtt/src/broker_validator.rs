@@ -180,7 +180,9 @@ fn get_broker_version(addr: SocketAddr, use_websocket: bool) -> Result<String, S
         ip_str
     };
     let mut mqttoptions = MqttOptions::new(client_id, host, port);
-    mqttoptions.set_transport(Transport::Ws);
+    if use_websocket {
+        mqttoptions.set_transport(Transport::Ws);
+    };
     mqttoptions.set_keep_alive(Duration::from_secs(5));
     let (client, mut connection) = Client::new(mqttoptions, 100);
 

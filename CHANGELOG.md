@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.11.1]
+
+- Fix accidentally always setting websocket as the MQTT transport layer when probing MQTT broker for broker version
+
 ## [2.11.0]
 
 ### Added
