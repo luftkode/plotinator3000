@@ -119,6 +119,12 @@ const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
         link: "https://github.com/luftkode/tib3d-script",
         subitems: None,
     },
+    LogFormat {
+        title: "Generic Altimeter",
+        description: "Any altimeter implemented with the generic HDF5 altimeter format",
+        link: "https://github.com/luftkode/frame-altimeter",
+        subitems: None,
+    },
 ];
 
 /// Draws a single log format entry
