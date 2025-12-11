@@ -26,8 +26,14 @@ impl SkytemHdf5 for Altimeter {
     fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let h5 = hdf5::File::open(path)?;
         let sensor_count = h5.attr("sensor_count")?.read_scalar::<u8>()?;
-        let starting_timestamp = h5.attr("timestamp")?.read_scalar::<VarLenUnicode>()?;
-        let starting_timestamp = starting_timestamp.to_string();
+        let sensor_type = h5
+            .attr("sensor_type")?
+            .read_scalar::<VarLenUnicode>()?
+            .to_string();
+        let starting_timestamp = h5
+            .attr("timestamp")?
+            .read_scalar::<VarLenUnicode>()?
+            .to_string();
         let starting_timestamp_utc: DateTime<Utc> =
             NaiveDateTime::parse_from_str(&starting_timestamp, "%Y%m%d_%H%M%S")?.and_utc();
 
@@ -46,7 +52,7 @@ impl SkytemHdf5 for Altimeter {
             let heights: Array1<f32> = h5.dataset(&height_ds_name)?.read_1d()?;
             let heights: Vec<f64> = heights.into_iter().map(|h| h.into()).collect();
             let times: Vec<u64> = h5.dataset(&timestamp_ds_name)?.read_raw()?;
-            let legend_name = format!("{}-{sensor_id}", Self::DESCRIPTIVE_NAME);
+            let legend_name = format!("{sensor_type}-{sensor_id}");
             if let Some(dataseries) = GeoSpatialDataBuilder::new(legend_name)
                 .timestamp(&times)
                 .altitude_from_laser(heights)
