@@ -62,8 +62,7 @@ eframe = { version = "0.33", default-features = false, features = [
 ] }
 egui_plot = { version = "0.34", features = ["serde"] }
 egui_extras = "0.33"
-# TODO: Move back to main repo once the update PR is merged
-egui-phosphor = { git = "https://github.com/ItsEthra/egui-phosphor.git", branch = "egui-0.33" }
+egui-phosphor = "0.11.0"
 walkers = { version = "0.50.0", features = ["serde"] }
 rayon = "1.11.0"
 log = "0.4"
@@ -192,9 +191,17 @@ strip = true
 lto = true
 codegen-units = 1
 
+[profile.dev]
+debug = "line-tables-only"
+
 # Optimize all dependencies even in debug builds:
 [profile.dev.package."*"]
 opt-level = 2
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
@@ -328,7 +335,7 @@ too_many_lines = "warn"
 trailing_empty_array = "warn"
 trait_duplication_in_bounds = "warn"
 tuple_array_conversions = "warn"
-unchecked_duration_subtraction = "warn"
+unchecked_time_subtraction = "warn"
 undocumented_unsafe_blocks = "warn"
 unimplemented = "warn"
 uninhabited_references = "warn"
