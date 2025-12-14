@@ -62,8 +62,7 @@ eframe = { version = "0.33", default-features = false, features = [
 ] }
 egui_plot = { version = "0.34", features = ["serde"] }
 egui_extras = "0.33"
-# TODO: Move back to main repo once the update PR is merged
-egui-phosphor = { git = "https://github.com/ItsEthra/egui-phosphor.git", branch = "egui-0.33" }
+egui-phosphor = "0.11.0"
 walkers = { version = "0.50.0", features = ["serde"] }
 rayon = "1.11.0"
 log = "0.4"
