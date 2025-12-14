@@ -245,11 +245,11 @@ const MAPBOX_API_TOKEN_COMPILE_TIME_NAME: &str = "PLOTINATOR3000_MAPBOX_API";
 const MAPBOX_API_TOKEN_RUNTIME_LOCAL: &str = "PLOTINATOR3000_MAPBOX_API_LOCAL";
 // Get a local runtime API token or fallback to the compile-time included public token
 fn get_mapbox_api_token() -> String {
-    std::env::var(MAPBOX_API_TOKEN_RUNTIME_LOCAL).ok().map_or_else(|| {
+    std::env::var(MAPBOX_API_TOKEN_RUNTIME_LOCAL).ok().unwrap_or_else(|| {
         log::info!("No local mapbox API token in {MAPBOX_API_TOKEN_RUNTIME_LOCAL}, falling back to compile-time token {MAPBOX_API_TOKEN_COMPILE_TIME_NAME}");
         #[allow(clippy::option_env_unwrap, reason = "that way every dev environment doesn't need an API token for development unrelated to map box")]
         option_env!("PLOTINATOR3000_MAPBOX_API").expect("no compile-time mapbox API token").to_owned()
-    }, |s| s)
+    })
 }
 
 #[cfg(test)]

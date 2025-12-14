@@ -575,27 +575,35 @@ impl MapViewPort {
             }
 
             if let Some(pointer_pos) = pointer_pos {
-                let hovered_point = find_closest_point_to_cursor(
+                let new_hovered = find_closest_point_to_cursor(
                     &self.geo_data,
                     &self.mqtt_geo_data,
                     pointer_pos,
                     projector,
                 );
 
+                let old_hovered = self.map_hovered_point.as_ref();
+
                 if let Some(plot_tx) = &mut self.plot_msg_tx {
-                    if let Some(point) = &hovered_point {
-                        plot_tx
-                            .send(PlotMessage::PointerTimestamp(Some((
-                                point.timestamp,
-                                point.path_color,
-                            ))))
-                            .ok();
-                    } else if self.map_hovered_point.is_some() {
-                        self.map_hovered_point = None;
-                        plot_tx.send(PlotMessage::PointerTimestamp(None)).ok();
+                    match (old_hovered, &new_hovered) {
+                        (Some(_), None) => {
+                            // Send `None` to the map GUI so that it can stop drawing the vertical line that indicates the correlation between
+                            // plot data and map pointer.
+                            plot_tx.send(PlotMessage::PointerTimestamp(None)).ok();
+                        }
+                        (_, Some(point)) => {
+                            plot_tx
+                                .send(PlotMessage::PointerTimestamp(Some((
+                                    point.timestamp,
+                                    point.path_color,
+                                ))))
+                                .ok();
+                        }
+                        (None, None) => {}
                     }
                 }
-                self.map_hovered_point = hovered_point;
+
+                self.map_hovered_point = new_hovered;
             }
         });
 
