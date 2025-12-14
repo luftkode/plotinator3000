@@ -21,14 +21,9 @@ egui_plot.workspace = true
 egui.workspace = true
 serde.workspace = true
 chrono.workspace = true
-num-traits.workspace = true
 log.workspace = true
-strum_macros.workspace = true
-strum.workspace = true
-rayon.workspace = true
 
 [dev-dependencies]
-testresult.workspace = true
 pretty_assertions.workspace = true
 insta.workspace = true
 

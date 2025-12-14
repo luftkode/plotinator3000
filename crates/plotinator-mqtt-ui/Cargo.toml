@@ -9,7 +9,6 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-plotinator-macros.workspace = true
 plotinator-mqtt.workspace = true
 plotinator-log-if.workspace = true
 plotinator-ui-util.workspace = true

@@ -11,7 +11,6 @@ homepage.workspace = true
 [dependencies]
 plotinator-log-if.workspace = true
 plotinator-ui-util.workspace = true
-plotinator-macros.workspace = true
 egui_plot.workspace = true
 rumqttc.workspace = true
 
@@ -19,14 +18,11 @@ chrono.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-strum_macros.workspace = true
 strum.workspace = true
 anyhow.workspace = true
-smallvec.workspace = true
 
 [dev-dependencies]
 plotinator-test-util.workspace = true
-testresult.workspace = true
 insta.workspace = true
 
 [lints]

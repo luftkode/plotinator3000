@@ -9,7 +9,6 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-anyhow.workspace = true
 eframe.workspace = true
 egui.workspace = true
 egui-phosphor.workspace = true

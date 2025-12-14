@@ -22,7 +22,6 @@ egui_extras.workspace = true
 serde.workspace = true
 log.workspace = true
 strum.workspace = true
-strum_macros.workspace = true
 smallvec.workspace = true
 
 [lints]

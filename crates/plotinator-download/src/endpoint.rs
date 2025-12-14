@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, strum_macros::Display)]
+#[derive(Debug, Clone, Copy, strum::Display)]
 pub enum Endpoint {
     #[strum(serialize = "/api/download/latest")]
     DownloadLatestData,

@@ -6,7 +6,7 @@ use byteorder::ReadBytesExt as _;
 use derive_more::derive::Display;
 use plotinator_log_if::log::LogEntry;
 use serde::{Deserialize, Serialize};
-use strum_macros::FromRepr;
+use strum::FromRepr;
 
 #[allow(
     non_camel_case_types,

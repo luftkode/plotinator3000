@@ -3980,7 +3980,6 @@ version = "2.12.0"
 dependencies = [
  "anyhow",
  "log",
- "plotinator-hdf5",
  "plotinator-log-if",
  "plotinator-plot-util",
  "plotinator-supported-formats",
@@ -3988,7 +3987,6 @@ dependencies = [
  "plotinator-ui-file-io",
  "plotinator-ui-log-settings",
  "rayon",
- "serde",
  "smallvec",
  "tempfile",
  "testresult",
@@ -4002,9 +4000,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "insta",
- "log",
  "plotinator-log-if",
- "plotinator-plot-util",
  "plotinator-test-util",
  "plotinator-ui-util",
  "serde",
@@ -4033,7 +4029,6 @@ dependencies = [
  "pretty_assertions",
  "reqwest",
  "strum",
- "strum_macros",
 ]
 
 [[package]]
@@ -4044,22 +4039,15 @@ dependencies = [
  "egui",
  "log",
  "plotinator-custom-files",
- "plotinator-hdf5",
- "plotinator-log-if",
  "plotinator-mqtt",
  "plotinator-mqtt-ui",
  "plotinator-plot-ui",
  "plotinator-plot-util",
  "plotinator-supported-formats",
- "plotinator-test-util",
- "plotinator-ui-file-io",
  "rfd",
  "serde",
  "serde_json",
  "smallvec",
- "tempfile",
- "testresult",
- "zip",
 ]
 
 [[package]]
@@ -4067,27 +4055,18 @@ name = "plotinator-hdf5"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "byteorder",
  "chrono",
- "derive_more",
- "egui_plot",
- "getset",
  "hdf5-metno",
  "insta",
  "log",
  "ndarray",
  "num-traits",
  "plotinator-log-if",
- "plotinator-macros",
- "plotinator-plot-util",
  "plotinator-proc-macros",
  "plotinator-test-util",
  "plotinator-ui-util",
  "rayon",
  "serde",
- "serde-big-array",
- "strum",
- "strum_macros",
  "testresult",
  "toml 0.9.8",
 ]
@@ -4117,18 +4096,15 @@ dependencies = [
  "byteorder",
  "chrono",
  "derive_more",
- "egui_plot",
  "getset",
  "log",
  "plotinator-log-if",
- "plotinator-plot-util",
  "plotinator-test-util",
  "plotinator-ui-util",
  "pretty_assertions",
  "serde",
  "serde-big-array",
  "strum",
- "strum_macros",
  "thiserror 2.0.17",
 ]
 
@@ -4156,7 +4132,6 @@ dependencies = [
  "serde",
  "smallvec",
  "strum",
- "strum_macros",
  "walkers",
 ]
 
@@ -4170,16 +4145,12 @@ dependencies = [
  "insta",
  "log",
  "plotinator-log-if",
- "plotinator-macros",
  "plotinator-test-util",
  "plotinator-ui-util",
  "rumqttc",
  "serde",
  "serde_json",
- "smallvec",
  "strum",
- "strum_macros",
- "testresult",
 ]
 
 [[package]]
@@ -4193,7 +4164,6 @@ dependencies = [
  "egui_plot",
  "log",
  "plotinator-log-if",
- "plotinator-macros",
  "plotinator-mqtt",
  "plotinator-ui-util",
  "pretty_assertions",
@@ -4225,11 +4195,8 @@ dependencies = [
  "plotinator-ui-log-settings",
  "plotinator-ui-util",
  "puffin",
- "rayon",
  "serde",
  "smallvec",
- "strum",
- "strum_macros",
 ]
 
 [[package]]
@@ -4241,18 +4208,13 @@ dependencies = [
  "egui_plot",
  "insta",
  "log",
- "num-traits",
  "plotinator-log-if",
  "plotinator-macros",
  "plotinator-proc-macros",
  "plotinator-ui-util",
  "pretty_assertions",
  "puffin",
- "rayon",
  "serde",
- "strum",
- "strum_macros",
- "testresult",
 ]
 
 [[package]]
@@ -4287,7 +4249,6 @@ dependencies = [
  "plotinator-log-if",
  "plotinator-logs",
  "plotinator-macros",
- "plotinator-mqtt",
  "plotinator-mqtt-ui",
  "plotinator-proc-macros",
  "plotinator-test-util",
@@ -4308,7 +4269,6 @@ dependencies = [
 name = "plotinator-ui-file-io"
 version = "2.12.0"
 dependencies = [
- "anyhow",
  "eframe",
  "egui",
  "egui-phosphor",
@@ -4339,7 +4299,6 @@ dependencies = [
  "log",
  "serde",
  "strum",
- "strum_macros",
 ]
 
 [[package]]
@@ -4362,15 +4321,11 @@ dependencies = [
 name = "plotinator3000"
 version = "2.12.0"
 dependencies = [
- "anyhow",
- "chrono",
  "eframe",
  "egui",
  "egui-notify",
  "egui-phosphor",
- "egui_extras",
  "egui_kittest",
- "egui_plot",
  "env_logger",
  "log",
  "mimalloc",
@@ -4380,31 +4335,22 @@ dependencies = [
  "plotinator-file-io",
  "plotinator-hdf5",
  "plotinator-log-if",
- "plotinator-logs",
- "plotinator-macros",
  "plotinator-map-ui",
  "plotinator-mqtt",
  "plotinator-mqtt-ui",
  "plotinator-plot-ui",
- "plotinator-plot-util",
  "plotinator-proc-macros",
  "plotinator-strfmt",
  "plotinator-supported-formats",
  "plotinator-test-util",
  "plotinator-ui-file-io",
- "plotinator-ui-log-settings",
  "plotinator-ui-util",
  "plotinator-updater",
  "puffin",
  "puffin_http",
- "rayon",
  "semver",
  "serde",
- "serde_json",
  "smallvec",
- "tempfile",
- "testresult",
- "walkers",
  "winres",
 ]
 
@@ -5577,6 +5523,9 @@ name = "strum"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+dependencies = [
+ "strum_macros",
+]
 
 [[package]]
 name = "strum_macros"

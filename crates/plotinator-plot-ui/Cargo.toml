@@ -30,10 +30,7 @@ egui-notify.workspace = true
 chrono.workspace = true
 log.workspace = true
 serde.workspace = true
-strum.workspace = true
-strum_macros.workspace = true
 smallvec.workspace = true
-rayon.workspace = true
 
 [features]
 default = []

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+- Remove unused dependencies found by `cargo-shear`
+
 ## [2.12.0]
 
 - Add support for the generic `altimeter` HDF5 format that only requires a `sensor_count` & `sensor_type` attribute and standardized height/timestamp
