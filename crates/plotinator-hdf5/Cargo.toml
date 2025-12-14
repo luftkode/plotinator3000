@@ -12,20 +12,12 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-plotinator-macros.workspace = true
 plotinator-proc-macros.workspace = true
 plotinator-test-util.workspace = true
-plotinator-plot-util.workspace = true
 plotinator-log-if.workspace = true
 plotinator-ui-util.workspace = true
-egui_plot.workspace = true
 serde.workspace = true
-serde-big-array.workspace = true
-strum.workspace = true
-byteorder.workspace = true
 chrono.workspace = true
-getset.workspace = true
-derive_more.workspace = true
 log.workspace = true
 num-traits.workspace = true
 toml.workspace = true

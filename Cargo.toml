@@ -113,36 +113,22 @@ pretty_assertions = "1.4.1"
 insta = { version = "1.44.3", features = ["filters"] }
 
 [dependencies]
-plotinator-logs.workspace = true
-plotinator-log-if.workspace = true
-plotinator-plot-util.workspace = true
 plotinator-plot-ui.workspace = true
-plotinator-hdf5.workspace = true
-plotinator-test-util.workspace = true
 plotinator-ui-util.workspace = true
-plotinator-macros.workspace = true
 plotinator-proc-macros.workspace = true
 plotinator-supported-formats.workspace = true
 plotinator-strfmt.workspace = true
 plotinator-file-io.workspace = true
 plotinator-ui-file-io.workspace = true
-plotinator-ui-log-settings.workspace = true
 plotinator-background-parser.workspace = true
 plotinator-custom-files.workspace = true
-walkers.workspace = true
 egui.workspace = true
 eframe.workspace = true
-egui_plot.workspace = true
 egui-phosphor.workspace = true
 egui-notify.workspace = true
-egui_extras.workspace = true
 log.workspace = true
 serde.workspace = true
-chrono.workspace = true
 semver.workspace = true
-serde_json.workspace = true
-anyhow.workspace = true
-rayon.workspace = true
 smallvec.workspace = true
 
 
@@ -163,8 +149,9 @@ env_logger.workspace = true
 mimalloc = "0.1.47"
 
 [dev-dependencies]
-testresult.workspace = true
-tempfile.workspace = true
+plotinator-hdf5.workspace = true
+plotinator-log-if.workspace = true
+plotinator-test-util.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 # For GUI and GUI snapshot tests

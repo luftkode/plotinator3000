@@ -21,7 +21,6 @@ plotinator-log-if = { workspace = true }
 plotinator-logs = { workspace = true }
 plotinator-hdf5 = { workspace = true }
 plotinator-csv = { workspace = true }
-plotinator-mqtt = { workspace = true }
 plotinator-mqtt-ui = { workspace = true }
 plotinator-macros = { workspace = true }
 plotinator-proc-macros = { workspace = true }
