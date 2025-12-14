@@ -22,7 +22,6 @@ egui_plot.workspace = true
 serde.workspace = true
 serde-big-array.workspace = true
 strum.workspace = true
-strum_macros.workspace = true
 byteorder.workspace = true
 chrono.workspace = true
 getset.workspace = true

@@ -5,7 +5,7 @@ use byteorder::LittleEndian;
 use byteorder::ReadBytesExt as _;
 use plotinator_log_if::log::LogEntry;
 use serde::{Deserialize, Serialize};
-use strum_macros::{Display, FromRepr};
+use strum::{Display, FromRepr};
 
 #[allow(
     non_camel_case_types,

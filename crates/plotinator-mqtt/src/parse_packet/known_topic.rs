@@ -5,7 +5,7 @@ use pilot_display::{PilotDisplayCoordinates, PilotDisplayRemainingDistance};
 use plotinator_log_if::prelude::*;
 use plotinator_ui_util::ExpectedPlotRange;
 use serde::Deserialize;
-use strum_macros::{Display, EnumString};
+use strum::{Display, EnumString};
 
 use crate::{
     data::listener::{MqttData, MqttDevice, MqttTopicData},

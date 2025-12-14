@@ -70,8 +70,7 @@ log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.142"
 serde-big-array = "0.5.1"
-strum = "0.27.2"
-strum_macros = "0.27.2"
+strum = { version = "0.27.2", features = ["derive"]}
 byteorder = "1.5.0"
 chrono = { version = "0.4.42", features = ["serde"] }
 getset = "0.1.6"

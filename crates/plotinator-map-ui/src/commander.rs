@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 /// Messages sent from main app to map viewport
-#[derive(strum_macros::Display)]
+#[derive(strum::Display)]
 pub enum MapCommand {
     /// Geo spatial data from a loaded dataset
     AddGeoData(Box<GeoSpatialDataset>),
@@ -23,7 +23,7 @@ pub enum MapCommand {
 }
 
 /// Messages sent to the main plot app
-#[derive(strum_macros::Display, Clone, Copy)]
+#[derive(strum::Display, Clone, Copy)]
 pub enum PlotMessage {
     /// The timestamp of a [`GeoPoint`] near the pointer on the map
     ///
