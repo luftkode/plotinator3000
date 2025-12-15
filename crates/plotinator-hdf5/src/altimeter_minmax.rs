@@ -1,5 +1,4 @@
-use std::path::Path;
-
+use crate::util::read_any_attribute_to_string;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use hdf5::types::VarLenUnicode;
 use ndarray::Array1;
@@ -9,8 +8,9 @@ use plotinator_log_if::{
     rawplot::RawPlot,
 };
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
-use crate::util::read_any_attribute_to_string;
+const ALTITUDE_VALID_RANGE: (f64, f64) = (0.0, 500.0);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AltimeterMinMax {
@@ -18,6 +18,36 @@ pub struct AltimeterMinMax {
     dataset_description: String,
     raw_plots: Vec<RawPlot>,
     metadata: Vec<(String, String)>,
+}
+
+impl AltimeterMinMax {
+    fn process_sensor(
+        h5: &hdf5::File,
+        sensor_id: u8,
+        sensor_type: &str,
+        raw_plots: &mut Vec<RawPlot>,
+    ) -> anyhow::Result<()> {
+        let times: Vec<u64> = h5.dataset(&format!("timestamp_{sensor_id}"))?.read_raw()?;
+
+        for (suffix, dataset_prefix) in [("min", "height_min"), ("max", "height_max")] {
+            let heights: Array1<f32> = h5
+                .dataset(&format!("{dataset_prefix}_{sensor_id}"))?
+                .read_1d()?;
+            let heights: Vec<f64> = heights.into_iter().map(|h| h.into()).collect();
+            let legend_name = format!("{sensor_type}-{suffix}-{sensor_id}");
+
+            if let Some(plot) = GeoSpatialDataBuilder::new(legend_name)
+                .timestamp(&times)
+                .altitude_from_laser(heights)
+                .altitude_valid_range(ALTITUDE_VALID_RANGE)
+                .build_into_rawplot()?
+            {
+                raw_plots.push(plot);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl SkytemHdf5 for AltimeterMinMax {
@@ -37,42 +67,19 @@ impl SkytemHdf5 for AltimeterMinMax {
         let starting_timestamp_utc: DateTime<Utc> =
             NaiveDateTime::parse_from_str(&starting_timestamp, "%Y%m%d_%H%M%S")?.and_utc();
 
-        let attr_names = h5.attr_names()?;
-        let mut metadata: Vec<(String, String)> = Vec::with_capacity(attr_names.len());
-        for attr_name in attr_names {
-            let attr = h5.attr(&attr_name)?;
-            let attr_val = read_any_attribute_to_string(&attr)?;
-            metadata.push((attr_name, attr_val));
-        }
+        let metadata: Vec<(String, String)> = h5
+            .attr_names()?
+            .into_iter()
+            .filter_map(|attr_name| {
+                let attr = h5.attr(&attr_name).ok()?;
+                let attr_val = read_any_attribute_to_string(&attr).ok()?;
+                Some((attr_name, attr_val))
+            })
+            .collect();
 
         let mut raw_plots = vec![];
         for sensor_id in 1..=sensor_count {
-            let height_min_ds_name = format!("height_min_{sensor_id}");
-            let height_max_ds_name = format!("height_max_{sensor_id}");
-            let timestamp_ds_name = format!("timestamp_{sensor_id}");
-            let heights_min: Array1<f32> = h5.dataset(&height_min_ds_name)?.read_1d()?;
-            let heights_max: Array1<f32> = h5.dataset(&height_max_ds_name)?.read_1d()?;
-            let heights_min: Vec<f64> = heights_min.into_iter().map(|h| h.into()).collect();
-            let heights_max: Vec<f64> = heights_max.into_iter().map(|h| h.into()).collect();
-            let times: Vec<u64> = h5.dataset(&timestamp_ds_name)?.read_raw()?;
-            let legend_name_min = format!("{sensor_type}-min-{sensor_id}");
-            let legend_name_max = format!("{sensor_type}-max-{sensor_id}");
-            if let Some(dataseries) = GeoSpatialDataBuilder::new(legend_name_min)
-                .timestamp(&times)
-                .altitude_from_laser(heights_min)
-                .altitude_valid_range((0.0, 500.)) // Safe to say it's invalid if it's above 500m
-                .build_into_rawplot()?
-            {
-                raw_plots.push(dataseries);
-            }
-            if let Some(dataseries) = GeoSpatialDataBuilder::new(legend_name_max)
-                .timestamp(&times)
-                .altitude_from_laser(heights_max)
-                .altitude_valid_range((0.0, 500.)) // Safe to say it's invalid if it's above 500m
-                .build_into_rawplot()?
-            {
-                raw_plots.push(dataseries);
-            }
+            Self::process_sensor(&h5, sensor_id, &sensor_type, &mut raw_plots)?;
         }
 
         Ok(Self {
