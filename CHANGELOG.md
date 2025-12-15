@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove unused dependencies found by `cargo-shear`
 - Update Rust version from `1.90` to `1.92`
 
+### Dependencies
+
+- `actions/checkout`: 4 → 6 ([#407](https://github.com/luftkode/plotinator3000/pull/407))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.16.4 ([#407](https://github.com/luftkode/plotinator3000/pull/407))
+- `actions/upload-artifact`: 4 → 6 ([#407](https://github.com/luftkode/plotinator3000/pull/407))
+- `crambl/dependabot-changelog-writer`: 1.3.0 → 1.3.1 ([#407](https://github.com/luftkode/plotinator3000/pull/407))
+- `actions/download-artifact`: 4 → 7 ([#407](https://github.com/luftkode/plotinator3000/pull/407))
+
 ## [2.12.0]
 
 - Add support for the generic `altimeter` HDF5 format that only requires a `sensor_count` & `sensor_type` attribute and standardized height/timestamp
