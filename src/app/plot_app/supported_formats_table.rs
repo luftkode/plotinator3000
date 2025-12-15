@@ -125,6 +125,12 @@ const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
         link: "https://github.com/luftkode/frame-altimeter",
         subitems: None,
     },
+    LogFormat {
+        title: "Generic Altimeter Min/Max",
+        description: "Any altimeter implemented with the generic HDF5 altimeter format with min/max readings",
+        link: "https://github.com/luftkode/frame-altimeter",
+        subitems: None,
+    },
 ];
 
 /// Draws a single log format entry

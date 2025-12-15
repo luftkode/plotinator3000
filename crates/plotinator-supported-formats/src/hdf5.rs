@@ -101,4 +101,5 @@ define_supported_hdf5_formats! {
     NjordIns => plotinator_hdf5::njord_ins::NjordIns,
     Tsc => plotinator_hdf5::tsc::Tsc,
     Altimeter => plotinator_hdf5::altimeter::Altimeter,
+    AltimeterMinMax => plotinator_hdf5::altimeter_minmax::AltimeterMinMax,
 }

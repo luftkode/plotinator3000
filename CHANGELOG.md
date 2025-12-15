@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.13.0]
+
+### Added
+
+- Support for generic altimeter with min/max samples
+
+### Changed
+
 - Remove unused dependencies found by `cargo-shear`
 - Update Rust version from `1.90` to `1.92`
 
