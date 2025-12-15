@@ -13,6 +13,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: crambl/dependabot-changelog-writer@a4b6e4aa40aa3d07139e5090a2748eb1f1c7671c
+      - uses: crambl/dependabot-changelog-writer@478f44ae023312b697349f9d12b646936020936f
         with:
           push-token: ${{ secrets.PAT_WITH_REPO_SCOPE }}
