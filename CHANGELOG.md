@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove unused dependencies found by `cargo-shear`
 - Update Rust version from `1.90` to `1.92`
 
+### Dependencies
+
+- `egui_kittest`: 0.33.2 → 0.33.3 ([#408](https://github.com/luftkode/plotinator3000/pull/408))
+- `egui`: 0.33.2 → 0.33.3 ([#408](https://github.com/luftkode/plotinator3000/pull/408))
+- `eframe`: 0.33.2 → 0.33.3 ([#408](https://github.com/luftkode/plotinator3000/pull/408))
+- `egui_extras`: 0.33.2 → 0.33.3 ([#408](https://github.com/luftkode/plotinator3000/pull/408))
+- `reqwest`: 0.12.24 → 0.12.25 ([#408](https://github.com/luftkode/plotinator3000/pull/408))
+
 ## [2.12.0]
 
 - Add support for the generic `altimeter` HDF5 format that only requires a `sensor_count` & `sensor_type` attribute and standardized height/timestamp
