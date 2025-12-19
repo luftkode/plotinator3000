@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.14.0]
+
+### Added
+
+- Support for generic inclinometer
+
+### Changed
+
 - Update dependencies with `cargo update`
 
 ## [2.13.0]

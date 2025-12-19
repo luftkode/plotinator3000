@@ -131,6 +131,12 @@ const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
         link: "https://github.com/luftkode/frame-altimeter",
         subitems: None,
     },
+    LogFormat {
+        title: "Generic Inclinometer",
+        description: "Any inclinometer implemented with the generic HDF5 inclinometer format",
+        link: "https://github.com/luftkode/frame-inclinometer",
+        subitems: None,
+    },
 ];
 
 /// Draws a single log format entry

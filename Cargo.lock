@@ -4094,7 +4094,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plotinator-background-parser"
-version = "2.13.0"
+version = "2.14.0"
 dependencies = [
  "anyhow",
  "log",
@@ -4126,7 +4126,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-custom-files"
-version = "2.13.0"
+version = "2.14.0"
 dependencies = [
  "anyhow",
  "log",
@@ -4385,7 +4385,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-ui-file-io"
-version = "2.13.0"
+version = "2.14.0"
 dependencies = [
  "eframe",
  "egui",
@@ -4395,7 +4395,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator-ui-log-settings"
-version = "2.13.0"
+version = "2.14.0"
 dependencies = [
  "chrono",
  "egui",
@@ -4437,7 +4437,7 @@ dependencies = [
 
 [[package]]
 name = "plotinator3000"
-version = "2.13.0"
+version = "2.14.0"
 dependencies = [
  "eframe",
  "egui",
