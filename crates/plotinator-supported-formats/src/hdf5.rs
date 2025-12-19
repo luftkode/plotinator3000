@@ -102,4 +102,5 @@ define_supported_hdf5_formats! {
     Tsc => plotinator_hdf5::tsc::Tsc,
     Altimeter => plotinator_hdf5::altimeter::Altimeter,
     AltimeterMinMax => plotinator_hdf5::altimeter_minmax::AltimeterMinMax,
+    Inclinometer => plotinator_hdf5::inclinometer::Inclinometer,
 }

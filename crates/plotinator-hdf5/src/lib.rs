@@ -5,6 +5,7 @@ pub mod frame_altimeters;
 pub mod frame_gps;
 pub mod frame_inclinometers;
 pub mod frame_magnetometer;
+pub mod inclinometer;
 pub mod njord_altimeter;
 pub mod njord_ins;
 pub(crate) mod stream_descriptor;

@@ -177,18 +177,22 @@ impl GeoPoint {
 }
 
 #[derive(Default)]
-pub struct GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> {
+pub struct GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'r, 'p, 'f, T: TimeStampPrimitive> {
     name: String,
     timestamp: Option<&'a [T]>,
     lat: Option<&'b [f64]>,
     lon: Option<&'c [f64]>,
     heading: Option<&'d [f64]>,
+    pitch: Option<&'p [f64]>,
+    roll: Option<&'r [f64]>,
     altitude: Option<RawGeoAltitudes>,
     altitude_valid_range: Option<(f64, f64)>, // Min/Max
     speed: Option<&'f [f64]>,
 }
 
-impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'f, T> {
+impl<'a, 'b, 'c, 'd, 'r, 'p, 'f, T: TimeStampPrimitive>
+    GeoSpatialDataBuilder<'a, 'b, 'c, 'd, 'r, 'p, 'f, T>
+{
     /// Start building, supplying a name such as `GP1` or `Njord Altimeter`
     ///
     /// At minimum, timestamps and either coordinates (both lat and lon) or another kind of auxiliary data such as
@@ -200,6 +204,8 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
             lat: None,
             lon: None,
             heading: None,
+            pitch: None,
+            roll: None,
             altitude: None,
             altitude_valid_range: None,
             speed: None,
@@ -224,6 +230,26 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
     /// Heading in degrees (0 = North, 90 = East, etc.)
     pub fn heading(mut self, heading: &'d [f64]) -> Self {
         self.heading = Some(heading);
+        self
+    }
+
+    /// Heading in degrees (0 = North, 90 = East, etc.)
+    ///
+    /// This serves as a more ergonomic API for datasets that may contain a heading dataset
+    pub fn maybe_heading(mut self, heading: Option<&'d [f64]>) -> Self {
+        self.heading = heading;
+        self
+    }
+
+    /// Pitch in degrees
+    pub fn pitch(mut self, pitch: &'p [f64]) -> Self {
+        self.pitch = Some(pitch);
+        self
+    }
+
+    /// Roll in degrees
+    pub fn roll(mut self, roll: &'r [f64]) -> Self {
+        self.roll = Some(roll);
         self
     }
 
@@ -268,6 +294,10 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
     ///
     /// If the builder has coordinates it will produce a [`PrimaryGeoSpatialData`], if it instead has any of altitude, velocity, heading, it will
     /// produce a [`AuxiliaryGeoSpatialData`]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "there's almost no logic, just a lot of arguments etc."
+    )]
     pub fn build(self) -> anyhow::Result<Option<GeoSpatialDataset>> {
         let Self {
             name,
@@ -275,6 +305,8 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
             lat,
             lon,
             heading,
+            pitch,
+            roll,
             altitude,
             altitude_valid_range,
             speed,
@@ -350,12 +382,19 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
             Ok(Some(GeoSpatialDataset::PrimaryGeoSpatialData(
                 PrimaryGeoSpatialData::new(name, points, delta_t_samples_plot),
             )))
-        } else if heading.is_some() || altitude.is_some() || speed.is_some() {
+        } else if heading.is_some()
+            || pitch.is_some()
+            || roll.is_some()
+            || altitude.is_some()
+            || speed.is_some()
+        {
             let aux_geo_data = Self::build_aux(
                 name,
                 ts.to_owned(),
                 delta_t_samples_plot,
                 heading,
+                pitch,
+                roll,
                 altitude,
                 altitude_valid_range,
                 speed,
@@ -368,11 +407,17 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
         }
     }
 
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "not a public function, could be encapsulated in a struct, but that's just more boilerplate"
+    )]
     fn build_aux(
         name: String,
         timestamps: Vec<T>,
         delta_t_samples_plot: RawPlotCommon,
         heading: Option<&[f64]>,
+        pitch: Option<&[f64]>,
+        roll: Option<&[f64]>,
         altitude: Option<RawGeoAltitudes>,
         altitude_valid_range: Option<(f64, f64)>,
         speed: Option<&[f64]>,
@@ -387,6 +432,16 @@ impl<'a, 'b, 'c, 'd, 'f, T: TimeStampPrimitive> GeoSpatialDataBuilder<'a, 'b, 'c
         if let Some(hdg) = heading {
             debug_assert_eq!(hdg.len(), timestamps_len);
             aux_geo_data = aux_geo_data.with_heading(hdg.to_owned());
+        }
+
+        if let Some(pitch) = pitch {
+            debug_assert_eq!(pitch.len(), timestamps_len);
+            aux_geo_data = aux_geo_data.with_pitch(pitch.to_owned());
+        }
+
+        if let Some(roll) = roll {
+            debug_assert_eq!(roll.len(), timestamps_len);
+            aux_geo_data = aux_geo_data.with_roll(roll.to_owned());
         }
 
         if let Some(alt) = altitude {
@@ -645,6 +700,8 @@ pub struct AuxiliaryGeoSpatialData {
     pub invalid_altitudes_count: Option<Vec<f64>>,
     pub speeds: Option<Vec<f64>>,
     pub headings: Option<Vec<f64>>,
+    pub pitch: Option<Vec<f64>>,
+    pub roll: Option<Vec<f64>>,
     pub color: Color32,
 }
 
@@ -663,6 +720,8 @@ impl AuxiliaryGeoSpatialData {
             invalid_altitudes_count: None,
             speeds: None,
             headings: None,
+            pitch: None,
+            roll: None,
             color,
         }
     }
@@ -671,6 +730,20 @@ impl AuxiliaryGeoSpatialData {
     pub fn with_heading(mut self, heading: Vec<f64>) -> Self {
         debug_assert_eq!(self.timestamps.len(), heading.len());
         self.headings = Some(heading);
+        self
+    }
+
+    /// Pitch in degrees
+    pub fn with_pitch(mut self, pitch: Vec<f64>) -> Self {
+        debug_assert_eq!(self.timestamps.len(), pitch.len());
+        self.pitch = Some(pitch);
+        self
+    }
+
+    /// Roll in degrees
+    pub fn with_roll(mut self, roll: Vec<f64>) -> Self {
+        debug_assert_eq!(self.timestamps.len(), roll.len());
+        self.roll = Some(roll);
         self
     }
 
@@ -695,34 +768,29 @@ impl AuxiliaryGeoSpatialData {
         if let Some(delta_t_samples_plot) = &self.delta_t_samples_plot {
             plots.push(delta_t_samples_plot.clone());
         }
-        if let Some(headings) = &self.headings {
-            let mut heading = Vec::with_capacity(headings.len());
-            for (t, hdg) in self.timestamps.iter().zip(headings) {
-                heading.push([t.as_(), *hdg]);
+
+        // Helper closure to process simple field -> plot conversions
+        let mut add_plot = |data: Option<&Vec<_>>, data_type: DataType| {
+            if let Some(values) = data {
+                let cooked: Vec<[f64; 2]> = self
+                    .timestamps
+                    .iter()
+                    .zip(values)
+                    .map(|(t, v)| [t.as_(), *v])
+                    .collect();
+
+                if cooked.len() > 1 {
+                    plots.push(RawPlotCommon::with_color(
+                        &self.name, cooked, data_type, color,
+                    ));
+                }
             }
-            if heading.len() > 1 {
-                plots.push(RawPlotCommon::with_color(
-                    &self.name,
-                    heading,
-                    DataType::Heading,
-                    color,
-                ));
-            }
-        }
-        if let Some(speeds) = &self.speeds {
-            let mut speed = Vec::with_capacity(speeds.len());
-            for (t, hdg) in self.timestamps.iter().zip(speeds) {
-                speed.push([t.as_(), *hdg]);
-            }
-            if speed.len() > 1 {
-                plots.push(RawPlotCommon::with_color(
-                    &self.name,
-                    speed,
-                    DataType::Velocity,
-                    color,
-                ));
-            }
-        }
+        };
+
+        add_plot(self.headings.as_ref(), DataType::Heading);
+        add_plot(self.pitch.as_ref(), DataType::Pitch);
+        add_plot(self.roll.as_ref(), DataType::Roll);
+        add_plot(self.speeds.as_ref(), DataType::Velocity);
 
         if let Some(altitudes) = &self.altitudes {
             let mut altitude = Vec::with_capacity(altitudes.len());
@@ -1275,6 +1343,8 @@ mod tests {
             invalid_altitudes_count: None,
             speeds: None,
             headings: None,
+            pitch: None,
+            roll: None,
             color: Color32::RED,
         };
 
