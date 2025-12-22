@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `derive_more`: 2.1.0 → 2.1.1 ([#413](https://github.com/luftkode/plotinator3000/pull/413))
+- `toml`: 0.9.8 → 0.9.10+spec-1.1.0 ([#413](https://github.com/luftkode/plotinator3000/pull/413))
+- `zip`: 6.0.0 → 7.0.0 ([#413](https://github.com/luftkode/plotinator3000/pull/413))
+- `insta`: 1.44.3 → 1.45.0 ([#413](https://github.com/luftkode/plotinator3000/pull/413))
+
 ## [2.14.0]
 
 ### Added
