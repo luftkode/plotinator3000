@@ -75,7 +75,7 @@ chrono = { version = "0.4.42", features = ["serde"] }
 getset = "0.1.6"
 derive_more = { version = "2", features = ["full"] }
 num-traits = "0.2.19"
-toml = "0.9.8"
+toml = "0.9.10"
 thiserror = "2.0"
 semver = "1.0.26"
 elevated-command = "1.1"
@@ -89,7 +89,7 @@ dirs = "6.0.0"
 smallvec = { version = "1.15.1", features = ["serde"]}
 tempfile = "3.23.0"
 rfd = "0.16"
-zip = "6.0"
+zip = "7.0"
 test-log = "0.2.19"
 winres = "0.1.12"
 ndarray = "0.17.1"
@@ -109,7 +109,7 @@ puffin_http = "0.16"
 # Dev dependencies
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
-insta = { version = "1.44.3", features = ["filters"] }
+insta = { version = "1.45.0", features = ["filters"] }
 
 [dependencies]
 plotinator-plot-ui.workspace = true
