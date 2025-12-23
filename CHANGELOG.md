@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.15.0]
+
+### Added
+
+- Support for generic GPS/GNSS receiver
+
 ### Dependencies
 
 - run `cargo update`

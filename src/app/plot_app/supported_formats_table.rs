@@ -137,6 +137,12 @@ const HDF5_LOG_FORMATS: &[LogFormat<'_>] = &[
         link: "https://github.com/luftkode/frame-inclinometer",
         subitems: None,
     },
+    LogFormat {
+        title: "Generic GPS",
+        description: "Any GNSS receiver implemented with the generic HDF5 GPS format",
+        link: "https://github.com/luftkode/frame-gps",
+        subitems: None,
+    },
 ];
 
 /// Draws a single log format entry
