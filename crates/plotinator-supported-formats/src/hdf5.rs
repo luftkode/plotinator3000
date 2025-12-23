@@ -103,4 +103,5 @@ define_supported_hdf5_formats! {
     Altimeter => plotinator_hdf5::altimeter::Altimeter,
     AltimeterMinMax => plotinator_hdf5::altimeter_minmax::AltimeterMinMax,
     Inclinometer => plotinator_hdf5::inclinometer::Inclinometer,
+    Gps => plotinator_hdf5::gps::Gps,
 }

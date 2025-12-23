@@ -5,12 +5,14 @@ pub mod frame_altimeters;
 pub mod frame_gps;
 pub mod frame_inclinometers;
 pub mod frame_magnetometer;
+pub mod gps;
 pub mod inclinometer;
 pub mod njord_altimeter;
 pub mod njord_ins;
 pub(crate) mod stream_descriptor;
 pub mod tsc;
 pub(crate) mod util;
+
 pub use {
     bifrost::BifrostLoopCurrent, frame_altimeters::FrameAltimeters, frame_gps::FrameGps,
     frame_inclinometers::FrameInclinometers, frame_magnetometer::FrameMagnetometer,
