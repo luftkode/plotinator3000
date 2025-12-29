@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 6 ([#416](https://github.com/luftkode/plotinator3000/pull/416))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.16.6 ([#416](https://github.com/luftkode/plotinator3000/pull/416))
+- `actions/upload-artifact`: 4 → 6 ([#416](https://github.com/luftkode/plotinator3000/pull/416))
+- `crambl/dependabot-changelog-writer`: 1.3.0 → 1.3.1 ([#416](https://github.com/luftkode/plotinator3000/pull/416))
+- `actions/download-artifact`: 4 → 7 ([#416](https://github.com/luftkode/plotinator3000/pull/416))
+
 ## [2.15.0]
 
 ### Added
