@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.14.4
+        uses: cargo-bins/cargo-binstall@v1.16.6
       - name: Install Cargo audit
         run: cargo binstall cargo-audit
       - name: Run Audit
@@ -80,7 +80,7 @@ jobs:
 
       # So that we can inspect why it failed
       - name: Upload snapshots (including diffs)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: matrix.os == 'macos-latest' && always()
         with:
           name: test-results
