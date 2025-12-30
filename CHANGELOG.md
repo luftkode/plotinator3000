@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Dependencies
+
+- `walkers`: 0.50.0 → 0.51.0 ([#417](https://github.com/luftkode/plotinator3000/pull/417))
+- `serde_json`: 1.0.146 → 1.0.148 ([#417](https://github.com/luftkode/plotinator3000/pull/417))
+- `tempfile`: 3.23.0 → 3.24.0 ([#417](https://github.com/luftkode/plotinator3000/pull/417))
+- `insta`: 1.45.0 → 1.45.1 ([#417](https://github.com/luftkode/plotinator3000/pull/417))
+
 ## [2.15.0]
 
 ### Added
